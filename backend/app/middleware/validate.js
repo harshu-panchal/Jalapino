@@ -63,7 +63,18 @@ export function validate(schema, source = "body") {
     // Mutating req.query / req.params is supported by Express and matches
     // the pre-existing req.body pattern; downstream handlers see the
     // sanitized value transparently.
-    req[source] = value;
+    // In some environments, req.query or req.params are read-only properties (getters only).
+    // In those cases, we redefine the property on the request instance to override the getter.
+    try {
+      req[source] = value;
+    } catch (e) {
+      Object.defineProperty(req, source, {
+        value,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
+    }
     return next();
   };
 }

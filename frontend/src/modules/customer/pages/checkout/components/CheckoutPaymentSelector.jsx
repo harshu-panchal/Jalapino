@@ -34,19 +34,18 @@ const CheckoutPaymentSelector = React.memo(function CheckoutPaymentSelector({
                 <Wallet size={16} className="text-primary" />
               </div>
               <div>
-                <h3 className="font-black text-slate-800 text-sm tracking-tight uppercase">
+                <h3 className="font-black text-slate-800 text-sm tracking-tight">
                   Use Wallet Balance
                 </h3>
-                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
+                <p className="text-[10px] text-slate-500 font-bold tracking-wider">
                   Available: ₹{walletBalance}
                 </p>
               </div>
             </div>
             <button
               onClick={onToggleWallet}
-              className={`w-12 h-6 rounded-full transition-all duration-300 relative flex items-center px-1 ${
-                useWallet ? "bg-primary" : "bg-slate-200"
-              }`}>
+              className={`w-12 h-6 rounded-full transition-all duration-300 relative flex items-center px-1 ${useWallet ? "bg-primary" : "bg-slate-200"
+                }`}>
               <motion.div
                 animate={{ x: useWallet ? 24 : 0 }}
                 className="h-4 w-4 rounded-full bg-white shadow-sm"
@@ -73,7 +72,7 @@ const CheckoutPaymentSelector = React.memo(function CheckoutPaymentSelector({
 
       {/* Payment Method */}
       <motion.div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
-        <h3 className="font-black text-slate-800 mb-4 uppercase text-sm tracking-widest">
+        <h3 className="font-black text-slate-800 mb-4 text-sm tracking-widest">
           Payment Method
         </h3>
         <div className="space-y-2">
@@ -83,15 +82,13 @@ const CheckoutPaymentSelector = React.memo(function CheckoutPaymentSelector({
               <button
                 key={method.id}
                 onClick={() => onSelectPayment(method.id)}
-                className={`w-full p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${
-                  selectedPayment === method.id
-                    ? "border-primary bg-brand-50"
-                    : "border-slate-200 bg-white hover:border-slate-300"
-                }`}>
-                <div
-                  className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                    selectedPayment === method.id ? "bg-brand-100" : "bg-slate-100"
+                className={`w-full p-3 rounded-xl border-2 transition-all flex items-center gap-3 ${selectedPayment === method.id
+                  ? "border-primary bg-brand-50"
+                  : "border-slate-200 bg-white hover:border-slate-300"
                   }`}>
+                <div
+                  className={`h-10 w-10 rounded-full flex items-center justify-center ${selectedPayment === method.id ? "bg-brand-100" : "bg-slate-100"
+                    }`}>
                   <Icon
                     size={18}
                     className={
@@ -101,17 +98,15 @@ const CheckoutPaymentSelector = React.memo(function CheckoutPaymentSelector({
                 </div>
                 <div className="flex-1 text-left">
                   <p
-                    className={`font-bold text-sm ${
-                      selectedPayment === method.id ? "text-primary" : "text-slate-800"
-                    }`}>
+                    className={`font-bold text-sm ${selectedPayment === method.id ? "text-primary" : "text-slate-800"
+                      }`}>
                     {method.label}
                   </p>
                   <p className="text-xs text-slate-500">{method.sublabel}</p>
                 </div>
                 <div
-                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${
-                    selectedPayment === method.id ? "border-primary" : "border-slate-300"
-                  }`}>
+                  className={`h-5 w-5 rounded-full border-2 flex items-center justify-center ${selectedPayment === method.id ? "border-primary" : "border-slate-300"
+                    }`}>
                   {selectedPayment === method.id && (
                     <div className="h-3 w-3 rounded-full bg-primary" />
                   )}

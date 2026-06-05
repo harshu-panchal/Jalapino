@@ -17,10 +17,8 @@ import {
 import LogoImage from "../../../../assets/Logo.png";
 
 // MUI Icons
-import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import LocationOnIcon from "@mui/icons-material/LocationOn";
 import SearchIcon from "@mui/icons-material/Search";
-import MicIcon from "@mui/icons-material/Mic";
 import ChevronDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
@@ -86,7 +84,7 @@ function CategoryNavColumn({
       className="relative z-[2] flex min-w-[48px] shrink-0 cursor-pointer flex-col items-center gap-0.5 border-b-2 px-2 pb-0.5 pt-0.5 snap-start md:min-w-[58px]">
       <div className="relative z-10 flex h-9 w-9 items-center justify-center md:h-11 md:w-11">
         {typeof cat.icon === "function" ||
-        (typeof cat.icon === "object" && cat.icon.$$typeof) ? (
+          (typeof cat.icon === "object" && cat.icon.$$typeof) ? (
           <cat.icon
             sx={{
               fontSize: { xs: 20, md: 24 },
@@ -148,6 +146,7 @@ const MainLocationHeader = ({
   categories = [],
   activeCategory,
   onCategorySelect,
+  hideSearchBar = false,
 }) => {
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
@@ -157,13 +156,13 @@ const MainLocationHeader = ({
   useEffect(() => {
     import("../../../../assets/lottie/shopping-cart.json")
       .then((m) => setCartAnimData(m.default))
-      .catch(() => {});
+      .catch(() => { });
   }, []);
   const { currentLocation, refreshLocation, isFetchingLocation } =
     useLocation();
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
-  const appName = settings?.appName || "App";
+  const appName = settings?.appName || "Jalpaino";
   const logoUrl = settings?.logoUrl || LogoImage;
   const navigate = useNavigate();
 
@@ -253,37 +252,28 @@ const MainLocationHeader = ({
     return () => clearTimeout(timeout);
   }, [typingState]);
 
-  // Smooth scroll interpolations
-  const headerTopPadding = useTransform(scrollY, [0, 160], [16, 12]);
-  const headerBottomPadding = useTransform(scrollY, [0, 160], [4, 3]);
-  const headerRoundness = useTransform(scrollY, [0, 160], [0, 24]);
-  const bgOpacity = useTransform(scrollY, [0, 160], [1, 0.98]);
+  // Header layout properties (fixed, non-collapsible)
+  const headerTopPadding = 16;
+  const headerBottomPadding = 12;
+  const bgOpacity = 0.98;
 
-  // Content animations
-  const contentHeight = useTransform(scrollY, [0, 160], ["64px", "0px"]);
-  const contentOpacity = useTransform(scrollY, [0, 160], [1, 0]);
-  const navHeight = useTransform(scrollY, [0, 200], ["60px", "0px"]);
-  const navOpacity = useTransform(scrollY, [0, 200], [1, 0]);
-  const navMargin = useTransform(scrollY, [0, 200], [4, 0]);
-  const categorySpacing = useTransform(scrollY, [0, 200], [3, 0]);
-  const cartOpacity = useTransform(scrollY, [0, 110, 150], [1, 0.7, 0]);
-  const cartScale = useTransform(scrollY, [0, 110, 150], [1, 0.9, 0.75]);
+  const contentHeight = "80px";
+  const contentOpacity = 1;
+  const navHeight = "60px";
+  const navOpacity = 1;
+  const navMargin = 4;
+  const categorySpacing = 3;
+  const cartOpacity = 1;
+  const cartScale = 1;
 
-  // Helper to hide elements completely when collapsed to prevent clicks
-  const displayContent = useTransform(scrollY, (value) =>
-    value > 160 ? "none" : "block",
-  );
-  const displayNav = useTransform(scrollY, (value) =>
-    value > 200 ? "none" : "flex",
-  );
-  const displayCart = useTransform(scrollY, (value) =>
-    value > 150 ? "none" : "block",
-  );
+  const displayContent = "block";
+  const displayNav = "flex";
+  const displayCart = "block";
 
   const baseHeaderColor = activeCategory?.headerColor || "var(--primary)";
   const headerFontColor = activeCategory?.headerFontColor || "#111827";
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
-  
+
   const headerGradient = buildHeaderGradient(baseHeaderColor);
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const categoryAccent = headerIconColor;
@@ -301,6 +291,7 @@ const MainLocationHeader = ({
   return (
     <>
       <div
+        style={{ fontFamily: "'Inter', sans-serif" }}
         className={cn(
           "fixed top-0 left-0 right-0 z-200",
           isProductDetailOpen && "hidden md:block",
@@ -310,12 +301,15 @@ const MainLocationHeader = ({
           style={{
             paddingTop: headerTopPadding,
             paddingBottom: headerBottomPadding,
-            borderBottomLeftRadius: headerRoundness,
-            borderBottomRightRadius: headerRoundness,
+            borderBottomLeftRadius: "24px",
+            borderBottomRightRadius: "24px",
             opacity: bgOpacity,
-            backgroundImage: headerGradient,
+            background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+            backdropFilter: "blur(20px) saturate(180%)",
+            WebkitBackdropFilter: "blur(20px) saturate(180%)",
+            borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           }}
-          className="px-4 shadow-[0_4px_20px_rgba(0,0,0,0.15)] overflow-hidden transform-gpu will-change-transform">
+          className="px-4 shadow-[0_8px_32px_rgba(0,0,0,0.25)] overflow-hidden transform-gpu will-change-transform">
           {/* Subtle Glow Overlay */}
           <div className="absolute inset-0 bg-white/8 pointer-events-none" />
 
@@ -362,16 +356,7 @@ const MainLocationHeader = ({
               </div>
 
               {/* Location Block (Desktop inline row) */}
-              <div className="flex flex-col border-l border-black/10 pl-4 lg:pl-8 h-10 justify-center">
-                <div className="flex items-center gap-1.5 opacity-70">
-                  <AccessTimeIcon sx={{ fontSize: 13, color: headerFontColor }} />
-                  <span 
-                    className="text-[11px] font-bold uppercase tracking-wider leading-none"
-                    style={{ color: headerFontColor }}
-                  >
-                    {currentLocation.time}
-                  </span>
-                </div>
+              <div className="flex flex-col border-l border-white/10 pl-4 lg:pl-8 h-10 justify-center">
                 <button
                   type="button"
                   data-lenis-prevent
@@ -379,43 +364,41 @@ const MainLocationHeader = ({
                   onClick={() => {
                     setIsLocationOpen(true);
                   }}
-                  className="flex items-center gap-1 text-slate-900 hover:text-slate-700 cursor-pointer group active:scale-95 transition-all border-0 bg-transparent p-0 text-left">
-                  <LocationOnIcon sx={{ fontSize: 14, color: "inherit" }} />
-                  <div 
-                    className="text-[13px] font-bold leading-tight max-w-[250px] lg:max-w-[320px] truncate"
-                    style={{ color: headerFontColor }}
+                  className="flex items-center gap-1 text-white hover:text-gray-200 cursor-pointer group active:scale-95 transition-all border-0 bg-transparent p-0 text-left">
+                  <LocationOnIcon sx={{ fontSize: 14, color: "#FFFFFF" }} />
+                  <div
+                    className="text-[13px] font-bold leading-tight max-w-[250px] lg:max-w-[320px] truncate text-white"
                   >
                     {isFetchingLocation
                       ? "Detecting location..."
                       : currentLocation.name}
                   </div>
                   <ChevronDownIcon
-                    sx={{ fontSize: 12, opacity: 0.5, color: headerFontColor }}
+                    sx={{ fontSize: 12, opacity: 0.8, color: "#FFFFFF" }}
                   />
                 </button>
               </div>
             </div>
 
             {/* Center Section: Search Bar */}
-            <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6">
-              <motion.div
-                onClick={handleSearchClick}
-                whileHover={{ scale: 1.01 }}
-                whileTap={{ scale: 0.99 }}
-                style={{ backgroundColor: searchBarBg }}
-                className="rounded-full px-4 h-11 shadow-md flex items-center border border-white/50 transition-all duration-200 focus-within:ring-2 focus-within:ring-brand-400/60 cursor-pointer">
-                <SearchIcon sx={{ color: "#000000", fontSize: 20 }} />
-                <input
-                  type="text"
-                  placeholder={searchPlaceholder || "Search Products..."}
-                  readOnly
-                  className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-semibold placeholder:text-black text-[15px] cursor-pointer"
-                />
-                <div className="flex items-center gap-2 border-l border-slate-100 pl-3">
-                  <MicIcon sx={{ color: "#000000", fontSize: 20 }} />
-                </div>
-              </motion.div>
-            </div>
+            {!hideSearchBar && (
+              <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6">
+                <motion.div
+                  onClick={handleSearchClick}
+                  whileHover={{ scale: 1.01 }}
+                  whileTap={{ scale: 0.99 }}
+                  style={{ backgroundColor: "rgba(17, 24, 39, 0.45)" }}
+                  className="rounded-full px-4 h-11 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[#8B1E24]/50 cursor-pointer">
+                  <SearchIcon sx={{ color: "#E5E7EB", fontSize: 20 }} />
+                  <input
+                    type="text"
+                    placeholder={searchPlaceholder || "Search Products..."}
+                    readOnly
+                    className="flex-1 bg-transparent border-none outline-none pl-2 text-white font-medium placeholder:text-gray-400 text-[15px] cursor-pointer"
+                  />
+                </motion.div>
+              </div>
+            )}
 
             {/* Right Section: Action Icons */}
             <div className="flex items-center gap-5 lg:gap-8 shrink-0">
@@ -423,8 +406,7 @@ const MainLocationHeader = ({
                 whileHover={{ scale: 1.15, rotate: 5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/wishlist")}
-                className="transition-all hover:text-red-500"
-                style={{ color: headerFontColor }}
+                className="transition-all text-white hover:text-[#8B1E24]"
               >
                 <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
               </motion.button>
@@ -433,11 +415,10 @@ const MainLocationHeader = ({
                 whileHover={{ scale: 1.15, rotate: -5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/checkout")}
-                className="transition-all hover:text-slate-700 relative group"
-                style={{ color: headerFontColor }}
+                className="transition-all text-white hover:text-[#8B1E24] relative group"
               >
                 <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
-                <span className="absolute -top-1.5 -right-1.5 bg-yellow-400 text-brand-900 text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-brand-800 shadow-sm transition-transform group-hover:-translate-y-0.5">
+                <span className="absolute -top-1.5 -right-1.5 bg-[#8B1E24] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm transition-transform group-hover:-translate-y-0.5">
                   0
                 </span>
               </motion.button>
@@ -446,8 +427,7 @@ const MainLocationHeader = ({
                 whileHover={{ scale: 1.15 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/profile")}
-                className="lg:bg-white/30 p-1.5 lg:rounded-full hover:bg-white transition-all"
-                style={{ color: headerFontColor }}
+                className="lg:bg-white/10 p-1.5 lg:rounded-full hover:bg-white/20 transition-all text-white"
               >
                 <AccountCircleOutlinedIcon sx={{ fontSize: 28 }} />
               </motion.button>
@@ -464,26 +444,25 @@ const MainLocationHeader = ({
                 display: displayContent,
                 overflow: "hidden",
               }}
-              className="relative z-10">
-              <div className="mb-1">
-                <span 
-                  className="inline-flex items-center rounded-full border border-black/10 bg-white/18 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider backdrop-blur-sm"
-                  style={{ color: headerFontColor }}
+              className="relative z-10 pb-4">
+              <div
+                onClick={() => navigate("/")}
+                className="mb-4 flex items-center gap-2 cursor-pointer select-none"
+              >
+                <img
+                  src={logoUrl}
+                  alt={`${appName} Logo`}
+                  loading="lazy"
+                  className="h-9 w-auto object-contain"
+                />
+                <span
+                  className="text-sm font-black uppercase tracking-wider text-white"
                 >
                   {appName}
                 </span>
               </div>
               <div className="flex justify-between items-start">
                 <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5 mb-0.5">
-                    <AccessTimeIcon sx={{ fontSize: 16, color: headerFontColor }} />
-                    <span 
-                      className="text-base font-bold tracking-tight leading-none"
-                      style={{ color: headerFontColor }}
-                    >
-                      {currentLocation.time}
-                    </span>
-                  </div>
                   <button
                     type="button"
                     data-lenis-prevent
@@ -491,18 +470,17 @@ const MainLocationHeader = ({
                     onClick={() => {
                       setIsLocationOpen(true);
                     }}
-                    className="flex items-center gap-1 text-slate-800 cursor-pointer group active:scale-95 transition-transform border-0 bg-transparent p-0 text-left">
-                    <LocationOnIcon sx={{ fontSize: 14, color: headerFontColor }} />
-                    <div 
-                      className="text-[10px] font-medium leading-tight max-w-[280px] truncate"
-                      style={{ color: headerFontColor }}
+                    className="flex items-center gap-1 text-white hover:text-gray-200 cursor-pointer group active:scale-95 transition-transform border-0 bg-transparent p-0 text-left">
+                    <LocationOnIcon sx={{ fontSize: 14, color: "#FFFFFF" }} />
+                    <div
+                      className="text-[10px] font-medium leading-tight max-w-[280px] truncate text-gray-200"
                     >
                       {isFetchingLocation
                         ? "Detecting location..."
                         : currentLocation.name}
                     </div>
                     <ChevronDownIcon
-                      sx={{ fontSize: 12, opacity: 0.5, color: headerFontColor }}
+                      sx={{ fontSize: 12, opacity: 0.8, color: "#FFFFFF" }}
                     />
                   </button>
                 </div>
@@ -511,26 +489,26 @@ const MainLocationHeader = ({
           </div>
 
           {/* Search Bar (MOBILE ONLY) */}
-          <div className="relative z-10 mt-[1.5px] flex items-center gap-2 md:hidden">
-            <motion.div
-              onClick={handleSearchClick}
-              whileTap={{ scale: 0.98 }}
-              style={{ backgroundColor: searchBarBg }}
-              className="flex-1 rounded-[10px] px-3 h-10 shadow-md flex items-center border border-white/50 transition-all duration-200 focus-within:ring-2 focus-within:ring-brand-400/60 cursor-pointer">
-              <SearchIcon sx={{ color: "#000000", fontSize: 18 }} />
-              <input
-                type="text"
-                placeholder={searchPlaceholder || "Search Products..."}
-                readOnly
-                className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-semibold placeholder:text-black text-[14px] cursor-pointer"
-              />
-              <div className="flex items-center gap-2 border-l border-slate-100 pl-2.5">
-                <MicIcon sx={{ color: "#000000", fontSize: 18 }} />
-              </div>
-            </motion.div>
-          </div>
+          {!hideSearchBar && (
+            <div className="relative z-10 mt-[1.5px] flex items-center gap-2 md:hidden">
+              <motion.div
+                onClick={handleSearchClick}
+                whileTap={{ scale: 0.98 }}
+                style={{ backgroundColor: "rgba(17, 24, 39, 0.45)" }}
+                className="flex-1 rounded-[10px] px-3 h-10 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[#8B1E24]/50 cursor-pointer">
+                <SearchIcon sx={{ color: "#E5E7EB", fontSize: 18 }} />
+                <input
+                  type="text"
+                  placeholder={searchPlaceholder || "Search Products..."}
+                  readOnly
+                  className="flex-1 bg-transparent border-none outline-none pl-2 text-white font-medium placeholder:text-gray-400 text-[14px] cursor-pointer"
+                />
+              </motion.div>
+            </div>
+          )}
 
           {/* Categories Navigation - Smooth Collapse */}
+          {/* 
           {categories.length > 0 && (
             <motion.div
               layout
@@ -566,6 +544,7 @@ const MainLocationHeader = ({
               })}
             </motion.div>
           )}
+          */}
 
           {/* Background Decorative patterns */}
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-[100px] -mr-40 -mt-40 pointer-events-none" />

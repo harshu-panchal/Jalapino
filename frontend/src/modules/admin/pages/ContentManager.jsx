@@ -34,6 +34,7 @@ const ContentManager = () => {
     const [headerCategories, setHeaderCategories] = useState([]);
     const [selectedHeaderId, setSelectedHeaderId] = useState('');
     const [sections, setSections] = useState([]);
+    const [allProducts, setAllProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const [activeTab, setActiveTab] = useState('banners');
@@ -135,6 +136,37 @@ const ContentManager = () => {
         loadSections();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [pageType, selectedHeaderId]);
+
+    useEffect(() => {
+        if (!isModalOpen || formData.displayType !== 'products') return;
+
+        const loadProducts = async () => {
+            try {
+                const params = { limit: 300 };
+                if (formData.productCategoryIds?.length > 0) {
+                    params.categoryIds = formData.productCategoryIds.join(',');
+                }
+                if (formData.productSubCategoryIds?.length > 0) {
+                    params.subcategoryIds = formData.productSubCategoryIds.join(',');
+                }
+                const res = await adminApi.getProducts(params);
+                const raw = res.data.result;
+                const list = Array.isArray(res.data.results)
+                    ? res.data.results
+                    : Array.isArray(raw?.items)
+                      ? raw.items
+                      : Array.isArray(raw)
+                        ? raw
+                        : [];
+                setAllProducts(list);
+            } catch (e) {
+                console.error(e);
+                setAllProducts([]);
+            }
+        };
+
+        loadProducts();
+    }, [isModalOpen, formData.displayType, formData.productCategoryIds, formData.productSubCategoryIds]);
 
     const resetForm = () => {
         setFormData({
@@ -904,7 +936,7 @@ const ContentManager = () => {
                                     Show products in a single horizontally scrollable row
                                 </label>
                             </div>
-                            <div className="space-y-2">
+                             <div className="space-y-2">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                     Filter by categories / subcategories (optional)
                                 </label>
@@ -936,6 +968,7 @@ const ContentManager = () => {
                                                                 ...prev,
                                                                 productCategoryIds: nextCategoryIds,
                                                                 productSubCategoryIds: nextSubCategoryIds,
+                                                                productIds: [],
                                                             };
                                                         })
                                                     }
@@ -967,6 +1000,7 @@ const ContentManager = () => {
                                                                 productSubCategoryIds: isSelected
                                                                     ? prev.productSubCategoryIds.filter(id => id !== s._id)
                                                                     : [...prev.productSubCategoryIds, s._id],
+                                                                productIds: [],
                                                             }))
                                                         }
                                                         className={cn(
@@ -982,8 +1016,46 @@ const ContentManager = () => {
                                             })}
                                     </div>
                                 </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                    Choose specific products to display (optional)
+                                </label>
+                                <div className="flex flex-wrap gap-1.5 max-h-40 overflow-y-auto pr-1 border border-slate-100 rounded-xl p-3 bg-slate-50/50">
+                                    {allProducts.length === 0 ? (
+                                        <span className="text-[11px] text-slate-400">
+                                            No products match. Select categories and subcategories above to filter.
+                                        </span>
+                                    ) : (
+                                        allProducts.map((p) => {
+                                            const selected = formData.productIds.includes(p._id);
+                                            return (
+                                                <button
+                                                    key={p._id}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setFormData(prev => ({
+                                                            ...prev,
+                                                            productIds: selected
+                                                                ? prev.productIds.filter(id => id !== p._id)
+                                                                : [...prev.productIds, p._id],
+                                                        }))
+                                                    }
+                                                    className={cn(
+                                                        "px-2.5 py-1.5 rounded-full text-[11px] font-bold border transition-all",
+                                                        selected
+                                                            ? "bg-primary text-primary-foreground border-primary"
+                                                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    {p.name}
+                                                </button>
+                                            );
+                                        })
+                                    )}
+                                </div>
                                 <p className="text-[10px] text-slate-400">
-                                    You can later extend this to select specific products.
+                                    If left empty, all products matching the selected category/subcategory filters will be shown dynamically.
                                 </p>
                             </div>
                         </div>

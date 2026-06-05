@@ -65,7 +65,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
   const getBannerOptimizedSrc = React.useCallback((url) => {
     if (!url) return url;
     if (!isCloudinaryUrl(url)) return url;
-    return applyCloudinaryTransform(url, "f_auto,q_auto,c_fill,g_auto,w_824,h_380");
+    return applyCloudinaryTransform(url, "f_auto,q_auto,c_fill,g_north,w_1448,h_650");
   }, []);
 
   return (
@@ -85,8 +85,10 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
           <div
             key={idx}
             className={cn(
-              "relative shrink-0 overflow-hidden bg-slate-100 flex items-center justify-center box-border",
-              fullWidth ? "h-[190px] rounded-none px-0" : "h-[190px] px-4 md:px-8"
+              "relative shrink-0 flex items-center justify-center box-border",
+              fullWidth
+                ? "aspect-[1448/650] w-full rounded-none px-0 overflow-hidden"
+                : "w-full px-4 md:px-8 overflow-visible pb-6"
             )}
             style={{ width: `${100 / totalItems}%` }}
           >
@@ -96,42 +98,44 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                 srcSet={
                   isCloudinaryUrl(banner.imageUrl)
                     ? buildCloudinarySrcSet(banner.imageUrl, [
-                        { w: 412, h: 190 },
-                        { w: 824, h: 380 },
-                        { w: 1248, h: 570 },
-                      ])
+                        { w: 412, h: 185 },
+                        { w: 824, h: 370 },
+                        { w: 1248, h: 560 },
+                      ], "f_auto,q_auto,c_fill,g_north")
                     : undefined
                 }
                 sizes="100vw"
                 alt={banner.title || section?.title || "Banner"}
-                className="w-full h-full object-cover object-center pointer-events-none"
-                width={412}
-                height={190}
+                className="w-full h-full object-cover object-top pointer-events-none"
+                width={1448}
+                height={650}
                 loading={idx === 0 ? "eager" : "lazy"}
                 fetchPriority={idx === 0 ? "high" : "low"}
                 decoding="async"
               />
             ) : (
-              <div className="h-full w-full max-w-[560px] overflow-hidden rounded-3xl bg-slate-100 shadow-[0_12px_30px_rgba(15,23,42,0.08)]">
+              <div className="w-full aspect-[1448/650] rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05),_0_2px_8px_rgba(0,0,0,0.03)] bg-white relative">
                 <img
                   src={getBannerOptimizedSrc(banner.imageUrl)}
                   srcSet={
                     isCloudinaryUrl(banner.imageUrl)
                       ? buildCloudinarySrcSet(banner.imageUrl, [
-                          { w: 560, h: 190 },
-                          { w: 1120, h: 380 },
-                        ])
+                          { w: 560, h: 251 },
+                          { w: 1120, h: 503 },
+                        ], "f_auto,q_auto,c_fill,g_north")
                       : undefined
                   }
-                  sizes="(max-width: 768px) 100vw, 560px"
+                  sizes="(max-width: 768px) 100vw, 1448px"
                   alt={banner.title || section?.title || "Banner"}
-                  className="w-full h-full object-cover object-center pointer-events-none"
-                  width={560}
-                  height={190}
+                  className="w-full h-full object-cover object-top pointer-events-none rounded-3xl"
+                  width={1448}
+                  height={650}
                   loading={idx === 0 ? "eager" : "lazy"}
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
+                {/* Subtle burgundy border overlay */}
+                <div className="absolute inset-0 border border-[#8b1e24]/15 rounded-3xl pointer-events-none" />
               </div>
             )}
           </div>

@@ -41,13 +41,23 @@ const EditProfilePage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 font-sans pb-10">
+        <div className="min-h-screen bg-[#FAF8F6] font-sans pb-10">
             {/* Header */}
-            <div className="bg-white sticky top-0 z-30 px-4 py-3 flex items-center gap-3 shadow-sm">
-                <Link to="/profile" className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <ArrowLeft size={24} className="text-slate-600" />
+            <div 
+                style={{
+                    background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                    backdropFilter: "blur(20px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderBottomLeftRadius: "20px",
+                    borderBottomRightRadius: "20px",
+                }}
+                className="sticky top-0 z-30 px-4 py-3 flex items-center gap-3 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+            >
+                <Link to="/profile" className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors">
+                    <ArrowLeft size={24} className="text-white" />
                 </Link>
-                <h1 className="text-lg font-black text-slate-800">Edit Profile</h1>
+                <h1 className="text-xl font-bold text-white font-['Inter']">Edit Profile</h1>
             </div>
 
             <div className="max-w-xl mx-auto p-5">

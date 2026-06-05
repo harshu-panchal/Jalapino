@@ -182,7 +182,7 @@ const CheckoutPage = () => {
     if (cart.length === 0) {
       import("../../../assets/lottie/Empty box.json")
         .then((m) => setEmptyBoxData(m.default))
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [cart.length === 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -190,23 +190,23 @@ const CheckoutPage = () => {
     ...(settings?.onlineEnabled === false
       ? []
       : [
-          {
-            id: "online",
-            label: "Pay Online",
-            icon: CreditCard,
-            sublabel: "UPI / Cards / NetBanking",
-          },
-        ]),
+        {
+          id: "online",
+          label: "Pay Online",
+          icon: CreditCard,
+          sublabel: "UPI / Cards / NetBanking",
+        },
+      ]),
     ...(settings?.codEnabled === false
       ? []
       : [
-          {
-            id: "cash",
-            label: "Cash on Delivery",
-            icon: Banknote,
-            sublabel: "Pay after delivery",
-          },
-        ]),
+        {
+          id: "cash",
+          label: "Cash on Delivery",
+          icon: Banknote,
+          sublabel: "Pay after delivery",
+        },
+      ]),
   ];
 
   const tipAmounts = [
@@ -375,8 +375,8 @@ const CheckoutPage = () => {
       } catch (e) {
         showToast(
           e?.__serverMsg ||
-            e?.message ||
-            "Could not fetch coordinates for this address. Delivery charges may not update.",
+          e?.message ||
+          "Could not fetch coordinates for this address. Delivery charges may not update.",
           "error",
         );
       }
@@ -470,7 +470,7 @@ const CheckoutPage = () => {
     } catch (e) {
       showToast(
         e.response?.data?.message ||
-          "Could not fetch coordinates for this address. Delivery charges may be inaccurate.",
+        "Could not fetch coordinates for this address. Delivery charges may be inaccurate.",
         "error",
       );
     }
@@ -498,7 +498,7 @@ const CheckoutPage = () => {
           .filter(Boolean)
           .join(", "),
         ...(typeof liveLocation.latitude === "number" &&
-        typeof liveLocation.longitude === "number"
+          typeof liveLocation.longitude === "number"
           ? { location: { lat: liveLocation.latitude, lng: liveLocation.longitude } }
           : {}),
       }));
@@ -515,7 +515,7 @@ const CheckoutPage = () => {
           .filter(Boolean)
           .join(", "),
         ...(typeof currentLocation.latitude === "number" &&
-        typeof currentLocation.longitude === "number"
+          typeof currentLocation.longitude === "number"
           ? { location: { lat: currentLocation.latitude, lng: currentLocation.longitude } }
           : {}),
       }));
@@ -715,7 +715,7 @@ const CheckoutPage = () => {
           setRecommendedProducts(items.slice(0, 8));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [cartProductIdKey]);
 
   const handlePlaceOrder = async () => {
@@ -780,7 +780,7 @@ const CheckoutPage = () => {
             setIsPlacingOrder(false);
             showToast(
               payError.message ||
-                "Order created but payment gateway failed. Please pay from order details.",
+              "Order created but payment gateway failed. Please pay from order details.",
               "error"
             );
             navigate(`/orders/${mainOrderId}`);
@@ -810,7 +810,7 @@ const CheckoutPage = () => {
       setIsPlacingOrder(false);
       showToast(
         error.response?.data?.message ||
-          "Failed to place order. Please try again.",
+        "Failed to place order. Please try again.",
         "error"
       );
     }
@@ -844,7 +844,7 @@ const CheckoutPage = () => {
       .then((r) => {
         if (r.data?.result) applyCancelled(r.data.result);
       })
-      .catch(() => {});
+      .catch(() => { });
 
     const off = onOrderStatusUpdate(getToken, (order) => applyCancelled(order));
 
@@ -857,7 +857,7 @@ const CheckoutPage = () => {
   // ─── Empty cart state ────────────────────────────────────────────────────────
   if (cart.length === 0 && !showSuccess) {
     return (
-      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+      <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 relative overflow-hidden font-['Inter']">
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-brand-50/50 via-transparent to-transparent pointer-events-none" />
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-brand-100/30 rounded-full blur-3xl pointer-events-none animate-pulse" />
         <div className="absolute top-40 -left-20 w-60 h-60 bg-yellow-100/40 rounded-full blur-3xl pointer-events-none animate-pulse" />
@@ -913,7 +913,7 @@ const CheckoutPage = () => {
 
   // ─── Main checkout return ────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f5f1e8] pb-32 font-sans">
+    <div className="min-h-screen bg-[#f5f1e8] pb-32 font-['Inter']">
       {/* Order Success Overlay */}
       <CheckoutOrderSuccess orderId={orderId} show={showSuccess} />
 
@@ -929,7 +929,7 @@ const CheckoutPage = () => {
               <ChevronLeft size={28} className="text-white" />
             </button>
             <div className="flex flex-col items-center">
-              <h1 className="text-xl md:text-3xl font-[1000] text-white tracking-tight uppercase">Checkout</h1>
+              <h1 className="text-xl md:text-3xl font-[1000] text-white tracking-tight ">Checkout</h1>
               <div className="flex items-center gap-2 mt-1">
                 <span className="h-1.5 w-1.5 bg-brand-400 rounded-full animate-pulse" />
                 <p className="text-brand-100/90 text-[10px] md:text-xs font-black tracking-[0.2em] uppercase">
@@ -1091,16 +1091,15 @@ const CheckoutPage = () => {
                 key={addr.id}
                 onClick={() => handleSelectSavedAddress(addr)}
                 disabled={isResolvingAddressCoords}
-                className={`w-full p-4 rounded-2xl border-2 text-left transition-all ${
-                  currentAddress.id === addr.id
-                    ? "border-primary bg-brand-50 shadow-sm"
-                    : "border-slate-100 bg-white hover:border-slate-200"
-                }`}>
+                className={`w-full p-4 rounded-2xl border-2 text-left transition-all ${currentAddress.id === addr.id
+                  ? "border-primary bg-brand-50 shadow-sm"
+                  : "border-slate-100 bg-white hover:border-slate-200"
+                  }`}>
                 <div className="flex items-center gap-3 mb-2">
                   <div className={`p-2 rounded-full ${currentAddress.id === addr.id ? "bg-primary text-primary-foreground" : "bg-slate-100 text-slate-500"}`}>
                     <MapPin size={16} />
                   </div>
-                  <span className="font-black text-slate-800 uppercase tracking-widest text-[10px]">{addr.label}</span>
+                  <span className="font-black text-slate-800 tracking-widest text-[10px]">{addr.label}</span>
                 </div>
                 <p className="text-sm font-bold text-slate-800">{user?.name || currentAddress.name}</p>
                 <p className="text-xs text-slate-500 leading-relaxed mb-1">{addr.address}</p>

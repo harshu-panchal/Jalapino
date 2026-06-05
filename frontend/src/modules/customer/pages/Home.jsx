@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInViewAnimation } from "@/core/hooks/useInViewAnimation";
-import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 // MUI Icons (shared with admin & icon selector)
 import HomeIcon from "@mui/icons-material/Home";
@@ -35,7 +35,6 @@ import {
   MARQUEE_MESSAGES,
   ICON_COMPONENTS,
 } from "../constants/homeConstants";
-import PromoMarquee from "../components/home/PromoMarquee";
 import QuickCategorySlider from "../components/home/QuickCategorySlider";
 import LowestPriceSection from "../components/home/LowestPriceSection";
 import OfferSections from "../components/home/OfferSections";
@@ -139,9 +138,9 @@ const ALL_CATEGORY = {
   name: "All",
   icon: HomeIcon,
   theme: DEFAULT_CATEGORY_THEME,
-  headerColor: "#0e7490",
-  headerFontColor: "#111111",
-  headerIconColor: "#111111",
+  headerColor: "#1F2937",
+  headerFontColor: "#ffffff",
+  headerIconColor: "#ffffff",
   banner: {
     title: "HOUSEFULL",
     subtitle: "SALE",
@@ -182,6 +181,77 @@ const Home = () => {
   const heroRef = useRef(null);
   const [heroVisible, setHeroVisible] = useState(true);
 
+  // Search placeholder animation
+  const [searchPlaceholder, setSearchPlaceholder] = useState("Search ");
+  const [typingState, setTypingState] = useState({
+    textIndex: 0,
+    charIndex: 0,
+    isDeleting: false,
+    isPaused: false,
+  });
+
+  const staticText = "Search ";
+  const typingPhrases = [
+    '"bread"',
+    '"milk"',
+    '"chocolate"',
+    '"eggs"',
+    '"chips"',
+  ];
+
+  useEffect(() => {
+    const { textIndex, charIndex, isDeleting, isPaused } = typingState;
+    const currentPhrase = typingPhrases[textIndex];
+
+    if (isPaused) {
+      const timeout = setTimeout(() => {
+        setTypingState((prev) => ({
+          ...prev,
+          isPaused: false,
+          isDeleting: true,
+        }));
+      }, 2000);
+      return () => clearTimeout(timeout);
+    }
+
+    const timeout = setTimeout(
+      () => {
+        if (!isDeleting) {
+          if (charIndex < currentPhrase.length) {
+            setSearchPlaceholder(
+              staticText + currentPhrase.substring(0, charIndex + 1),
+            );
+            setTypingState((prev) => ({
+              ...prev,
+              charIndex: prev.charIndex + 1,
+            }));
+          } else {
+            setTypingState((prev) => ({ ...prev, isPaused: true }));
+          }
+        } else {
+          if (charIndex > 0) {
+            setSearchPlaceholder(
+              staticText + currentPhrase.substring(0, charIndex - 1),
+            );
+            setTypingState((prev) => ({
+              ...prev,
+              charIndex: prev.charIndex - 1,
+            }));
+          } else {
+            setTypingState((prev) => ({
+              ...prev,
+              isDeleting: false,
+              textIndex: (prev.textIndex + 1) % typingPhrases.length,
+            }));
+          }
+        }
+      },
+      isDeleting ? 50 : 100,
+    );
+
+    return () => clearTimeout(timeout);
+  }, [typingState]);
+
   useEffect(() => {
     if (typeof IntersectionObserver === "undefined") {
       setHeroVisible(true);
@@ -216,7 +286,7 @@ const Home = () => {
 
   useEffect(() => {
     if (products.length === 0 && !isLoading) {
-      import("@/assets/lottie/animation.json").then((m) => setNoServiceData(m.default)).catch(() => {});
+      import("@/assets/lottie/animation.json").then((m) => setNoServiceData(m.default)).catch(() => { });
     }
   }, [products.length, isLoading]);
 
@@ -249,6 +319,7 @@ const Home = () => {
       if (cached) {
         applyHomePageData(cached, { cacheKey, persist: false });
         setIsLoading(false);
+        await hydrateSelectedSectionProducts(cached.experienceSections, cached.products);
         return;
       }
     }
@@ -296,7 +367,7 @@ const Home = () => {
         const mergedAllCategory = allHeaderFromAdmin ? { ...ALL_CATEGORY, headerColor: allHeaderFromAdmin.headerColor || ALL_CATEGORY.headerColor, headerFontColor: allHeaderFromAdmin.headerFontColor || ALL_CATEGORY.headerFontColor, headerIconColor: allHeaderFromAdmin.headerIconColor || ALL_CATEGORY.headerIconColor, icon: allHeaderFromAdmin.icon || ALL_CATEGORY.icon } : ALL_CATEGORY;
         nextHomeData.categories = [mergedAllCategory, ...formattedHeaders.filter((h) => !((h.slug?.toLowerCase() === "all") || (h.name?.toLowerCase() === "all")))];
         nextHomeData.activeCategory = mergedAllCategory;
-        nextHomeData.quickCategories = dbCats.filter((cat) => cat.type === "category").map((cat) => ({ id: cat._id, name: cat.name, image: cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" }));
+        nextHomeData.quickCategories = dbCats.filter((cat) => cat.type === "category").map((cat) => ({ id: cat._id, name: cat.name, image: cat.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png", icon: cat.icon }));
       }
       if (prodRes.data.success) {
         const rawResult = prodRes.data.result;
@@ -307,13 +378,15 @@ const Home = () => {
       const sectionsList = sectionsRes?.data?.results || sectionsRes?.data?.result || sectionsRes?.data;
       nextHomeData.offerSections = Array.isArray(sectionsList) ? sectionsList : [];
       applyHomePageData(nextHomeData, { cacheKey });
+      await hydrateSelectedSectionProducts(nextHomeData.experienceSections, nextHomeData.products);
     } catch (error) { console.error("Error:", error); } finally { setIsLoading(false); }
   };
 
-  const hydrateSelectedSectionProducts = async (sections = []) => {
+  const hydrateSelectedSectionProducts = async (sections = [], existingProducts = null) => {
     const selectedProductIds = Array.from(new Set(sections.flatMap((s) => s?.displayType === "products" ? (s?.config?.products?.productIds || []) : []).map((id) => String(id || "").trim()).filter(Boolean)));
     if (!selectedProductIds.length) return;
-    const existingIds = new Set(productsRef.current.map((p) => String(p?._id || p?.id || "").trim()));
+    const currentProducts = existingProducts || productsRef.current || [];
+    const existingIds = new Set(currentProducts.map((p) => String(p?._id || p?.id || "").trim()));
     const missingIds = selectedProductIds.filter((id) => !existingIds.has(id));
     if (!missingIds.length) return;
     try {
@@ -321,7 +394,7 @@ const Home = () => {
       const missingResults = await Promise.allSettled(missingIds.map((id) => customerApi.getProductById(id, locationParams)));
       const fetchedMissing = missingResults.filter((r) => r.status === "fulfilled").flatMap((r) => { const p = r.value?.data?.result || r.value?.data?.results; return Array.isArray(p) ? p : (p ? [p] : []); }).map((p) => ({ ...p, id: p._id, image: p.mainImage || p.image || "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=400&h=400", price: p.salePrice || p.price, originalPrice: p.price, weight: p.weight || "1 unit", deliveryTime: "8-15 mins" }));
       if (fetchedMissing.length) setProducts((prev) => { const merged = [...prev]; const mergedIds = new Set(merged.map((p) => String(p?._id || p?.id || "").trim())); fetchedMissing.forEach((p) => { const key = String(p?._id || p?.id || "").trim(); if (!mergedIds.has(key)) { merged.push(p); mergedIds.add(key); } }); return merged; });
-    } catch (e) {}
+    } catch (e) { }
   };
 
   useEffect(() => { fetchData(); }, [currentLocation?.latitude, currentLocation?.longitude]);
@@ -364,7 +437,7 @@ const Home = () => {
     const firstUrl = heroConfig?.banners?.items?.[0]?.imageUrl;
     if (!firstUrl) return;
     const link = document.createElement("link");
-    link.rel = "preload"; link.as = "image"; link.href = applyCloudinaryTransform(firstUrl, "f_auto,q_auto,c_fill,g_auto,w_824,h_380");
+    link.rel = "preload"; link.as = "image"; link.href = applyCloudinaryTransform(firstUrl, "f_auto,q_auto,c_fill,g_north,w_1448,h_650");
     link.setAttribute("fetchpriority", "high"); document.head.appendChild(link);
     return () => { if (link.parentNode) link.parentNode.removeChild(link); };
   }, [heroConfig?.banners?.items?.[0]?.imageUrl]);
@@ -381,7 +454,7 @@ const Home = () => {
   const productsById = useMemo(() => { const map = {}; products.forEach((p) => { map[p._id || p.id] = p; }); return map; }, [products]);
   const effectiveQuickCategories = useMemo(() => {
     const ids = heroConfig.categoryIds || [];
-    if (ids.length > 0) { const resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id, name: c.name, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png" })); if (resolved.length > 0) return resolved; }
+    if (ids.length > 0) { const resolved = ids.map((id) => categoryMap[id]).filter(Boolean).map((c) => ({ id: c._id, name: c.name, image: c.image || "https://cdn-icons-png.flaticon.com/128/2321/2321831.png", icon: c.icon })); if (resolved.length > 0) return resolved; }
     return quickCategories;
   }, [heroConfig.categoryIds, categoryMap, quickCategories]);
 
@@ -405,9 +478,9 @@ const Home = () => {
   };
 
   return (
-    <div className={`min-h-screen pt-[190px] md:pt-[250px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#F5F7F8]"}`}>
+    <div className={`min-h-screen pt-[108px] md:pt-[120px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
-        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} />
+        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} />
       </div>
 
       {products.length === 0 && !isLoading ? (
@@ -419,29 +492,39 @@ const Home = () => {
         </div>
       ) : (
         <>
-          <motion.div ref={heroRef} className="block md:hidden will-change-transform" style={isMobile ? { opacity: 1 } : { opacity, y, scale, pointerEvents }}>
-            <div className="relative w-full overflow-hidden">
-              {heroConfig.banners?.items?.length ? (
-                <ExperienceBannerCarousel section={{ title: "" }} items={heroConfig.banners.items} fullWidth edgeToEdge />
-              ) : (
-                <div className="w-full h-[190px] bg-[#ecfeff] p-6 relative overflow-hidden flex items-center border-y border-primary/10 shadow-sm">
-                  <div className="relative z-10 w-3/5 flex flex-col items-start gap-2">
-                    <h4 className="text-2xl font-black text-[#1A1A1A] tracking-tight">Get <span className="text-primary">Products</span></h4>
-                    <button className="bg-[#FF1E56] text-white px-6 py-2.5 rounded-2xl font-black text-xs tracking-wide">Order now</button>
-                  </div>
-                  <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full blur-2xl -mt-12 -mr-12" />
-                </div>
-              )}
-            </div>
-          </motion.div>
+          {/* Search Bar on Page (above banners) */}
+          <div className="w-full max-w-2xl mx-auto px-4 pt-8 md:pt-12 pb-8 md:pb-12">
+            <motion.div
+              onClick={() => navigate("/search")}
+              whileHover={{ scale: 1.005 }}
+              whileTap={{ scale: 0.995 }}
+              style={{ backgroundColor: "#FFFFFF" }}
+              className="w-full rounded-[12px] md:rounded-full px-4 h-12 shadow-sm border border-slate-200 flex items-center cursor-pointer transition-all hover:shadow-md"
+            >
+              <Search className="text-slate-400 w-5 h-5 mr-3 shrink-0" />
+              <input
+                type="text"
+                placeholder={searchPlaceholder || "Search Products..."}
+                readOnly
+                className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm md:text-base cursor-pointer"
+              />
+            </motion.div>
+          </div>
 
-          <PromoMarquee />
+          {heroConfig.banners?.items?.length > 0 && (
+            <motion.div ref={heroRef} className="block md:hidden will-change-transform" style={isMobile ? { opacity: 1 } : { opacity, y, scale, pointerEvents }}>
+              <div className="relative w-full overflow-hidden">
+                <ExperienceBannerCarousel section={{ title: "" }} items={heroConfig.banners.items} fullWidth edgeToEdge />
+              </div>
+            </motion.div>
+          )}
+
           <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} />
           <LowestPriceSection products={products} onSeeAll={() => navigate("/category/all")} />
           <OfferSections sections={offerSections} noServiceData={noServiceData} />
 
           {sectionsForRenderer.length > 0 && (
-            <div className="container mx-auto px-4 md:px-8 lg:px-[50px] py-10 md:py-16">
+            <div className="container mx-auto px-4 md:px-8 lg:px-[50px] pt-0 pb-10 md:pt-0 md:pb-16">
               <SectionRenderer sections={sectionsForRenderer} productsById={productsById} categoriesById={categoryMap} subcategoriesById={subcategoryMap} />
             </div>
           )}

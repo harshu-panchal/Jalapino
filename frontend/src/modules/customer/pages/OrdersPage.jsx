@@ -40,7 +40,7 @@ const OrdersPage = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+            <div className="min-h-screen flex items-center justify-center bg-[#FAF8F6]">
                 <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-white shadow-sm border border-slate-100">
                     <Loader2 className="animate-spin text-brand-600" size={22} />
                     <span className="text-sm font-medium text-slate-600">Loading your orders…</span>
@@ -50,15 +50,25 @@ const OrdersPage = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-24">
-            <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm px-4 pt-4 pb-3 border-b border-slate-200/60 mb-4 flex items-center gap-2">
+        <div className="min-h-screen bg-[#FAF8F6] pb-24">
+            <div 
+                style={{
+                    background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                    backdropFilter: "blur(20px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderBottomLeftRadius: "20px",
+                    borderBottomRightRadius: "20px",
+                }}
+                className="sticky top-0 z-30 px-4 py-3 flex items-center gap-2 mb-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+            >
                 <button
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-slate-200/70 rounded-full transition-colors -ml-1"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors -ml-1"
                 >
-                    <ChevronLeft size={22} className="text-slate-800" />
+                    <ChevronLeft size={22} className="text-white" />
                 </button>
-                <h1 className="text-xl font-semibold text-slate-900 tracking-tight">My Orders</h1>
+                <h1 className="text-xl font-bold text-white tracking-tight font-['Inter']">My Orders</h1>
             </div>
 
             <div className="space-y-4 px-4 pb-2">

@@ -48,11 +48,10 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
             <button
               key={tip.value}
               onClick={() => onSelectTip(tip.value)}
-              className={`py-2 rounded-xl border-2 transition-all font-bold text-sm ${
-                selectedTip === tip.value
-                  ? "border-pink-500 bg-pink-100 text-pink-700"
-                  : "border-pink-200 bg-white text-slate-700 hover:border-pink-300"
-              }`}>
+              className={`py-2 rounded-xl border-2 transition-all font-bold text-sm ${selectedTip === tip.value
+                ? "border-pink-500 bg-pink-100 text-pink-700"
+                : "border-pink-200 bg-white text-slate-700 hover:border-pink-300"
+                }`}>
               {tip.label}
             </button>
           ))}
@@ -65,14 +64,14 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
           <div className="h-10 w-10 rounded-2xl bg-brand-50 flex items-center justify-center">
             <Clipboard size={20} className="text-primary" />
           </div>
-          <h3 className="font-[1000] text-slate-800 text-xl tracking-tight uppercase">
+          <h3 className="font-[1000] text-slate-800 text-xl tracking-tight">
             Order Summary
           </h3>
         </div>
 
         <div className="space-y-4">
           <div className="flex justify-between items-center px-2">
-            <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
+            <span className="text-slate-500 font-bold text-[13px] tracking-wider">
               Item Total
             </span>
             <span className="font-black text-slate-800">
@@ -80,7 +79,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
             </span>
           </div>
           <div className="flex justify-between items-center px-2">
-            <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
+            <span className="text-slate-500 font-bold text-[13px] tracking-wider">
               Delivery Fee
             </span>
             <span className="font-black text-slate-800">₹{deliveryFee}</span>
@@ -95,7 +94,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                     ? ` (billed ${pricingPreview.distanceKmRounded.toFixed(2)} km)`
                     : ""}
                 </span>
-                <span className="uppercase tracking-wider">
+                <span className=" tracking-wider">
                   {pricingPreview?.snapshots?.deliverySettings?.deliveryPricingMode ||
                     pricingPreview?.snapshots?.deliverySettings?.pricingMode ||
                     ""}
@@ -103,13 +102,13 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
               </div>
             )}
           <div className="flex justify-between items-center px-2">
-            <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
+            <span className="text-slate-500 font-bold text-[13px] tracking-wider">
               Handling Fee
             </span>
             <span className="font-black text-slate-800">₹{handlingFee}</span>
           </div>
           <div className="flex justify-between items-center px-2">
-            <span className="text-slate-500 font-bold text-[13px] uppercase tracking-wider">
+            <span className="text-slate-500 font-bold text-[13px] tracking-wider">
               Tax
             </span>
             <span className="font-black text-slate-800">₹{taxAmount}</span>
@@ -120,7 +119,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex justify-between items-center px-3 py-2 bg-brand-50 rounded-xl border border-brand-100">
-              <span className="text-primary font-black text-xs flex items-center gap-2 uppercase tracking-wider">
+              <span className="text-primary font-black text-xs flex items-center gap-2 tracking-wider">
                 <Tag size={14} />
                 Coupon Reserved
               </span>
@@ -143,7 +142,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
               initial={{ opacity: 0, x: -5 }}
               animate={{ opacity: 1, x: 0 }}
               className="flex justify-between items-center px-3 py-2 bg-brand-50 rounded-xl border border-brand-100 mb-2">
-              <span className="text-primary font-black text-[11px] flex items-center gap-2 uppercase tracking-tight">
+              <span className="text-primary font-black text-[11px] flex items-center gap-2 tracking-tight">
                 <Wallet size={14} />
                 Wallet Applied
               </span>
@@ -154,10 +153,10 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
           <div className="mt-4 pt-6 border-t-2 border-dashed border-slate-100">
             <div className="flex justify-between items-center">
               <div className="flex flex-col">
-                <span className="font-[1000] text-slate-800 text-lg uppercase tracking-tight">
+                <span className="font-[1000] text-slate-800 text-lg tracking-tight">
                   {finalAmountToPay === 0 ? "Fully Covered" : "Total Payable"}
                 </span>
-                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-[0.2em]">
+                <span className="text-[10px] text-slate-400 font-bold tracking-[0.2em]">
                   {finalAmountToPay === 0 ? "Paid via Wallet" : "Safe & Secure Payment"}
                 </span>
               </div>

@@ -33,7 +33,7 @@ const ApplicationPending = () => {
   const isRejected = applicationStatus === "rejected";
 
   return (
-    <div className="min-h-screen bg-slate-950 relative overflow-hidden font-['Outfit']">
+    <div className="min-h-screen bg-slate-950 relative overflow-hidden font-sans">
       <div className="absolute inset-0">
         <div className="absolute top-[-20%] right-[-10%] h-[420px] w-[420px] rounded-full bg-amber-400/10 blur-3xl" />
         <div className="absolute bottom-[-20%] left-[-10%] h-[420px] w-[420px] rounded-full bg-brand-400/10 blur-3xl" />

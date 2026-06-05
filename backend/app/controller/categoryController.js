@@ -59,7 +59,7 @@ export const getCategories = async (req, res) => {
       const categories = await getOrSet(
         cacheKey,
         async () => {
-          const selectFields = "name slug image iconId type parentId headerColor headerFontColor headerIconColor";
+          const selectFields = "name slug image icon iconId type parentId headerColor headerFontColor headerIconColor";
           return Category.find({ type: "header" })
             .select(selectFields)
             .populate({
@@ -145,7 +145,7 @@ export const getCategories = async (req, res) => {
 export const createCategory = async (req, res) => {
   try {
     const categoryData = {};
-    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "iconId", "headerColor", "headerFontColor", "headerIconColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
+    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "icon", "iconId", "headerColor", "headerFontColor", "headerIconColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
     
     // Strict Whitelisting and Sanitization
     for (const key of allowedKeys) {
@@ -159,22 +159,40 @@ export const createCategory = async (req, res) => {
       }
     }
     
-    // Handle Images
-    if (req.file) {
+    // Handle Images & Icons
+    const imageFile = req.files?.["image"]?.[0];
+    const iconFile = req.files?.["icon"]?.[0];
+
+    if (imageFile) {
       try {
-        const url = await uploadToCloudinary(req.file.buffer, "categories", {
-          mimeType: req.file.mimetype,
+        const url = await uploadToCloudinary(imageFile.buffer, "categories", {
+          mimeType: imageFile.mimetype,
           resourceType: "image",
         });
         categoryData.image = url;
       } catch (err) {
-        console.error("Cloudinary upload failed for category:", err);
+        console.error("Cloudinary upload failed for category image:", err);
       }
     } else if (typeof req.body.image === 'string' && req.body.image.startsWith('http')) {
       categoryData.image = req.body.image;
     } else {
-       // FORCED FIX: Ensure no phantom object remains
        delete categoryData.image; 
+    }
+
+    if (iconFile) {
+      try {
+        const url = await uploadToCloudinary(iconFile.buffer, "categories", {
+          mimeType: iconFile.mimetype,
+          resourceType: "image",
+        });
+        categoryData.icon = url;
+      } catch (err) {
+        console.error("Cloudinary upload failed for category icon:", err);
+      }
+    } else if (typeof req.body.icon === 'string' && req.body.icon.startsWith('http')) {
+      categoryData.icon = req.body.icon;
+    } else {
+       delete categoryData.icon;
     }
 
     // Explicitly validate Parent ID hierarchy
@@ -226,7 +244,7 @@ export const updateCategory = async (req, res) => {
     }
 
     const categoryData = {};
-    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "iconId", "headerColor", "headerFontColor", "headerIconColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
+    const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "icon", "iconId", "headerColor", "headerFontColor", "headerIconColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue"];
     
     for (const key of allowedKeys) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
@@ -238,15 +256,18 @@ export const updateCategory = async (req, res) => {
       }
     }
 
-    if (req.file) {
+    const imageFile = req.files?.["image"]?.[0];
+    const iconFile = req.files?.["icon"]?.[0];
+
+    if (imageFile) {
       try {
-        const url = await uploadToCloudinary(req.file.buffer, "categories", {
-          mimeType: req.file.mimetype,
+        const url = await uploadToCloudinary(imageFile.buffer, "categories", {
+          mimeType: imageFile.mimetype,
           resourceType: "image",
         });
         categoryData.image = url;
       } catch (err) {
-        console.error("Cloudinary upload failed for category update:", err);
+        console.error("Cloudinary upload failed for category image update:", err);
         return handleResponse(res, 400, `Image update failed: ${err.message}`);
       }
     } else if (typeof req.body.image === 'string' && req.body.image.startsWith('http')) {
@@ -255,6 +276,25 @@ export const updateCategory = async (req, res) => {
         categoryData.image = "";
     } else {
         if (req.body.image && typeof req.body.image === 'object') delete categoryData.image;
+    }
+
+    if (iconFile) {
+      try {
+        const url = await uploadToCloudinary(iconFile.buffer, "categories", {
+          mimeType: iconFile.mimetype,
+          resourceType: "image",
+        });
+        categoryData.icon = url;
+      } catch (err) {
+        console.error("Cloudinary upload failed for category icon update:", err);
+        return handleResponse(res, 400, `Icon update failed: ${err.message}`);
+      }
+    } else if (typeof req.body.icon === 'string' && req.body.icon.startsWith('http')) {
+      categoryData.icon = req.body.icon;
+    } else if (req.body.icon === "") {
+        categoryData.icon = "";
+    } else {
+        if (req.body.icon && typeof req.body.icon === 'object') delete categoryData.icon;
     }
 
     const existing = await Category.findById(id).select("type parentId").lean();

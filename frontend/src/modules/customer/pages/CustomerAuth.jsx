@@ -145,7 +145,7 @@ const CustomerAuth = () => {
     };
 
     return (
-        <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit',_sans-serif] overflow-hidden">
+        <div className="min-h-screen w-full relative flex items-center justify-center font-sans overflow-hidden">
 
             {/* Dynamic Atmospheric Background */}
             <div 

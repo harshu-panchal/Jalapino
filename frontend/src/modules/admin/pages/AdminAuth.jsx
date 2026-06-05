@@ -110,7 +110,7 @@ const AdminAuth = () => {
     };
 
     return (
-        <div className="flex min-h-screen items-center justify-center bg-[#f3f6ff] p-6 font-['Outfit',_sans-serif]">
+        <div className="flex min-h-screen items-center justify-center bg-[#f3f6ff] p-6 font-sans">
             {/* Background Decorations */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute top-[-20%] left-[-10%] w-[800px] h-[800px] bg-brand-50 opacity-40 rounded-full blur-[120px]"></div>

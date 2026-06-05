@@ -142,7 +142,7 @@ const SellerProfile = () => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto p-4 md:p-8 font-['Outfit']">
+    <div className="max-w-5xl mx-auto p-4 md:p-8 font-sans">
       {/* Header Section */}
       <div className="relative mb-24 px-4">
         {/* Banner Background */}

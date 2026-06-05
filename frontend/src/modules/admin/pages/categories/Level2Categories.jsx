@@ -55,6 +55,10 @@ const Level2Categories = () => {
   const [previewUrl, setPreviewUrl] = useState(null);
   const fileInputRef = useRef(null);
 
+  const [iconFile, setIconFile] = useState(null);
+  const [previewIconUrl, setPreviewIconUrl] = useState(null);
+  const fileInputIconRef = useRef(null);
+
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -140,6 +144,14 @@ const Level2Categories = () => {
     }
   };
 
+  const handleIconChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setIconFile(file);
+      setPreviewIconUrl(URL.createObjectURL(file));
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.name || !formData.slug || !formData.parentId) {
       toast.error("Name, slug and parent header are required");
@@ -163,6 +175,14 @@ const Level2Categories = () => {
         data.append("image", imageFile);
       } else if (previewUrl && !previewUrl.startsWith("blob:")) {
         data.append("image", previewUrl);
+      }
+
+      if (iconFile) {
+        data.append("icon", iconFile);
+      } else if (previewIconUrl && !previewIconUrl.startsWith("blob:")) {
+        data.append("icon", previewIconUrl);
+      } else {
+        data.append("icon", "");
       }
 
       if (editingItem) {
@@ -210,6 +230,8 @@ const Level2Categories = () => {
     });
     setImageFile(null);
     setPreviewUrl(null);
+    setIconFile(null);
+    setPreviewIconUrl(null);
     setIsAddModalOpen(true);
   };
 
@@ -224,6 +246,9 @@ const Level2Categories = () => {
       parentId: item.parentId?._id || item.parentId || "",
     });
     setPreviewUrl(item.image || null);
+    setPreviewIconUrl(item.icon || null);
+    setImageFile(null);
+    setIconFile(null);
     setIsAddModalOpen(true);
   };
 
@@ -362,6 +387,9 @@ const Level2Categories = () => {
                   Image
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Icon
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -381,13 +409,13 @@ const Level2Categories = () => {
             <tbody className="divide-y divide-gray-100">
               {isLoading ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-gray-500">
+                  <td colSpan="8" className="text-center py-8 text-gray-500">
                     Loading...
                   </td>
                 </tr>
               ) : filteredCategories.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="text-center py-8 text-gray-500">
+                  <td colSpan="8" className="text-center py-8 text-gray-500">
                     No categories found
                   </td>
                 </tr>
@@ -414,6 +442,19 @@ const Level2Categories = () => {
                           />
                         ) : (
                           <Image className="w-5 h-5 text-gray-400" />
+                        )}
+                      </div>
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden flex items-center justify-center border border-gray-200">
+                        {cat.icon ? (
+                          <img
+                            src={typeof cat.icon === 'string' ? cat.icon : (cat.icon.url || cat.icon.secure_url || cat.icon)}
+                            alt={cat.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-gray-400 font-medium">None</span>
                         )}
                       </div>
                     </td>
@@ -494,33 +535,90 @@ const Level2Categories = () => {
               </div>
 
               <div className="p-6 space-y-4">
-                {/* Image Upload */}
-                <div className="flex justify-center">
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className="w-24 h-24 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-500 overflow-hidden transition-colors">
-                    {previewUrl ? (
-                      <img
-                        src={previewUrl}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-center">
-                        <Image className="w-8 h-8 text-gray-400 mx-auto" />
-                        <span className="text-xs text-gray-500 mt-1">
-                          Upload
-                        </span>
-                      </div>
-                    )}
+                {/* Image & Icon Upload */}
+                <div className="flex justify-center gap-8">
+                  {/* Image Upload */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Main Image</span>
+                    <div
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-24 h-24 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-500 overflow-hidden transition-colors relative group">
+                      {previewUrl ? (
+                        <>
+                          <img
+                            src={previewUrl}
+                            alt="Preview"
+                            className="w-full h-full object-cover"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Upload className="w-5 h-5 text-white" />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="text-center">
+                          <Image className="w-8 h-8 text-gray-400 mx-auto" />
+                          <span className="text-xs text-gray-500 mt-1">Upload</span>
+                        </div>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      className="hidden"
+                      onChange={handleImageChange}
+                      accept="image/*"
+                    />
                   </div>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    onChange={handleImageChange}
-                    accept="image/*"
-                  />
+
+                  {/* Icon Upload */}
+                  <div className="flex flex-col items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Slider Icon</span>
+                    <div className="relative group">
+                      <div
+                        onClick={() => fileInputIconRef.current?.click()}
+                        className="w-24 h-24 rounded-full bg-gray-50 border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:border-brand-500 overflow-hidden transition-colors relative">
+                        {previewIconUrl ? (
+                          <>
+                            <img
+                              src={previewIconUrl}
+                              alt="Icon Preview"
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                              <Upload className="w-5 h-5 text-white" />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center">
+                            <Image className="w-8 h-8 text-gray-400 mx-auto" />
+                            <span className="text-xs text-gray-500 mt-1">Upload</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {previewIconUrl && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIconFile(null);
+                            setPreviewIconUrl(null);
+                          }}
+                          className="absolute -top-1 -right-1 bg-red-100 hover:bg-red-200 text-red-600 p-1.5 rounded-full shadow-md transition-colors cursor-pointer z-10"
+                          title="Remove Icon"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    <input
+                      type="file"
+                      ref={fileInputIconRef}
+                      className="hidden"
+                      onChange={handleIconChange}
+                      accept="image/*"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

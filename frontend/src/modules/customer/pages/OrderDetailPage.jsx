@@ -583,7 +583,7 @@ const OrderDetailPage = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+      <div className="min-h-screen flex items-center justify-center bg-[#FAF8F6]">
         <Loader2 className="animate-spin text-brand-600" size={32} />
       </div>
     );
@@ -750,7 +750,7 @@ const OrderDetailPage = () => {
 
   if (!order) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-b from-slate-50 to-white">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#FAF8F6]">
         <Package size={64} className="text-slate-300 mb-4" />
         <h3 className="text-lg font-bold text-slate-800">Order not found</h3>
         <Link to="/orders" className="text-brand-600 font-bold mt-4 hover:text-brand-700">
@@ -761,19 +761,29 @@ const OrderDetailPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-white pb-24 font-sans">
+    <div className="min-h-screen bg-[#FAF8F6] pb-24 font-sans">
       {/* Minimal Header */}
-      <div className="bg-white/80 backdrop-blur-md sticky top-0 z-30 px-4 py-3 flex items-center justify-between border-b border-slate-100">
+      <div 
+        style={{
+          background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+          backdropFilter: "blur(20px) saturate(180%)",
+          WebkitBackdropFilter: "blur(20px) saturate(180%)",
+          borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+          borderBottomLeftRadius: "20px",
+          borderBottomRightRadius: "20px",
+        }}
+        className="sticky top-0 z-30 px-4 py-3 flex items-center justify-between shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+      >
         <button
           type="button"
           onClick={handleBack}
-          className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors"
+          className="p-2 -ml-2 rounded-full hover:bg-white/10 transition-colors"
         >
-          <ChevronLeft size={24} className="text-slate-800" />
+          <ChevronLeft size={24} className="text-white" />
         </button>
         <div className="flex-1 text-center">
-          <h1 className="text-base font-bold text-slate-800">Order</h1>
-          <p className="text-xs text-slate-500 font-medium">#{order.orderId.slice(-8)}</p>
+          <h1 className="text-base font-bold text-white font-['Inter']">Order</h1>
+          <p className="text-xs text-white/70 font-medium font-['Inter']">#{order.orderId.slice(-8)}</p>
         </div>
         <div className="w-10" />
       </div>

@@ -85,6 +85,7 @@ export const addToCart = async (req, res) => {
 
     const itemIndex = cart.items.findIndex(
       (item) =>
+        item.productId &&
         item.productId.toString() === productId &&
         String(item.variantSku || "").trim() === normalizedVariantSku,
     );
@@ -121,6 +122,7 @@ export const updateQuantity = async (req, res) => {
 
     const itemIndex = cart.items.findIndex(
       (item) =>
+        item.productId &&
         item.productId.toString() === productId &&
         String(item.variantSku || "").trim() === normalizedVariantSku,
     );
@@ -159,6 +161,7 @@ export const removeFromCart = async (req, res) => {
     }
 
     cart.items = cart.items.filter((item) => {
+      if (!item.productId) return false;
       if (item.productId.toString() !== productId) return true;
       // If variantSku is provided, remove only that variant line.
       if (normalizedVariantSku) {

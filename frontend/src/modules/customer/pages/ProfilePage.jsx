@@ -98,24 +98,34 @@ const ProfilePage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 pb-24 md:pb-8 font-sans">
-            <div className="sticky top-0 z-30 bg-slate-50/95 backdrop-blur-sm px-4 pt-4 pb-3 border-b border-slate-200/60 mb-4 flex items-center gap-2">
+        <div className="min-h-screen bg-[#FAF8F6] pb-24 md:pb-8 font-sans">
+            <div 
+                style={{
+                    background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                    backdropFilter: "blur(20px) saturate(180%)",
+                    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
+                    borderBottomLeftRadius: "20px",
+                    borderBottomRightRadius: "20px",
+                }}
+                className="sticky top-0 z-30 px-4 py-3 flex items-center gap-2 mb-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
+            >
                 <button
                     onClick={() => navigate(-1)}
-                    className="w-10 h-10 flex items-center justify-center hover:bg-slate-200/70 rounded-full transition-colors -ml-1"
+                    className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors -ml-1"
                 >
-                    <ChevronLeft size={22} className="text-slate-800" />
+                    <ChevronLeft size={22} className="text-white" />
                 </button>
-                <h1 className="text-xl font-semibold text-slate-900 tracking-tight">My Profile</h1>
+                <h1 className="text-xl font-bold text-white tracking-tight font-['Inter']">My Profile</h1>
                 <div className="ml-auto flex items-center gap-2">
                     <button
                         type="button"
                         onClick={handleTestPush}
                         disabled={isTestingPush}
                         title="Test push notification"
-                        className="w-10 h-10 flex items-center justify-center rounded-full transition-colors border border-slate-200 bg-white hover:bg-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                        className="w-10 h-10 flex items-center justify-center rounded-full transition-colors border border-white/10 bg-white/10 hover:bg-white/20 disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                        <Bell size={18} className={isTestingPush ? "text-slate-400" : "text-slate-700"} />
+                        <Bell size={18} className={isTestingPush ? "text-white/40" : "text-white"} />
                     </button>
                 </div>
             </div>

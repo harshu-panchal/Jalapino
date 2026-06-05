@@ -47,7 +47,7 @@ const MiniCart = () => {
                             style={{
                                 backgroundColor: "var(--customer-mini-cart-color, var(--primary))",
                             }}
-                            className="flex items-center gap-2 text-white py-1.5 px-2.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] hover:scale-[1.02] active:scale-95 transition-all group border border-white/10 relative overflow-hidden"
+                            className="flex items-center gap-2 text-white py-1.5 px-2.5 rounded-full shadow-[0_10px_30px_rgba(0,0,0,0.22)] hover:scale-[1.02] active:scale-95 transition-all group border border-white/10 relative overflow-hidden font-['Inter']"
                         >
                             <div className="absolute inset-0 overflow-hidden rounded-full pointer-events-none">
                                 <div className="mini-cart-shimmer absolute inset-y-0 left-[-40%] w-[40%] bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-[-20deg]" />

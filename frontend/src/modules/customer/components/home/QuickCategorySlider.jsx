@@ -1,12 +1,11 @@
 import React, { useRef } from "react";
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { QUICK_CATEGORY_PALETTES } from "../../constants/homeConstants";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
-import QuickCategoriesBg from "@/assets/Catagorysection_bg.png";
 
 const QuickCategorySlider = ({ categories, onCategoryClick }) => {
   const scrollRef = useRef(null);
+  const navigate = useNavigate();
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -18,76 +17,74 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
   if (!categories || categories.length === 0) return null;
 
   return (
-    <div className="w-full mb-5 -mt-[24px] md:mt-3 overflow-hidden relative group z-20">
-      <div
-        className="relative overflow-hidden bg-white shadow-[0_14px_28px_rgba(15,23,42,0.09)]"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(255,255,255,0.78) 0%, rgba(255,255,255,0.65) 100%), url(${QuickCategoriesBg})`,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-        }}>
-        <div className="absolute inset-0 bg-white/10 pointer-events-none" />
-
-        <div className="relative z-10 px-4 pt-2.5 pb-0.5 md:px-8 md:pt-4">
-          <h2 className="text-center text-[17px] md:text-[20px] font-bold tracking-tight text-[#132018] leading-none">
-            Quick categories
+    <div className="w-full mb-0 mt-8 md:mt-12 overflow-hidden relative group z-20 font-['Inter'] bg-[#FAF8F6] pt-0 pb-5 md:pb-6">
+      <div className="container mx-auto px-4 md:px-8 lg:px-[50px] relative">
+        
+        <div className="flex justify-between items-center mb-6 md:mb-8 px-1">
+          <h2 className="text-lg md:text-[22px] font-black tracking-tight text-[#8B1E24] leading-none font-['Inter']">
+            Shop by Categories
           </h2>
-        </div>
-
-        {/* Left Scroll Button */}
-        <div className="absolute left-4 lg:left-10 top-[58%] -translate-y-1/2 z-20 hidden md:flex">
           <button
-            onClick={() => scroll("left")}
-            className="h-10 w-10 bg-white/90 backdrop-blur-md shadow-xl rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
-            <ChevronLeft size={22} strokeWidth={3} />
+            onClick={() => navigate("/categories")}
+            className="flex items-center gap-0.5 text-xs font-bold text-[#8B1E24] hover:opacity-80 transition-opacity cursor-pointer leading-none">
+            View All
+            <ChevronRight size={12} strokeWidth={3} className="ml-0.5" />
           </button>
         </div>
 
+        {/* Left Scroll Button */}
+        <div className="absolute left-1 top-[60%] -translate-y-1/2 z-20 hidden md:flex">
+          <button
+            onClick={() => scroll("left")}
+            className="h-8 w-8 bg-white/90 backdrop-blur-md shadow-md rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
+            <ChevronLeft size={18} strokeWidth={3} />
+          </button>
+        </div>
+
+        {/* Categories container */}
         <div
           ref={scrollRef}
-          className="relative z-10 flex items-start gap-2 md:gap-3 lg:gap-4 overflow-x-auto no-scrollbar px-4 pb-2 pt-1 md:px-8 md:pb-4 snap-x scroll-smooth">
-          {categories.map((cat, idx) => {
-            const palette = QUICK_CATEGORY_PALETTES[idx % QUICK_CATEGORY_PALETTES.length];
+          className="relative z-10 flex items-start gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-2 pt-1 snap-x scroll-smooth">
+          {categories.map((cat) => {
             return (
               <div
                 key={cat.id}
                 onClick={() => onCategoryClick(cat.id)}
-                className="flex flex-col items-center gap-0.5 min-w-[74px] md:min-w-[104px] lg:min-w-[120px] cursor-pointer group/item snap-start transition-transform active:scale-95">
-                <div
-                  className="relative w-[74px] h-[84px] md:w-[104px] md:h-[116px] lg:w-[120px] lg:h-[132px] rounded-[18px] md:rounded-[22px] shadow-[0_8px_18px_rgba(15,23,42,0.10)] border flex items-start justify-center p-1.5 md:p-2 transition-all duration-300 group-hover/item:-translate-y-1 group-hover/item:shadow-[0_16px_30px_rgba(15,23,42,0.14)] overflow-hidden smooth-transform"
-                  style={{
-                    backgroundImage: `linear-gradient(135deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.6) 24%, rgba(255,255,255,0.15) 100%), linear-gradient(135deg, ${palette.bgFrom}, ${palette.bgVia}, ${palette.bgTo})`,
-                    borderColor: palette.frameColor,
-                  }}>
-                  <div
-                    className="absolute inset-0 opacity-40 pointer-events-none"
-                    style={{ backgroundColor: palette.glowColor }}
-                  />
-                  <img
-                    src={applyCloudinaryTransform(cat.image, "f_auto,q_auto,w_150")}
-                    alt={cat.name}
-                    loading="lazy"
-                    className="absolute left-1/2 top-2.5 md:top-3 z-10 h-[56px] w-[56px] md:h-[64px] md:w-[64px] -translate-x-1/2 object-contain drop-shadow-[0_5px_12px_rgba(0,0,0,0.10)] mix-blend-multiply group-hover/item:scale-110 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-x-1.5 md:inset-x-2 bottom-1.5 z-20 text-center">
-                    <span className="block text-[9px] md:text-[10px] lg:text-[11px] font-semibold text-[#1f2b20] leading-tight whitespace-nowrap overflow-hidden text-ellipsis drop-shadow-[0_1px_0_rgba(255,255,255,0.65)] group-hover/item:text-primary transition-colors">
-                      {cat.name}
-                    </span>
-                  </div>
+                className="flex flex-col items-center cursor-pointer group/item snap-start min-w-[70px] sm:min-w-[88px] max-w-[96px] transition-transform active:scale-95">
+                
+                {/* Styled Circle Container */}
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#FFFFFF] border border-[#E7DDD5] flex items-center justify-center transition-all duration-300 group-hover/item:scale-105 group-hover/item:border-[#d0bfb2] shadow group-hover/item:shadow-md">
+                  {cat.icon || cat.image ? (
+                    <img
+                      src={applyCloudinaryTransform(cat.icon || cat.image, "f_auto,q_auto,w_150")}
+                      alt={cat.name}
+                      loading="lazy"
+                      className="h-10 w-10 sm:h-12 sm:w-12 object-contain mix-blend-multiply"
+                    />
+                  ) : (
+                    <div className="h-6 w-6 rounded-full bg-slate-300" />
+                  )}
                 </div>
+
+                {/* Text Label Below Circle */}
+                <span className="text-center text-[10px] sm:text-[11px] md:text-xs font-bold text-[#374151] line-clamp-2 leading-tight block mt-2.5 w-full px-1 group-hover/item:text-primary transition-colors">
+                  {cat.name}
+                </span>
+
               </div>
             );
           })}
         </div>
 
         {/* Right Scroll Button */}
-        <div className="absolute right-4 lg:right-10 top-[58%] -translate-y-1/2 z-20 hidden md:flex">
+        <div className="absolute right-1 top-[60%] -translate-y-1/2 z-20 hidden md:flex">
           <button
             onClick={() => scroll("right")}
-            className="h-10 w-10 bg-white/90 backdrop-blur-md shadow-xl rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
-            <ChevronRight size={22} strokeWidth={3} />
+            className="h-8 w-8 bg-white/90 backdrop-blur-md shadow-md rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
+            <ChevronRight size={18} strokeWidth={3} />
           </button>
         </div>
+
       </div>
     </div>
   );

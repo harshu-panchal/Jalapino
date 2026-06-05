@@ -158,7 +158,7 @@ const ProductCard = React.memo(
     return (
       <div
         className={cn(
-          "flex-shrink-0 w-full rounded-xl sm:rounded-2xl overflow-hidden flex flex-col h-full shadow-sm cursor-pointer transition-all duration-300 hover:scale-[1.02]",
+          "flex-shrink-0 w-full rounded-xl sm:rounded-2xl overflow-hidden flex flex-col h-full shadow-sm cursor-pointer transition-all duration-300 hover:scale-[1.02] font-['Inter']",
           compact
             ? "bg-white border-[1.5px] border-brand-50 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.08)]"
             : neutralBg
@@ -241,8 +241,8 @@ const ProductCard = React.memo(
           className={cn(
             "flex flex-col flex-1",
             compact
-              ? "p-2 pt-1 gap-0"
-              : "bg-white/40 p-1.5 pt-2 sm:p-3 sm:pt-4 gap-0.5",
+              ? "p-3 pt-2.5 sm:p-3.5 sm:pt-3.5 gap-0.5"
+              : "bg-white/40 p-3.5 pt-4 sm:p-5 sm:pt-5 gap-1",
           )}>
           <div className="flex items-center gap-1 mb-0.5 sm:gap-1.5 sm:mb-1">
             <div
@@ -276,78 +276,71 @@ const ProductCard = React.memo(
             </h4>
           </div>
 
-          {/* Delivery Time & Unit info */}
-          <div className="flex items-center gap-1 text-gray-500 mt-0.5 mb-1 sm:gap-1.5 sm:mt-1 sm:mb-2">
-            <Clock size={compact ? 9 : 10} className="text-primary/80" />
+          {/* Price Section */}
+          <div className="mt-auto flex items-baseline gap-1.5">
             <span
               className={cn(
-                "font-semibold",
-                compact ? "text-[8px]" : "text-[9px] sm:text-[10px]",
+                "font-[1000] text-[#1A1A1A] leading-none",
+                compact ? "text-[12px] sm:text-[13px]" : "text-[14px] sm:text-base",
               )}>
-              {product.deliveryTime || "8-12 mins"}
+              ₹{product.price}
             </span>
-          </div>
-
-          {/* Price Row / ADD Button Combination for compact */}
-          <div className="mt-auto flex items-center justify-between gap-1">
-            <div className="flex flex-col">
+            {product.originalPrice > product.price && (
               <span
                 className={cn(
-                  "font-[1000] text-[#1A1A1A]",
-                  compact ? "text-[11px]" : "text-[13px] sm:text-sm",
+                  "font-medium text-gray-400 line-through leading-none",
+                  compact ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-[12px]",
                 )}>
-                ₹{product.price}
+                ₹{product.originalPrice}
               </span>
-              {product.originalPrice > product.price && (
-                <span
-                  className={cn(
-                    "font-medium text-gray-400 line-through leading-none",
-                    compact ? "text-[8px]" : "text-[9px] sm:text-[10px]",
-                  )}>
-                  ₹{product.originalPrice}
-                </span>
-              )}
-            </div>
+            )}
+          </div>
 
-            {/* ADD Button / Quantity Selector (Always in price row) */}
-            <div className="flex">
-              {quantity > 0 ? (
-                <div
-                  className={cn(
-                    "flex items-center bg-white border-[1.5px] border-primary rounded-lg p-0.5 justify-between",
-                    compact ? "min-w-[60px]" : "min-w-[68px] sm:min-w-[90px] md:min-w-[100px]",
-                  )}>
-                  <button
-                    onClick={handleDecrement}
-                    className="p-0.5 px-0.5 text-primary active:scale-90 transition-transform sm:p-1 sm:px-1">
-                    <Minus size={compact ? 10 : 12} strokeWidth={3.5} />
-                  </button>
-                  <span
-                    className={cn(
-                      "font-black text-primary",
-                      compact ? "text-[10px]" : "text-[11px] sm:text-[13px] md:text-sm",
-                    )}>
-                    {quantity}
-                  </span>
-                  <button
-                    onClick={handleIncrement}
-                    className="p-0.5 px-0.5 text-primary active:scale-90 transition-transform sm:p-1 sm:px-1">
-                    <Plus size={compact ? 10 : 12} strokeWidth={3.5} />
-                  </button>
-                </div>
-              ) : (
+          {/* ADD Button / Quantity Selector */}
+          <div className="mt-2 w-full flex">
+            {quantity > 0 ? (
+              <div
+                style={{
+                  background: "linear-gradient(135deg, rgba(139, 30, 36, 0.9) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
+                className={cn(
+                  "flex items-center rounded-lg p-0.5 justify-between w-full text-white shadow-md",
+                  compact ? "h-7 sm:h-8" : "h-8 sm:h-9"
+                )}>
                 <button
-                  onClick={handleAddToCart}
-                  className={cn(
-                    "bg-white border-[1.5px] border-primary text-primary rounded-lg font-black shadow-sm hover:bg-primary/5 mb-0 transition-all uppercase tracking-wide leading-none active:scale-95",
-                    compact
-                      ? "px-2.5 py-1 text-[10px]"
-                      : "px-3.5 py-1.5 text-[11px] sm:px-7 sm:py-2 sm:text-[13px] md:text-sm md:px-8 md:py-2.5",
-                  )}>
-                  ADD
+                  onClick={handleDecrement}
+                  className="p-1 px-2.5 text-white active:scale-90 transition-transform">
+                  <Minus size={compact ? 10 : 12} strokeWidth={3.5} />
                 </button>
-              )}
-            </div>
+                <span
+                  className="font-black text-white text-[11px] sm:text-xs md:text-sm">
+                  {quantity}
+                </span>
+                <button
+                  onClick={handleIncrement}
+                  className="p-1 px-2.5 text-white active:scale-90 transition-transform">
+                  <Plus size={compact ? 10 : 12} strokeWidth={3.5} />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAddToCart}
+                style={{
+                  background: "linear-gradient(135deg, rgba(139, 30, 36, 0.9) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                  border: "1px solid rgba(255, 255, 255, 0.12)",
+                  backdropFilter: "blur(8px)",
+                  WebkitBackdropFilter: "blur(8px)",
+                }}
+                className={cn(
+                  "w-full text-white rounded-lg font-bold shadow-md hover:shadow-lg hover:brightness-110 flex items-center justify-center transition-all uppercase tracking-wide active:scale-95",
+                  compact ? "h-7 sm:h-8 text-[10px] sm:text-xs" : "h-8 sm:h-9 text-xs sm:text-sm"
+                )}>
+                ADD
+              </button>
+            )}
           </div>
         </div>
       </div>

@@ -26,6 +26,9 @@ const categorySchema = new mongoose.Schema(
     image: {
       type: String, // Cloudinary URL
     },
+    icon: {
+      type: String, // Cloudinary URL for custom uploaded icon
+    },
     iconId: {
       type: String, // SVG icon identifier
       trim: true,
