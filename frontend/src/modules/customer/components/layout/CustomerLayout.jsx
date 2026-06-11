@@ -12,13 +12,51 @@ import { useAuth } from '@core/context/AuthContext';
 import { onReturnPickupOtp, onReturnDropOtp } from '@core/services/orderSocket';
 import { toast } from 'sonner';
 import { ShieldCheck, Package } from 'lucide-react';
+import { customerApi } from '../../services/customerApi';
+import { buildHeaderOpacityGradient } from '../../utils/headerTheme';
 
 const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = false, showCart: showCartProp, showBottomNav: showBottomNavProp }) => {
     const location = useLocation();
     const { isOpen: isProductDetailOpen } = useProductDetail();
     const { user, token } = useAuth();
 
+    // Dynamically apply/sync the header background color set at All in Header Category
+    useEffect(() => {
+        const cachedColor = localStorage.getItem('customer-header-base-color');
+        if (cachedColor) {
+            const gradient = buildHeaderOpacityGradient(cachedColor);
+            document.documentElement.style.setProperty('--customer-header-gradient', gradient);
+            document.documentElement.style.setProperty('--customer-header-base-color', cachedColor);
+        }
+
+        const fetchHeaderColors = async () => {
+            try {
+                const res = await customerApi.getCategories();
+                if (res.data.success) {
+                    const dbCats = res.data.results || res.data.result || [];
+                    const allHeader = dbCats.find(
+                        (cat) =>
+                            cat.type === 'header' &&
+                            (cat.slug?.toLowerCase() === 'all' || cat.name?.toLowerCase() === 'all')
+                    );
+                    if (allHeader && allHeader.headerColor) {
+                        const newColor = allHeader.headerColor;
+                        localStorage.setItem('customer-header-base-color', newColor);
+                        const gradient = buildHeaderOpacityGradient(newColor);
+                        document.documentElement.style.setProperty('--customer-header-gradient', gradient);
+                        document.documentElement.style.setProperty('--customer-header-base-color', newColor);
+                    }
+                }
+            } catch (err) {
+                console.error('[CustomerLayout] Failed to fetch header categories for theme:', err);
+            }
+        };
+
+        fetchHeaderColors();
+    }, []);
+
     // Listen for Return OTPs (Real-time Alert for Customer)
+
     useEffect(() => {
         if (!token || !user) return;
 

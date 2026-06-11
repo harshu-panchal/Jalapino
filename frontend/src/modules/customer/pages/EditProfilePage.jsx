@@ -45,7 +45,7 @@ const EditProfilePage = () => {
             {/* Header */}
             <div 
                 style={{
-                    background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                    background: "var(--customer-header-gradient)",
                     backdropFilter: "blur(20px) saturate(180%)",
                     WebkitBackdropFilter: "blur(20px) saturate(180%)",
                     borderBottom: "1px solid rgba(255, 255, 255, 0.08)",

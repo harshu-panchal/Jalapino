@@ -135,7 +135,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   decoding="async"
                 />
                 {/* Subtle burgundy border overlay */}
-                <div className="absolute inset-0 border border-[#8b1e24]/15 rounded-3xl pointer-events-none" />
+                <div className="absolute inset-0 border border-[var(--customer-header-base-color)]/15 rounded-3xl pointer-events-none" />
               </div>
             )}
           </div>

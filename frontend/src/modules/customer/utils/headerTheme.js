@@ -73,3 +73,29 @@ export function buildMiniCartGradient(baseHeaderColor) {
   return `linear-gradient(135deg, ${top} 0%, ${mid} 48%, ${deep} 100%)`;
 }
 
+/** Convert hex to rgba string with specified opacity */
+export function hexToRgba(hex, alpha = 1) {
+  if (!hex || typeof hex !== "string" || !hex.startsWith("#")) {
+    return `rgba(139, 30, 36, ${alpha})`;
+  }
+  const normalized =
+    hex.length === 4
+      ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`
+      : hex;
+  const value = normalized.slice(1);
+  if (value.length !== 6) return `rgba(139, 30, 36, ${alpha})`;
+
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** Build the 135deg gradient with opacity from a base header color */
+export function buildHeaderOpacityGradient(baseHeaderColor, alpha = 0.95) {
+  const base = baseHeaderColor && baseHeaderColor.startsWith("#") ? baseHeaderColor : "#8B1E24";
+  const darker = shiftHex(base, -65);
+  return `linear-gradient(135deg, ${hexToRgba(base, alpha)} 0%, ${hexToRgba(darker, alpha)} 100%)`;
+}
+
+

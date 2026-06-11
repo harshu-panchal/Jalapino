@@ -13,6 +13,7 @@ import {
   buildMiniCartColor,
   buildSearchBarBackgroundColor,
   shiftHex,
+  buildHeaderOpacityGradient,
 } from "../../utils/headerTheme";
 import LogoImage from "../../../../assets/Logo.png";
 
@@ -257,7 +258,7 @@ const MainLocationHeader = ({
   const headerBottomPadding = 12;
   const bgOpacity = 0.98;
 
-  const contentHeight = "80px";
+  const contentHeight = "auto";
   const contentOpacity = 1;
   const navHeight = "60px";
   const navOpacity = 1;
@@ -270,10 +271,13 @@ const MainLocationHeader = ({
   const displayNav = "flex";
   const displayCart = "block";
 
-  const baseHeaderColor = activeCategory?.headerColor || "var(--primary)";
+  const baseHeaderColor = activeCategory?.headerColor || localStorage.getItem('customer-header-base-color') || "var(--primary)";
   const headerFontColor = activeCategory?.headerFontColor || "#111827";
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
 
+  const headerOpacityGradient = baseHeaderColor && baseHeaderColor.startsWith("#") 
+    ? buildHeaderOpacityGradient(baseHeaderColor) 
+    : "var(--customer-header-gradient)";
   const headerGradient = buildHeaderGradient(baseHeaderColor);
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const categoryAccent = headerIconColor;
@@ -304,7 +308,7 @@ const MainLocationHeader = ({
             borderBottomLeftRadius: "24px",
             borderBottomRightRadius: "24px",
             opacity: bgOpacity,
-            background: "linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%)",
+            background: headerOpacityGradient,
             backdropFilter: "blur(20px) saturate(180%)",
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
             borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
@@ -344,15 +348,17 @@ const MainLocationHeader = ({
             <div className="flex items-center gap-4 lg:gap-8">
               <div
                 onClick={() => navigate("/")}
-                className="flex items-center gap-3 cursor-pointer group shrink-0">
-                <div className="group-hover:scale-110 transition-all duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.2)]">
-                  <img
-                    src={logoUrl}
-                    alt={`${appName} Logo`}
-                    loading="lazy"
-                    className="h-10 w-auto object-contain"
-                  />
-                </div>
+                className="flex flex-col items-start cursor-pointer select-none shrink-0 group">
+                <span
+                  className="text-lg md:text-xl font-black uppercase tracking-wider text-white leading-none transition-transform duration-300 group-hover:scale-105"
+                >
+                  {appName}
+                </span>
+                <span
+                  className="text-xs md:text-sm font-semibold text-white/95 mt-2.5 tracking-wide"
+                >
+                  हर घर का हुनर, हर घर तक
+                </span>
               </div>
 
               {/* Location Block (Desktop inline row) */}
@@ -388,7 +394,7 @@ const MainLocationHeader = ({
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
                   style={{ backgroundColor: "rgba(17, 24, 39, 0.45)" }}
-                  className="rounded-full px-4 h-11 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[#8B1E24]/50 cursor-pointer">
+                  className="rounded-full px-4 h-11 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
                   <SearchIcon sx={{ color: "#E5E7EB", fontSize: 20 }} />
                   <input
                     type="text"
@@ -406,7 +412,7 @@ const MainLocationHeader = ({
                 whileHover={{ scale: 1.15, rotate: 5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/wishlist")}
-                className="transition-all text-white hover:text-[#8B1E24]"
+                className="transition-all text-white hover:text-[var(--customer-header-base-color)]"
               >
                 <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
               </motion.button>
@@ -415,10 +421,10 @@ const MainLocationHeader = ({
                 whileHover={{ scale: 1.15, rotate: -5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/checkout")}
-                className="transition-all text-white hover:text-[#8B1E24] relative group"
+                className="transition-all text-white hover:text-[var(--customer-header-base-color)] relative group"
               >
                 <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
-                <span className="absolute -top-1.5 -right-1.5 bg-[#8B1E24] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm transition-transform group-hover:-translate-y-0.5">
+                <span className="absolute -top-1.5 -right-1.5 bg-[var(--customer-header-base-color)] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm transition-transform group-hover:-translate-y-0.5">
                   0
                 </span>
               </motion.button>
@@ -447,18 +453,17 @@ const MainLocationHeader = ({
               className="relative z-10 pb-4">
               <div
                 onClick={() => navigate("/")}
-                className="mb-4 flex items-center gap-2 cursor-pointer select-none"
+                className="mb-3 flex flex-col items-start cursor-pointer select-none"
               >
-                <img
-                  src={logoUrl}
-                  alt={`${appName} Logo`}
-                  loading="lazy"
-                  className="h-9 w-auto object-contain"
-                />
                 <span
-                  className="text-sm font-black uppercase tracking-wider text-white"
+                  className="text-lg font-black uppercase tracking-wider text-white leading-none"
                 >
                   {appName}
+                </span>
+                <span
+                  className="text-xs font-semibold text-white/95 mt-2.5 tracking-wide"
+                >
+                  हर घर का हुनर, हर घर तक
                 </span>
               </div>
               <div className="flex justify-between items-start">
@@ -495,7 +500,7 @@ const MainLocationHeader = ({
                 onClick={handleSearchClick}
                 whileTap={{ scale: 0.98 }}
                 style={{ backgroundColor: "rgba(17, 24, 39, 0.45)" }}
-                className="flex-1 rounded-[10px] px-3 h-10 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[#8B1E24]/50 cursor-pointer">
+                className="flex-1 rounded-[10px] px-3 h-10 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
                 <SearchIcon sx={{ color: "#E5E7EB", fontSize: 18 }} />
                 <input
                   type="text"

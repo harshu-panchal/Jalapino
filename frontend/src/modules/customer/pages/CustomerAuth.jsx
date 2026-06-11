@@ -16,11 +16,13 @@ import {
     ShoppingBasket,
     Heart,
     Star,
-    ChevronLeft
+    ChevronLeft,
+    Store
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { customerApi } from '../services/customerApi';
 import BgImage from '@/assets/image.png';
+import LogoImage from '@/assets/Logo.png';
 
 const CATEGORIES = [
     {
@@ -53,16 +55,6 @@ const CATEGORIES = [
         shadow: "rgba(14, 165, 233, 0.3)",
         img: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?auto=format&fit=crop&q=80&w=600"
     },
-    {
-        title: "Health",
-        icon: <ShieldCheck size={28} />,
-        color: "#eff6ff",
-        ring: "#60a5fa",
-        text: "#1d4ed8",
-        theme: "#3b82f6",
-        shadow: "rgba(59, 130, 246, 0.3)",
-        img: "https://images.unsplash.com/photo-1512678080530-7760d81faba6?q=80&w=1200&auto=format&fit=crop"
-    },
 ];
 
 const CustomerAuth = () => {
@@ -71,16 +63,25 @@ const CustomerAuth = () => {
     const [showOtp, setShowOtp] = useState(false);
     const [timer, setTimer] = useState(0);
     const [carouselIndex, setCarouselIndex] = useState(0);
+    const [showSplash, setShowSplash] = useState(true);
     const { login } = useAuth();
     const { settings } = useSettings();
     const appName = settings?.appName || 'App';
     const logoUrl = settings?.logoUrl || '';
     const navigate = useNavigate();
 
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowSplash(false);
+        }, 3200); // 3.2 seconds splash display
+        return () => clearTimeout(timer);
+    }, []);
+
     const [formData, setFormData] = useState({
         phone: '',
         otp: '',
-        name: ''
+        name: '',
+        customerType: 'retail'
     });
 
     const activeCategory = CATEGORIES[carouselIndex];
@@ -111,7 +112,11 @@ const CustomerAuth = () => {
             if (isLogin) {
                 await customerApi.sendLoginOtp({ phone: formData.phone });
             } else {
-                await customerApi.sendSignupOtp({ name: formData.name, phone: formData.phone });
+                await customerApi.sendSignupOtp({
+                    name: formData.name,
+                    phone: formData.phone,
+                    customerType: formData.customerType
+                });
             }
             setShowOtp(true);
             setTimer(30);
@@ -224,27 +229,20 @@ const CustomerAuth = () => {
                             </motion.div>
                         </AnimatePresence>
 
-                        {/* Top Branding Bar */}
-                        <div className="absolute top-8 left-0 w-full px-6 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-10 h-10 bg-white/20 backdrop-blur-xl rounded-xl flex items-center justify-center border border-white/30">
-                                    <ShoppingBag size={20} className="text-white" />
-                                </div>
-                                <span className="text-white font-black tracking-tighter text-xl">{appName.toUpperCase()}</span>
-                            </div>
-                        </div>
-
-                        {/* Centered App Message */}
-                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center px-8 text-white pt-10">
+                        {/* Top Branding & App Message Bar */}
+                        <div className="absolute top-4 left-0 w-full px-6 flex flex-col items-center text-center text-white">
+                            <span className="font-black tracking-tighter text-xl mb-3">{appName.toUpperCase()}</span>
+                            <p className="text-[15px] font-extrabold text-white tracking-wide mb-3">
+                                हर घर का हुनर, हर घर तक
+                            </p>
                             <motion.h2
                                 key={carouselIndex}
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
-                                className="text-2xl font-black tracking-tight leading-none mb-2"
+                                className="text-[12px] font-bold uppercase tracking-[2px] leading-none opacity-75"
                             >
                                 {activeCategory.title.toUpperCase()} INSIDE
                             </motion.h2>
-                            <p className="text-[10px] font-bold uppercase tracking-[4px] opacity-70">Everything delivered fast</p>
                         </div>
 
                         {/* S-Curve Divider */}
@@ -270,9 +268,10 @@ const CustomerAuth = () => {
                                         className="w-full h-full"
                                         style={{ color: activeCategory.text }}
                                     >
-                                        {logoUrl ? (
-                                            <img
-                                                src={logoUrl}
+                                        {logoUrl || LogoImage ? (
+                                            <motion.img
+                                                layoutId="app-logo"
+                                                src={logoUrl || LogoImage}
                                                 alt={`${appName} logo`}
                                                 loading="lazy"
                                                 className="w-full h-full object-cover"
@@ -328,21 +327,57 @@ const CustomerAuth = () => {
 
                                     <form onSubmit={handleSendOtp} className="space-y-4">
                                         {!isLogin && (
-                                            <div className="relative group">
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors" style={{ color: 'inherit' }}>
-                                                    <User size={18} className="group-focus-within:text-[var(--theme-color)]" style={{ color: 'inherit' }} />
+                                            <>
+                                                <div className="relative group">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors" style={{ color: 'inherit' }}>
+                                                        <User size={18} className="group-focus-within:text-[var(--theme-color)]" style={{ color: 'inherit' }} />
+                                                    </div>
+                                                    <input
+                                                        required
+                                                        name="name"
+                                                        placeholder="Full Name"
+                                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
+                                                        style={{ '--theme-color': activeCategory.theme }}
+                                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                        onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
+                                                        onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
+                                                    />
                                                 </div>
-                                                <input
-                                                    required
-                                                    name="name"
-                                                    placeholder="Full Name"
-                                                    className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
-                                                    style={{ '--theme-color': activeCategory.theme }}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                    onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
-                                                    onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
-                                                />
-                                            </div>
+                                                <div className="flex bg-gray-50 rounded-2xl p-1.5 border border-gray-100 gap-1.5">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, customerType: 'retail' })}
+                                                        className={`flex-1 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest outline-none border border-transparent ${
+                                                            formData.customerType === 'retail'
+                                                                ? 'bg-white shadow-sm'
+                                                                : 'text-gray-400 hover:text-gray-600'
+                                                        }`}
+                                                        style={{
+                                                            color: formData.customerType === 'retail' ? activeCategory.theme : undefined,
+                                                            borderColor: formData.customerType === 'retail' ? `${activeCategory.theme}20` : 'transparent'
+                                                        }}
+                                                    >
+                                                        <ShoppingBag size={15} />
+                                                        Retail
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setFormData({ ...formData, customerType: 'wholesale' })}
+                                                        className={`flex-1 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest outline-none border border-transparent ${
+                                                            formData.customerType === 'wholesale'
+                                                                ? 'bg-white shadow-sm'
+                                                                : 'text-gray-400 hover:text-gray-600'
+                                                        }`}
+                                                        style={{
+                                                            color: formData.customerType === 'wholesale' ? activeCategory.theme : undefined,
+                                                            borderColor: formData.customerType === 'wholesale' ? `${activeCategory.theme}20` : 'transparent'
+                                                        }}
+                                                    >
+                                                        <Store size={15} />
+                                                        Wholesale
+                                                    </button>
+                                                </div>
+                                            </>
                                         )}
                                         <div className="relative group">
                                             <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors">
@@ -356,7 +391,7 @@ const CustomerAuth = () => {
                                                 name="phone"
                                                 maxLength={10}
                                                 placeholder="Mobile Number"
-                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-20 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
+                                                className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-24 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
                                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}
                                                 onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
                                                 onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
@@ -478,6 +513,56 @@ const CustomerAuth = () => {
             <div className="hidden md:block absolute bottom-10 right-10 text-white/20 text-xs font-bold uppercase tracking-[4px]">
                 Adaptive Theme Simulator
             </div>
+
+            {/* Immersive Brand Splash Screen Overlay */}
+            <AnimatePresence>
+                {showSplash && (
+                    <motion.div
+                        initial={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.6, ease: "easeInOut" }}
+                        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#D62828] to-[#800000] font-sans"
+                    >
+                        <div className="flex flex-col items-center gap-8">
+                            {/* Logo */}
+                            <motion.div
+                                initial={{ scale: 0.6, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{
+                                    type: "spring",
+                                    stiffness: 120,
+                                    damping: 15,
+                                    duration: 0.8
+                                }}
+                                className="w-48 h-48 md:w-56 md:h-56 rounded-full bg-white border-8 border-white shadow-2xl flex items-center justify-center overflow-hidden"
+                            >
+                                <motion.img
+                                    layoutId="app-logo"
+                                    src={logoUrl || LogoImage}
+                                    alt={`${appName} logo`}
+                                    className="w-full h-full object-cover"
+                                />
+                            </motion.div>
+
+                            {/* Tagline */}
+                            <div className="overflow-hidden py-2">
+                                <motion.h1
+                                    initial={{ y: "100%", opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    transition={{
+                                        delay: 1.2,
+                                        duration: 0.8,
+                                        ease: "easeOut"
+                                    }}
+                                    className="text-white text-xl md:text-2xl font-black tracking-wider text-center"
+                                >
+                                    हर घर का हुनर, हर घर तक
+                                </motion.h1>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

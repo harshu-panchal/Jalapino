@@ -301,7 +301,7 @@ const ProductCard = React.memo(
             {quantity > 0 ? (
               <div
                 style={{
-                  background: "linear-gradient(135deg, rgba(139, 30, 36, 0.9) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                  background: "linear-gradient(135deg, rgba(214, 40, 40, 0.9) 0%, rgba(149, 0, 0, 0.95) 100%)",
                   border: "1px solid rgba(255, 255, 255, 0.12)",
                   backdropFilter: "blur(8px)",
                   WebkitBackdropFilter: "blur(8px)",
@@ -329,7 +329,7 @@ const ProductCard = React.memo(
               <button
                 onClick={handleAddToCart}
                 style={{
-                  background: "linear-gradient(135deg, rgba(139, 30, 36, 0.9) 0%, rgba(74, 29, 36, 0.95) 100%)",
+                  background: "linear-gradient(135deg, rgba(214, 40, 40, 0.9) 0%, rgba(149, 0, 0, 0.95) 100%)",
                   border: "1px solid rgba(255, 255, 255, 0.12)",
                   backdropFilter: "blur(8px)",
                   WebkitBackdropFilter: "blur(8px)",

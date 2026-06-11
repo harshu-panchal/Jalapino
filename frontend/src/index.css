@@ -49,6 +49,12 @@
 
   /* Cart pill fill — overridden on Home by MainLocationHeader */
   --customer-mini-cart-color: #0284c7;
+
+  /* Header Background Gradient: defaults to the brand maroon */
+  --customer-header-gradient: linear-gradient(135deg, rgba(139, 30, 36, 0.95) 0%, rgba(74, 29, 36, 0.95) 100%);
+
+  /* Header Base Color: defaults to brand maroon */
+  --customer-header-base-color: #8B1E24;
 }
 
 body {

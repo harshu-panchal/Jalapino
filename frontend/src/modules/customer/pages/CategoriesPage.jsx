@@ -50,7 +50,7 @@ const CategoriesPage = () => {
             <div className="max-w-3xl mx-auto px-6 pt-[140px] md:pt-[160px] pb-24">
                 {isLoading ? (
                     <div className="flex justify-center py-20">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#8B1E24]" />
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--customer-header-base-color)]" />
                     </div>
                 ) : (
                     <div className="grid grid-cols-4 gap-x-6 sm:gap-x-8 md:gap-x-10 gap-y-10 md:gap-y-14">
@@ -72,7 +72,7 @@ const CategoriesPage = () => {
                                             className="w-full h-full object-contain mix-blend-multiply transition-transform duration-300 group-hover:scale-105"
                                         />
                                     </div>
-                                    <span className="text-[11px] sm:text-xs md:text-sm lg:text-base font-bold text-[#2D3F51] tracking-tight leading-snug line-clamp-2 group-hover:text-[#8B1E24] transition-colors font-['Inter']">
+                                    <span className="text-[11px] sm:text-xs md:text-sm lg:text-base font-bold text-[#2D3F51] tracking-tight leading-snug line-clamp-2 group-hover:text-[var(--customer-header-base-color)] transition-colors font-['Inter']">
                                         {category.name}
                                     </span>
                                 </Link>
