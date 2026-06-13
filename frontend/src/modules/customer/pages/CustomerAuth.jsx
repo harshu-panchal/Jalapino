@@ -81,8 +81,18 @@ const CustomerAuth = () => {
         phone: '',
         otp: '',
         name: '',
-        customerType: 'retail'
+        customerType: 'retail',
+        referralCode: ''
     });
+
+    useEffect(() => {
+        const queryParams = new URLSearchParams(window.location.search);
+        const refCode = queryParams.get('ref');
+        if (refCode) {
+            setIsLogin(false);
+            setFormData(prev => ({ ...prev, referralCode: refCode.toUpperCase() }));
+        }
+    }, []);
 
     const activeCategory = CATEGORIES[carouselIndex];
 
@@ -115,7 +125,8 @@ const CustomerAuth = () => {
                 await customerApi.sendSignupOtp({
                     name: formData.name,
                     phone: formData.phone,
-                    customerType: formData.customerType
+                    customerType: formData.customerType,
+                    referralCode: formData.referralCode
                 });
             }
             setShowOtp(true);
@@ -344,6 +355,21 @@ const CustomerAuth = () => {
                                                     />
                                                 </div>
 
+                                                <div className="relative group">
+                                                    <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-300 transition-colors" style={{ color: 'inherit' }}>
+                                                        <Zap size={18} className="group-focus-within:text-[var(--theme-color)]" style={{ color: 'inherit' }} />
+                                                    </div>
+                                                    <input
+                                                        name="referralCode"
+                                                        placeholder="Referral Code (Optional)"
+                                                        className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-12 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all uppercase"
+                                                        style={{ '--theme-color': activeCategory.theme }}
+                                                        value={formData.referralCode}
+                                                        onChange={(e) => setFormData({ ...formData, referralCode: e.target.value.toUpperCase() })}
+                                                        onFocus={(e) => e.target.style.borderColor = activeCategory.theme}
+                                                        onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
+                                                    />
+                                                </div>
                                             </>
                                         )}
                                         <div className="relative group">

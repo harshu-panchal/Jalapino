@@ -192,6 +192,16 @@ const ProfilePage = () => {
                                 color="#f59e0b"
                                 bg="rgba(245,158,11,0.10)"
                             />
+                            {settings?.referralProgram?.isEnabled && (
+                                <MenuItem
+                                    icon={Gift}
+                                    label="Refer & Earn"
+                                    sub="Invite friends & get cashback"
+                                    path="/refer-earn"
+                                    color="#ec4899"
+                                    bg="rgba(236,72,153,0.10)"
+                                />
+                            )}
                             <MenuItem
                                 icon={Heart}
                                 label="Your Wishlist"

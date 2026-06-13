@@ -33,6 +33,7 @@ export const signupCustomer = async (req, res) => {
             rawPhone: payload.phone,
             flow: "signup",
             ipAddress: req.ip,
+            referralCode: payload.referralCode,
         });
 
         return handleResponse(res, 200, "If the number is eligible, OTP has been sent");

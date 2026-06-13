@@ -3,6 +3,9 @@ import {
   handleCodOrderFinance,
   settleDeliveredOrder,
 } from "./finance/orderFinanceService.js";
+import Referral from "../models/referral.js";
+import Setting from "../models/setting.js";
+import Order from "../models/order.js";
 
 /**
  * Financial side effects when order becomes delivered (mirrors orderController).
@@ -68,5 +71,26 @@ export async function applyDeliveredSettlement(order, orderIdString) {
         { upsert: true, new: true },
       );
     }
+  }
+
+  // Handle Referral Rewards if first order is delivered and qualifies
+  try {
+    const refereeId = order.customer?._id || order.customer;
+    const referral = await Referral.findOne({ refereeId, status: "pending" });
+    if (referral) {
+      const settings = await Setting.findOne();
+      if (settings?.referralProgram?.isEnabled && settings?.referralProgram?.eligibilityCondition === "first_order_delivered") {
+        const orderTotal = order.paymentBreakdown?.grandTotal || order.pricing?.total || 0;
+        if (orderTotal >= (settings.referralProgram.minOrderValue || 100)) {
+          const deliveredCount = await Order.countDocuments({ customer: refereeId, status: "delivered" });
+          if (deliveredCount === 1) {
+            const { processReferralRewards } = await import("./referralService.js");
+            await processReferralRewards(referral._id);
+          }
+        }
+      }
+    }
+  } catch (referralErr) {
+    console.error("Error processing delivered referral:", referralErr);
   }
 }

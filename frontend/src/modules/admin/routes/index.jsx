@@ -93,6 +93,7 @@ const AdminSettings = React.lazy(() => import("../pages/AdminSettings"));
 const EnvSettings = React.lazy(() => import("../pages/EnvSettings"));
 const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
 const RewardManagement = React.lazy(() => import("../pages/RewardManagement"));
+const ReferralSettings = React.lazy(() => import("../pages/ReferralSettings"));
 
 const navItems = [
   {
@@ -124,6 +125,7 @@ const navItems = [
       { label: "Send Notifications", path: "/admin/notifications" },
       { label: "Coupons & Promos", path: "/admin/coupons" },
       { label: "Spin Wheel Rewards", path: "/admin/gamification" },
+      { label: "Refer & Earn", path: "/admin/referral" },
       { label: "Offer Sections", path: "/admin/offer-sections" },
       { label: "Shop by Store", path: "/admin/shop-by-store" },
     ],
@@ -256,6 +258,7 @@ const AdminRoutes = () => {
         <Route path="/shop-by-store" element={<ShopByStoreManagement />} />
         <Route path="/coupons" element={<CouponManagement />} />
         <Route path="/gamification" element={<RewardManagement />} />
+        <Route path="/referral" element={<ReferralSettings />} />
         <Route path="/sellers/pending" element={<PendingSellers />} />
         <Route path="/seller-locations" element={<SellerLocations />} />
         <Route path="/delivery-boys/active" element={<ActiveDeliveryBoys />} />

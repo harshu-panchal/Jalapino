@@ -117,9 +117,9 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     // Route-based visibility logic
     const path = location.pathname.replace(/\/$/, '') || '/';
 
-    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/reels', '/spin'];
-    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/spin'];
-    const hideCartRoutes = ['/checkout', '/search', '/chat', '/reels', '/spin'];
+    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn'];
+    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/spin', '/refer-earn'];
+    const hideCartRoutes = ['/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn'];
 
     // If props are passed, use them. Otherwise, use route-based logic.
     const showHeader = showHeaderProp !== undefined ? showHeaderProp : (!hideHeaderRoutes.includes(path) && !path.startsWith('/category') && !path.startsWith('/orders'));
@@ -152,7 +152,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin') ? "pb-0" : "pb-16")}>
+            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn') ? "pb-0" : "pb-16")}>
                 {children}
             </main>
 

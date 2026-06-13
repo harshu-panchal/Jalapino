@@ -161,6 +161,34 @@ const settingSchema = new mongoose.Schema(
                 default: false,
             },
         },
+        referralProgram: {
+            isEnabled: {
+                type: Boolean,
+                default: false,
+            },
+            rewardType: {
+                type: String,
+                enum: ["cashback", "coupon"],
+                default: "cashback",
+            },
+            referrerReward: {
+                type: Number,
+                default: 50,
+            },
+            refereeReward: {
+                type: Number,
+                default: 20,
+            },
+            eligibilityCondition: {
+                type: String,
+                enum: ["signup", "first_order_delivered"],
+                default: "first_order_delivered",
+            },
+            minOrderValue: {
+                type: Number,
+                default: 100,
+            },
+        },
     },
     {
         timestamps: true,

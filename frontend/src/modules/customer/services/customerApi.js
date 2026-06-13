@@ -150,4 +150,7 @@ export const customerApi = {
   getWheelState: () => getWithDedupe("/gamification/state", {}, { ttl: 0 }),
   spinWheel: () => axiosInstance.post("/gamification/spin"),
   scratchCard: (spinId) => axiosInstance.post("/gamification/scratch", { spinId }),
+  
+  // Refer & Earn
+  getReferralDetails: () => axiosInstance.get("/referral/details"),
 };

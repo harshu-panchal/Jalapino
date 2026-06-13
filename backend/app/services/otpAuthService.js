@@ -1,9 +1,30 @@
 import crypto from "crypto";
 import Customer from "../models/customer.js";
+import Referral from "../models/referral.js";
+import Setting from "../models/setting.js";
 import { sendSmsIndiaHubOtp } from "./smsIndiaHubService.js";
 import { generateOTP, useRealSMS } from "../utils/otp.js";
 import { getRedisClient } from "../config/redis.js";
 import { isValidE164Phone, maskPhone, normalizePhoneNumber } from "../utils/phone.js";
+
+async function generateUniqueReferralCode(name) {
+  const sanitized = String(name || "JAL")
+    .replace(/[^a-zA-Z]/g, "")
+    .substring(0, 5)
+    .toUpperCase();
+  
+  let attempts = 0;
+  while (attempts < 10) {
+    const rand = crypto.randomBytes(3).toString("hex").toUpperCase();
+    const code = `JAL-${sanitized}-${rand}`;
+    const existing = await Customer.findOne({ referralCode: code });
+    if (!existing) {
+      return code;
+    }
+    attempts++;
+  }
+  return `JAL-${Date.now().toString(36).toUpperCase()}`;
+}
 
 const OTP_EXPIRY_MINUTES = () => parseInt(process.env.OTP_EXPIRY_MINUTES || "5", 10);
 const OTP_RESEND_COOLDOWN_SECONDS = () =>
@@ -94,9 +115,22 @@ export async function issueCustomerOtp({
   rawPhone,
   flow,
   ipAddress = "unknown",
+  referralCode = "",
 }) {
   const phone = normalizeAndValidatePhone(rawPhone);
   const now = new Date();
+
+  // Validate referral code if signing up
+  let referredByUserId = null;
+  if (flow === "signup" && referralCode && referralCode.trim() !== "") {
+    const referrer = await Customer.findOne({ referralCode: referralCode.trim().toUpperCase() });
+    if (!referrer) {
+      const err = new Error("Invalid referral code");
+      err.statusCode = 400;
+      throw err;
+    }
+    referredByUserId = referrer._id;
+  }
 
   const sendAllowed = await incrementWindowCounter(`otp:send:phone:${phone}`, {
     limit: OTP_SEND_LIMIT_PER_WINDOW(),
@@ -124,10 +158,13 @@ export async function issueCustomerOtp({
 
     // In mock/dev mode, allow login OTP issuance so local testing works end-to-end.
     if (!customer) {
+      const generatedCode = await generateUniqueReferralCode(name);
       customer = await Customer.create({
         name: name || "Customer",
         phone,
         isVerified: false,
+        referralCode: generatedCode,
+        referredBy: referredByUserId,
       });
       customer = await Customer.findById(customer._id).select(
         "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
@@ -136,14 +173,30 @@ export async function issueCustomerOtp({
   }
 
   if (!customer) {
+    const generatedCode = await generateUniqueReferralCode(name);
     customer = await Customer.create({
       name: name || "Customer",
       phone,
       isVerified: false,
+      referralCode: generatedCode,
+      referredBy: referredByUserId,
     });
     customer = await Customer.findById(customer._id).select(
       "+otpHash +otpExpiresAt +otpFailedAttempts +otpLockedUntil +otpLastSentAt +otpSessionVersion +otp +otpExpiry",
     );
+  } else if (!customer.isVerified) {
+    let updated = false;
+    if (referredByUserId && String(customer.referredBy) !== String(referredByUserId)) {
+      customer.referredBy = referredByUserId;
+      updated = true;
+    }
+    if (!customer.referralCode) {
+      customer.referralCode = await generateUniqueReferralCode(customer.name || name);
+      updated = true;
+    }
+    if (updated) {
+      await customer.save();
+    }
   }
 
   if (customer.otpLockedUntil && customer.otpLockedUntil > now) {
@@ -266,6 +319,8 @@ export async function verifyCustomerOtpCode({
     throw err;
   }
 
+  const isFirstVerification = !customer.isVerified;
+
   customer.isVerified = true;
   customer.otpHash = undefined;
   customer.otpExpiresAt = undefined;
@@ -277,6 +332,30 @@ export async function verifyCustomerOtpCode({
   customer.lastLogin = now;
 
   await customer.save();
+
+  if (isFirstVerification && customer.referredBy) {
+    try {
+      let referral = await Referral.findOne({ refereeId: customer._id });
+      if (!referral) {
+        referral = new Referral({
+          referrerId: customer.referredBy,
+          refereeId: customer._id,
+          status: "pending",
+        });
+        await referral.save();
+
+        await Customer.findByIdAndUpdate(customer.referredBy, { $inc: { referralCount: 1 } });
+      }
+
+      const settings = await Setting.findOne();
+      if (settings?.referralProgram?.isEnabled && settings?.referralProgram?.eligibilityCondition === "signup") {
+        const { processReferralRewards } = await import("./referralService.js");
+        await processReferralRewards(referral._id);
+      }
+    } catch (err) {
+      console.error("Error processing signup referral:", err);
+    }
+  }
 
   otpAuditLog("customer_otp_verify_success", {
     phone: maskPhone(phone),

@@ -22,6 +22,7 @@ import { adminSupportApi } from './supportApi';
 import { adminDeliveryApi } from './deliveryApi';
 import { adminContentApi } from './contentApi';
 import { adminGamificationApi } from './gamificationApi';
+import { adminReferralApi } from './referralApi';
 
 export {
     adminAuthApi,
@@ -34,6 +35,7 @@ export {
     adminDeliveryApi,
     adminContentApi,
     adminGamificationApi,
+    adminReferralApi,
 };
 
 /**
@@ -51,6 +53,7 @@ export const adminApi = {
     ...adminDeliveryApi,
     ...adminContentApi,
     ...adminGamificationApi,
+    ...adminReferralApi,
 };
 
 export default adminApi;

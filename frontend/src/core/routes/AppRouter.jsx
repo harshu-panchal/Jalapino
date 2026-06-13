@@ -48,6 +48,7 @@ const SearchPage = lazy(() => import('../../modules/customer/pages/SearchPage'))
 const WalletPage = lazy(() => import('../../modules/customer/pages/WalletPage'));
 const ReelsPage = lazy(() => import('../../modules/customer/pages/ReelsPage'));
 const SpinWinPage = lazy(() => import('../../modules/customer/pages/SpinWinPage'));
+const ReferEarnPage = lazy(() => import('../../modules/customer/pages/ReferEarnPage'));
 
 // Lazy load heavy modules
 const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
@@ -176,6 +177,7 @@ const AppRouter = () => {
                         { path: 'search', element: <SearchPage /> },
                         { path: 'reels', element: <ReelsPage /> },
                         { path: 'spin', element: <ProtectedRoute><SpinWinPage /></ProtectedRoute> },
+                        { path: 'refer-earn', element: <ProtectedRoute><ReferEarnPage /></ProtectedRoute> },
                     ]
                 },
                 {
