@@ -22,6 +22,7 @@ import mediaRoute from "./mediaRoutes.js";
 import healthRoute from "./healthRoutes.js";
 import metricsRoute from "./metricsRoutes.js";
 import authOtpRoute from "../modules/otp/otp.routes.js";
+import gamificationRoute from "./gamificationRoutes.js";
 
 import express from "express";
 
@@ -65,6 +66,7 @@ const setupRoutes = (app) => {
     router.use("/auth/otp", authOtpRoute);
     router.use("/push", pushRoute);
     router.use("/tickets", ticketRoute);
+    router.use("/gamification", gamificationRoute);
     router.use("/reviews", reviewRoute);
     router.use("/admin/faqs", faqRoute);
     router.use("/public/faqs", faqRoute); // For public access without admin prefix

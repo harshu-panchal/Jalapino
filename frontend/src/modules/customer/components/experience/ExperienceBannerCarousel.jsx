@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { motion, useMotionValue } from "framer-motion";
 import {
@@ -14,6 +15,7 @@ const BANNER_CHUNK_SIZE = 20;
 const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap = 0, edgeToEdge = false }) => {
   if (!items.length) return null;
 
+  const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = React.useState(0);
   const [visibleCount, setVisibleCount] = React.useState(() =>
     Math.min(items.length, BANNER_CHUNK_SIZE)
@@ -68,6 +70,18 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
     return applyCloudinaryTransform(url, "f_auto,q_auto,c_fill,g_north,w_1448,h_650");
   }, []);
 
+  const handleBannerClick = React.useCallback((banner) => {
+    if (!banner.linkType || banner.linkType === "none" || !banner.linkValue) return;
+
+    if (banner.linkType === "url") {
+      window.open(banner.linkValue, "_blank", "noopener,noreferrer");
+    } else if (banner.linkType === "product") {
+      navigate(`/product/${banner.linkValue}`);
+    } else {
+      navigate(`/category/${banner.linkValue}`);
+    }
+  }, [navigate]);
+
   return (
     <div className={cn("overflow-hidden touch-pan-y", fullWidth && "w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]")}>
       <motion.div
@@ -88,9 +102,11 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
               "relative shrink-0 flex items-center justify-center box-border",
               fullWidth
                 ? "aspect-[1448/650] w-full rounded-none px-0 overflow-hidden"
-                : "w-full px-4 md:px-8 overflow-visible pb-6"
+                : "w-full px-4 md:px-8 overflow-visible pb-6",
+              banner.linkType && banner.linkType !== "none" && banner.linkValue ? "cursor-pointer hover:brightness-95 transition-all" : ""
             )}
             style={{ width: `${100 / totalItems}%` }}
+            onClick={() => handleBannerClick(banner)}
           >
             {fullWidth ? (
               <img

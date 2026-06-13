@@ -204,6 +204,7 @@ const ProductManagement = () => {
     brand: "",
     mainImage: null,
     galleryImages: [],
+    videoUrl: "",
     variants: [
       { id: Date.now(), name: "", price: "", salePrice: "", stock: "", sku: "" },
     ],
@@ -329,6 +330,10 @@ const ProductManagement = () => {
       data.append("brand", formData.brand);
       data.append("weight", formData.weight);
       data.append("tags", formData.tags);
+      data.append("videoUrl", formData.videoUrl || "");
+      data.append("shelfLife", formData.shelfLife || "");
+      data.append("countryOfOrigin", formData.countryOfOrigin || "");
+      data.append("fssaiLicense", formData.fssaiLicense || "");
       data.append("variants", JSON.stringify(formData.variants));
 
       if (formData.mainImageFile) {
@@ -425,6 +430,10 @@ const ProductManagement = () => {
         brand: item.brand || "",
         mainImage: item.mainImage || null,
         galleryImages: item.galleryImages || [],
+        videoUrl: item.videoUrl || "",
+        shelfLife: item.shelfLife || "",
+        countryOfOrigin: item.countryOfOrigin || "",
+        fssaiLicense: item.fssaiLicense || "",
         variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
           {
             id: Date.now(),
@@ -455,6 +464,10 @@ const ProductManagement = () => {
         brand: "",
         mainImage: null,
         galleryImages: [],
+        videoUrl: "",
+        shelfLife: "",
+        countryOfOrigin: "",
+        fssaiLicense: "",
         variants: [
           {
             id: Date.now(),
@@ -1076,6 +1089,57 @@ const ProductManagement = () => {
                           />
                         </div>
                       </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="space-y-1.5 flex flex-col">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                            Shelf Life
+                          </label>
+                          <input
+                            value={formData.shelfLife}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                shelfLife: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
+                            placeholder="e.g. 3 Days"
+                          />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                            Country of Origin
+                          </label>
+                          <input
+                            value={formData.countryOfOrigin}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                countryOfOrigin: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
+                            placeholder="e.g. India"
+                          />
+                        </div>
+                        <div className="space-y-1.5 flex flex-col">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                            FSSAI License
+                          </label>
+                          <input
+                            value={formData.fssaiLicense}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                fssaiLicense: e.target.value,
+                              })
+                            }
+                            className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
+                            placeholder="e.g. 1001234567890"
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
                   {/* Additional tabs populated as needed */}
@@ -1203,6 +1267,25 @@ const ProductManagement = () => {
                         <p className="text-[10px] text-slate-500 font-medium">
                           Existing gallery images are shown here. Uploading new images will append them to the gallery.
                         </p>
+                      </div>
+
+                      {/* Product Video Section */}
+                      <div className="space-y-3 pt-6 border-t border-slate-100">
+                        <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          Product Video (YouTube URL)
+                        </label>
+                        <div className="flex flex-col gap-2">
+                          <input
+                            type="text"
+                            value={formData.videoUrl || ""}
+                            onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
+                            placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+                            className="w-full px-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                          />
+                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed ml-1">
+                            Provide a link to an unlisted YouTube video (30-50 seconds) recorded in portrait orientation showcasing the product.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   )}

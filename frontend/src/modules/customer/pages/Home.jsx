@@ -28,6 +28,8 @@ import ExperienceBannerCarousel from "../components/experience/ExperienceBannerC
 import { useLocation } from "../context/LocationContext";
 import { useSettings } from "@core/context/SettingsContext";
 import Lottie from "lottie-react";
+import { DotLottieReact } from "@lottiefiles/dotlottie-react";
+import spinWheelLottie from "@/assets/spin_wheel.lottie?url";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 import { getJSON, remove as removeStorage, STORAGE_KEYS } from "@core/utils/storage";
 
@@ -478,7 +480,7 @@ const Home = () => {
   };
 
   return (
-    <div className={`min-h-screen pt-[108px] md:pt-[120px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
+    <div className={`min-h-screen pt-[190px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
         <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} />
       </div>
@@ -493,13 +495,13 @@ const Home = () => {
       ) : (
         <>
           {/* Search Bar on Page (above banners) */}
-          <div className="w-full max-w-2xl mx-auto px-4 pt-8 md:pt-12 pb-8 md:pb-12">
+          <div className="w-full max-w-2xl mx-auto px-4 pt-8 md:pt-12 pb-8 md:pb-12 flex items-center gap-3">
             <motion.div
               onClick={() => navigate("/search")}
               whileHover={{ scale: 1.005 }}
               whileTap={{ scale: 0.995 }}
               style={{ backgroundColor: "#FFFFFF" }}
-              className="w-full rounded-[12px] md:rounded-full px-4 h-12 shadow-sm border border-slate-200 flex items-center cursor-pointer transition-all hover:shadow-md"
+              className="flex-1 rounded-[12px] md:rounded-full px-4 h-12 shadow-sm border border-slate-200 flex items-center cursor-pointer transition-all hover:shadow-md"
             >
               <Search className="text-slate-400 w-5 h-5 mr-3 shrink-0" />
               <input
@@ -509,6 +511,22 @@ const Home = () => {
                 className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm md:text-base cursor-pointer"
               />
             </motion.div>
+            
+            <motion.button
+              onClick={() => navigate("/spin")}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              className="w-12 h-12 flex items-center justify-center cursor-pointer relative shrink-0"
+              title="Spin & Win"
+            >
+              <div className="w-12 h-12 flex items-center justify-center z-10">
+                <DotLottieReact
+                  src={spinWheelLottie}
+                  loop
+                  autoplay
+                />
+              </div>
+            </motion.button>
           </div>
 
           {heroConfig.banners?.items?.length > 0 && (

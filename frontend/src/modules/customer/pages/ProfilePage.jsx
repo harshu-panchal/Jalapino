@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Store, Gift
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -185,6 +185,14 @@ const ProfilePage = () => {
                                 bg="rgba(16,185,129,0.10)"
                             />
                             <MenuItem
+                                icon={Gift}
+                                label="Spin & Win"
+                                sub="Claim daily lucky scratch cards"
+                                path="/spin"
+                                color="#f59e0b"
+                                bg="rgba(245,158,11,0.10)"
+                            />
+                            <MenuItem
                                 icon={Heart}
                                 label="Your Wishlist"
                                 sub="Your saved items"
@@ -209,6 +217,25 @@ const ProfilePage = () => {
                             <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">Help & Settings</p>
                         </div>
                         <div className="divide-y divide-slate-100">
+                            {role === 'seller' ? (
+                                <MenuItem
+                                    icon={Store}
+                                    label="Seller Dashboard"
+                                    sub="Manage products, inventory & orders"
+                                    path="/seller"
+                                    color="#e11d48"
+                                    bg="rgba(225,29,72,0.08)"
+                                />
+                            ) : (
+                                <MenuItem
+                                    icon={Store}
+                                    label="Become a Seller"
+                                    sub="Register your shop and start selling"
+                                    path="/seller/auth?signup=true"
+                                    color="#e11d48"
+                                    bg="rgba(225,29,72,0.08)"
+                                />
+                            )}
                             <MenuItem
                                 icon={HelpCircle}
                                 label="Help & Support"

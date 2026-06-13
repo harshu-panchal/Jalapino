@@ -125,6 +125,26 @@ const productSchema = new mongoose.Schema(
         isFeatured: {
             type: Boolean,
             default: false,
+        },
+        videoUrl: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        shelfLife: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        countryOfOrigin: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        fssaiLicense: {
+            type: String,
+            trim: true,
+            default: "",
         }
     },
     { timestamps: true }

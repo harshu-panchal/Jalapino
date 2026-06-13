@@ -13,9 +13,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Clock } from "lucide-react";
 
 import { useProductDetail } from "../../context/ProductDetailContext";
+import { useCustomerMode } from "../../context/CustomerModeContext";
 
 const ProductCard = React.memo(
   ({ product, badge, className, compact = false, neutralBg = false }) => {
+    const { isWholesale } = useCustomerMode();
     const { toggleWishlist: toggleWishlistGlobal, isInWishlist } =
       useWishlist();
     const { cart, addToCart, updateQuantity, removeFromCart } = useCart();
@@ -116,11 +118,14 @@ const ProductCard = React.memo(
         }
         addToCart({
           ...product,
+          price: isWholesale ? Math.floor(product.price * 0.8) : product.price,
+          originalPrice: isWholesale ? product.price : product.originalPrice,
+          isWholesale,
           variantSku: variantKey,
           variantName: defaultVariant?.name || "",
         });
       },
-      [animateAddToCart, product, addToCart, variantKey, defaultVariant?.name],
+      [animateAddToCart, product, addToCart, variantKey, defaultVariant?.name, isWholesale],
     );
 
     const handleIncrement = React.useCallback(
@@ -171,6 +176,7 @@ const ProductCard = React.memo(
         <div className="relative">
           {/* Badge (Custom or Discount) */}
           {(badge ||
+            isWholesale ||
             product.discount ||
             product.originalPrice > product.price) && (
               <div
@@ -181,8 +187,14 @@ const ProductCard = React.memo(
                     : "top-2 left-2 px-1 py-0.5 text-[7px] sm:top-3 sm:left-3 sm:px-2 sm:py-1 sm:text-[9px]",
                 )}>
                 {badge ||
-                  product.discount ||
-                  `${Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF`}
+                  (isWholesale
+                    ? "WHOLESALE 20% OFF"
+                    : product.discount ||
+                      `${Math.round(
+                        ((product.originalPrice - product.price) /
+                          product.originalPrice) *
+                          100,
+                      )}% OFF`)}
               </div>
             )}
 
@@ -264,6 +276,15 @@ const ProductCard = React.memo(
               )}>
               {product.weight || "1 unit"}
             </div>
+            {isWholesale && (
+              <div
+                className={cn(
+                  "bg-amber-500 text-white font-[900] rounded px-1.5 py-0.5 tracking-wide uppercase animate-pulse",
+                  compact ? "text-[6.5px]" : "text-[7.5px] sm:text-[8px]",
+                )}>
+                Bulk Pack
+              </div>
+            )}
           </div>
 
           <div className={cn(compact ? "h-8" : "h-8 sm:h-9")}>
@@ -283,15 +304,15 @@ const ProductCard = React.memo(
                 "font-[1000] text-[#1A1A1A] leading-none",
                 compact ? "text-[12px] sm:text-[13px]" : "text-[14px] sm:text-base",
               )}>
-              ₹{product.price}
+              ₹{isWholesale ? Math.floor(product.price * 0.8) : product.price}
             </span>
-            {product.originalPrice > product.price && (
+            {(isWholesale || product.originalPrice > product.price) && (
               <span
                 className={cn(
                   "font-medium text-gray-400 line-through leading-none",
                   compact ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-[12px]",
                 )}>
-                ₹{product.originalPrice}
+                ₹{isWholesale ? product.price : product.originalPrice}
               </span>
             )}
           </div>

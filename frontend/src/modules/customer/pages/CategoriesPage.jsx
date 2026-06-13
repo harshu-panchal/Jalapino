@@ -47,7 +47,7 @@ const CategoriesPage = () => {
     return (
         <div className="min-h-screen bg-[#FAF8F6]">
             <MainLocationHeader hideSearchBar={true} />
-            <div className="max-w-3xl mx-auto px-6 pt-[140px] md:pt-[160px] pb-24">
+            <div className="max-w-3xl mx-auto px-6 pt-[210px] md:pt-[230px] pb-24">
                 {isLoading ? (
                     <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--customer-header-base-color)]" />

@@ -1,14 +1,20 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, MapPin } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Menu, MapPin, ShoppingBag, Store } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useWishlist } from '../../context/WishlistContext';
 import { useCart } from '../../context/CartContext';
 import { useLocation as useAppLocation } from "../../context/LocationContext";
 import { useSettings } from '@core/context/SettingsContext';
+import { useCustomerMode } from '../../context/CustomerModeContext';
 import LocationDrawer from '../shared/LocationDrawer';
+import { cn } from '@/lib/utils';
+import retailerIcon from "../../../../assets/retailer.webp";
+import wholesalerIcon from "../../../../assets/wholesaler.webp";
 
 const Header = () => {
+    const { mode, toggleMode } = useCustomerMode();
     const { settings } = useSettings();
     const { count: wishlistCount } = useWishlist();
     const { cartCount } = useCart();
@@ -70,8 +76,55 @@ const Header = () => {
     }, [typingState]);
 
     return (
-        <header className="absolute top-4 md:top-8 left-0 right-0 z-[200] px-4">
+        <header style={{ fontFamily: "'Inter', sans-serif" }} className="absolute top-4 md:top-8 left-0 right-0 z-[200] px-4 font-sans">
             <div className="container mx-auto max-w-6xl">
+                {/* Mode Switcher Cards */}
+                <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
+                    {/* Retail Card */}
+                    <button
+                        type="button"
+                        onClick={() => toggleMode('retail')}
+                        className={cn(
+                            "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                            mode === 'retail'
+                                ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
+                                : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
+                        )}
+                    >
+                        <img 
+                            src={retailerIcon} 
+                            alt="Retail" 
+                            className={cn(
+                                "h-7 w-7 object-contain transition-all duration-300",
+                                mode === 'retail' ? "opacity-100 scale-105" : "opacity-70 hover:opacity-100"
+                            )}
+                        />
+                        <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
+                    </button>
+
+                    {/* Wholesale Card */}
+                    <button
+                        type="button"
+                        onClick={() => toggleMode('whole')}
+                        className={cn(
+                            "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                            mode === 'whole'
+                                ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
+                                : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
+                        )}
+                    >
+                        <img 
+                            src={wholesalerIcon} 
+                            alt="Wholesale" 
+                            className={cn(
+                                "h-7 w-7 object-contain transition-all duration-300",
+                                mode === 'whole' ? "opacity-100 scale-105" : "opacity-70 hover:opacity-100"
+                            )}
+                        />
+                        <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
+                    </button>
+                </div>
+
                 {/* Mobile Top Row: Location & Profile */}
                 <div className="md:hidden flex items-center justify-between mb-4 px-2 animate-in slide-in-from-top duration-500">
                     <button

@@ -16,6 +16,8 @@ import {
   buildHeaderOpacityGradient,
 } from "../../utils/headerTheme";
 import LogoImage from "../../../../assets/Logo.png";
+import retailerIcon from "../../../../assets/retailer.webp";
+import wholesalerIcon from "../../../../assets/wholesaler.webp";
 
 // MUI Icons
 import LocationOnIcon from "@mui/icons-material/LocationOn";
@@ -24,6 +26,10 @@ import ChevronDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
+import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
+import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
+
+import { useCustomerMode } from "../../context/CustomerModeContext";
 
 /** Full-width bottom stroke + tab curve; l/r are 0–100% of column where the inner bump sits. */
 function buildActiveTabPath(l, r) {
@@ -149,6 +155,7 @@ const MainLocationHeader = ({
   onCategorySelect,
   hideSearchBar = false,
 }) => {
+  const { mode, toggleMode } = useCustomerMode();
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [cartAnimData, setCartAnimData] = useState(null);
@@ -317,6 +324,53 @@ const MainLocationHeader = ({
           {/* Subtle Glow Overlay */}
           <div className="absolute inset-0 bg-white/8 pointer-events-none" />
 
+          {/* Mode Switcher Cards */}
+          <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
+            {/* Retail Card */}
+            <button
+              type="button"
+              onClick={() => toggleMode('retail')}
+              className={cn(
+                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border text-white",
+                mode === 'retail'
+                  ? "bg-white text-slate-900 border-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] scale-[1.02] font-black"
+                  : "bg-white/10 text-white/80 border-white/10 hover:bg-white/20 hover:text-white"
+              )}
+            >
+              <img 
+                src={retailerIcon} 
+                alt="Retail"
+                className={cn(
+                  "h-7 w-7 object-contain transition-all duration-300",
+                  mode === 'retail' ? "opacity-100 scale-105" : "opacity-75 hover:opacity-100"
+                )}
+              />
+              <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
+            </button>
+
+            {/* Wholesale Card */}
+            <button
+              type="button"
+              onClick={() => toggleMode('whole')}
+              className={cn(
+                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border text-white",
+                mode === 'whole'
+                  ? "bg-white text-slate-900 border-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] scale-[1.02] font-black"
+                  : "bg-white/10 text-white/80 border-white/10 hover:bg-white/20 hover:text-white"
+              )}
+            >
+              <img 
+                src={wholesalerIcon} 
+                alt="Wholesale"
+                className={cn(
+                  "h-7 w-7 object-contain transition-all duration-300",
+                  mode === 'whole' ? "opacity-100 scale-105" : "opacity-75 hover:opacity-100"
+                )}
+              />
+              <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
+            </button>
+          </div>
+
           {/* Corner Lottie */}
           <motion.button
             initial={{ opacity: 0, scale: 0.9, y: -8 }}
@@ -330,7 +384,7 @@ const MainLocationHeader = ({
             type="button"
             aria-label="Open cart"
             onClick={() => navigate("/checkout")}
-            className="absolute top-3 right-5 sm:top-4 sm:right-6 md:top-5 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer">
+            className="absolute top-[72px] right-5 sm:top-[76px] sm:right-6 md:top-5 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer">
             {cartAnimData ? (
               <Lottie
                 animationData={cartAnimData}

@@ -343,40 +343,7 @@ const CustomerAuth = () => {
                                                         onBlur={(e) => e.target.style.borderColor = '#F3F4F6'}
                                                     />
                                                 </div>
-                                                <div className="flex bg-gray-50 rounded-2xl p-1.5 border border-gray-100 gap-1.5">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, customerType: 'retail' })}
-                                                        className={`flex-1 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest outline-none border border-transparent ${
-                                                            formData.customerType === 'retail'
-                                                                ? 'bg-white shadow-sm'
-                                                                : 'text-gray-400 hover:text-gray-600'
-                                                        }`}
-                                                        style={{
-                                                            color: formData.customerType === 'retail' ? activeCategory.theme : undefined,
-                                                            borderColor: formData.customerType === 'retail' ? `${activeCategory.theme}20` : 'transparent'
-                                                        }}
-                                                    >
-                                                        <ShoppingBag size={15} />
-                                                        Retail
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setFormData({ ...formData, customerType: 'wholesale' })}
-                                                        className={`flex-1 py-3 rounded-xl transition-all flex items-center justify-center gap-2 text-xs font-black uppercase tracking-widest outline-none border border-transparent ${
-                                                            formData.customerType === 'wholesale'
-                                                                ? 'bg-white shadow-sm'
-                                                                : 'text-gray-400 hover:text-gray-600'
-                                                        }`}
-                                                        style={{
-                                                            color: formData.customerType === 'wholesale' ? activeCategory.theme : undefined,
-                                                            borderColor: formData.customerType === 'wholesale' ? `${activeCategory.theme}20` : 'transparent'
-                                                        }}
-                                                    >
-                                                        <Store size={15} />
-                                                        Wholesale
-                                                    </button>
-                                                </div>
+
                                             </>
                                         )}
                                         <div className="relative group">

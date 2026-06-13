@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
 import { UserRole } from "@core/constants/roles";
@@ -48,7 +48,9 @@ const REQUIRED_DOCUMENT_CONFIG = [
 ];
 
 const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams] = useSearchParams();
+  const isSignupMode = searchParams.get("mode") === "signup" || searchParams.get("signup") === "true";
+  const [isLogin, setIsLogin] = useState(!isSignupMode);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [signupStep, setSignupStep] = useState(1);
@@ -56,6 +58,25 @@ const Auth = () => {
   const { login } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
+  const panelRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const handleWheel = (e) => {
+      if (panel.scrollHeight <= panel.clientHeight) {
+        return;
+      }
+      e.preventDefault();
+      panel.scrollTop += e.deltaY;
+    };
+
+    panel.addEventListener("wheel", handleWheel, { passive: false });
+    return () => {
+      panel.removeEventListener("wheel", handleWheel);
+    };
+  }, []);
   const appName = settings?.appName || "App";
   const logoUrl = settings?.logoUrl || "";
   const [verifications, setVerifications] = useState({
@@ -253,15 +274,7 @@ const Auth = () => {
     }
   };
 
-  const handlePanelWheel = (e) => {
-    const panel = e.currentTarget;
-    if (panel.scrollHeight <= panel.clientHeight) {
-      return;
-    }
 
-    e.preventDefault();
-    panel.scrollTop += e.deltaY;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -417,7 +430,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#fcfaff] p-6 font-sans overflow-hidden relative">
+    <div className="w-full min-h-screen bg-[#fcfaff] p-4 sm:p-6 font-sans relative flex flex-col items-center justify-start md:justify-center">
       {/* Elegant Ambient Background */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[60%] h-[60%] bg-slate-100/50 rounded-full blur-[120px]" />
@@ -427,7 +440,7 @@ const Auth = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-full max-w-[1000px] min-h-[600px] max-h-[90vh] bg-white rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row overflow-hidden">
+        className="relative z-10 w-full max-w-[1000px] min-h-0 md:min-h-[600px] max-h-none md:max-h-[90vh] bg-white rounded-2xl md:rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row md:overflow-hidden">
         {/* Visual Side Panel */}
         <div className="hidden md:flex w-[45%] bg-linear-to-br from-slate-900 via-slate-950 to-black relative flex-col items-center justify-center p-10 overflow-hidden">
           {/* Abstract Decorative Circles */}
@@ -476,8 +489,8 @@ const Auth = () => {
 
         {/* Form Content Side */}
         <div
-          className="w-full md:w-[55%] min-h-0 p-8 pt-12 md:p-12 md:pt-16 flex flex-col justify-center bg-white overflow-y-auto overscroll-contain touch-pan-y custom-scrollbar relative"
-          onWheelCapture={handlePanelWheel}
+          ref={panelRef}
+          className="w-full md:w-[55%] min-h-0 p-5 pt-8 md:p-12 md:pt-16 flex flex-col justify-center bg-white md:overflow-y-auto md:overscroll-contain custom-scrollbar relative"
           style={{ WebkitOverflowScrolling: "touch" }}>
           <div className="hidden md:flex absolute top-8 right-8 z-20">
             <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
@@ -528,7 +541,7 @@ const Auth = () => {
                 {(isLogin || signupStep === 1) && (
                   <>
                     {!isLogin && (
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-4">
                         <div className="relative group">
                           <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
                             <User size={18} />
@@ -538,7 +551,7 @@ const Auth = () => {
                             name="name"
                             required
                             placeholder="Owner Name"
-                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                             value={formData.name}
                             onChange={handleChange}
                           />
@@ -552,7 +565,7 @@ const Auth = () => {
                             name="shopName"
                             required
                             placeholder="Shop / Business Name"
-                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                             value={formData.shopName}
                             onChange={handleChange}
                           />
@@ -571,7 +584,7 @@ const Auth = () => {
                         inputMode="email"
                         autoComplete="email"
                         placeholder="Business Email"
-                        className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                        className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                         value={formData.email}
                         onChange={handleChange}
                       />
@@ -613,7 +626,7 @@ const Auth = () => {
                               otp: e.target.value.replace(/\D/g, "").slice(0, 4),
                             })
                           }
-                          className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+                          className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-500"
                         />
                         <button
                           type="button"
@@ -643,7 +656,7 @@ const Auth = () => {
                             name="phone"
                             required
                             placeholder="Contact Number"
-                            className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                            className="w-full pl-12 pr-28 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                             value={formData.phone}
                             onChange={handleChange}
                           />
@@ -683,7 +696,7 @@ const Auth = () => {
                                   otp: e.target.value.replace(/\D/g, "").slice(0, 4),
                                 })
                               }
-                              className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-400"
+                              className="flex-1 bg-transparent text-sm font-bold text-slate-700 outline-none placeholder:text-slate-500"
                             />
                             <button
                               type="button"
@@ -715,7 +728,7 @@ const Auth = () => {
                         minLength={6}
                         autoComplete="current-password"
                         placeholder="Enter your password"
-                        className="w-full pl-12 pr-14 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                        className="w-full pl-12 pr-14 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                         value={formData.password}
                         onChange={handleChange}
                       />
@@ -785,7 +798,7 @@ const Auth = () => {
                           name="locality"
                           required
                           placeholder="Locality / Area"
-                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                           value={formData.locality}
                           onChange={handleChange}
                         />
@@ -799,7 +812,7 @@ const Auth = () => {
                           name="pincode"
                           required
                           placeholder="Pincode"
-                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                           value={formData.pincode}
                           onChange={handleChange}
                         />
@@ -813,7 +826,7 @@ const Auth = () => {
                           name="city"
                           required
                           placeholder="City"
-                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                           value={formData.city}
                           onChange={handleChange}
                         />
@@ -827,7 +840,7 @@ const Auth = () => {
                           name="state"
                           required
                           placeholder="State"
-                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300"
+                          className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                           value={formData.state}
                           onChange={handleChange}
                         />
@@ -843,7 +856,7 @@ const Auth = () => {
                         rows={3}
                         required
                         placeholder="Full address"
-                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-300 resize-none"
+                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500 resize-none"
                         value={formData.address}
                         onChange={handleChange}
                       />

@@ -222,14 +222,6 @@ const CheckoutPage = () => {
 
   const RECIPIENT_STORAGE_KEY = STORAGE_KEYS.RECIPIENT_ADDRESS;
 
-  // Derived display values for primary delivery card
-  const displayName = savedRecipient?.name || currentAddress.name;
-  const displayPhone =
-    savedRecipient?.phone || currentAddress.phone || "6268423925";
-  const displayAddress = savedRecipient
-    ? `${savedRecipient.completeAddress}${savedRecipient.landmark ? `, ${savedRecipient.landmark}` : ""}${savedRecipient.pincode ? ` - ${savedRecipient.pincode}` : ""}`
-    : `${currentAddress.address}${currentAddress.landmark ? `, ${currentAddress.landmark}` : ""}, ${currentAddress.city}`;
-
   useEffect(() => {
     if (!paymentMethods.length) return;
     const exists = paymentMethods.some((method) => method.id === selectedPayment);
@@ -279,6 +271,32 @@ const CheckoutPage = () => {
       location: hasAddrLoc ? { lat: addrLoc.lat, lng: addrLoc.lng } : undefined,
     };
   };
+
+  const addressForOrder = useMemo(() => buildAddressForOrder(), [
+    savedRecipient,
+    currentAddress,
+    currentLocation,
+  ]);
+
+  const hasCoordinates = useMemo(() => {
+    return !!(
+      addressForOrder?.location?.lat &&
+      addressForOrder?.location?.lng
+    );
+  }, [addressForOrder]);
+
+  const displayName = savedRecipient?.name || currentAddress.name;
+  const displayPhone =
+    savedRecipient?.phone || currentAddress.phone || "6268423925";
+
+  const displayAddress = useMemo(() => {
+    if (!hasCoordinates) {
+      return "No exact location selected. Please click Change or Edit to set your coordinates.";
+    }
+    return savedRecipient
+      ? `${savedRecipient.completeAddress}${savedRecipient.landmark ? `, ${savedRecipient.landmark}` : ""}${savedRecipient.pincode ? ` - ${savedRecipient.pincode}` : ""}`
+      : `${currentAddress.address}${currentAddress.landmark ? `, ${currentAddress.landmark}` : ""}, ${currentAddress.city}`;
+  }, [hasCoordinates, savedRecipient, currentAddress]);
 
   const handleSaveRecipient = () => {
     if (
@@ -719,11 +737,16 @@ const CheckoutPage = () => {
   }, [cartProductIdKey]);
 
   const handlePlaceOrder = async () => {
+    if (!hasCoordinates) {
+      showToast("Please select your exact delivery location first.", "error");
+      setIsAddressModalOpen(true);
+      return;
+    }
     setIsPlacingOrder(true);
     try {
       const taxAmount = pricingPreview?.taxTotal || 0;
       const orderData = {
-        address: buildAddressForOrder(),
+        address: addressForOrder,
         paymentMode: selectedPayment === "online" ? "ONLINE" : "COD",
         discountTotal: discountAmount,
         taxTotal: taxAmount,
@@ -983,6 +1006,7 @@ const CheckoutPage = () => {
               displayName={displayName}
               displayPhone={displayPhone}
               displayAddress={displayAddress}
+              hasCoordinates={hasCoordinates}
             />
 
             {/* Cart Summary */}
@@ -1056,7 +1080,7 @@ const CheckoutPage = () => {
                 amount={finalAmountToPay}
                 onSuccess={handlePlaceOrder}
                 isLoading={isPlacingOrder || isPreviewLoading || !pricingPreview}
-                text={finalAmountToPay === 0 ? "Place Free Order" : "Order Now"}
+                text={!hasCoordinates ? "Set Delivery Location" : finalAmountToPay === 0 ? "Place Free Order" : "Order Now"}
               />
               <p className="text-center text-[10px] text-slate-400 font-bold mt-4 uppercase tracking-[0.1em]">
                 🔒 SSL encrypted secure checkout
@@ -1073,7 +1097,7 @@ const CheckoutPage = () => {
             amount={finalAmountToPay}
             onSuccess={handlePlaceOrder}
             isLoading={isPlacingOrder || isPreviewLoading || !pricingPreview}
-            text={finalAmountToPay === 0 ? "Place Free Order" : "Slide to Pay"}
+            text={!hasCoordinates ? "Set Delivery Location" : finalAmountToPay === 0 ? "Place Free Order" : "Slide to Pay"}
           />
         </div>
       </div>

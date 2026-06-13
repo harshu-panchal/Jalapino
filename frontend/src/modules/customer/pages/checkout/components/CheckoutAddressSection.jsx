@@ -1,5 +1,5 @@
 import React from "react";
-import { Check, Contact2 } from "lucide-react";
+import { Check, Contact2, AlertTriangle, MapPin } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -36,6 +36,7 @@ const CheckoutAddressSection = React.memo(function CheckoutAddressSection({
   displayName,
   displayPhone,
   displayAddress,
+  hasCoordinates,
 }) {
   return (
     <motion.div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-100">
@@ -176,16 +177,31 @@ const CheckoutAddressSection = React.memo(function CheckoutAddressSection({
       </div>
 
       {/* Active address card */}
-      <div className="border rounded-xl p-3 mb-3 relative cursor-pointer transition-all border-primary bg-brand-50/50">
+      <div 
+        onClick={onSelectAddress}
+        className={`border rounded-xl p-3 mb-3 relative cursor-pointer transition-all ${
+          hasCoordinates 
+            ? "border-primary bg-brand-50/50 hover:bg-brand-50" 
+            : "border-amber-400 bg-amber-50/20 hover:bg-amber-50/40 animate-pulse"
+        }`}
+      >
         <div className="flex items-start gap-3">
           <div className="mt-1">
-            <div className="h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-              <Check size={12} className="text-white stroke-[4]" />
+            <div className={`h-5 w-5 rounded-full flex items-center justify-center ${
+              hasCoordinates ? "bg-primary" : "bg-amber-500"
+            }`}>
+              {hasCoordinates ? (
+                <Check size={12} className="text-white stroke-[4]" />
+              ) : (
+                <AlertTriangle size={12} className="text-white" />
+              )}
             </div>
           </div>
           <div className="flex-1">
             <div className="flex justify-between items-start">
-              <h4 className="font-bold text-slate-800 text-sm">{displayName}</h4>
+              <h4 className="font-bold text-slate-800 text-sm">
+                {hasCoordinates ? displayName : "Select Location"}
+              </h4>
               <div className="flex items-center gap-2">
                 <button
                   onClick={(e) => { e.stopPropagation(); onEditAddress(); }}
@@ -199,8 +215,14 @@ const CheckoutAddressSection = React.memo(function CheckoutAddressSection({
                 </button>
               </div>
             </div>
-            <p className="text-xs text-slate-500 font-medium mt-0.5">{displayPhone}</p>
-            <p className="text-xs text-slate-500 mt-1 leading-relaxed">{displayAddress}</p>
+            {hasCoordinates && (
+              <p className="text-xs text-slate-500 font-medium mt-0.5">{displayPhone}</p>
+            )}
+            <p className={`text-xs mt-1 leading-relaxed ${
+              hasCoordinates ? "text-slate-500" : "text-amber-700 font-semibold"
+            }`}>
+              {displayAddress}
+            </p>
           </div>
         </div>
       </div>
@@ -215,19 +237,35 @@ const CheckoutAddressSection = React.memo(function CheckoutAddressSection({
       </button>
 
       {/* Confirmation banner */}
-      <motion.div className="mt-3 rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 flex items-center gap-3 shadow-sm">
-        <div className="h-8 w-8 rounded-full bg-black  flex items-center justify-center shadow-brand-500/40 shadow-md">
-          <Check size={16} className="text-white stroke-[3]" />
-        </div>
-        <div className="flex-1">
-          <p className="text-[13px] font-semibold text-brand-900">
-            Delivery address confirmed
-          </p>
-          <p className="text-[11px] font-medium text-brand-800/80">
-            We&apos;ll deliver to the address you&apos;ve entered above.
-          </p>
-        </div>
-      </motion.div>
+      {hasCoordinates ? (
+        <motion.div className="mt-3 rounded-2xl border border-brand-100 bg-brand-50/70 px-4 py-3 flex items-center gap-3 shadow-sm">
+          <div className="h-8 w-8 rounded-full bg-black flex items-center justify-center shadow-brand-500/40 shadow-md">
+            <Check size={16} className="text-white stroke-[3]" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[13px] font-semibold text-brand-900">
+              Delivery address confirmed
+            </p>
+            <p className="text-[11px] font-medium text-brand-800/80">
+              We&apos;ll deliver to the address you&apos;ve entered above.
+            </p>
+          </div>
+        </motion.div>
+      ) : (
+        <motion.div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-center gap-3 shadow-sm">
+          <div className="h-8 w-8 rounded-full bg-amber-500 flex items-center justify-center shadow-md animate-pulse">
+            <MapPin size={16} className="text-white" />
+          </div>
+          <div className="flex-1">
+            <p className="text-[13px] font-bold text-amber-900">
+              Location Setup Required
+            </p>
+            <p className="text-[11px] font-medium text-amber-800/80">
+              Please click &quot;Change&quot;, &quot;Edit&quot;, or use live location to pin your exact spot.
+            </p>
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   );
 });

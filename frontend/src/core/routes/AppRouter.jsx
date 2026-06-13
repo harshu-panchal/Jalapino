@@ -12,6 +12,7 @@ import { CartProvider } from '../../modules/customer/context/CartContext';
 import { CartAnimationProvider } from '../../modules/customer/context/CartAnimationContext';
 import { ProductDetailProvider } from '../../modules/customer/context/ProductDetailContext';
 import { LocationProvider } from '../../modules/customer/context/LocationContext';
+import { CustomerModeProvider } from '../../modules/customer/context/CustomerModeContext';
 import ScrollToTop from '../../modules/customer/components/shared/ScrollToTop';
 
 // Public Pages
@@ -45,6 +46,8 @@ const CheckoutPage = lazy(() => import('../../modules/customer/pages/CheckoutPag
 const PaymentStatusPage = lazy(() => import('../../modules/customer/pages/PaymentStatusPage'));
 const SearchPage = lazy(() => import('../../modules/customer/pages/SearchPage'));
 const WalletPage = lazy(() => import('../../modules/customer/pages/WalletPage'));
+const ReelsPage = lazy(() => import('../../modules/customer/pages/ReelsPage'));
+const SpinWinPage = lazy(() => import('../../modules/customer/pages/SpinWinPage'));
 
 // Lazy load heavy modules
 const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
@@ -59,22 +62,24 @@ const CustomerLayoutWrapper = () => {
     }, []);
 
     return (
-        <LocationProvider>
-            <WishlistProvider>
-                <CartProvider>
-                    <CartAnimationProvider>
-                        <ProductDetailProvider>
-                            <ScrollToTop />
-                            <CustomerLayout>
-                                <Suspense fallback={<div className="flex h-screen items-center justify-center font-sans">Loading...</div>}>
-                                    <Outlet />
-                                </Suspense>
-                            </CustomerLayout>
-                        </ProductDetailProvider>
-                    </CartAnimationProvider>
-                </CartProvider>
-            </WishlistProvider>
-        </LocationProvider>
+        <CustomerModeProvider>
+            <LocationProvider>
+                <WishlistProvider>
+                    <CartProvider>
+                        <CartAnimationProvider>
+                            <ProductDetailProvider>
+                                <ScrollToTop />
+                                <CustomerLayout>
+                                    <Suspense fallback={<div className="flex h-screen items-center justify-center font-sans">Loading...</div>}>
+                                        <Outlet />
+                                    </Suspense>
+                                </CustomerLayout>
+                            </ProductDetailProvider>
+                        </CartAnimationProvider>
+                    </CartProvider>
+                </WishlistProvider>
+            </LocationProvider>
+        </CustomerModeProvider>
     );
 };
 
@@ -169,6 +174,8 @@ const AppRouter = () => {
                         { path: 'profile/edit', element: <ProtectedRoute><EditProfilePage /></ProtectedRoute> },
                         { path: 'wallet', element: <ProtectedRoute><WalletPage /></ProtectedRoute> },
                         { path: 'search', element: <SearchPage /> },
+                        { path: 'reels', element: <ReelsPage /> },
+                        { path: 'spin', element: <ProtectedRoute><SpinWinPage /></ProtectedRoute> },
                     ]
                 },
                 {

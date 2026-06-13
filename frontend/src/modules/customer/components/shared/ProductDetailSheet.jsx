@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useMemo } from 'react';
 import { motion, AnimatePresence, useAnimation, useDragControls } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { X, ChevronDown, Share2, Heart, Search, Clock, Minus, Plus, ShoppingBag, Star, MessageSquare, ArrowLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronDown, Share2, Heart, Search, Clock, Minus, Plus, ShoppingBag, Star, MessageSquare, ArrowLeft, ChevronRight, Play } from 'lucide-react';
 import { useProductDetail } from '../../context/ProductDetailContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -404,15 +404,7 @@ const ProductDetailSheet = () => {
 
                                         {/* Top badges row */}
                                         <div className="flex items-center gap-2 flex-wrap">
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.1 }}
-                                                className="inline-flex items-center gap-1.5 bg-[#ecfeff] border border-brand-200/50 text-primary px-3 py-1.5 rounded-lg text-[10px] font-[700] uppercase tracking-wider"
-                                            >
-                                                <Clock size={12} strokeWidth={2.5} className="text-primary" />
-                                                {selectedProduct.deliveryTime || '8-15 MINS'}
-                                            </motion.div>
+
                                             {selectedProduct.originalPrice > selectedProduct.price && (
                                                 <motion.div
                                                     initial={{ opacity: 0, x: -10 }}
@@ -423,16 +415,18 @@ const ProductDetailSheet = () => {
                                                     💰 Save ₹{selectedProduct.originalPrice - selectedProduct.price}
                                                 </motion.div>
                                             )}
-                                            <motion.div
-                                                initial={{ opacity: 0, x: -10 }}
-                                                animate={{ opacity: 1, x: 0 }}
-                                                transition={{ delay: 0.2 }}
-                                                className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-[700] border border-orange-100/50"
-                                            >
-                                                <Star size={10} fill="currentColor" />
-                                                {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
-                                                <span className="text-orange-400 font-medium">({reviews.length > 0 ? reviews.length : '120+'})</span>
-                                            </motion.div>
+                                            {reviews.length > 0 && (
+                                                <motion.div
+                                                    initial={{ opacity: 0, x: -10 }}
+                                                    animate={{ opacity: 1, x: 0 }}
+                                                    transition={{ delay: 0.2 }}
+                                                    className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-50 text-orange-600 rounded-lg text-[10px] font-[700] border border-orange-100/50"
+                                                >
+                                                    <Star size={10} fill="currentColor" />
+                                                    {(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}
+                                                    <span className="text-orange-400 font-medium">({reviews.length})</span>
+                                                </motion.div>
+                                            )}
                                         </div>
 
                                         {/* Product Name */}
@@ -446,6 +440,17 @@ const ProductDetailSheet = () => {
                                             </h1>
                                             {selectedProduct.weight && (
                                                 <span className="text-[13px] text-gray-400 font-bold uppercase tracking-wider">{selectedProduct.weight}</span>
+                                            )}
+                                            {selectedProduct.videoUrl && (
+                                                <div className="mt-2">
+                                                    <Link
+                                                        to={`/reels?productId=${selectedProduct.id || selectedProduct._id}`}
+                                                        onClick={closeProduct}
+                                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-primary/20"
+                                                    >
+                                                        <Play size={12} fill="currentColor" /> Watch Video
+                                                    </Link>
+                                                </div>
                                             )}
                                         </motion.div>
 
@@ -617,10 +622,10 @@ const ProductDetailSheet = () => {
                                             >
                                                 <div className="grid grid-cols-2 gap-3 mt-1">
                                                     {[
-                                                        { label: 'Shelf Life', value: '3 Days', emoji: '📅' },
-                                                        { label: 'Country of Origin', value: 'India', emoji: '🇮🇳' },
-                                                        { label: 'FSSAI License', value: '1001234567890', emoji: '🛡️' },
-                                                        { label: 'Customer Care', value: supportEmail, emoji: '📧' }
+                                                        { label: 'Shelf Life', value: selectedProduct.shelfLife || '3 Days', emoji: '📅' },
+                                                        { label: 'Country of Origin', value: selectedProduct.countryOfOrigin || 'India', emoji: '🇮🇳' },
+                                                        { label: 'FSSAI License', value: selectedProduct.fssaiLicense || '1001234567890', emoji: '🛡️' },
+                                                        { label: 'Customer Care', value: selectedProduct.customerCare || supportEmail, emoji: '📧' }
                                                     ].map((d) => (
                                                         <div key={d.label} className="bg-slate-50 p-2.5 rounded-xl border border-slate-100 group hover:bg-white hover:shadow-sm transition-all">
                                                             <span className="text-[10px] text-slate-400 block mb-0.5 font-bold uppercase tracking-wider">{d.label}</span>
@@ -633,16 +638,18 @@ const ProductDetailSheet = () => {
                                             {/* Customer Reviews */}
                                             <AccordionItem 
                                                 id="reviews" 
-                                                title={`Customer Reviews (${reviews.length > 0 ? reviews.length : '120+'})`}
+                                                title={`Customer Reviews (${reviews.length})`}
                                                 icon={<Star size={16} />}
                                             >
                                                 <div className="space-y-6 mt-2">
-                                                    <div className="flex items-center justify-between mb-4">
-                                                        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-primary rounded-xl text-xs font-black border border-brand-100">
-                                                            <Star size={14} fill="currentColor" />
-                                                            {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
+                                                    {reviews.length > 0 && (
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-primary rounded-xl text-xs font-black border border-brand-100">
+                                                                <Star size={14} fill="currentColor" />
+                                                                {(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    )}
 
                                                     {/* Review Form */}
                                                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 mb-6">
@@ -698,7 +705,7 @@ const ProductDetailSheet = () => {
                                                         ) : (
                                                             <div className="py-10 text-center bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                                                                 <MessageSquare size={20} className="text-slate-300 mx-auto mb-2" />
-                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No reviews yet — be the first!</p>
+                                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Be the first to write a review</p>
                                                             </div>
                                                         )}
                                                     </div>
@@ -828,15 +835,23 @@ const ProductDetailSheet = () => {
 
                             {/* Product Info Container */}
                             <div className="px-5 pt-2 pb-6">
-                                {/* Delivery Time Badge */}
-                                <div className="inline-flex items-center gap-1.5 bg-[#F0FDF4] border border-brand-100 text-primary px-2.5 py-1 rounded-lg text-[10px] font-black uppercase mb-3">
-                                    <Clock size={12} strokeWidth={3} />
-                                    {selectedProduct.deliveryTime || "8 Mins"}
-                                </div>
+
 
                                 <h2 className="text-xl font-black text-[#1A1A1A] leading-tight mb-2">
                                     {selectedProduct.name}
                                 </h2>
+
+                                {selectedProduct.videoUrl && (
+                                     <div className="mb-3">
+                                         <Link
+                                             to={`/reels?productId=${selectedProduct.id || selectedProduct._id}`}
+                                             onClick={closeProduct}
+                                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border border-primary/20"
+                                         >
+                                             <Play size={12} fill="currentColor" /> Watch Video
+                                         </Link>
+                                     </div>
+                                 )}
 
                                 {/* Variants Selection (Mobile) */}
                                 {selectedProduct.variants && selectedProduct.variants.length > 0 && (
@@ -889,10 +904,10 @@ const ProductDetailSheet = () => {
                                     >
                                         <div className="grid grid-cols-2 gap-3 mt-1">
                                             {[
-                                                { label: 'Shelf Life', value: '3 Days' },
-                                                { label: 'Country of Origin', value: 'India' },
-                                                { label: 'FSSAI License', value: '1001234567890' },
-                                                { label: 'Customer Care', value: supportEmail }
+                                                { label: 'Shelf Life', value: selectedProduct.shelfLife || '3 Days' },
+                                                { label: 'Country of Origin', value: selectedProduct.countryOfOrigin || 'India' },
+                                                { label: 'FSSAI License', value: selectedProduct.fssaiLicense || '1001234567890' },
+                                                { label: 'Customer Care', value: selectedProduct.customerCare || supportEmail }
                                             ].map((d) => (
                                                 <div key={d.label} className="bg-slate-50 p-3 rounded-xl border border-slate-100">
                                                     <span className="text-gray-400 block mb-0.5 text-[10px] font-bold uppercase tracking-wider">{d.label}</span>
@@ -905,16 +920,18 @@ const ProductDetailSheet = () => {
                                     {/* Customer Reviews */}
                                     <AccordionItem 
                                         id="reviews" 
-                                        title={`Customer Reviews (${reviews.length > 0 ? reviews.length : '120+'})`}
+                                        title={`Customer Reviews (${reviews.length})`}
                                         icon={<Star size={18} strokeWidth={2.5} />}
                                     >
                                         <div className="space-y-6 mt-2">
-                                            <div className="flex items-center justify-between mb-4">
-                                                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-primary rounded-xl text-xs font-black border border-brand-100">
-                                                    <Star size={16} fill="currentColor" />
-                                                    {reviews.length > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1) : '4.8'}
+                                            {reviews.length > 0 && (
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-50 text-primary rounded-xl text-xs font-black border border-brand-100">
+                                                        <Star size={16} fill="currentColor" />
+                                                        {(reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length).toFixed(1)}
+                                                    </div>
                                                 </div>
-                                            </div>
+                                            )}
 
                                             {/* Review Form */}
                                             <div className="bg-slate-50 p-5 rounded-3xl border border-slate-100 mb-6">
@@ -966,7 +983,7 @@ const ProductDetailSheet = () => {
                                                 ) : (
                                                     <div className="py-12 text-center bg-slate-50/50 rounded-3xl border border-dashed border-slate-200">
                                                         <MessageSquare size={24} className="text-slate-300 mx-auto mb-3" />
-                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No reviews yet — be the first!</p>
+                                                        <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Be the first to write a review</p>
                                                     </div>
                                                 )}
                                             </div>

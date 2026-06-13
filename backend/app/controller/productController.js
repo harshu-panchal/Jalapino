@@ -223,6 +223,7 @@ export const getProducts = async (req, res) => {
       sort,
       lat,
       lng,
+      hasVideo,
     } = req.query;
     const enforceRadius = isCustomerVisibilityRequest(req);
 
@@ -315,6 +316,9 @@ export const getProducts = async (req, res) => {
     }
 
     if (featured !== undefined) query.isFeatured = featured === "true";
+    if (hasVideo === "true") {
+      query.videoUrl = { $exists: true, $ne: "" };
+    }
 
     let finalQuery = { ...query };
     if (enforceRadius) {
@@ -353,7 +357,7 @@ export const getProducts = async (req, res) => {
       const [rawProducts, total] = await Promise.all([
         Product.find(finalQuery)
           .select(
-            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants createdAt",
+            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants videoUrl createdAt",
           )
           // No .populate() — names resolved via cache-backed entityNameCache
           .sort(sortQuery)
@@ -476,7 +480,7 @@ export const getSellerProducts = async (req, res) => {
     ] = await Promise.all([
       Product.find(query)
         .select(
-          "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants createdAt",
+          "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants videoUrl createdAt",
         )
         .populate("headerId", "name")
         .populate("categoryId", "name")
