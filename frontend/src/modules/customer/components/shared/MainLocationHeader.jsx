@@ -331,18 +331,22 @@ const MainLocationHeader = ({
               type="button"
               onClick={() => toggleMode('retail')}
               className={cn(
-                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border text-white",
+                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                 mode === 'retail'
-                  ? "bg-white text-slate-900 border-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] scale-[1.02] font-black"
-                  : "bg-white/10 text-white/80 border-white/10 hover:bg-white/20 hover:text-white"
+                  ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                  : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
               )}
+              style={{
+                borderWidth: '3px',
+                borderColor: 'transparent'
+              }}
             >
               <img 
                 src={retailerIcon} 
                 alt="Retail"
                 className={cn(
                   "h-7 w-7 object-contain transition-all duration-300",
-                  mode === 'retail' ? "opacity-100 scale-105" : "opacity-75 hover:opacity-100"
+                  mode === 'retail' ? "opacity-100 scale-105" : "opacity-100"
                 )}
               />
               <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
@@ -353,18 +357,22 @@ const MainLocationHeader = ({
               type="button"
               onClick={() => toggleMode('whole')}
               className={cn(
-                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border text-white",
+                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                 mode === 'whole'
-                  ? "bg-white text-slate-900 border-white shadow-[0_8px_20px_rgba(0,0,0,0.18)] scale-[1.02] font-black"
-                  : "bg-white/10 text-white/80 border-white/10 hover:bg-white/20 hover:text-white"
+                  ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                  : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
               )}
+              style={{
+                borderWidth: '3px',
+                borderColor: 'transparent'
+              }}
             >
               <img 
                 src={wholesalerIcon} 
                 alt="Wholesale"
                 className={cn(
                   "h-7 w-7 object-contain transition-all duration-300",
-                  mode === 'whole' ? "opacity-100 scale-105" : "opacity-75 hover:opacity-100"
+                  mode === 'whole' ? "opacity-100 scale-105" : "opacity-100"
                 )}
               />
               <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
