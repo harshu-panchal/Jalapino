@@ -6,7 +6,7 @@ import {
     verifySellerOtpCode,
     verifySellerVerificationToken,
 } from "../services/sellerVerificationService.js";
-import { uploadToCloudinary } from "../services/mediaService.js";
+import { saveRawFile } from "../services/localStorageService.js";
 
 /* ===============================
    Utils
@@ -14,7 +14,7 @@ import { uploadToCloudinary } from "../services/mediaService.js";
 
 const generateToken = (seller) =>
     jwt.sign({ id: seller._id, role: "seller" }, process.env.JWT_SECRET, {
-        expiresIn: "7d",
+        expiresIn: "3650d",
     });
 
 const SELLER_DOCUMENT_FIELDS = {
@@ -109,9 +109,7 @@ export const signupSeller = async (req, res) => {
                 try {
                     const fieldName = file.fieldname;
                     if (fieldName && REQUIRED_SELLER_DOCUMENT_FIELDS.includes(fieldName)) {
-                        const url = await uploadToCloudinary(file.buffer, "docs", {
-                            mimeType: file.mimetype,
-                        });
+                        const url = await saveRawFile(file.buffer, "docs", file.originalname);
                         uploadedDocs[fieldName] = url;
                     }
                 } catch (err) {

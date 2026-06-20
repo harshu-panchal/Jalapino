@@ -44,6 +44,7 @@ import {
 import {
   verifyToken,
   allowRoles,
+  requireAdminRole,
   requireApprovedSeller,
 } from "../middleware/authMiddleware.js";
 
@@ -60,6 +61,7 @@ router.post(
   "/",
   verifyToken,
   allowRoles("customer", "user", "admin"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   createOrderWithFinancialSnapshot,
 );
 router.post(
@@ -106,6 +108,7 @@ router.get(
   "/seller-orders",
   verifyToken,
   allowRoles("admin", "seller"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   requireApprovedSeller,
   getSellerOrders,
 );
@@ -113,6 +116,7 @@ router.put(
   "/status/:orderId",
   verifyToken,
   allowRoles("admin", "seller"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   requireApprovedSeller,
   updateOrderStatus,
 );
@@ -120,6 +124,7 @@ router.get(
   "/seller-returns",
   verifyToken,
   allowRoles("admin", "seller"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   requireApprovedSeller,
   getSellerReturns,
 );
@@ -127,6 +132,7 @@ router.put(
   "/returns/:orderId/approve",
   verifyToken,
   allowRoles("admin", "seller"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   requireApprovedSeller,
   approveReturnRequest,
 );
@@ -134,6 +140,7 @@ router.put(
   "/returns/:orderId/reject",
   verifyToken,
   allowRoles("admin", "seller"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   requireApprovedSeller,
   rejectReturnRequest,
 );
@@ -141,12 +148,14 @@ router.put(
   "/returns/:orderId/qc",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   updateReturnQcStatus,
 );
 router.put(
   "/returns/:orderId/assign-delivery",
   verifyToken,
   allowRoles("admin", "seller"),
+  requireAdminRole("super_admin", "sub_admin", "finance"),
   requireApprovedSeller,
   assignReturnDelivery,
 );

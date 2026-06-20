@@ -24,6 +24,7 @@ import metricsRoute from "./metricsRoutes.js";
 import authOtpRoute from "../modules/otp/otp.routes.js";
 import gamificationRoute from "./gamificationRoutes.js";
 import referralRoute from "./referralRoutes.js";
+import hsnRoute from "./hsnRoutes.js";
 
 import express from "express";
 
@@ -72,6 +73,7 @@ const setupRoutes = (app) => {
     router.use("/reviews", reviewRoute);
     router.use("/admin/faqs", faqRoute);
     router.use("/public/faqs", faqRoute); // For public access without admin prefix
+    router.use("/hsn", hsnRoute);
 
     app.use("/api", router);
 }

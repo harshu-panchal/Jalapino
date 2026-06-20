@@ -1,6 +1,6 @@
 // Comprehensive Order Management System
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import Pagination from '@shared/components/ui/Pagination';
@@ -32,8 +32,12 @@ import {
 const OrdersList = () => {
     const { status = 'all' } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const { showToast } = useToast();
-    const [searchTerm, setSearchTerm] = useState('');
+    
+    // Read initial search query from URL if present
+    const initialQuery = new URLSearchParams(location.search).get('q') || '';
+    const [searchTerm, setSearchTerm] = useState(initialQuery);
     const [dateRange, setDateRange] = useState('All Time');
     const [orders, setOrders] = useState([]);
     const [summary, setSummary] = useState({

@@ -33,6 +33,7 @@ const BillingCharges = () => {
         handlingFeeStrategy: "highest_category_fee",
         codEnabled: true,
         onlineEnabled: true,
+        gstPercentage: 0,
     });
 
     useEffect(() => {
@@ -61,6 +62,7 @@ const BillingCharges = () => {
                         handlingFeeStrategy: s.handlingFeeStrategy ?? prev.handlingFeeStrategy,
                         codEnabled: s.codEnabled ?? prev.codEnabled,
                         onlineEnabled: s.onlineEnabled ?? prev.onlineEnabled,
+                        gstPercentage: s.gstPercentage ?? prev.gstPercentage,
                     }));
                 }
             } catch (error) {
@@ -76,6 +78,8 @@ const BillingCharges = () => {
             await Promise.all([
                 adminApi.updatePlatformSettings({
                     returnDeliveryCommission,
+                    platformFee: config.platformFee,
+                    freeDeliveryThreshold: config.freeDeliveryThreshold,
                 }),
                 adminApi.updateDeliveryFinanceSettings({
                     deliveryPricingMode: deliveryMode === 'fixed' ? 'fixed_price' : 'distance_based',
@@ -90,6 +94,7 @@ const BillingCharges = () => {
                     handlingFeeStrategy: config.handlingFeeStrategy,
                     codEnabled: config.codEnabled,
                     onlineEnabled: config.onlineEnabled,
+                    gstPercentage: config.gstPercentage,
                 }),
             ]);
 
@@ -155,37 +160,22 @@ const BillingCharges = () => {
                             </h3>
                         </div>
                         <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            {/* Removed unused platform fee and free delivery threshold inputs */}
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    Platform/Handling Fee (₹)
+                                    Global GST Percentage (%)
                                     <Info className="h-3 w-3 opacity-50" />
                                 </label>
                                 <div className="relative group">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 group-focus-within:text-red-500 transition-colors">₹</span>
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 group-focus-within:text-red-500 transition-colors">%</span>
                                     <input
                                         type="number"
-                                        value={config.platformFee}
-                                        onChange={(e) => handleInputChange('platformFee', e.target.value)}
+                                        value={config.gstPercentage}
+                                        onChange={(e) => handleInputChange('gstPercentage', e.target.value)}
                                         className="w-full pl-10 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-red-500/10 transition-all"
                                     />
                                 </div>
-                                <p className="text-[10px] font-bold text-slate-400 italic">Fee added to every order.</p>
-                            </div>
-                            <div className="space-y-3">
-                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                                    Free Delivery Minimum (₹)
-                                    <Zap className="h-3 w-3 text-amber-500" />
-                                </label>
-                                <div className="relative group">
-                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 group-focus-within:text-red-500 transition-colors">₹</span>
-                                    <input
-                                        type="number"
-                                        value={config.freeDeliveryThreshold}
-                                        onChange={(e) => handleInputChange('freeDeliveryThreshold', e.target.value)}
-                                        className="w-full pl-10 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-red-500/10 transition-all"
-                                    />
-                                </div>
-                                <p className="text-[10px] font-bold text-slate-400 italic">Orders above this amount will have free delivery.</p>
+                                <p className="text-[10px] font-bold text-slate-400 italic">Global tax applied dynamically to checkout subtotal.</p>
                             </div>
                         </div>
                     </Card>

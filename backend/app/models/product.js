@@ -60,6 +60,11 @@ const productSchema = new mongoose.Schema(
         galleryImages: [{
             type: String, // Array of Cloudinary URLs
         }],
+        hsnId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "HSN",
+            default: null,
+        },
         headerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",

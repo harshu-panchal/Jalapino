@@ -16,7 +16,7 @@ import {
     Activity,
     Loader2
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import Pagination from '@shared/components/ui/Pagination';
 import { adminApi } from '../services/adminApi';
@@ -24,7 +24,9 @@ import { toast } from 'sonner';
 
 const CustomerManagement = () => {
     const navigate = useNavigate();
-    const [searchTerm, setSearchTerm] = useState('');
+    const location = useLocation();
+    const initialQuery = new URLSearchParams(location.search).get('q') || '';
+    const [searchTerm, setSearchTerm] = useState(initialQuery);
     const [filterStatus, setFilterStatus] = useState('all');
     const [isExporting, setIsExporting] = useState(false);
     const [customers, setCustomers] = useState([]);

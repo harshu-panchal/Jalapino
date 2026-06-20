@@ -3,6 +3,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import DashboardLayout from "@shared/layout/DashboardLayout";
 import { useSupportUnread } from "@core/context/SupportUnreadContext";
 import { setActiveRole, ROLES } from "@core/auth/activeRoleStore";
+import { useAuth } from "@core/context/AuthContext";
 import {
   LayoutDashboard,
   Tag,
@@ -66,6 +67,7 @@ const CustomerManagement = React.lazy(
 const CustomerDetail = React.lazy(() => import("../pages/CustomerDetail"));
 const UserManagement = React.lazy(() => import("../pages/UserManagement"));
 const Profile = React.lazy(() => import("@/pages/Profile"));
+const HsnManagement = React.lazy(() => import("../pages/HsnManagement"));
 const FAQManagement = React.lazy(() => import("../pages/FAQManagement"));
 const OrdersList = React.lazy(() => import("../pages/OrdersList"));
 const OrderDetail = React.lazy(() => import("../pages/OrderDetail"));
@@ -115,6 +117,7 @@ const navItems = [
     ],
   },
   { label: "Products", path: "/admin/products", icon: Box, color: "amber" },
+  { label: "HSN Management", path: "/admin/hsn-management", icon: Tag, color: "rose" },
   {
     label: "Marketing Tools",
     icon: Sparkles,
@@ -212,6 +215,8 @@ const navItems = [
   { label: "System Settings", path: "/admin/env", icon: Terminal, color: "dark" },
 ];
 
+import AdminManagement from "../pages/AdminManagement";
+
 const BillingCharges = React.lazy(() => import("../pages/BillingCharges"));
 
 const AdminRoutes = () => {
@@ -220,15 +225,56 @@ const AdminRoutes = () => {
   }, []);
 
   const { totalUnread } = useSupportUnread();
+  const { user } = useAuth();
 
   const navItemsWithBadges = React.useMemo(() => {
+    const subRole = user?.subRole || "super_admin";
+    
     const count = Number.isFinite(totalUnread) ? totalUnread : 0;
-    if (count <= 0) return navItems;
-    return navItems.map((item) => {
+    
+    // Filter items based on subRole
+    let filteredItems = navItems.filter((item) => {
+      if (subRole === "super_admin") return true;
+      
+      const label = item.label;
+      if (subRole === "finance") {
+        return ["Dashboard", "Orders", "Wallet", "Money Requests", "Seller Payments", "Collect Cash", "Fees & Charges", "My Profile"].includes(label);
+      }
+      
+      if (subRole === "marketing") {
+        return ["Dashboard", "Marketing Tools", "My Profile"].includes(label);
+      }
+      
+      if (subRole === "sub_admin") {
+        return !["Wallet", "Money Requests", "Seller Payments", "Collect Cash", "Fees & Charges", "System Settings", "Admin Management", "Marketing Tools"].includes(label);
+      }
+      
+      return true;
+    });
+    
+    // Add "Admin Management" for super_admin
+    if (subRole === "super_admin") {
+      const systemSettingsIndex = filteredItems.findIndex(i => i.label === "System Settings");
+      const adminManagementItem = {
+        label: "Admin Management",
+        path: "/admin/admin-management",
+        icon: User,
+        color: "blue"
+      };
+      if (systemSettingsIndex >= 0) {
+        filteredItems.splice(systemSettingsIndex, 0, adminManagementItem);
+      } else {
+        filteredItems.push(adminManagementItem);
+      }
+    }
+
+    if (count <= 0) return filteredItems;
+    
+    return filteredItems.map((item) => {
       if (item?.label !== "Customer Support") return item;
       return { ...item, badgeCount: count };
     });
-  }, [totalUnread]);
+  }, [totalUnread, user]);
 
   return (
     <DashboardLayout navItems={navItemsWithBadges} title="Admin Center">
@@ -236,6 +282,7 @@ const AdminRoutes = () => {
         <Route path="/" element={<Dashboard />} />
         <Route path="/users" element={<UserManagement />} />
         <Route path="/profile" element={<AdminProfile />} />
+        <Route path="/admin-management" element={<AdminManagement />} />
         {/* Lazy routes for new sections */}
         <Route
           path="/categories"
@@ -246,6 +293,7 @@ const AdminRoutes = () => {
         <Route path="/categories/sub" element={<SubCategories />} />
         <Route path="/categories/hierarchy" element={<CategoryHierarchy />} />
         <Route path="/products" element={<ProductManagement />} />
+        <Route path="/hsn-management" element={<HsnManagement />} />
         <Route path="/sellers/active" element={<ActiveSellers />} />
         <Route path="/sellers/active/:id" element={<SellerDetail />} />
         <Route path="/support-tickets" element={<SupportTickets />} />

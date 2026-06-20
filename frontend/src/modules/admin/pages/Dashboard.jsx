@@ -28,8 +28,10 @@ import {
 } from 'recharts';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 const AdminDashboard = () => {
+    const navigate = useNavigate();
     const [statsData, setStatsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
@@ -89,8 +91,9 @@ const AdminDashboard = () => {
             icon: Users,
             color: 'text-brand-600',
             bg: 'bg-brand-50',
-            trend: '+12.5%',
-            description: 'Active this month'
+            trend: '',
+            description: 'All Time',
+            path: '/admin/customers'
         },
         {
             label: 'Active Sellers',
@@ -98,8 +101,9 @@ const AdminDashboard = () => {
             icon: Store,
             color: 'text-purple-600',
             bg: 'bg-purple-50',
-            trend: '+5.2%',
-            description: 'Verified stores'
+            trend: '',
+            description: 'Verified stores',
+            path: '/admin/sellers/active'
         },
         {
             label: 'Total Orders',
@@ -107,8 +111,9 @@ const AdminDashboard = () => {
             icon: Truck,
             color: 'text-orange-600',
             bg: 'bg-orange-50',
-            trend: '+18.4%',
-            description: 'Last 30 days'
+            trend: '',
+            description: 'All Time',
+            path: '/admin/orders/all'
         },
         {
             label: 'Revenue',
@@ -116,8 +121,9 @@ const AdminDashboard = () => {
             icon: BarChart3,
             color: 'text-brand-600',
             bg: 'bg-brand-50',
-            trend: '+8.2%',
-            description: 'Net earnings'
+            trend: '',
+            description: 'Total Delivered Revenue',
+            path: '/admin/wallet'
         },
     ];
 
@@ -143,17 +149,22 @@ const AdminDashboard = () => {
             {/* Main Stats Grid */}
             <div className="ds-grid-stats">
                 {stats.map((stat) => (
-                    <StatCard
-                        key={stat.label}
-                        label={stat.label}
-                        value={stat.value}
-                        icon={stat.icon}
-                        trend={stat.trend}
-                        description={stat.description}
-                        color={stat.color}
-                        bg={stat.bg}
-                        className={cn("ring-1 ring-gray-100", stat.bg + "/30")}
-                    />
+                    <div 
+                        key={stat.label} 
+                        onClick={() => stat.path && navigate(stat.path)}
+                        className={stat.path ? "cursor-pointer transition-transform hover:scale-105" : ""}
+                    >
+                        <StatCard
+                            label={stat.label}
+                            value={stat.value}
+                            icon={stat.icon}
+                            trend={stat.trend}
+                            description={stat.description}
+                            color={stat.color}
+                            bg={stat.bg}
+                            className={cn("ring-1 ring-gray-100 h-full", stat.bg + "/30")}
+                        />
+                    </div>
                 ))}
             </div>
 

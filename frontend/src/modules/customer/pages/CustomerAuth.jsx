@@ -213,7 +213,7 @@ const CustomerAuth = () => {
             <div className="w-[92%] max-w-[400px] h-[85vh] max-h-[780px] bg-white relative z-10 overflow-hidden rounded-[40px] shadow-[0_50px_100px_-20px_rgba(0,0,0,0.15)] border border-white/40 flex flex-col transition-colors duration-1000">
 
                 {/* Scrollable Content Container */}
-                <div className="h-full overflow-y-auto no-scrollbar pb-20">
+                <div className="flex-1 overflow-y-auto pb-20">
 
                     {/* Header: Immersive Category Visuals */}
                     <motion.div
@@ -381,8 +381,10 @@ const CustomerAuth = () => {
                                             </div>
                                             <input
                                                 required
+                                                type="tel"
                                                 name="phone"
                                                 maxLength={10}
+                                                value={formData.phone}
                                                 placeholder="Mobile Number"
                                                 className="w-full bg-gray-50 border border-gray-100 rounded-2xl pl-24 pr-4 py-4 text-sm font-bold text-gray-800 outline-none focus:bg-white transition-all"
                                                 onChange={(e) => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '') })}

@@ -119,6 +119,7 @@ export const updateDeliverySettingsSchema = Joi.object({
     .optional(),
   codEnabled: Joi.boolean().optional(),
   onlineEnabled: Joi.boolean().optional(),
+  gstPercentage: Joi.number().min(0).optional(),
 }).or(
   "deliveryPricingMode",
   "pricingMode",
@@ -133,4 +134,5 @@ export const updateDeliverySettingsSchema = Joi.object({
   "handlingFeeStrategy",
   "codEnabled",
   "onlineEnabled",
+  "gstPercentage",
 );

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import { adminApi } from '../services/adminApi';
@@ -30,13 +31,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 const ProductManagement = () => {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]); // All categories for dropdowns
+    const [dbHsns, setDbHsns] = useState([]);
     const [page, setPage] = useState(1);
     const [pageSize, setPageSize] = useState(25);
     const [total, setTotal] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
 
-    const [searchTerm, setSearchTerm] = useState('');
+    const location = useLocation();
+    const initialQuery = new URLSearchParams(location.search).get('q') || '';
+    const [searchTerm, setSearchTerm] = useState(initialQuery);
     const [filterCategory, setFilterCategory] = useState('all');
     const [filterStatus, setFilterStatus] = useState('all'); // Added filterStatus
     const [filterApprovalStatus, setFilterApprovalStatus] = useState('all');
@@ -71,6 +75,7 @@ const ProductManagement = () => {
         header: '',
         categoryId: '',
         subcategoryId: '',
+        hsnId: '',
         status: 'active',
         isFeatured: false,
         tags: '',
@@ -86,14 +91,22 @@ const ProductManagement = () => {
     const [viewingVariants, setViewingVariants] = useState(null);
     const [isVariantsViewModalOpen, setIsVariantsViewModalOpen] = useState(false);
 
-    const fetchCategories = async () => {
+    const fetchCategoriesAndHsn = async () => {
         try {
-            const response = await adminApi.getCategoryTree();
-            if (response.data.success) {
-                setCategories(response.data.results || response.data.result || []);
+            const [catRes, hsnRes] = await Promise.all([
+                adminApi.getCategoryTree(),
+                adminApi.get?.('/hsn/active').catch(() => null) || fetch(import.meta.env.VITE_API_URL + '/hsn/active').then(res => res.json()).catch(() => null)
+            ]);
+            if (catRes?.data?.success) {
+                setCategories(catRes.data.results || catRes.data.result || []);
+            }
+            if (hsnRes?.data?.success) {
+                 setDbHsns(hsnRes.data.results || []);
+            } else if (hsnRes && hsnRes.success) {
+                 setDbHsns(hsnRes.results || []);
             }
         } catch (error) {
-            console.error('Failed to fetch categories');
+            console.error('Failed to fetch categories/hsns');
         }
     };
 
@@ -129,7 +142,7 @@ const ProductManagement = () => {
     };
 
     useEffect(() => {
-        fetchCategories();
+        fetchCategoriesAndHsn();
     }, []);
 
     useEffect(() => {
@@ -163,6 +176,9 @@ const ProductManagement = () => {
             data.append('headerId', formData.header);
             data.append('categoryId', formData.categoryId);
             data.append('subcategoryId', formData.subcategoryId);
+            if (formData.hsnId) {
+                data.append('hsnId', formData.hsnId);
+            }
             data.append('status', formData.status);
             data.append('isFeatured', formData.isFeatured);
             data.append('brand', formData.brand);
@@ -299,6 +315,7 @@ const ProductManagement = () => {
                 header: item.headerId?._id || item.headerId || '',
                 categoryId: item.categoryId?._id || item.categoryId || '',
                 subcategoryId: item.subcategoryId?._id || item.subcategoryId || '',
+                hsnId: item.hsnId?._id || item.hsnId || '',
                 status: item.status || 'active',
                 isFeatured: item.isFeatured || false,
                 tags: Array.isArray(item.tags) ? item.tags.join(', ') : item.tags || '',
@@ -322,7 +339,7 @@ const ProductManagement = () => {
             setFormData({
                 name: '', slug: '', sku: '', description: '', price: '',
                 salePrice: '', stock: '', lowStockAlert: 5, unit: 'packet',
-                header: '', categoryId: '', subcategoryId: '', status: 'active',
+                header: '', categoryId: '', subcategoryId: '', hsnId: '', status: 'active',
                 isFeatured: false, tags: '', weight: '', brand: '',
                 mainImage: null, galleryImages: [],
                 variants: [
@@ -856,6 +873,21 @@ const ProductManagement = () => {
                                                     <option value="">Select Sub-Category</option>
                                                     {categories.find(h => h._id === formData.header)?.children?.find(c => c._id === formData.categoryId)?.children?.map(sc => (
                                                         <option key={sc._id} value={sc._id}>{sc.name}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                            <div className="space-y-1.5 flex flex-col pt-6">
+                                                <label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">HSN Code / GST</label>
+                                                <select
+                                                    value={formData.hsnId}
+                                                    onChange={(e) => setFormData({ ...formData, hsnId: e.target.value })}
+                                                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none cursor-pointer"
+                                                >
+                                                    <option value="">Select HSN Code (Default 0% GST)</option>
+                                                    {dbHsns.map((hsn) => (
+                                                        <option key={hsn._id} value={hsn._id}>
+                                                            {hsn.hsnCode} - {hsn.description} ({hsn.gstPercentage}% GST)
+                                                        </option>
                                                     ))}
                                                 </select>
                                             </div>

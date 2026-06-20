@@ -15,6 +15,7 @@ export const sellerApi = {
     // Categories (Public)
     getCategories: () => axiosInstance.get('/admin/categories'),
     getCategoryTree: () => axiosInstance.get('/admin/categories?tree=true'),
+    getActiveHsns: () => axiosInstance.get('/hsn/active'),
 
     // Others
     getStats: (range) => axiosInstance.get('/seller/stats', { params: { range } }),

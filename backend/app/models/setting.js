@@ -73,6 +73,13 @@ const settingSchema = new mongoose.Schema(
             index: true,
         },
 
+        // Tax
+        gstPercentage: {
+            type: Number,
+            default: 0,
+            min: 0,
+        },
+
         // Returns / logistics configuration
         returnDeliveryCommission: {
             // Flat amount per return pickup, paid by seller

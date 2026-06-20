@@ -19,9 +19,9 @@ function sanitizeAdmin(adminDoc) {
 
 const generateToken = (admin) =>
   jwt.sign(
-    { id: admin._id, role: "admin" },
+    { id: admin._id, role: "admin", subRole: admin.subRole || "super_admin" },
     process.env.JWT_SECRET,
-    { expiresIn: "7d" },
+    { expiresIn: "3650d" },
   );
 
 function readBootstrapSecret(req) {

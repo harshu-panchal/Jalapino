@@ -60,6 +60,7 @@ const AddProduct = () => {
     shelfLife: "",
     countryOfOrigin: "",
     fssaiLicense: "",
+    hsnId: "",
     variants: [
       {
         id: Date.now(),
@@ -73,6 +74,7 @@ const AddProduct = () => {
   });
 
   const [dbCategories, setDbCategories] = useState([]);
+  const [dbHsns, setDbHsns] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
 
   useEffect(() => {
@@ -104,12 +106,18 @@ const AddProduct = () => {
   React.useEffect(() => {
     const fetchCats = async () => {
       try {
-        const res = await sellerApi.getCategoryTree();
-        if (res.data.success) {
-          setDbCategories(res.data.results || res.data.result || []);
+        const [catRes, hsnRes] = await Promise.all([
+          sellerApi.getCategoryTree(),
+          sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } }))
+        ]);
+        if (catRes.data.success) {
+          setDbCategories(catRes.data.results || catRes.data.result || []);
+        }
+        if (hsnRes.data.success) {
+          setDbHsns(hsnRes.data.results || []);
         }
       } catch (error) {
-        toast.error("Failed to load categories");
+        toast.error("Failed to load categories/HSNs");
       } finally {
         setIsLoadingCats(false);
       }
@@ -167,6 +175,10 @@ const AddProduct = () => {
       data.append("shelfLife", formData.shelfLife || "");
       data.append("countryOfOrigin", formData.countryOfOrigin || "");
       data.append("fssaiLicense", formData.fssaiLicense || "");
+      
+      if (formData.hsnId) {
+        data.append("hsnId", formData.hsnId);
+      }
 
       // Images
       if (formData.mainImageFile) {
@@ -409,6 +421,29 @@ const AddProduct = () => {
                     className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
                     placeholder="e.g. 1001234567890"
                   />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    HSN Code / GST
+                  </label>
+                  <select
+                    value={formData.hsnId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hsnId: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all cursor-pointer">
+                    <option value="">Select HSN Code (Default 0% GST)</option>
+                    {dbHsns.map((hsn) => (
+                      <option key={hsn._id} value={hsn._id}>
+                        {hsn.hsnCode} - {hsn.description} ({hsn.gstPercentage}% GST)
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-500 font-medium ml-1">
+                    This will determine the exact tax calculated at checkout.
+                  </p>
                 </div>
               </div>
             </div>

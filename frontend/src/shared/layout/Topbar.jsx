@@ -5,7 +5,8 @@ import {
     HiOutlineUserCircle,
     HiOutlineBell,
     HiOutlineSearch,
-    HiOutlineMenu
+    HiOutlineMenu,
+    HiOutlineArrowLeft
 } from 'react-icons/hi';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,14 @@ const Topbar = ({ onMenuClick }) => {
         if (!q) return;
         if (isSeller) {
             navigate(`/seller/products?q=${encodeURIComponent(q)}`);
+        } else if (isAdmin) {
+            if (location.pathname.startsWith('/admin/products')) {
+                navigate(`/admin/products?q=${encodeURIComponent(q)}`);
+            } else if (location.pathname.startsWith('/admin/customers')) {
+                navigate(`/admin/customers?q=${encodeURIComponent(q)}`);
+            } else {
+                navigate(`/admin/orders/all?q=${encodeURIComponent(q)}`);
+            }
         }
     };
 
@@ -173,6 +182,17 @@ const Topbar = ({ onMenuClick }) => {
                 >
                     <HiOutlineMenu className="h-5 w-5" />
                 </button>
+
+                {/* Global Back Button (Hidden on Dashboards) */}
+                {!location.pathname.endsWith('/dashboard') && (
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="p-2 mr-3 bg-gray-50 hover:bg-primary/10 rounded-xl text-gray-600 hover:text-primary transition-all duration-300 border border-transparent hover:border-primary/20 shadow-sm flex items-center justify-center"
+                        title="Go Back"
+                    >
+                        <HiOutlineArrowLeft className="h-5 w-5" />
+                    </button>
+                )}
 
                 {/* Mobile Logo */}
                 <div className="flex items-center space-x-2 mr-4 md:hidden">

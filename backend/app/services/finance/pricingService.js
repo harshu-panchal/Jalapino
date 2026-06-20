@@ -321,7 +321,8 @@ export async function hydrateOrderItems(
     .filter(Boolean);
 
   const productQuery = Product.find({ _id: { $in: productIds } })
-    .select("_id name salePrice price mainImage headerId sellerId status approvalStatus variants")
+    .select("_id name salePrice price mainImage headerId sellerId status approvalStatus variants hsnId")
+    .populate("hsnId", "hsnCode gstPercentage status")
     .lean();
   if (session) productQuery.session(session);
   const products = await productQuery;
@@ -366,6 +367,8 @@ export async function hydrateOrderItems(
       ? serverUnitPrice
       : normalizeLinePrice(item.price) || serverUnitPrice;
 
+    const isHsnActive = product.hsnId && product.hsnId.status === "active";
+
     return {
       productId,
       productName: item.name || product.name,
@@ -376,6 +379,8 @@ export async function hydrateOrderItems(
       sellerId: String(product.sellerId),
       variantSku: rawVariantSku || "",
       variantName: resolvedVariant ? String(resolvedVariant?.name || "").trim() : "",
+      hsnCode: isHsnActive ? product.hsnId.hsnCode : null,
+      gstPercentage: isHsnActive ? product.hsnId.gstPercentage : 0,
     };
   });
 }
@@ -433,6 +438,7 @@ export async function generateOrderPaymentBreakdown({
   let productSubtotal = 0;
   let sellerPayoutTotal = 0;
   let adminProductCommissionTotal = 0;
+  let calculatedTax = 0;
 
   const lineItems = normalizedItems.map((item) => {
     const category = categoryById.get(String(item.headerCategoryId));
@@ -443,6 +449,9 @@ export async function generateOrderPaymentBreakdown({
       adminProductCommissionTotal,
       commission.adminCommission,
     );
+
+    const itemTax = roundCurrency((commission.itemSubtotal * (item.gstPercentage || 0)) / 100);
+    calculatedTax = addMoney(calculatedTax, itemTax);
 
     return {
       productId: item.productId,
@@ -457,6 +466,9 @@ export async function generateOrderPaymentBreakdown({
       appliedCommissionType: commission.appliedCommissionType,
       appliedCommissionValue: commission.appliedCommissionValue,
       appliedCommissionFixedRule: commission.appliedFixedRule,
+      hsnCode: item.hsnCode || null,
+      gstPercentage: item.gstPercentage || 0,
+      taxAmount: itemTax,
     };
   });
 
@@ -468,9 +480,10 @@ export async function generateOrderPaymentBreakdown({
   const rider = calculateRiderPayout(distanceKm, effectiveSettings);
 
   const normalizedDiscount = roundCurrency(discountTotal || 0);
-  const normalizedTax = roundCurrency(taxTotal || 0);
   const normalizedTip = roundCurrency(tipTotal || 0);
   const normalizedWallet = roundCurrency(walletAmount || 0);
+
+  const normalizedTax = roundCurrency(taxTotal || calculatedTax);
 
   const grossTotal = roundCurrency(
     productSubtotal +

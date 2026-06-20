@@ -14,6 +14,7 @@ import { adjustStock, getStockHistory } from "../controller/stockController.js";
 import {
     verifyToken,
     allowRoles,
+    requireAdminRole,
     optionalVerifyToken,
     requireApprovedSeller,
 } from "../middleware/authMiddleware.js";
@@ -31,15 +32,16 @@ router.get("/", optionalVerifyToken, getProducts);
 router.get("/seller/me", verifyToken, allowRoles("seller"), requireApprovedSeller, getSellerProducts);
 router.get("/stock-history", verifyToken, allowRoles("seller"), requireApprovedSeller, getStockHistory);
 router.post("/adjust-stock", verifyToken, allowRoles("seller"), requireApprovedSeller, adjustStock);
-router.get("/moderation", verifyToken, allowRoles("admin"), getModerationProducts);
-router.patch("/moderation/:id/approve", verifyToken, allowRoles("admin"), approveProduct);
-router.patch("/moderation/:id/reject", verifyToken, allowRoles("admin"), rejectProduct);
+router.get("/moderation", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getModerationProducts);
+router.patch("/moderation/:id/approve", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveProduct);
+router.patch("/moderation/:id/reject", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), rejectProduct);
 router.get("/:id", optionalVerifyToken, getProductById);
 
 router.post(
     "/",
     verifyToken,
     allowRoles("seller", "admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     requireApprovedSeller,
     upload.any(),
     createProduct
@@ -49,6 +51,7 @@ router.put(
     "/:id",
     verifyToken,
     allowRoles("seller", "admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     requireApprovedSeller,
     upload.any(),
     updateProduct
@@ -58,6 +61,7 @@ router.delete(
     "/:id",
     verifyToken,
     allowRoles("seller", "admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     requireApprovedSeller,
     deleteProduct
 );

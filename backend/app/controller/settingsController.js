@@ -50,6 +50,7 @@ const ALLOWED_KEYS = [
   "onlineEnabled",
   "lowStockAlertsEnabled",
   "productApproval",
+  "gstPercentage",
 ];
 
 function flattenForMongoSet(prefix, value, target) {
@@ -127,6 +128,7 @@ const updateSettingsSchema = Joi.object({
     sellerCreateRequiresApproval: Joi.boolean(),
     sellerEditRequiresApproval: Joi.boolean(),
   }).unknown(false),
+  gstPercentage: Joi.number().min(0),
 }).unknown(false);
 
 /**
@@ -147,7 +149,7 @@ export const getPublicSettings = async (req, res) => {
       async () => {
         const existing = await Setting.findOne(filter)
           .select(
-            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled lowStockAlertsEnabled productApproval referralProgram createdAt",
+            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled lowStockAlertsEnabled productApproval referralProgram gstPercentage createdAt",
           )
           .lean();
         return existing || null;

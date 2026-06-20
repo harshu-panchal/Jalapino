@@ -197,7 +197,7 @@ const AdminAuth = () => {
                                         type={showPassword ? "text" : "password"}
                                         name="password"
                                         required
-                                        minLength={10}
+                                        minLength={1}
                                         maxLength={128}
                                         autoComplete="current-password"
                                         value={formData.password}

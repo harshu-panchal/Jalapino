@@ -161,7 +161,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                 </span>
               </div>
               <span className="font-[1000] text-primary text-3xl tracking-tighter italic">
-                {isPreviewLoading ? "Calculating..." : `₹${Math.ceil(finalAmountToPay)}`}
+                {isPreviewLoading ? "Calculating..." : `₹${finalAmountToPay}`}
               </span>
             </div>
           </div>

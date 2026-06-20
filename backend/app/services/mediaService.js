@@ -1,7 +1,7 @@
 import crypto from "crypto";
-import { v2 as cloudinary } from "cloudinary";
 import MediaMetadata from "../models/mediaMetadata.js";
 import logger from "./logger.js";
+import { processAndSaveImage, saveRawFile, deleteLocalFile } from "./localStorageService.js";
 
 function getMaxUploadBytes() {
   const raw = parseInt(process.env.MEDIA_MAX_FILE_SIZE || "10485760", 10);
@@ -469,14 +469,20 @@ function getMediaURL(publicId, transformations = {}) {
 }
 
 async function deleteMedia(publicId, userId, userModel) {
+  // If the file is local (new format)
+  if (publicId.includes("/images/")) {
+    await deleteLocalFile(publicId);
+  } else {
+    // Legacy Cloudinary delete logic (if needed)
+    // cloudinary.uploader.destroy(publicId)
+  }
+
   const media = await MediaMetadata.findOne({
     $or: [{ publicId }, { objectKey: publicId }],
     isDeleted: false,
   });
   if (!media) {
-    const err = new Error("Media not found or already deleted");
-    err.statusCode = 404;
-    throw err;
+    return; // File deleted but metadata not found, ignore
   }
   if (
     String(media.uploadedBy || "") !== String(userId || "") ||
@@ -490,33 +496,15 @@ async function deleteMedia(publicId, userId, userModel) {
 }
 
 async function uploadToCloudinary(fileBuffer, folder = "categories", options = {}) {
-  validateStorageConfig();
-  configureCloudinary();
   const mimeType = String(options.mimeType || "").trim().toLowerCase();
   const resourceType = String(options.resourceType || "").trim().toLowerCase();
-  const shouldOptimizeImage =
-    options.optimize !== false &&
-    (resourceType === "image" || isImageMimeType(mimeType));
-
-  const uploadOptions = {
-    folder,
-    resource_type: shouldOptimizeImage ? "image" : "auto",
-    ...(shouldOptimizeImage ? getImageUploadOptions() : {}),
-  };
-
-  return new Promise((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      uploadOptions,
-      (error, result) => {
-        if (error) {
-          reject(error);
-        } else {
-          resolve(result.secure_url);
-        }
-      },
-    );
-    uploadStream.end(fileBuffer);
-  });
+  const isImage = resourceType === "image" || mimeType.startsWith("image/");
+  
+  if (isImage || folder.includes("images") || folder.includes("banners") || folder.includes("logos")) {
+    return await processAndSaveImage(fileBuffer, folder, "upload.webp");
+  } else {
+    return await saveRawFile(fileBuffer, folder, "upload.bin");
+  }
 }
 
 async function generateSignedUploadURL(options) {

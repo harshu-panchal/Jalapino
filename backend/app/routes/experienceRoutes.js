@@ -12,7 +12,7 @@ import {
   getAdminHeroConfig,
   upsertHeroConfig,
 } from "../controller/experienceController.js";
-import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
+import { verifyToken, allowRoles, requireAdminRole } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -37,6 +37,7 @@ router.put(
   "/admin/experience/reorder",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "marketing"),
   reorderExperienceSections
 );
 
@@ -45,12 +46,14 @@ router.get(
   "/admin/experience/hero",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "marketing"),
   getAdminHeroConfig
 );
 router.put(
   "/admin/experience/hero",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "marketing"),
   upsertHeroConfig
 );
 
@@ -58,6 +61,7 @@ router.put(
   "/admin/experience/:id",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "marketing"),
   updateExperienceSection
 );
 
@@ -65,6 +69,7 @@ router.delete(
   "/admin/experience/:id",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "marketing"),
   deleteExperienceSection
 );
 
@@ -72,6 +77,7 @@ router.post(
   "/admin/experience/upload-banner",
   verifyToken,
   allowRoles("admin"),
+  requireAdminRole("super_admin", "marketing"),
   upload.single("image"),
   uploadBannerImage
 );

@@ -6,12 +6,15 @@ import {
   createUploadIntent,
   confirmUpload,
   deleteMedia,
-  uploadToCloudinary,
 } from "../services/mediaService.js";
+import { processAndSaveImage, saveRawFile, deleteLocalFile } from "../services/localStorageService.js";
 import logger from "../services/logger.js";
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 } // 5MB limit
+});
 
 const VALID_ENTITY_TYPES = [
   "product",
@@ -112,11 +115,16 @@ router.post("/upload", verifyToken, upload.single("file"), async (req, res) => {
 
     const mimeType = req.file.mimetype;
     const imageUpload = isImageMimeType(mimeType);
-    const folder = imageUpload ? "media/images" : "media/files";
-    const url = await uploadToCloudinary(req.file.buffer, folder, {
-      mimeType,
-      resourceType: imageUpload ? "image" : "raw",
-    });
+    let url;
+    
+    // Default to misc, can be overridden if frontend sends folder/type
+    const folder = req.body.folder || (imageUpload ? "misc" : "docs");
+
+    if (imageUpload) {
+      url = await processAndSaveImage(req.file.buffer, folder, req.file.originalname);
+    } else {
+      url = await saveRawFile(req.file.buffer, folder, req.file.originalname);
+    }
 
     return handleResponse(res, 200, "Media uploaded successfully", {
       url,
@@ -208,7 +216,13 @@ router.delete("/*publicId", verifyToken, async (req, res) => {
       return handleResponse(res, 400, "Invalid user role for media upload");
     }
 
-    await deleteMedia(publicId, req.user.id, uploadedByModel);
+    if (publicId.includes("/images/")) {
+        // New VPS local file URL format
+        await deleteLocalFile(publicId);
+    } else {
+        // Old Cloudinary publicId
+        await deleteMedia(publicId, req.user.id, uploadedByModel);
+    }
     return handleResponse(res, 200, "Media deleted successfully");
   } catch (error) {
     logger.error("Failed to delete media", {

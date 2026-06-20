@@ -34,6 +34,11 @@ const adminSchema = new mongoose.Schema(
       type: String,
       default: "admin",
     },
+    subRole: {
+      type: String,
+      enum: ["super_admin", "sub_admin", "finance", "marketing"],
+      default: "super_admin",
+    },
     isVerified: {
       type: Boolean,
       default: true, // Internal admins might be verified by default or via admin code

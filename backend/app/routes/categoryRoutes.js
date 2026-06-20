@@ -5,7 +5,7 @@ import {
     updateCategory,
     deleteCategory
 } from "../controller/categoryController.js";
-import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
+import { verifyToken, allowRoles, requireAdminRole } from "../middleware/authMiddleware.js";
 import multer from "multer";
 
 const storage = multer.memoryStorage();
@@ -21,6 +21,7 @@ router.post(
     "/",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     upload.fields([
         { name: "image", maxCount: 1 },
         { name: "icon", maxCount: 1 }
@@ -32,6 +33,7 @@ router.put(
     "/:id",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     upload.fields([
         { name: "image", maxCount: 1 },
         { name: "icon", maxCount: 1 }
@@ -43,6 +45,7 @@ router.delete(
     "/:id",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     deleteCategory
 );
 

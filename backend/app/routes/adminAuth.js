@@ -34,7 +34,11 @@ import {
     getSellers,
     getSellerLocations,
     getPlatformSettings,
-    updatePlatformSettings
+    updatePlatformSettings,
+    getAllAdmins,
+    createAdmin,
+    updateAdminRole,
+    deleteAdmin
 } from "../controller/adminController.js";
 import {
     exportAdminFinanceStatementController,
@@ -46,7 +50,7 @@ import {
     updateDeliverySettingsController,
 } from "../controller/adminFinanceController.js";
 
-import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
+import { verifyToken, allowRoles, requireAdminRole } from "../middleware/authMiddleware.js";
 import {
     adminBootstrapRateLimiter,
     authRouteRateLimiter,
@@ -62,6 +66,36 @@ const smallAdminPayload = createContentLengthGuard(
 router.post("/bootstrap", adminBootstrapRateLimiter, smallAdminPayload, bootstrapAdmin);
 router.post("/signup", adminBootstrapRateLimiter, smallAdminPayload, signupAdmin);
 router.post("/login", authRouteRateLimiter, smallAdminPayload, loginAdmin);
+
+// Admin Management routes
+router.get(
+    "/admins",
+    verifyToken,
+    allowRoles("admin"),
+    requireAdminRole("super_admin"),
+    getAllAdmins
+);
+router.post(
+    "/admins",
+    verifyToken,
+    allowRoles("admin"),
+    requireAdminRole("super_admin"),
+    createAdmin
+);
+router.put(
+    "/admins/:id",
+    verifyToken,
+    allowRoles("admin"),
+    requireAdminRole("super_admin"),
+    updateAdminRole
+);
+router.delete(
+    "/admins/:id",
+    verifyToken,
+    allowRoles("admin"),
+    requireAdminRole("super_admin"),
+    deleteAdmin
+);
 
 // Profile routes
 router.get(
@@ -95,69 +129,79 @@ router.get(
     "/finance/summary",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "finance"),
     getAdminFinanceSummaryController,
 );
 router.get(
     "/finance/ledger",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "finance"),
     getAdminFinanceLedgerController,
 );
 router.get(
     "/finance/payouts",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "finance"),
     getAdminFinancePayoutsController,
 );
 router.post(
     "/finance/payouts/process",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "finance"),
     processAdminFinancePayoutsController,
 );
 router.get(
     "/finance/export-statement",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "finance"),
     exportAdminFinanceStatementController,
 );
 router.get(
     "/settings/platform",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin"),
     getPlatformSettings
 );
 router.get(
     "/settings/delivery",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin"),
     getDeliverySettingsController,
 );
 router.put(
     "/settings/delivery",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin"),
     updateDeliverySettingsController,
 );
 router.put(
     "/settings/platform",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin"),
     updatePlatformSettings
 );
-router.get("/users", verifyToken, allowRoles("admin"), getUsers);
-router.get("/users/:id", verifyToken, allowRoles("admin"), getUserById);
-router.get("/sellers", verifyToken, allowRoles("admin"), getSellers);
-router.get("/sellers/locations", verifyToken, allowRoles("admin"), getSellerLocations);
-router.get("/sellers/active", verifyToken, allowRoles("admin"), getActiveSellers);
-router.get("/sellers/pending", verifyToken, allowRoles("admin"), getPendingSellers);
-router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), approveSellerApplication);
-router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), rejectSellerApplication);
+router.get("/users", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getUsers);
+router.get("/users/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getUserById);
+router.get("/sellers", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getSellers);
+router.get("/sellers/locations", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getSellerLocations);
+router.get("/sellers/active", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getActiveSellers);
+router.get("/sellers/pending", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getPendingSellers);
+router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerApplication);
+router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), rejectSellerApplication);
 
 router.get(
     "/delivery-partners",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     getDeliveryPartners
 );
 
@@ -165,6 +209,7 @@ router.patch(
     "/delivery-partners/approve/:id",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     approveDeliveryPartner
 );
 
@@ -172,28 +217,29 @@ router.delete(
     "/delivery-partners/reject/:id",
     verifyToken,
     allowRoles("admin"),
+    requireAdminRole("super_admin", "sub_admin"),
     rejectDeliveryPartner
 );
 
-router.get("/active-fleet", verifyToken, allowRoles("admin"), getActiveFleet);
-router.get("/wallet-data", verifyToken, allowRoles("admin"), getAdminWalletData);
+router.get("/active-fleet", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getActiveFleet);
+router.get("/wallet-data", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getAdminWalletData);
 
 // Delivery Payouts / Funds
-router.get("/delivery-transactions", verifyToken, allowRoles('admin'), getDeliveryTransactions);
-router.put("/transactions/:id/settle", verifyToken, allowRoles("admin"), settleTransaction);
-router.put("/transactions/bulk-settle-delivery", verifyToken, allowRoles("admin"), bulkSettleDelivery);
+router.get("/delivery-transactions", verifyToken, allowRoles('admin'), requireAdminRole("super_admin", "finance"), getDeliveryTransactions);
+router.put("/transactions/:id/settle", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), settleTransaction);
+router.put("/transactions/bulk-settle-delivery", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), bulkSettleDelivery);
 
 // Cash Collection Hub
-router.get("/delivery-cash", verifyToken, allowRoles("admin"), getDeliveryCashBalances);
-router.get("/rider-cash-details/:id", verifyToken, allowRoles("admin"), getRiderCashDetails);
-router.post("/settle-cash", verifyToken, allowRoles("admin"), settleRiderCash);
-router.get("/cash-history", verifyToken, allowRoles("admin"), getCashSettlementHistory);
+router.get("/delivery-cash", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getDeliveryCashBalances);
+router.get("/rider-cash-details/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getRiderCashDetails);
+router.post("/settle-cash", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), settleRiderCash);
+router.get("/cash-history", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getCashSettlementHistory);
 
 // Seller Withdrawal Management
-router.get("/seller-withdrawals", verifyToken, allowRoles("admin"), getSellerWithdrawals);
-router.get("/delivery-withdrawals", verifyToken, allowRoles("admin"), getDeliveryWithdrawals);
-router.get("/seller-transactions", verifyToken, allowRoles("admin"), getSellerTransactions);
-router.put("/withdrawals/:id", verifyToken, allowRoles("admin"), updateWithdrawalStatus);
+router.get("/seller-withdrawals", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getSellerWithdrawals);
+router.get("/delivery-withdrawals", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getDeliveryWithdrawals);
+router.get("/seller-transactions", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), getSellerTransactions);
+router.put("/withdrawals/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "finance"), updateWithdrawalStatus);
 
 // Protected admin route example
 router.get(
