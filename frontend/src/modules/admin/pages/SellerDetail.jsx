@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import adminUsersApi from '../services/api/usersApi';
+import { adminEventConfigApi } from '../services/adminEventConfigApi';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import {
@@ -35,21 +37,31 @@ const SellerDetail = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { showToast } = useToast();
-    const [activeTab, setActiveTab] = useState('orders');
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'orders';
+
+    const setActiveTab = (tab) => {
+        setSearchParams({ tab });
+    };
     const [isRefreshing, setIsRefreshing] = useState(false);
+
+    // Edit Shop Modal State
+    const [isEditingShop, setIsEditingShop] = useState(false);
+    const [isSavingEdit, setIsSavingEdit] = useState(false);
+    const [editFormData, setEditFormData] = useState({});
 
     // Mock Data for Seller
     const [seller, setSeller] = useState({
         id: id || 'SEL-001',
-        shopName: 'Fresh Mart Superstore',
-        ownerName: 'Rahul Sharma',
-        email: 'rahul@freshmart.com',
-        phone: '+91 98765 43210',
-        category: 'Grocery',
+        shopName: 'Loading...',
+        ownerName: 'Loading...',
+        email: 'Loading...',
+        phone: 'Loading...',
+        category: 'Loading...',
         rating: 4.8,
         status: 'active',
         joinedDate: '12 Jan 2024',
-        location: 'Mumbai, Maharashtra',
+        location: 'Loading...',
         image: 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?auto=format&fit=crop&q=80&w=200',
         walletBalance: 24500,
         totalOrders: 1450,
@@ -61,16 +73,108 @@ const SellerDetail = () => {
             bankName: 'HDFC Bank',
             accountNo: 'XXXX XXXX 1234',
             ifsc: 'HDFC0001234'
-        }
+        },
+        isEventSeller: false,
+        eventCategory: '',
+        maxCapacity: 500
     });
+    
+    const [eventCategories, setEventCategories] = useState([]);
+
+    const fetchSellerData = async () => {
+        try {
+            const res = await adminUsersApi.getSellerById(id);
+            const data = res.data.result;
+            setSeller(prev => ({
+                ...prev,
+                shopName: data.shopName,
+                ownerName: data.name || data.ownerName,
+                email: data.email,
+                phone: data.phone,
+                location: data.address || data.location,
+                isEventSeller: data.isEventSeller || false,
+                eventCategory: (data.serviceCategories && data.serviceCategories.length > 0) ? data.serviceCategories[0] : '',
+                maxCapacity: data.maxGuestCapacity || 500,
+                commissionRate: data.commissionRate ? `${data.commissionRate}%` : '10%',
+                joinedDate: new Date(data.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
+                bankInfo: {
+                    bankName: data.bankDetails?.bankName || 'Not Set',
+                    accountNo: data.bankDetails?.accountNo ? `XXXX XXXX ${data.bankDetails.accountNo.slice(-4)}` : 'XXXX XXXX 0000',
+                    ifsc: data.bankDetails?.ifscCode || 'Not Set'
+                },
+                walletBalance: data.stats?.walletBalance || 0,
+                totalOrders: data.stats?.totalOrders || 0,
+                totalRevenue: data.stats?.totalRevenue || 0,
+                rating: data.stats?.rating || 0
+            }));
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const fetchCategories = async () => {
+        try {
+            const res = await adminEventConfigApi.getEventCategories();
+            setEventCategories(res.result || res || []);
+        } catch (error) {
+            console.error("Failed to load categories", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchSellerData();
+        fetchCategories();
+    }, [id]);
+
+    const handleUpdateEventSettings = async () => {
+        try {
+            await adminUsersApi.updateSellerType(id, {
+                isEventSeller: seller.isEventSeller,
+                serviceCategories: seller.eventCategory ? [seller.eventCategory] : [],
+                maxGuestCapacity: seller.maxCapacity
+            });
+            showToast('Event settings updated!', 'success');
+        } catch (error) {
+            showToast('Failed to update event settings', 'error');
+        }
+    };
 
     const handleRefresh = () => {
         setIsRefreshing(true);
-        setTimeout(() => {
-            setIsRefreshing(false);
-            showToast('Seller data synchronized', 'success');
-        }, 800);
+        fetchCategories();
+        fetchSellerData().finally(() => setIsRefreshing(false));
     };
+
+    const handleEditShopClick = () => {
+        setEditFormData({
+            shopName: seller.shopName,
+            name: seller.ownerName,
+            phone: seller.phone,
+            address: seller.location,
+            sellerStatus: seller.status,
+            commissionRate: seller.commissionRate?.replace('%', '') || '10',
+            bankDetails: seller.bankInfo
+        });
+        setIsEditingShop(true);
+    };
+
+    const handleEditSubmit = async (e) => {
+        e.preventDefault();
+        setIsSavingEdit(true);
+        try {
+            await adminUsersApi.updateSeller(id, editFormData);
+            showToast('Shop details updated successfully', 'success');
+            setIsEditingShop(false);
+            fetchSellerData();
+        } catch (error) {
+            console.error(error);
+            showToast(error.response?.data?.message || 'Failed to update shop details', 'error');
+        } finally {
+            setIsSavingEdit(false);
+        }
+    };
+
+    if (!seller) return <div className="p-8 text-center text-slate-500 font-bold">Loading...</div>;
 
     return (
         <div className="ds-section-spacing animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
@@ -100,7 +204,10 @@ const SellerDetail = () => {
                         <RotateCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
                         SYNC DATA
                     </button>
-                    <button className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
+                    <button 
+                        onClick={handleEditShopClick}
+                        className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
+                    >
                         <Edit3 className="h-4 w-4" />
                         EDIT SHOP
                     </button>
@@ -364,8 +471,72 @@ const SellerDetail = () => {
                                     </div>
 
                                     <div className="ds-section-spacing">
+                                        {/* EVENT SELLER SETTINGS */}
                                         <div>
-                                            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Operational Status</h5>
+                                            <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Event Seller Settings</h5>
+                                            <div className="p-6 bg-brand-50 rounded-xl border border-brand-200">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-900">Enable Event Flow</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium">Switch this seller to the Event Management dashboard.</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={cn(
+                                                            "text-xs font-black uppercase tracking-wider transition-colors",
+                                                            seller.isEventSeller ? "text-brand-600" : "text-slate-400"
+                                                        )}>
+                                                            {seller.isEventSeller ? "ON" : "OFF"}
+                                                        </span>
+                                                        <label className="relative inline-flex items-center cursor-pointer">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="sr-only peer" 
+                                                                checked={seller.isEventSeller}
+                                                                onChange={(e) => setSeller({...seller, isEventSeller: e.target.checked})}
+                                                            />
+                                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-600 shadow-inner"></div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                
+                                                {seller.isEventSeller && (
+                                                    <div className="space-y-4 pt-4 border-t border-brand-200/50">
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-slate-600 uppercase">Service Category</label>
+                                                            <select 
+                                                                className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500"
+                                                                value={seller.eventCategory}
+                                                                onChange={(e) => setSeller({...seller, eventCategory: e.target.value})}
+                                                            >
+                                                                <option value="">Select Category</option>
+                                                                {eventCategories.map((cat) => (
+                                                                    <option key={cat._id || cat.id} value={cat._id || cat.id}>{cat.name}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                        <div>
+                                                            <label className="text-[10px] font-bold text-slate-600 uppercase">Max Guest Capacity</label>
+                                                            <input 
+                                                                type="number" 
+                                                                className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500"
+                                                                value={seller.maxCapacity}
+                                                                onChange={(e) => setSeller({...seller, maxCapacity: parseInt(e.target.value) || 0})}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <button 
+                                                    onClick={handleUpdateEventSettings}
+                                                    className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
+                                                >
+                                                    SAVE EVENT SETTINGS
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 mt-8">Operational Status</h5>
                                             <div className="p-6 bg-slate-900 rounded-xl text-white">
                                                 <div className="flex items-center justify-between mb-6">
                                                     <div className="flex items-center gap-2">
@@ -460,6 +631,131 @@ const SellerDetail = () => {
                     </Card>
                 </div>
             </div>
+
+            {/* Edit Shop Modal */}
+            <Modal 
+                isOpen={isEditingShop} 
+                onClose={() => !isSavingEdit && setIsEditingShop(false)} 
+                title="Edit Shop Details"
+                className="max-w-2xl"
+            >
+                <form onSubmit={handleEditSubmit} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label className="text-xs font-bold text-slate-600">Shop Name</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={editFormData.shopName || ''}
+                                onChange={e => setEditFormData({...editFormData, shopName: e.target.value})}
+                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-600">Owner Name</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={editFormData.name || ''}
+                                onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-600">Phone</label>
+                            <input 
+                                type="text" 
+                                required
+                                value={editFormData.phone || ''}
+                                onChange={e => setEditFormData({...editFormData, phone: e.target.value})}
+                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs font-bold text-slate-600">Status</label>
+                            <select 
+                                value={editFormData.sellerStatus || 'active'}
+                                onChange={e => setEditFormData({...editFormData, sellerStatus: e.target.value})}
+                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                            >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="on_leave">On Leave</option>
+                            </select>
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600">Address</label>
+                            <textarea 
+                                value={editFormData.address || ''}
+                                onChange={e => setEditFormData({...editFormData, address: e.target.value})}
+                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                            />
+                        </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-6">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Finance Details</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="text-xs font-bold text-slate-600">Commission Rate (%)</label>
+                                <input 
+                                    type="number" 
+                                    min="0" max="100"
+                                    value={editFormData.commissionRate || ''}
+                                    onChange={e => setEditFormData({...editFormData, commissionRate: e.target.value})}
+                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-600">Bank Name</label>
+                                <input 
+                                    type="text" 
+                                    value={editFormData.bankDetails?.bankName || ''}
+                                    onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, bankName: e.target.value}})}
+                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-600">Account Number</label>
+                                <input 
+                                    type="text" 
+                                    value={editFormData.bankDetails?.accountNo || ''}
+                                    onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, accountNo: e.target.value}})}
+                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                                />
+                            </div>
+                            <div>
+                                <label className="text-xs font-bold text-slate-600">IFSC Code</label>
+                                <input 
+                                    type="text" 
+                                    value={editFormData.bankDetails?.ifscCode || ''}
+                                    onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, ifscCode: e.target.value}})}
+                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+                        <button 
+                            type="button" 
+                            onClick={() => setIsEditingShop(false)}
+                            className="px-5 py-2.5 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl"
+                            disabled={isSavingEdit}
+                        >
+                            Cancel
+                        </button>
+                        <button 
+                            type="submit" 
+                            className="px-5 py-2.5 text-xs font-black uppercase bg-slate-900 text-white hover:bg-slate-800 rounded-xl disabled:opacity-50 flex items-center gap-2"
+                            disabled={isSavingEdit}
+                        >
+                            {isSavingEdit && <RotateCw className="h-3 w-3 animate-spin" />}
+                            Save Changes
+                        </button>
+                    </div>
+                </form>
+            </Modal>
         </div>
     );
 };

@@ -38,7 +38,10 @@ import {
     getAllAdmins,
     createAdmin,
     updateAdminRole,
-    deleteAdmin
+    deleteAdmin,
+    getSellerById,
+    updateSellerType,
+    updateSellerDetails
 } from "../controller/adminController.js";
 import {
     exportAdminFinanceStatementController,
@@ -194,6 +197,9 @@ router.get("/sellers", verifyToken, allowRoles("admin"), requireAdminRole("super
 router.get("/sellers/locations", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getSellerLocations);
 router.get("/sellers/active", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getActiveSellers);
 router.get("/sellers/pending", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getPendingSellers);
+router.get("/sellers/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getSellerById);
+router.patch("/sellers/:id/type", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), updateSellerType);
+router.put("/sellers/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), updateSellerDetails);
 router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerApplication);
 router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), rejectSellerApplication);
 

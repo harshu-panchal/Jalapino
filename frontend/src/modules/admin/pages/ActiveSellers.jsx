@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import Card from "@shared/components/ui/Card";
 import Badge from "@shared/components/ui/Badge";
 import Pagination from "@shared/components/ui/Pagination";
@@ -74,17 +75,17 @@ const normalizeSeller = (seller) => {
     serviceRadius: safeNumber(seller.serviceRadius) || 5,
     joinedDate: joinedAt
       ? new Date(joinedAt).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "N/A",
     lastOrderLabel: seller.lastOrderAt
       ? new Date(seller.lastOrderAt).toLocaleDateString("en-GB", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-        })
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      })
       : "No orders yet",
     location: seller.location || "Location not set",
     avatar:
@@ -114,6 +115,7 @@ const ActiveSellers = () => {
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [selectedSeller, setSelectedSeller] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -240,9 +242,9 @@ const ActiveSellers = () => {
             <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
               {lastSyncAt
                 ? `Synced ${lastSyncAt.toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}`
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}`
                 : "Sync pending"}
             </span>
           </div>
@@ -467,7 +469,7 @@ const ActiveSellers = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
-                          onClick={() => setSelectedSeller(seller)}
+                          onClick={() => navigate(`/admin/sellers/active/${seller.id}`)}
                           className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2"
                         >
                           <HiOutlineEye className="h-3.5 w-3.5" />

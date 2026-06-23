@@ -42,6 +42,10 @@ import {
   getOrderRoute,
 } from "../controller/orderWorkflowController.js";
 import {
+  createRazorpayEcommerceOrder,
+  verifyRazorpayEcommerceOrder,
+} from "../controller/razorpayEcommerceController.js";
+import {
   verifyToken,
   allowRoles,
   requireAdminRole,
@@ -69,6 +73,18 @@ router.post(
   verifyToken,
   allowRoles("customer", "user", "admin"),
   verifyOnlineOrderPayment,
+);
+router.post(
+  "/:id/razorpay/create",
+  verifyToken,
+  allowRoles("customer", "user", "admin"),
+  createRazorpayEcommerceOrder,
+);
+router.post(
+  "/:id/razorpay/verify",
+  verifyToken,
+  allowRoles("customer", "user", "admin"),
+  verifyRazorpayEcommerceOrder,
 );
 router.post(
   "/:id/cod/mark-collected",

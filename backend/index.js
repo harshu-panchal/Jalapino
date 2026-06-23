@@ -164,7 +164,9 @@ function createApp() {
       return compression.filter(req, res);
     },
   }));
-  app.use(helmet());
+  app.use(helmet({
+    crossOriginResourcePolicy: { policy: "cross-origin" }
+  }));
   app.use(cors(corsOptions));
   app.use(globalApiRateLimiter);
 
@@ -179,6 +181,10 @@ function createApp() {
 
   app.use(express.json({ limit: process.env.API_JSON_LIMIT || "1mb" }));
   app.use(express.urlencoded({ limit: process.env.API_URLENCODED_LIMIT || "1mb", extended: true }));
+
+  // Serve uploaded files statically
+  const STORAGE_BASE_PATH = process.env.STORAGE_BASE_PATH || path.join(process.cwd(), "uploads");
+  app.use("/images", express.static(STORAGE_BASE_PATH));
 
   // Root endpoint
   app.get("/", (req, res) => {

@@ -1,35 +1,41 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft } from 'lucide-react';
+import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
+import { toast } from 'sonner';
 
 const OrdersPage = () => {
     const navigate = useNavigate();
+    const [activeTab, setActiveTab] = useState('orders'); // 'orders' or 'events'
     const [orders, setOrders] = useState([]);
+    const [eventBookings, setEventBookings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [editingEvent, setEditingEvent] = useState(null);
+    const [editFormData, setEditFormData] = useState({ guestCount: '', budget: '', date: '', time: '', location: '' });
 
     useEffect(() => {
         const fetchOrders = async () => {
             try {
                 const response = await customerApi.getMyOrders();
-                // Backend uses handleResponse():
-                // - arrays => { results: [...] }
-                // - objects => { result: { items: [...] } }
                 const payload = response?.data;
                 const items =
                     payload?.result?.items ||
                     payload?.results ||
                     [];
                 setOrders(Array.isArray(items) ? items : []);
+                
+                try {
+                    const eventRes = await customerApi.getMyEventBookings();
+                    const eventItems = eventRes.data?.results || eventRes.data?.result || [];
+                    setEventBookings(Array.isArray(eventItems) ? eventItems : []);
+                } catch (err) {
+                    console.warn("[OrdersPage] Event API error:", err?.response?.data?.message);
+                }
+
             } catch (error) {
                 console.error("Failed to fetch orders:", error);
-                const apiMessage = error?.response?.data?.message;
-                // Orders page is a primary screen; surface failures instead of silently showing empty state.
-                if (apiMessage) {
-                    console.warn("[OrdersPage] API error:", apiMessage);
-                }
             } finally {
                 setLoading(false);
             }
@@ -37,6 +43,41 @@ const OrdersPage = () => {
 
         fetchOrders();
     }, []);
+
+    const handleCancelEvent = async (id) => {
+        if (!window.confirm("Are you sure you want to cancel this event booking?")) return;
+        try {
+            toast.loading("Cancelling booking...", { id: 'cancel' });
+            await customerApi.cancelEventBooking(id);
+            setEventBookings(prev => prev.map(b => b._id === id ? { ...b, overallStatus: 'CANCELLED' } : b));
+            toast.success("Booking cancelled successfully", { id: 'cancel' });
+        } catch (error) {
+            toast.error("Failed to cancel booking", { id: 'cancel' });
+        }
+    };
+
+    const handleEditClick = (booking) => {
+        setEditingEvent(booking);
+        setEditFormData({
+            guestCount: booking.guestCount || '',
+            budget: booking.budget || '',
+            date: booking.eventDate ? new Date(booking.eventDate).toISOString().split('T')[0] : '',
+            time: booking.eventTime || '',
+            location: booking.location?.address || booking.location || ''
+        });
+    };
+
+    const handleSaveEdit = async () => {
+        try {
+            toast.loading("Saving changes...", { id: 'edit' });
+            const { data } = await customerApi.updateEventBooking(editingEvent._id, { eventData: editFormData });
+            setEventBookings(prev => prev.map(b => b._id === editingEvent._id ? (data.result || data) : b));
+            setEditingEvent(null);
+            toast.success("Event updated successfully", { id: 'edit' });
+        } catch (error) {
+            toast.error("Failed to update event", { id: 'edit' });
+        }
+    };
 
     if (loading) {
         return (
@@ -71,8 +112,23 @@ const OrdersPage = () => {
                 <h1 className="text-xl font-bold text-white tracking-tight font-['Inter']">My Orders</h1>
             </div>
 
+            <div className="flex bg-white px-4 pt-2 border-b border-slate-100 mb-4 shadow-sm sticky top-[64px] z-20">
+                <button 
+                    onClick={() => setActiveTab('orders')}
+                    className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'orders' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
+                >
+                    Retail / Wholesale
+                </button>
+                <button 
+                    onClick={() => setActiveTab('events')}
+                    className={`flex-1 py-3 text-sm font-bold border-b-2 transition-colors ${activeTab === 'events' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
+                >
+                    Event Bookings
+                </button>
+            </div>
+
             <div className="space-y-4 px-4 pb-2">
-                {orders.length === 0 ? (
+                {activeTab === 'orders' && orders.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Package size={56} className="text-slate-300 mb-4" />
                         <h3 className="text-base font-semibold text-slate-900 mb-1">No orders yet</h3>
@@ -83,7 +139,9 @@ const OrdersPage = () => {
                             Start Shopping
                         </Link>
                     </div>
-                ) : (
+                )}
+
+                {activeTab === 'orders' && orders.length > 0 && (
                     orders.map((order) => {
                         const legacy = getLegacyStatusFromOrder(order);
                         return (
@@ -167,13 +225,131 @@ const OrdersPage = () => {
                                 </div>
                             </div>
                         </Link>
-                    );
+                        );
                     })
                 )}
+
+                {activeTab === 'events' && eventBookings.length === 0 && (
+                    <div className="flex flex-col items-center justify-center py-20 text-center">
+                        <Clock size={56} className="text-slate-300 mb-4" />
+                        <h3 className="text-base font-semibold text-slate-900 mb-1">No event bookings yet</h3>
+                        <p className="text-slate-500 text-sm mb-6 max-w-[260px]">
+                            You haven't planned any events yet. Let Jalapino make your next event memorable!
+                        </p>
+                        <Link to="/plan-my-event" className="bg-purple-600 hover:bg-purple-700 text-white px-7 py-2.5 rounded-full font-semibold text-sm shadow-sm transition-colors">
+                            Plan an Event
+                        </Link>
+                    </div>
+                )}
+
+                {activeTab === 'events' && eventBookings.length > 0 && (
+                    eventBookings.map((booking) => (
+                        <div
+                            key={booking._id}
+                            className="block bg-white rounded-2xl px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] border border-slate-100/80 mb-4"
+                        >
+                            <div className="flex justify-between items-start mb-3">
+                                <div>
+                                    <h3 className="font-bold text-slate-900 capitalize text-sm">
+                                        {booking.eventType} Event
+                                    </h3>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                        {new Date(booking.eventDate).toLocaleDateString()} at {booking.eventTime}
+                                    </p>
+                                </div>
+                                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${booking.overallStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}>
+                                    {booking.overallStatus || booking.status}
+                                </span>
+                            </div>
+                            <div className="text-xs text-slate-600 mb-3 space-y-1">
+                                <p><span className="font-medium">Location:</span> {booking.location?.address || booking.location || 'Pending Location'}</p>
+                                <p><span className="font-medium">Guests:</span> {booking.guestCount} People</p>
+                                <p><span className="font-medium">Services:</span> {booking.services?.length || 0} Categories</p>
+                            </div>
+                            <div className="border-t border-slate-100 pt-3 flex justify-between items-center mb-3">
+                                <span className="text-[11px] font-medium text-slate-500">
+                                    Payment: {booking.paymentMode || 'COD'} ({booking.paymentStatus})
+                                </span>
+                                <span className="text-sm font-bold text-slate-900">
+                                    ₹{booking.totalAmount?.toLocaleString()}
+                                </span>
+                            </div>
+                            {booking.overallStatus !== 'CANCELLED' && (
+                                <div className="flex gap-2 border-t border-slate-100 pt-3">
+                                    <button 
+                                        onClick={() => handleEditClick(booking)}
+                                        className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-semibold text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                                    >
+                                        <Edit2 size={14} /> Edit
+                                    </button>
+                                    <button 
+                                        onClick={() => handleCancelEvent(booking._id)}
+                                        className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-semibold text-rose-600 bg-rose-50 rounded-lg hover:bg-rose-100 transition-colors"
+                                    >
+                                        <XCircle size={14} /> Cancel
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    ))
+                )}
             </div>
+
+            {editingEvent && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-100">
+                            <h3 className="font-bold text-slate-800">Edit Event Details</h3>
+                            <button onClick={() => setEditingEvent(null)} className="p-1 hover:bg-slate-100 rounded-full"><X size={20} className="text-slate-500" /></button>
+                        </div>
+                        <div className="p-4 space-y-4">
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                                    Guest Count {editingEvent?.paymentMode === 'ONLINE' && <span className="text-[10px] text-rose-500 font-normal ml-1">(Locked for Online Payments)</span>}
+                                </label>
+                                <input 
+                                    type="number" 
+                                    value={editFormData.guestCount} 
+                                    onChange={(e) => setEditFormData({...editFormData, guestCount: e.target.value})} 
+                                    disabled={editingEvent?.paymentMode === 'ONLINE'}
+                                    className="w-full text-sm p-2.5 border rounded-xl disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" 
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">
+                                    Budget (₹) {editingEvent?.paymentMode === 'ONLINE' && <span className="text-[10px] text-rose-500 font-normal ml-1">(Locked for Online Payments)</span>}
+                                </label>
+                                <input 
+                                    type="number" 
+                                    value={editFormData.budget} 
+                                    onChange={(e) => setEditFormData({...editFormData, budget: e.target.value})} 
+                                    disabled={editingEvent?.paymentMode === 'ONLINE'}
+                                    className="w-full text-sm p-2.5 border rounded-xl disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" 
+                                />
+                            </div>
+                            <div className="flex gap-3">
+                                <div className="flex-1">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+                                    <input type="date" value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl" />
+                                </div>
+                                <div className="flex-1">
+                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Time</label>
+                                    <input type="time" value={editFormData.time} onChange={(e) => setEditFormData({...editFormData, time: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl" />
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-xs font-semibold text-slate-600 mb-1">Location</label>
+                                <input type="text" value={editFormData.location} onChange={(e) => setEditFormData({...editFormData, location: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl" />
+                            </div>
+                            <button onClick={handleSaveEdit} className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl shadow-sm transition-colors mt-2">
+                                Save Changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
 
 export default OrdersPage;
-

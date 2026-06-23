@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInViewAnimation } from "@/core/hooks/useInViewAnimation";
-import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, Search, Coffee } from "lucide-react";
 
 // MUI Icons (shared with admin & icon selector)
 import HomeIcon from "@mui/icons-material/Home";
@@ -526,6 +526,17 @@ const Home = () => {
                   autoplay
                 />
               </div>
+            </motion.button>
+
+            <motion.button
+              onClick={() => navigate("/catering")}
+              whileHover={{ scale: 1.08 }}
+              whileTap={{ scale: 0.92 }}
+              className="w-12 h-12 flex items-center justify-center cursor-pointer bg-white rounded-[12px] md:rounded-full border border-slate-200 shadow-sm hover:shadow-md transition-all shrink-0 relative overflow-hidden"
+              title="Catering Services"
+            >
+              <div className="absolute inset-0 bg-amber-50 opacity-0 hover:opacity-100 transition-opacity"></div>
+              <Coffee className="w-5 h-5 text-amber-500 relative z-10" />
             </motion.button>
           </div>
 

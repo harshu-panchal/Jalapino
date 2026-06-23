@@ -8,6 +8,7 @@ import { useProductDetail } from "../../context/ProductDetailContext";
 import { useSettings } from "@core/context/SettingsContext";
 import { cn } from "@/lib/utils";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
+import { toast } from 'sonner';
 import {
   buildHeaderGradient,
   buildMiniCartColor,
@@ -28,6 +29,7 @@ import ShoppingCartOutlinedIcon from "@mui/icons-material/ShoppingCartOutlined";
 import AccountCircleOutlinedIcon from "@mui/icons-material/AccountCircleOutlined";
 import ShoppingBagOutlinedIcon from "@mui/icons-material/ShoppingBagOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
+import CelebrationIcon from "@mui/icons-material/Celebration";
 
 import { useCustomerMode } from "../../context/CustomerModeContext";
 
@@ -376,6 +378,31 @@ const MainLocationHeader = ({
                 )}
               />
               <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
+            </button>
+
+            {/* Plan My Event Card */}
+            <button
+              type="button"
+              onClick={() => {
+                toast.success('Switched to Event Planner Mode', {
+                  description: 'Design and book complete events across multiple vendors.',
+                  duration: 3000,
+                });
+                navigate('/plan-my-event');
+              }}
+              className={cn(
+                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-[0_8px_24px_rgba(236,72,153,0.3)] hover:scale-[1.02]"
+              )}
+              style={{
+                borderWidth: '3px',
+                borderColor: 'transparent'
+              }}
+            >
+              <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-full">
+                <CelebrationIcon sx={{ fontSize: 18, color: 'white' }} />
+              </div>
+              <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br/>Event</span>
             </button>
           </div>
 

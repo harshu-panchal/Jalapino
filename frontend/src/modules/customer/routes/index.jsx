@@ -21,6 +21,7 @@ import OrderDetailPage from '../pages/OrderDetailPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
 import CheckoutPage from '../pages/CheckoutPage';
 import PaymentStatusPage from '../pages/PaymentStatusPage';
+import CateringPage from '../pages/CateringPage';
 import ScrollToTop from '../components/shared/ScrollToTop';
 import { WishlistProvider } from '../context/WishlistContext';
 import { CartProvider } from '../context/CartContext';
@@ -47,6 +48,7 @@ const CustomerRoutes = () => {
                             <Route path="privacy" element={<PrivacyPage />} />
                             <Route path="about" element={<AboutPage />} />
                             <Route path="offers" element={<OffersPage />} />
+                            <Route path="catering" element={<CateringPage />} />
 
                             {/* Protected Customer Routes */}
                             <Route path="wishlist" element={<ProtectedRoute><WishlistPage /></ProtectedRoute>} />

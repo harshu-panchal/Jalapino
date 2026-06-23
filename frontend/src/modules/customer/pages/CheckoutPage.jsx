@@ -786,26 +786,58 @@ const CheckoutPage = () => {
 
         if (selectedPayment === "online") {
           try {
-            const paymentRes = await customerApi.createPaymentOrder({
-              orderRef: paymentRef,
-              orderId: mainOrderId,
+            const rzpRes = await customerApi.createRazorpayOrder(paymentRef, { amount: finalAmountToPay });
+            
+            const options = {
+              key: "rzp_test_S3IcSS1NbymL6D", 
+              amount: rzpRes.data.result.amount,
+              currency: "INR",
+              name: appName,
+              description: `Payment for Order ${paymentRef}`,
+              order_id: rzpRes.data.result.id,
+              handler: async function (response) {
+                try {
+                  await customerApi.verifyRazorpayOrder(paymentRef, {
+                    razorpay_order_id: response.razorpay_order_id,
+                    razorpay_payment_id: response.razorpay_payment_id,
+                    razorpay_signature: response.razorpay_signature
+                  });
+                  clearCart();
+                  showToast("Order placed successfully!", "success");
+                  setOrderId(mainOrderId);
+                  setShowSuccess(true);
+                  if (postOrderNavigateRef.current) clearTimeout(postOrderNavigateRef.current);
+                  postOrderNavigateRef.current = setTimeout(() => {
+                    postOrderNavigateRef.current = null;
+                    setIsPlacingOrder(false);
+                    navigate(`/orders/${mainOrderId}`);
+                  }, 3000);
+                } catch (err) {
+                  setIsPlacingOrder(false);
+                  showToast("Payment verification failed", "error");
+                  navigate(`/orders/${mainOrderId}`);
+                }
+              },
+              prefill: {
+                name: user?.name || "",
+                contact: user?.phone || ""
+              },
+              theme: {
+                color: "#22c55e"
+              }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response){
+              setIsPlacingOrder(false);
+              showToast("Payment failed: " + response.error.description, "error");
+              navigate(`/orders/${mainOrderId}`);
             });
-            if (paymentRes.data.success && paymentRes.data.result?.redirectUrl) {
-              clearCart();
-              window.location.href = paymentRes.data.result.redirectUrl;
-              return;
-            } else {
-              throw new Error(
-                paymentRes.data.message || "Failed to initiate payment gateway"
-              );
-            }
+            rzp.open();
+            return;
           } catch (payError) {
             setIsPlacingOrder(false);
-            showToast(
-              payError.message ||
-              "Order created but payment gateway failed. Please pay from order details.",
-              "error"
-            );
+            showToast(payError.message || "Failed to initiate Razorpay payment", "error");
             navigate(`/orders/${mainOrderId}`);
             return;
           }

@@ -37,6 +37,7 @@ const ProductManagement = () => {
 
   const [products, setProducts] = useState([]);
   const [dbCategories, setDbCategories] = useState([]);
+  const [dbHsns, setDbHsns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -90,9 +91,15 @@ const ProductManagement = () => {
 
   const fetchCategories = async () => {
     try {
-      const res = await sellerApi.getCategoryTree();
-      if (res.data.success) {
-        setDbCategories(res.data.results || res.data.result || []);
+      const [catRes, hsnRes] = await Promise.all([
+        sellerApi.getCategoryTree(),
+        sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } }))
+      ]);
+      if (catRes.data?.success) {
+        setDbCategories(catRes.data.results || catRes.data.result || []);
+      }
+      if (hsnRes.data?.success) {
+        setDbHsns(hsnRes.data.results || []);
       }
     } catch (error) {
       // fail silently
@@ -198,6 +205,7 @@ const ProductManagement = () => {
     category: "",
     header: "",
     subcategory: "",
+    hsnId: "",
     status: "active",
     tags: "",
     weight: "",
@@ -326,6 +334,9 @@ const ProductManagement = () => {
       data.append("headerId", formData.header);
       data.append("categoryId", formData.category);
       data.append("subcategoryId", formData.subcategory);
+      if (formData.hsnId) {
+        data.append("hsnId", formData.hsnId);
+      }
       data.append("status", formData.status);
       data.append("brand", formData.brand);
       data.append("weight", formData.weight);
@@ -424,6 +435,7 @@ const ProductManagement = () => {
         header: item.headerId?._id || item.headerId || "",
         category: item.categoryId?._id || item.categoryId || "",
         subcategory: item.subcategoryId?._id || item.subcategoryId || "",
+        hsnId: item.hsnId?._id || item.hsnId || "",
         status: item.status || "active",
         tags: Array.isArray(item.tags) ? item.tags.join(", ") : item.tags || "",
         weight: item.weight || "",
@@ -458,6 +470,7 @@ const ProductManagement = () => {
         lowStockAlert: 5,
         category: "",
         header: "",
+        hsnId: "",
         status: "active",
         tags: "",
         weight: "",
@@ -1206,6 +1219,25 @@ const ProductManagement = () => {
                                 {sc.name}
                               </option>
                             ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1.5 flex flex-col">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          HSN Code / GST
+                        </label>
+                        <select
+                          value={formData.hsnId}
+                          onChange={(e) =>
+                            setFormData({ ...formData, hsnId: e.target.value })
+                          }
+                          className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none cursor-pointer">
+                          <option value="">Select HSN Code (Default 0% GST)</option>
+                          {dbHsns.map((hsn) => (
+                            <option key={hsn._id || hsn.id} value={hsn._id || hsn.id}>
+                              {hsn.hsnCode} - {hsn.description} ({hsn.gstPercentage}% GST)
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>

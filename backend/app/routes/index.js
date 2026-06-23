@@ -25,6 +25,12 @@ import authOtpRoute from "../modules/otp/otp.routes.js";
 import gamificationRoute from "./gamificationRoutes.js";
 import referralRoute from "./referralRoutes.js";
 import hsnRoute from "./hsnRoutes.js";
+import cateringRoute from "./cateringRoutes.js";
+import eventBookingRoute from "./eventBookingRoutes.js";
+import eventConfigRoute from "./eventConfigRoutes.js";
+import adminEventConfigRoute from "./adminEventConfigRoutes.js";
+import eventSellerRoute from "./eventSellerRoutes.js";
+import sellerEventRoute from "./sellerEventRoutes.js";
 
 import express from "express";
 
@@ -42,6 +48,7 @@ const setupRoutes = (app) => {
     //   /categories       → public category browsing (read-only handlers)
     // Same router, two URL surfaces. Do not deduplicate without coordinated frontend changes.
     router.use("/admin/categories", categoryRoute);
+    router.use("/admin/event-config", adminEventConfigRoute);
     router.use("/admin", adminRoute);
     router.use("/seller", sellerRoute);
     router.use("/settings", settingsRoute);
@@ -74,6 +81,11 @@ const setupRoutes = (app) => {
     router.use("/admin/faqs", faqRoute);
     router.use("/public/faqs", faqRoute); // For public access without admin prefix
     router.use("/hsn", hsnRoute);
+    router.use("/catering", cateringRoute);
+    router.use("/events", eventBookingRoute);
+    router.use("/events/sellers", eventSellerRoute);
+    router.use("/event-config", eventConfigRoute);
+    router.use("/seller/events", sellerEventRoute);
 
     app.use("/api", router);
 }

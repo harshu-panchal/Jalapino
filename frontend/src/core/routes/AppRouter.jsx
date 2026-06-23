@@ -49,6 +49,11 @@ const WalletPage = lazy(() => import('../../modules/customer/pages/WalletPage'))
 const ReelsPage = lazy(() => import('../../modules/customer/pages/ReelsPage'));
 const SpinWinPage = lazy(() => import('../../modules/customer/pages/SpinWinPage'));
 const ReferEarnPage = lazy(() => import('../../modules/customer/pages/ReferEarnPage'));
+const CateringPage = lazy(() => import('../../modules/customer/pages/CateringPage'));
+const PlanMyEventPage = lazy(() => import('../../modules/customer/pages/events/PlanMyEventPage'));
+const EventCategoriesPage = lazy(() => import('../../modules/customer/pages/events/EventCategoriesPage'));
+const EventSellersPage = lazy(() => import('../../modules/customer/pages/events/EventSellersPage'));
+const EventCheckoutPage = lazy(() => import('../../modules/customer/pages/events/EventCheckoutPage'));
 
 // Lazy load heavy modules
 const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
@@ -161,6 +166,10 @@ const AppRouter = () => {
                         { path: 'about', element: <AboutPage /> },
                         { path: 'offers', element: <OffersPage /> },
                         { path: 'shop-by-store', element: <ShopByStorePage /> },
+                        { path: 'plan-my-event', element: <PlanMyEventPage /> },
+                        { path: 'plan-my-event/categories', element: <EventCategoriesPage /> },
+                        { path: 'plan-my-event/sellers', element: <EventSellersPage /> },
+                        { path: 'plan-my-event/checkout', element: <EventCheckoutPage /> },
                         { path: 'wishlist', element: <ProtectedRoute><WishlistPage /></ProtectedRoute> },
                         { path: 'orders', element: <ProtectedRoute><OrdersPage /></ProtectedRoute> },
                         { path: 'orders/:orderId', element: <ProtectedRoute><OrderDetailPage /></ProtectedRoute> },
@@ -178,6 +187,7 @@ const AppRouter = () => {
                         { path: 'reels', element: <ReelsPage /> },
                         { path: 'spin', element: <ProtectedRoute><SpinWinPage /></ProtectedRoute> },
                         { path: 'refer-earn', element: <ProtectedRoute><ReferEarnPage /></ProtectedRoute> },
+                        { path: 'catering', element: <CateringPage /> },
                     ]
                 },
                 {

@@ -22,6 +22,7 @@ import {
   Terminal,
   Sparkles,
   User,
+  Coffee,
 } from "lucide-react";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -96,6 +97,15 @@ const EnvSettings = React.lazy(() => import("../pages/EnvSettings"));
 const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
 const RewardManagement = React.lazy(() => import("../pages/RewardManagement"));
 const ReferralSettings = React.lazy(() => import("../pages/ReferralSettings"));
+
+const CateringDashboard = React.lazy(() => import("../pages/catering/CateringDashboard"));
+const CateringServices = React.lazy(() => import("../pages/catering/CateringServices"));
+const CateringPackages = React.lazy(() => import("../pages/catering/CateringPackages"));
+const CateringBookings = React.lazy(() => import("../pages/catering/CateringBookings"));
+
+const EventConfigPage = React.lazy(() => import("../pages/events/EventConfigPage"));
+const CityManagementPage = React.lazy(() => import("../pages/events/CityManagementPage"));
+const EventBookingsPage = React.lazy(() => import("../pages/events/EventBookingsPage"));
 
 const navItems = [
   {
@@ -197,6 +207,27 @@ const navItems = [
       { label: "Cancelled", path: "/admin/orders/cancelled" },
       { label: "Returned", path: "/admin/orders/returned" },
       { label: "Return Requests", path: "/admin/returns" },
+    ],
+  },
+  {
+    label: "Catering",
+    icon: Coffee,
+    color: "amber",
+    children: [
+      { label: "Dashboard", path: "/admin/catering/dashboard" },
+      { label: "Services", path: "/admin/catering/services" },
+      { label: "Packages", path: "/admin/catering/packages" },
+      { label: "Bookings", path: "/admin/catering/bookings" },
+    ],
+  },
+  {
+    label: "Event Commerce",
+    icon: Sparkles,
+    color: "purple",
+    children: [
+      { label: "Configuration", path: "/admin/events/config" },
+      { label: "City Management", path: "/admin/events/cities" },
+      { label: "All Bookings", path: "/admin/events/bookings" },
     ],
   },
   {
@@ -329,6 +360,16 @@ const AdminRoutes = () => {
         <Route path="/billing" element={<BillingCharges />} />
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/env" element={<EnvSettings />} />
+        
+        <Route path="/catering/dashboard" element={<CateringDashboard />} />
+        <Route path="/catering/services" element={<CateringServices />} />
+        <Route path="/catering/packages" element={<CateringPackages />} />
+        <Route path="/catering/bookings" element={<CateringBookings />} />
+        
+        <Route path="/events/config" element={<EventConfigPage />} />
+        <Route path="/events/cities" element={<CityManagementPage />} />
+        <Route path="/events/bookings" element={<EventBookingsPage />} />
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DashboardLayout>

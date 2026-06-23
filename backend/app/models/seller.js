@@ -134,6 +134,54 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 5, // Default 5km
     },
+    // Event Seller Specific Fields
+    isEventSeller: {
+      type: Boolean,
+      default: false
+    },
+    serviceCategories: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'EventCategory'
+    }],
+    maxEventsPerDay: {
+      type: Number,
+      default: 2
+    },
+    maxGuestCapacity: {
+      type: Number,
+      default: 500
+    },
+    businessTimings: {
+      start: { type: String, default: "09:00" },
+      end: { type: String, default: "22:00" }
+    },
+    emergencyBookingAvailable: {
+      type: Boolean,
+      default: false
+    },
+    autoAcceptBookings: {
+      type: Boolean,
+      default: false
+    },
+    sellerStatus: {
+      type: String,
+      enum: ['active', 'inactive', 'on_leave'],
+      default: 'active'
+    },
+    sellerVerificationStatus: {
+      type: String,
+      enum: ['pending', 'verified', 'rejected'],
+      default: 'pending'
+    },
+    commissionRate: {
+      type: Number,
+      default: 10
+    },
+    bankDetails: {
+      bankName: { type: String, trim: true },
+      accountNo: { type: String, trim: true },
+      ifscCode: { type: String, trim: true }
+    },
     lastLogin: Date,
   },
   { timestamps: true },

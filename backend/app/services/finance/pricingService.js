@@ -450,7 +450,8 @@ export async function generateOrderPaymentBreakdown({
       commission.adminCommission,
     );
 
-    const itemTax = roundCurrency((commission.itemSubtotal * (item.gstPercentage || 0)) / 100);
+    const appliedGstPercentage = item.hsnCode ? (item.gstPercentage || 0) : (item.gstPercentage || effectiveSettings.gstPercentage || 0);
+    const itemTax = roundCurrency((commission.itemSubtotal * appliedGstPercentage) / 100);
     calculatedTax = addMoney(calculatedTax, itemTax);
 
     return {
@@ -467,7 +468,7 @@ export async function generateOrderPaymentBreakdown({
       appliedCommissionValue: commission.appliedCommissionValue,
       appliedCommissionFixedRule: commission.appliedFixedRule,
       hsnCode: item.hsnCode || null,
-      gstPercentage: item.gstPercentage || 0,
+      gstPercentage: appliedGstPercentage,
       taxAmount: itemTax,
     };
   });

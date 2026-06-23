@@ -13,7 +13,7 @@ async function run() {
     try {
         console.log("Connecting to MongoDB...");
         await mongoose.connect(MONGO_URI, {
-            serverSelectionTimeoutMS: 5000 
+            serverSelectionTimeoutMS: 5000
         });
         console.log("Connected successfully");
 
@@ -22,7 +22,7 @@ async function run() {
         const Wallet = mongoose.model('Wallet', new mongoose.Schema({ ownerId: mongoose.Schema.Types.ObjectId, availableBalance: Number, ownerType: String }, { strict: false }), 'wallets');
 
         const chirag = await Delivery.findOne({ name: /Chirag/i });
-        
+
         if (!chirag) {
             console.log("Delivery partner 'Chirag' not found.");
             mongoose.disconnect();
@@ -32,7 +32,7 @@ async function run() {
         console.log(`Found partner: ${chirag.name} (ID: ${chirag._id})`);
 
         let wallet = await Wallet.findOne({ ownerId: chirag._id, ownerType: 'DELIVERY_PARTNER' });
-        
+
         if (!wallet) {
             console.log("No wallet found. Creating...");
             wallet = new Wallet({
@@ -60,4 +60,4 @@ async function run() {
     }
 }
 
-run();
+run();  

@@ -8,7 +8,7 @@ const testAdminLogin = async () => {
   try {
     // Connect to MongoDB
     const mongoUri = process.env.MONGO_URI;
-    
+
     if (!mongoUri) {
       throw new Error('MONGO_URI environment variable is not defined');
     }
@@ -27,7 +27,7 @@ const testAdminLogin = async () => {
 
     // Find admin by email
     const admin = await Admin.findOne({ email: testEmail }).select('+password');
-    
+
     if (!admin) {
       console.log('❌ FAILED: Admin not found with email:', testEmail);
       console.log('\nChecking all admins in database...');
@@ -45,7 +45,7 @@ const testAdminLogin = async () => {
 
     // Test password comparison
     const isMatch = await admin.comparePassword(testPassword);
-    
+
     if (isMatch) {
       console.log('✅ SUCCESS: Password matches!');
       console.log('\nYou can log in with:');

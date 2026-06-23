@@ -63,6 +63,11 @@ export const customerApi = {
     axiosInstance.post("/orders", data, { timeout: 120000 }),
   verifyOnlineOrderPayment: (orderId, data) =>
     axiosInstance.post(`/orders/${orderId}/payment/verify-online`, data),
+  createRazorpayOrder: (orderId, data) =>
+    // Force Vite reload
+    axiosInstance.post(`/orders/${orderId}/razorpay/create`, data),
+  verifyRazorpayOrder: (orderId, data) =>
+    axiosInstance.post(`/orders/${orderId}/razorpay/verify`, data),
   markOrderDelivered: (orderId, data) =>
     axiosInstance.post(`/orders/${orderId}/delivered`, data || {}),
   markOrderCodCollected: (orderId, data) =>
@@ -101,6 +106,15 @@ export const customerApi = {
   getProductReviews: (productId) =>
     getWithDedupe(`/reviews/product/${productId}`),
   submitReview: (data) => axiosInstance.post("/reviews/submit", data),
+  recordAppOpen: (data) => axiosInstance.post("/gamification/app-open", data),
+
+  // Event Booking API
+  createEventBooking: (data) => axiosInstance.post("/events/book", data),
+  getMyEventBookings: () => axiosInstance.get("/events/my-bookings"),
+  updateEventBooking: (id, data) => axiosInstance.put(`/events/${id}`, data),
+  cancelEventBooking: (id) => axiosInstance.delete(`/events/${id}`),
+  getEventBookingDetails: (id) => axiosInstance.get(`/events/${id}`),
+
   createTicket: (data) => axiosInstance.post("/tickets/create", data),
   getMyTickets: () => getWithDedupe("/tickets/my-tickets"),
   replyTicket: (ticketId, text, options = {}) => {
