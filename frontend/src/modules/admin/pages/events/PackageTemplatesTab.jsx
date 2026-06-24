@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Button, 
-    TextField, 
-    Dialog, 
-    DialogTitle, 
-    DialogContent, 
-    DialogActions, 
+import {
+    Button,
+    TextField,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
     IconButton,
     Switch,
     FormControlLabel,
@@ -25,7 +25,7 @@ const PackageTemplatesTab = ({ categories }) => {
     const [loading, setLoading] = useState(false);
     const [modalOpen, setModalOpen] = useState(false);
     const [editingTemplate, setEditingTemplate] = useState(null);
-    
+
     // Form state
     const [form, setForm] = useState({
         category: '',
@@ -124,7 +124,7 @@ const PackageTemplatesTab = ({ categories }) => {
                     Add Package Template
                 </Button>
             </div>
-            
+
             {loading ? (
                 <div className="flex justify-center py-10"><CircularProgress /></div>
             ) : (
@@ -172,7 +172,7 @@ const PackageTemplatesTab = ({ categories }) => {
             <Dialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 2, padding: 2 } }}>
                 <DialogTitle sx={{ fontWeight: 'bold' }}>{editingTemplate ? 'Edit Package Template' : 'Add Package Template'}</DialogTitle>
                 <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
-                    
+
                     {packageCategories.length === 0 && (
                         <div className="bg-orange-50 text-orange-700 p-3 rounded-lg text-sm mb-2 border border-orange-200 font-medium">
                             Warning: No categories have "Package Builder" plugin enabled yet. Please enable it in Service Categories first.
@@ -184,7 +184,7 @@ const PackageTemplatesTab = ({ categories }) => {
                         <Select
                             value={form.category}
                             label="Category"
-                            onChange={e => setForm({...form, category: e.target.value})}
+                            onChange={e => setForm({ ...form, category: e.target.value })}
                         >
                             {packageCategories.map(cat => (
                                 <MenuItem key={cat._id} value={cat._id}>{cat.name}</MenuItem>
@@ -192,30 +192,30 @@ const PackageTemplatesTab = ({ categories }) => {
                         </Select>
                     </FormControl>
 
-                    <TextField 
-                        fullWidth label="Package Name (e.g. Premium Decoration)" 
+                    <TextField
+                        fullWidth label="Package Name (e.g. Premium Decoration)"
                         variant="outlined"
-                        value={form.packageName} 
-                        onChange={e => setForm({...form, packageName: e.target.value})} 
-                    />
-                    
-                    <TextField 
-                        fullWidth label="Description" 
-                        variant="outlined" multiline rows={2}
-                        value={form.description} 
-                        onChange={e => setForm({...form, description: e.target.value})} 
+                        value={form.packageName}
+                        onChange={e => setForm({ ...form, packageName: e.target.value })}
                     />
 
-                    <TextField 
-                        fullWidth label="Included Features (One per line)" 
+                    <TextField
+                        fullWidth label="Description"
+                        variant="outlined" multiline rows={2}
+                        value={form.description}
+                        onChange={e => setForm({ ...form, description: e.target.value })}
+                    />
+
+                    <TextField
+                        fullWidth label="Included Features (One per line)"
                         variant="outlined" multiline rows={3}
                         placeholder={"Setup labor\nBalloons\nRibbons"}
-                        value={form.includedFeatures} 
-                        onChange={e => setForm({...form, includedFeatures: e.target.value})} 
+                        value={form.includedFeatures}
+                        onChange={e => setForm({ ...form, includedFeatures: e.target.value })}
                     />
 
                     <FormControlLabel
-                        control={<Switch checked={form.isActive} onChange={e => setForm({...form, isActive: e.target.checked})} color="primary" />}
+                        control={<Switch checked={form.isActive} onChange={e => setForm({ ...form, isActive: e.target.checked })} color="primary" />}
                         label={<span className="font-medium">Active Status</span>}
                     />
 

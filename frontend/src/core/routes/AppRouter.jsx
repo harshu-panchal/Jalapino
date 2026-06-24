@@ -53,6 +53,7 @@ const CateringPage = lazy(() => import('../../modules/customer/pages/CateringPag
 const PlanMyEventPage = lazy(() => import('../../modules/customer/pages/events/PlanMyEventPage'));
 const EventCategoriesPage = lazy(() => import('../../modules/customer/pages/events/EventCategoriesPage'));
 const EventSellersPage = lazy(() => import('../../modules/customer/pages/events/EventSellersPage'));
+const EventPackageSelectionPage = lazy(() => import('../../modules/customer/pages/events/EventPackageSelectionPage'));
 const EventCheckoutPage = lazy(() => import('../../modules/customer/pages/events/EventCheckoutPage'));
 
 // Lazy load heavy modules
@@ -60,6 +61,7 @@ const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
 const AdminModule = lazy(() => import('../../modules/admin/routes/index'));
 const DeliveryModule = lazy(() => import('../../modules/delivery/routes/index'));
 
+import MaintenancePage from '../../shared/components/MaintenancePage';
 import CustomerLayout from '../../modules/customer/components/layout/CustomerLayout';
 
 const CustomerLayoutWrapper = () => {
@@ -155,6 +157,10 @@ const AppRouter = () => {
                     element: <div className="flex h-screen items-center justify-center font-sans">Unauthorized Access</div>,
                 },
                 {
+                    path: 'maintenance',
+                    element: <MaintenancePage />,
+                },
+                {
                     element: <CustomerLayoutWrapper />,
                     children: [
                         { index: true, element: <Home /> },
@@ -169,6 +175,7 @@ const AppRouter = () => {
                         { path: 'plan-my-event', element: <PlanMyEventPage /> },
                         { path: 'plan-my-event/categories', element: <EventCategoriesPage /> },
                         { path: 'plan-my-event/sellers', element: <EventSellersPage /> },
+                        { path: 'plan-my-event/packages', element: <EventPackageSelectionPage /> },
                         { path: 'plan-my-event/checkout', element: <EventCheckoutPage /> },
                         { path: 'wishlist', element: <ProtectedRoute><WishlistPage /></ProtectedRoute> },
                         { path: 'orders', element: <ProtectedRoute><OrdersPage /></ProtectedRoute> },

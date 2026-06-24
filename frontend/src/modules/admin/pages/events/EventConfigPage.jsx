@@ -26,6 +26,7 @@ import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { adminEventConfigApi } from '../../services/adminEventConfigApi';
 import CircularProgress from '@mui/material/CircularProgress';
 import PackageTemplatesTab from './PackageTemplatesTab';
+import EventPayoutsTab from './EventPayoutsTab';
 
 function TabPanel(props) {
     const { children, value, index, ...other } = props;
@@ -224,10 +225,11 @@ const EventConfigPage = () => {
             </div>
 
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)}>
+                <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="scrollable" scrollButtons="auto">
                     <Tab label="Event Types" />
                     <Tab label="Service Categories & Forms" />
                     <Tab label="Package Templates" />
+                    <Tab label="Event Payouts" />
                 </Tabs>
             </Box>
 
@@ -577,6 +579,11 @@ const EventConfigPage = () => {
             {/* Package Templates Tab */}
             <TabPanel value={tabValue} index={2}>
                 <PackageTemplatesTab categories={categories} />
+            </TabPanel>
+
+            {/* Event Payouts Tab */}
+            <TabPanel value={tabValue} index={3}>
+                <EventPayoutsTab />
             </TabPanel>
 
         </div>

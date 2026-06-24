@@ -34,6 +34,7 @@ const BillingCharges = () => {
         codEnabled: true,
         onlineEnabled: true,
         gstPercentage: 0,
+        eventPlatformFee: 10,
     });
 
     useEffect(() => {
@@ -63,6 +64,7 @@ const BillingCharges = () => {
                         codEnabled: s.codEnabled ?? prev.codEnabled,
                         onlineEnabled: s.onlineEnabled ?? prev.onlineEnabled,
                         gstPercentage: s.gstPercentage ?? prev.gstPercentage,
+                        eventPlatformFee: s.eventPlatformFee ?? prev.eventPlatformFee,
                     }));
                 }
             } catch (error) {
@@ -80,6 +82,7 @@ const BillingCharges = () => {
                     returnDeliveryCommission,
                     platformFee: config.platformFee,
                     freeDeliveryThreshold: config.freeDeliveryThreshold,
+                    eventPlatformFee: config.eventPlatformFee,
                 }),
                 adminApi.updateDeliveryFinanceSettings({
                     deliveryPricingMode: deliveryMode === 'fixed' ? 'fixed_price' : 'distance_based',
@@ -176,6 +179,23 @@ const BillingCharges = () => {
                                     />
                                 </div>
                                 <p className="text-[10px] font-bold text-slate-400 italic">Global tax applied dynamically to checkout subtotal.</p>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                    Event Platform Fee (%)
+                                    <Info className="h-3 w-3 opacity-50" />
+                                </label>
+                                <div className="relative group">
+                                    <span className="absolute left-5 top-1/2 -translate-y-1/2 font-bold text-slate-300 group-focus-within:text-purple-500 transition-colors">%</span>
+                                    <input
+                                        type="number"
+                                        value={config.eventPlatformFee}
+                                        onChange={(e) => handleInputChange('eventPlatformFee', e.target.value)}
+                                        className="w-full pl-10 pr-5 py-4 bg-slate-50 border-none rounded-2xl text-base font-black text-slate-900 outline-none focus:ring-2 focus:ring-purple-500/10 transition-all"
+                                    />
+                                </div>
+                                <p className="text-[10px] font-bold text-slate-400 italic">Global commission rate deducted from event payouts.</p>
                             </div>
                         </div>
                     </Card>

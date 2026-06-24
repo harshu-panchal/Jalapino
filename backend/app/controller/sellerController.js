@@ -52,6 +52,13 @@ export const getNearbySellers = async (req, res) => {
       return distance <= (seller.serviceRadius || 5);
     });
 
+    // --- RELIABILITY ENGINE: Sort by score descending ---
+    nearbySellers.sort((a, b) => {
+      const scoreA = a.reliabilityScore !== undefined ? a.reliabilityScore : 100;
+      const scoreB = b.reliabilityScore !== undefined ? b.reliabilityScore : 100;
+      return scoreB - scoreA;
+    });
+
     return handleResponse(
       res,
       200,

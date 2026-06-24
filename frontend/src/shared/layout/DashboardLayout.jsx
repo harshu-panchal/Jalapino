@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BellRing, Check, X, Clock, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useSettings } from '@core/context/SettingsContext';
 import SellerOrdersContext from '@/modules/seller/context/SellerOrdersContext';
 import SellerEarningsContext, { defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
 import { getOrderSocket, onSellerOrderNew, onReturnDropOtp } from '@/core/services/orderSocket';
@@ -55,6 +56,7 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [returnDropOtpAlert, setReturnDropOtpAlert] = useState(null); // { orderId, otp, expiresAt }
     const { user, logout, role } = useAuth();
+    const { settings } = useSettings();
     const location = useLocation();
     const navigate = useNavigate();
 
@@ -423,6 +425,20 @@ const DashboardLayout = ({ children, navItems, title }) => {
                     </div>
                 </main>
             </div>
+
+            {/* AI Copilot FAB (Customer Only) */}
+            {role === 'customer' && settings?.aiControl?.aiEnabled && (
+                <div className="fixed bottom-20 right-6 z-[90] flex flex-col items-end gap-2 animate-in slide-in-from-bottom-5">
+                    {/* Tooltip / Greeting */}
+                    <div className="bg-white px-4 py-2 rounded-2xl shadow-lg border border-slate-100 text-sm font-medium text-slate-700 animate-pulse">
+                        {settings?.aiControl?.aiGreeting || "Hello! I am your AI Copilot. How can I help you today?"}
+                    </div>
+                    {/* FAB Button */}
+                    <button className="w-14 h-14 bg-gradient-to-tr from-brand-500 to-brand-400 rounded-full shadow-xl flex items-center justify-center text-white hover:scale-105 transition-transform">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 8V4H8"/><rect width="16" height="12" x="4" y="8" rx="2"/><path d="M2 14h2"/><path d="M20 14h2"/><path d="M15 13v2"/><path d="M9 13v2"/></svg>
+                    </button>
+                </div>
+            )}
 
             {/* Global Order Alert Modal */}
             <AnimatePresence>

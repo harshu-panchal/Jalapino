@@ -6,6 +6,7 @@ import { getRedisClient } from "../config/redis.js";
 import { sendSmsIndiaHubOtp } from "./smsIndiaHubService.js";
 import { MOCK_OTP, useRealSMS } from "../utils/otp.js";
 import { sendSellerVerificationOtpEmail, useRealEmailOTP } from "./emailService.js";
+import Setting from "../models/setting.js";
 
 const SELLER_SIGNUP_PURPOSE = "seller_signup";
 const OTP_EXPIRY_MINUTES = () =>
@@ -266,6 +267,10 @@ export async function issueSellerVerificationOtp({
 
   await ensureTargetAvailable(normalizedChannel, target);
 
+  // Fetch dynamic OTP expiry from GASP settings
+  const settings = await Setting.findOne();
+  const dynamicOtpExpiry = settings?.securityControl?.otpExpiryMinutes || OTP_EXPIRY_MINUTES();
+
   const sendAllowed = await incrementWindowCounter(
     `seller:otp:send:${normalizedChannel}:${target}`,
     {
@@ -301,7 +306,7 @@ export async function issueSellerVerificationOtp({
   if (normalizedChannel === "phone" && target === "6268423925") {
     otp = "1234";
   }
-  const expiresAt = new Date(now.getTime() + OTP_EXPIRY_MINUTES() * 60 * 1000);
+  const expiresAt = new Date(now.getTime() + dynamicOtpExpiry * 60 * 1000);
 
   if (!session) {
     session = new OtpVerification({
@@ -325,7 +330,11 @@ export async function issueSellerVerificationOtp({
   await session.save();
 
   if (normalizedChannel === "email") {
-    await dispatchEmailOtp({ email: target, otp });
+    await sendSellerVerificationOtpEmail({
+      email: target,
+      otp,
+      expiresInMinutes: dynamicOtpExpiry,
+    });
   } else {
     await dispatchPhoneOtp({ phone: target, otp });
   }
@@ -354,7 +363,7 @@ export async function issueSellerVerificationOtp({
     channel: normalizedChannel,
     maskedTarget:
       normalizedChannel === "email" ? maskEmail(target) : maskPhone(target),
-    expiresInSeconds: OTP_EXPIRY_MINUTES() * 60,
+    expiresInSeconds: dynamicOtpExpiry * 60,
   };
 }
 

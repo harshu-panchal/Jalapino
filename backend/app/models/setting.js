@@ -80,6 +80,13 @@ const settingSchema = new mongoose.Schema(
             min: 0,
         },
 
+        // Event Platform Fee
+        eventPlatformFee: {
+            type: Number,
+            default: 10,
+            min: 0,
+        },
+
         // Returns / logistics configuration
         returnDeliveryCommission: {
             // Flat amount per return pickup, paid by seller
@@ -196,6 +203,108 @@ const settingSchema = new mongoose.Schema(
                 default: 100,
             },
         },
+
+        // Operations & Maintenance
+        maintenanceMode: {
+            type: Boolean,
+            default: false
+        },
+        maintenanceMessage: {
+            type: String,
+            default: "We are currently undergoing scheduled maintenance. Please check back later."
+        },
+        maintenanceExpectedCompletion: {
+            type: Date
+        },
+        
+        // GASP Platform Control Engine
+        platformControl: {
+            retailEnabled: { type: Boolean, default: true },
+            wholesaleEnabled: { type: Boolean, default: true },
+            planMyEventEnabled: { type: Boolean, default: true },
+            customerRegistration: { type: Boolean, default: true },
+            sellerRegistration: { type: Boolean, default: true },
+            sellerApprovalRequirement: { type: Boolean, default: true },
+            categoryApprovalRequirement: { type: Boolean, default: true },
+        },
+
+        // GASP Pricing Configuration Engine
+        pricingControl: {
+            commissionPercentage: { type: Number, default: 5 },
+            platformFee: { type: Number, default: 0 },
+            convenienceFee: { type: Number, default: 0 },
+            cancellationCharges: { type: Number, default: 0 },
+            refundCharges: { type: Number, default: 0 },
+            bookingCharges: { type: Number, default: 0 },
+            walletRulesEnabled: { type: Boolean, default: true },
+        },
+
+        // GASP Payment Configuration Engine
+        paymentControl: {
+            paymentGateway: { type: String, enum: ["razorpay", "stripe", "cashfree", "none"], default: "razorpay" },
+            escrowEnabled: { type: Boolean, default: false },
+            settlementCycleDays: { type: Number, default: 2 },
+            autoSettlementEnabled: { type: Boolean, default: false },
+            walletUsageEnabled: { type: Boolean, default: true },
+            refundTimelineDays: { type: Number, default: 5 },
+            splitPaymentEnabled: { type: Boolean, default: false },
+        },
+
+        // GASP Booking Configuration Engine
+        bookingControl: {
+            bookingWindowDays: { type: Number, default: 365 },
+            advanceBookingLimitPercent: { type: Number, default: 20 },
+            slotBufferMinutes: { type: Number, default: 30 },
+            customerConfirmationRequired: { type: Boolean, default: true },
+            sellerConfirmationRequired: { type: Boolean, default: true },
+            autoExpiryHours: { type: Number, default: 24 },
+        },
+
+        // GASP AI Configuration Engine
+        aiControl: {
+            aiEnabled: { type: Boolean, default: true },
+            aiGreeting: { type: String, default: "Hi there! How can I help you plan your event today?" },
+            aiTone: { type: String, enum: ["Professional", "Friendly", "Enthusiastic"], default: "Friendly" },
+            copilotVisibility: { type: Boolean, default: true },
+        },
+
+        // GASP Notification Configuration Engine
+        notificationControl: {
+            smsEnabled: { type: Boolean, default: true },
+            whatsappEnabled: { type: Boolean, default: false },
+            pushEnabled: { type: Boolean, default: true },
+            emailEnabled: { type: Boolean, default: true },
+            reminderFrequencyHours: { type: Number, default: 24 },
+        },
+
+        // GASP Subscription Configuration Engine
+        subscriptionControl: {
+            freePlanEnabled: { type: Boolean, default: true },
+            trialPeriodDays: { type: Number, default: 14 },
+            basicPlanPrice: { type: Number, default: 999 },
+            premiumPlanPrice: { type: Number, default: 2999 },
+        },
+
+        // GASP Analytics Configuration Engine
+        analyticsControl: {
+            revenueDashboardVisible: { type: Boolean, default: true },
+            bookingDashboardVisible: { type: Boolean, default: true },
+            sellerDashboardVisible: { type: Boolean, default: true },
+            customerDashboardVisible: { type: Boolean, default: true },
+        },
+
+        // GASP Security Configuration Engine
+        securityControl: {
+            otpExpiryMinutes: { type: Number, default: 5 },
+            sessionTimeoutHours: { type: Number, default: 24 },
+            loginAttemptLimit: { type: Number, default: 5 },
+        },
+
+        // GASP Knowledge Base Engine
+        knowledgeBaseControl: {
+            faqEnabled: { type: Boolean, default: true },
+            sopVisibility: { type: String, enum: ["Public", "SellersOnly", "Hidden"], default: "Public" },
+        }
     },
     {
         timestamps: true,

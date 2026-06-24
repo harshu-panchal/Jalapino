@@ -11,6 +11,7 @@ import { geocodeAddress } from "../services/mapsGeocodeService.js";
 import Order from "../models/order.js";
 import Customer from "../models/customer.js";
 import Transaction from "../models/transaction.js";
+import Setting from "../models/setting.js";
 import { orderMatchQueryFromRouteParam } from "../utils/orderLookup.js";
 import {
   generateReturnPickupOtp,
@@ -300,14 +301,19 @@ export const requestReturnPickupOtp = async (req, res) => {
         // ── Send SMS to customer (BACKGROUND) ──
         setImmediate(async () => {
           try {
-            const customerObj = await Customer.findById(customerId).lean();
-            const phone = customerObj?.phone || order.address?.phone;
-            if (phone) {
-              await sendSmsIndiaHubOtp({
-                phone,
-                otp: result.otp,
-                message: `Your return pickup OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
-              });
+            const settings = await Setting.findOne();
+            if (settings?.notificationControl?.smsEnabled !== false) {
+              const customerObj = await Customer.findById(customerId).lean();
+              const phone = customerObj?.phone || order.address?.phone;
+              if (phone) {
+                await sendSmsIndiaHubOtp({
+                  phone,
+                  otp: result.otp,
+                  message: `Your return pickup OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
+                });
+              }
+            } else {
+              console.log("[requestReturnPickupOtp] SMS skipped as per GASP Notification Control");
             }
           } catch (smsErr) {
             console.warn("[requestReturnPickupOtp] SMS failed:", smsErr.message);
@@ -453,13 +459,18 @@ export const requestReturnDropOtp = async (req, res) => {
         // ── Send SMS to seller (BACKGROUND) ──
         setImmediate(async () => {
           try {
-            const sellerPhone = order.seller?.phone;
-            if (sellerPhone) {
-              await sendSmsIndiaHubOtp({
-                phone: sellerPhone,
-                otp: result.otp,
-                message: `Return drop OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
-              });
+            const settings = await Setting.findOne();
+            if (settings?.notificationControl?.smsEnabled !== false) {
+              const sellerPhone = order.seller?.phone;
+              if (sellerPhone) {
+                await sendSmsIndiaHubOtp({
+                  phone: sellerPhone,
+                  otp: result.otp,
+                  message: `Return drop OTP for order #${orderId} is ${result.otp}. Noyo-kart.`,
+                });
+              }
+            } else {
+              console.log("[requestReturnDropOtp] SMS skipped as per GASP Notification Control");
             }
           } catch (smsErr) {
             console.warn("[requestReturnDropOtp] SMS failed:", smsErr.message);

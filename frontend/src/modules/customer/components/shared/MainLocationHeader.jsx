@@ -329,81 +329,87 @@ const MainLocationHeader = ({
           {/* Mode Switcher Cards */}
           <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
             {/* Retail Card */}
-            <button
-              type="button"
-              onClick={() => toggleMode('retail')}
-              className={cn(
-                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                mode === 'retail'
-                  ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
-                  : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-              )}
-              style={{
-                borderWidth: '3px',
-                borderColor: 'transparent'
-              }}
-            >
-              <img 
-                src={retailerIcon} 
-                alt="Retail"
+            {settings?.platformControl?.retailEnabled !== false && (
+              <button
+                type="button"
+                onClick={() => toggleMode('retail')}
                 className={cn(
-                  "h-7 w-7 object-contain transition-all duration-300",
-                  mode === 'retail' ? "opacity-100 scale-105" : "opacity-100"
+                  "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                  mode === 'retail'
+                    ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
                 )}
-              />
-              <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
-            </button>
+                style={{
+                  borderWidth: '3px',
+                  borderColor: 'transparent'
+                }}
+              >
+                <img 
+                  src={retailerIcon} 
+                  alt="Retail"
+                  className={cn(
+                    "h-7 w-7 object-contain transition-all duration-300",
+                    mode === 'retail' ? "opacity-100 scale-105" : "opacity-100"
+                  )}
+                />
+                <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
+              </button>
+            )}
 
             {/* Wholesale Card */}
-            <button
-              type="button"
-              onClick={() => toggleMode('whole')}
-              className={cn(
-                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                mode === 'whole'
-                  ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
-                  : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-              )}
-              style={{
-                borderWidth: '3px',
-                borderColor: 'transparent'
-              }}
-            >
-              <img 
-                src={wholesalerIcon} 
-                alt="Wholesale"
+            {settings?.platformControl?.wholesaleEnabled !== false && (
+              <button
+                type="button"
+                onClick={() => toggleMode('whole')}
                 className={cn(
-                  "h-7 w-7 object-contain transition-all duration-300",
-                  mode === 'whole' ? "opacity-100 scale-105" : "opacity-100"
+                  "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                  mode === 'whole'
+                    ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
                 )}
-              />
-              <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
-            </button>
+                style={{
+                  borderWidth: '3px',
+                  borderColor: 'transparent'
+                }}
+              >
+                <img 
+                  src={wholesalerIcon} 
+                  alt="Wholesale"
+                  className={cn(
+                    "h-7 w-7 object-contain transition-all duration-300",
+                    mode === 'whole' ? "opacity-100 scale-105" : "opacity-100"
+                  )}
+                />
+                <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
+              </button>
+            )}
 
             {/* Plan My Event Card */}
-            <button
-              type="button"
-              onClick={() => {
-                toast.success('Switched to Event Planner Mode', {
-                  description: 'Design and book complete events across multiple vendors.',
-                  duration: 3000,
-                });
-                navigate('/plan-my-event');
-              }}
-              className={cn(
-                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-[0_8px_24px_rgba(236,72,153,0.3)] hover:scale-[1.02]"
-              )}
-              style={{
-                borderWidth: '3px',
-                borderColor: 'transparent'
-              }}
-            >
-              <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-full">
-                <CelebrationIcon sx={{ fontSize: 18, color: 'white' }} />
-              </div>
-              <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br/>Event</span>
-            </button>
+            {settings?.platformControl?.planMyEventEnabled !== false && (
+              <button
+                type="button"
+                onClick={() => {
+                  toast.success('Switched to Event Planner Mode', {
+                    description: 'Design and book complete events across multiple vendors.',
+                    duration: 3000,
+                  });
+                  navigate('/plan-my-event');
+                }}
+                className={cn(
+                  "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                  "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-[0_8px_24px_rgba(236,72,153,0.3)] hover:scale-[1.02]"
+                )}
+                style={{
+                  borderWidth: '3px',
+                  borderColor: 'transparent'
+                }}
+              >
+                <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-full">
+                  <CelebrationIcon sx={{ fontSize: 18, color: 'white' }} />
+                </div>
+                <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br/>Event</span>
+              </button>
+            )}
           </div>
 
           {/* Corner Lottie */}

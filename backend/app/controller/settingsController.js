@@ -51,6 +51,19 @@ const ALLOWED_KEYS = [
   "lowStockAlertsEnabled",
   "productApproval",
   "gstPercentage",
+  "maintenanceMode",
+  "maintenanceMessage",
+  "maintenanceExpectedCompletion",
+  "platformControl",
+  "pricingControl",
+  "paymentControl",
+  "bookingControl",
+  "aiControl",
+  "notificationControl",
+  "subscriptionControl",
+  "securityControl",
+  "analyticsControl",
+  "knowledgeBaseControl"
 ];
 
 function flattenForMongoSet(prefix, value, target) {
@@ -129,7 +142,79 @@ const updateSettingsSchema = Joi.object({
     sellerEditRequiresApproval: Joi.boolean(),
   }).unknown(false),
   gstPercentage: Joi.number().min(0),
-}).unknown(false);
+  maintenanceMode: Joi.boolean(),
+  maintenanceMessage: Joi.string().allow("").max(500),
+  maintenanceExpectedCompletion: Joi.date().iso().allow(null),
+  platformControl: Joi.object({
+    retailEnabled: Joi.boolean(),
+    wholesaleEnabled: Joi.boolean(),
+    planMyEventEnabled: Joi.boolean(),
+    customerRegistration: Joi.boolean(),
+    sellerRegistration: Joi.boolean(),
+    sellerApprovalRequirement: Joi.boolean(),
+    categoryApprovalRequirement: Joi.boolean(),
+  }).unknown(true),
+  pricingControl: Joi.object({
+    commissionPercentage: Joi.number().min(0),
+    platformFee: Joi.number().min(0),
+    convenienceFee: Joi.number().min(0),
+    cancellationCharges: Joi.number().min(0),
+    refundCharges: Joi.number().min(0),
+    bookingCharges: Joi.number().min(0),
+    walletRulesEnabled: Joi.boolean(),
+  }).unknown(true),
+  paymentControl: Joi.object({
+    paymentGateway: Joi.string().valid("razorpay", "stripe", "cashfree", "none"),
+    escrowEnabled: Joi.boolean(),
+    settlementCycleDays: Joi.number().min(0),
+    autoSettlementEnabled: Joi.boolean(),
+    walletUsageEnabled: Joi.boolean(),
+    refundTimelineDays: Joi.number().min(0),
+    splitPaymentEnabled: Joi.boolean(),
+  }).unknown(true),
+  bookingControl: Joi.object({
+    bookingWindowDays: Joi.number().min(0),
+    advanceBookingLimitPercent: Joi.number().min(0),
+    slotBufferMinutes: Joi.number().min(0),
+    customerConfirmationRequired: Joi.boolean(),
+    sellerConfirmationRequired: Joi.boolean(),
+    autoExpiryHours: Joi.number().min(0),
+  }).unknown(true),
+  aiControl: Joi.object({
+    aiEnabled: Joi.boolean(),
+    aiGreeting: Joi.string(),
+    aiTone: Joi.string().valid("Professional", "Friendly", "Enthusiastic"),
+    copilotVisibility: Joi.boolean(),
+  }).unknown(true),
+  notificationControl: Joi.object({
+    smsEnabled: Joi.boolean(),
+    whatsappEnabled: Joi.boolean(),
+    pushEnabled: Joi.boolean(),
+    emailEnabled: Joi.boolean(),
+    reminderFrequencyHours: Joi.number().min(0),
+  }).unknown(true),
+  subscriptionControl: Joi.object({
+    freePlanEnabled: Joi.boolean(),
+    trialPeriodDays: Joi.number().min(0),
+    basicPlanPrice: Joi.number().min(0),
+    premiumPlanPrice: Joi.number().min(0),
+  }).unknown(true),
+  analyticsControl: Joi.object({
+    revenueDashboardVisible: Joi.boolean(),
+    bookingDashboardVisible: Joi.boolean(),
+    sellerDashboardVisible: Joi.boolean(),
+    customerDashboardVisible: Joi.boolean(),
+  }).unknown(true),
+  securityControl: Joi.object({
+    otpExpiryMinutes: Joi.number().min(0),
+    sessionTimeoutHours: Joi.number().min(0),
+    loginAttemptLimit: Joi.number().min(0),
+  }).unknown(true),
+  knowledgeBaseControl: Joi.object({
+    faqEnabled: Joi.boolean(),
+    sopVisibility: Joi.string().valid("Public", "SellersOnly", "Hidden"),
+  }).unknown(true),
+}).unknown(true);
 
 /**
  * GET /api/settings (public)
@@ -149,7 +234,7 @@ export const getPublicSettings = async (req, res) => {
       async () => {
         const existing = await Setting.findOne(filter)
           .select(
-            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled lowStockAlertsEnabled productApproval referralProgram gstPercentage createdAt",
+            "appName supportEmail supportPhone currencySymbol currencyCode timezone logoUrl faviconUrl primaryColor secondaryColor returnDeliveryCommission deliveryPricingMode pricingMode customerBaseDeliveryFee riderBasePayout baseDeliveryCharge baseDistanceCapacityKm incrementalKmSurcharge deliveryPartnerRatePerKm fleetCommissionRatePerKm fixedDeliveryFee handlingFeeStrategy codEnabled onlineEnabled lowStockAlertsEnabled productApproval platformControl pricingControl paymentControl bookingControl aiControl notificationControl subscriptionControl securityControl analyticsControl knowledgeBaseControl referralProgram gstPercentage maintenanceMode maintenanceMessage maintenanceExpectedCompletion createdAt",
           )
           .lean();
         return existing || null;
@@ -216,7 +301,7 @@ export const updateSettings = async (req, res) => {
       { $set: toSet },
       { new: true, upsert: true },
     );
-    await invalidate("cache:platform:settings:*");
+    await invalidate(tenantId ? `cache:platform:settings:${tenantId}` : "cache:platform:settings:default");
 
     const result = settings?.toObject?.() || settings || {};
     if (!result.productApproval) {
@@ -243,12 +328,15 @@ export const uploadSettingsImage = async (req, res) => {
       return handleResponse(res, 400, "type must be logo or favicon");
     }
 
+    const tenantId = req.tenantId ?? null;
+    const cacheKeyToInvalidate = tenantId ? `cache:platform:settings:${tenantId}` : "cache:platform:settings:default";
+
     if (req.file) {
       const url = await uploadToCloudinary(req.file.buffer, "settings", {
         mimeType: req.file.mimetype,
         resourceType: "image",
       });
-      await invalidate("cache:platform:settings:*");
+      await invalidate(cacheKeyToInvalidate);
       return handleResponse(res, 200, "Image uploaded", { url, type });
     }
 
@@ -257,7 +345,7 @@ export const uploadSettingsImage = async (req, res) => {
       return handleResponse(res, 400, "A valid image URL is required");
     }
 
-    await invalidate("cache:platform:settings:*");
+    await invalidate(cacheKeyToInvalidate);
     return handleResponse(res, 200, "Image URL accepted", { url: providedUrl, type });
   } catch (error) {
     return handleResponse(res, 500, error.message);

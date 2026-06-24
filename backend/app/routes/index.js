@@ -31,15 +31,31 @@ import eventConfigRoute from "./eventConfigRoutes.js";
 import adminEventConfigRoute from "./adminEventConfigRoutes.js";
 import eventSellerRoute from "./eventSellerRoutes.js";
 import sellerEventRoute from "./sellerEventRoutes.js";
+import sellerPackageRoute from "./sellerPackageRoutes.js";
+import sellerApprovalRoute from "./sellerApprovalRoutes.js";
+
+import eventPayoutRoute from "./eventPayoutRoutes.js";
+import appConfigRoute from "./appConfigRoutes.js";
+import sellerCalendarRoute from "./sellerCalendarRoutes.js";
 
 import express from "express";
+import { checkMaintenanceMode } from "../middleware/maintenanceMiddleware.js";
+
+import operationsRoute from "./operationsRoutes.js";
+import supportTicketRoute from "./supportTicketRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
+    
+    // Apply maintenance mode globally to the API
+    router.use(checkMaintenanceMode);
 
     // Health and metrics endpoints (no /api prefix for standard paths)
     app.use("/health", healthRoute);
     app.use("/metrics", metricsRoute);
+
+    router.use("/admin/operations", operationsRoute);
+    router.use("/support-tickets", supportTicketRoute);
 
     router.use("/customer", customerRoute);
     router.use("/delivery", deliveryRoute);
@@ -85,7 +101,12 @@ const setupRoutes = (app) => {
     router.use("/events", eventBookingRoute);
     router.use("/events/sellers", eventSellerRoute);
     router.use("/event-config", eventConfigRoute);
+    router.use("/admin/event-payouts", eventPayoutRoute);
+    router.use("/admin/app-config", appConfigRoute);
     router.use("/seller/events", sellerEventRoute);
+    router.use("/seller/calendar", sellerCalendarRoute);
+    router.use("/seller/packages", sellerPackageRoute);
+    router.use("/seller", sellerApprovalRoute);
 
     app.use("/api", router);
 }

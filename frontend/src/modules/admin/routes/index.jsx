@@ -107,6 +107,8 @@ const EventConfigPage = React.lazy(() => import("../pages/events/EventConfigPage
 const CityManagementPage = React.lazy(() => import("../pages/events/CityManagementPage"));
 const EventBookingsPage = React.lazy(() => import("../pages/events/EventBookingsPage"));
 
+const OperationsDashboard = React.lazy(() => import("../pages/OperationsDashboard"));
+
 const navItems = [
   {
     label: "Dashboard",
@@ -243,7 +245,15 @@ const navItems = [
     color: "slate",
   },
   { label: "My Profile", path: "/admin/profile", icon: User, color: "indigo" },
-  { label: "System Settings", path: "/admin/env", icon: Terminal, color: "dark" },
+  {
+    label: "System Settings",
+    icon: Terminal,
+    color: "dark",
+    children: [
+      { label: "Environment Vars", path: "/admin/env" },
+      { label: "Operations Center", path: "/admin/operations" },
+    ]
+  },
 ];
 
 import AdminManagement from "../pages/AdminManagement";
@@ -360,6 +370,7 @@ const AdminRoutes = () => {
         <Route path="/billing" element={<BillingCharges />} />
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/env" element={<EnvSettings />} />
+        <Route path="/operations" element={<OperationsDashboard />} />
         
         <Route path="/catering/dashboard" element={<CateringDashboard />} />
         <Route path="/catering/services" element={<CateringServices />} />

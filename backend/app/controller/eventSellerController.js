@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Seller from "../models/seller.js";
 import SellerAvailability from "../models/event/SellerAvailability.js";
 import SellerReservation from "../models/event/SellerReservation.js";
+import SellerPackage from "../models/event/SellerPackage.js";
 
 export const searchEventSellers = async (req, res) => {
   try {
@@ -96,6 +97,35 @@ export const searchEventSellers = async (req, res) => {
       success: false,
       error: true,
       message: error.message || "Failed to search sellers",
+    });
+  }
+};
+
+export const getSellerPackagesPublic = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    
+    // Fetch packages that are available
+    const packages = await SellerPackage.find({ 
+      seller: sellerId,
+      availability: true 
+    })
+    .populate('category', 'name activePlugins')
+    .populate('template', 'packageName includedFeatures optionalFeatures description images')
+    .lean();
+
+    return res.status(200).json({
+      success: true,
+      error: false,
+      message: "Seller packages fetched successfully",
+      result: packages,
+    });
+  } catch (error) {
+    console.error("Error fetching seller packages:", error);
+    return res.status(500).json({
+      success: false,
+      error: true,
+      message: error.message || "Failed to fetch seller packages",
     });
   }
 };

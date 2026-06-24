@@ -38,6 +38,8 @@ const EventPackages = React.lazy(() => import("../pages/event/EventPackages"));
 const EventReservations = React.lazy(() => import("../pages/event/EventReservations"));
 const EventCalendar = React.lazy(() => import("../pages/event/EventCalendar"));
 
+const EventRequests = React.lazy(() => import("../pages/event/EventRequests"));
+
 const navItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
   { label: "Products", path: "/seller/products", icon: HiOutlineCube },
@@ -70,6 +72,7 @@ const navItems = [
 
 const eventNavItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
+  { label: "Event Requests", path: "/seller/event-requests", icon: HiOutlineClipboardDocumentList },
   { label: "Packages", path: "/seller/packages", icon: HiOutlineCube },
   { label: "Reservations", path: "/seller/reservations", icon: HiOutlineClipboardDocumentList },
   { label: "Calendar", path: "/seller/calendar", icon: HiOutlineCalendar },
@@ -92,6 +95,7 @@ const SellerRoutes = () => {
         {isEventSeller ? (
           <>
             <Route path="/" element={<EventDashboard />} />
+            <Route path="/event-requests" element={<EventRequests />} />
             <Route path="/packages" element={<EventPackages />} />
             <Route path="/reservations" element={<EventReservations />} />
             <Route path="/calendar" element={<EventCalendar />} />

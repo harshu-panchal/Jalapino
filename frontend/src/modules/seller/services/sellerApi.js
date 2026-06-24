@@ -44,4 +44,8 @@ export const sellerApi = {
     approveReturn: (orderId, data) => axiosInstance.put(`/orders/returns/${orderId}/approve`, data),
     rejectReturn: (orderId, data) => axiosInstance.put(`/orders/returns/${orderId}/reject`, data),
     assignReturnDelivery: (orderId, data) => axiosInstance.put(`/orders/returns/${orderId}/assign-delivery`, data),
+
+    // Event Requests
+    getEventRequests: () => axiosInstance.get('/seller/event-requests'),
+    updateEventRequestStatus: (id, data) => axiosInstance.put(`/seller/event-requests/${id}/status`, data),
 };

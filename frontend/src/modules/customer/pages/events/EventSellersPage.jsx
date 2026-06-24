@@ -66,7 +66,7 @@ const EventSellersPage = () => {
                         </div>
                         <h3 className="text-lg font-bold text-slate-800 mb-2">No Providers Available</h3>
                         <p className="text-slate-500 max-w-xs mx-auto">We couldn't find any providers matching your specific requirements and availability.</p>
-                        <button 
+                        <button
                             onClick={() => navigate(-1)}
                             className="mt-6 px-6 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition-colors"
                         >
@@ -79,7 +79,7 @@ const EventSellersPage = () => {
                             {sellers.length} Providers Found
                         </h2>
                         {sellers.map(seller => (
-                            <motion.div 
+                            <motion.div
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 key={seller._id}
@@ -88,8 +88,13 @@ const EventSellersPage = () => {
                                 <div className="flex justify-between items-start mb-3">
                                     <div>
                                         <h3 className="font-bold text-lg text-slate-800 leading-tight">{seller.shopName || seller.name}</h3>
-                                        <div className="flex items-center gap-2 mt-1">
+                                        <div className="flex items-center gap-2 mt-1 flex-wrap">
                                             <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold">Verified</span>
+                                            {seller.reliabilityScore !== undefined && (
+                                                <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded font-bold flex items-center gap-1">
+                                                    ⭐ {seller.reliabilityScore}% Reliable
+                                                </span>
+                                            )}
                                             <span className="text-xs text-slate-500 font-medium">Cap: {seller.maxGuestCapacity} Guests</span>
                                         </div>
                                     </div>
@@ -100,7 +105,7 @@ const EventSellersPage = () => {
                                 <p className="text-sm text-slate-600 mb-4 line-clamp-2">
                                     {seller.description || "Premium event service provider."}
                                 </p>
-                                
+
                                 <div className="flex gap-2 flex-wrap mb-5">
                                     {seller.serviceCategories?.map(cat => (
                                         <span key={cat._id} className="text-[10px] bg-slate-100 text-slate-600 px-2 py-1 rounded-md font-bold uppercase tracking-wider">
@@ -109,11 +114,22 @@ const EventSellersPage = () => {
                                     ))}
                                 </div>
 
-                                <button 
-                                    onClick={() => navigate('/plan-my-event/checkout', { state: { eventData, preferences, selectedCategories, selectedSeller: seller } })}
+                                <button
+                                    onClick={() => {
+                                        // Check if any of the seller's categories have package_builder plugin
+                                        const needsPackageSelection = seller.serviceCategories?.some(cat =>
+                                            cat.activePlugins && cat.activePlugins.includes('package_builder')
+                                        );
+
+                                        if (needsPackageSelection) {
+                                            navigate('/plan-my-event/packages', { state: { eventData, preferences, selectedCategories, selectedSeller: seller } });
+                                        } else {
+                                            navigate('/plan-my-event/checkout', { state: { eventData, preferences, selectedCategories, selectedSeller: seller } });
+                                        }
+                                    }}
                                     className="w-full bg-slate-900 text-white font-bold rounded-xl py-3 hover:bg-slate-800 transition-colors active:scale-[0.98]"
                                 >
-                                    View Packages & Book
+                                    {seller.serviceCategories?.some(c => c.activePlugins?.includes('package_builder')) ? 'View Packages & Book' : 'Select Provider'}
                                 </button>
                             </motion.div>
                         ))}

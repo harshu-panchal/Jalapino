@@ -67,6 +67,17 @@ export const eventConfigApi = {
         }
     },
 
+    // Get packages configured by a specific seller
+    getSellerPackages: async (sellerId) => {
+        try {
+            const response = await axiosInstance.get(`/events/sellers/${sellerId}/packages`);
+            return response.data?.result || [];
+        } catch (error) {
+            console.error("Error fetching seller packages:", error);
+            throw error;
+        }
+    },
+
     // Upload media file
     uploadMedia: async (file) => {
         try {

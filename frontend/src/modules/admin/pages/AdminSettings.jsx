@@ -19,7 +19,10 @@ import {
     Linkedin,
     Youtube,
     Loader2,
-    X
+    X,
+    Wallet,
+    CalendarRange,
+    CircleDollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@shared/components/ui/Toast';
@@ -39,7 +42,14 @@ const AdminSettings = () => {
     const { showToast } = useToast();
     const [isSaving, setIsSaving] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('general');
+    const [activeTab, setActiveTab] = useState(() => {
+        return localStorage.getItem('adminSettingsTab') || 'general';
+    });
+
+    useEffect(() => {
+        localStorage.setItem('adminSettingsTab', activeTab);
+    }, [activeTab]);
+
     const [logoUploading, setLogoUploading] = useState(false);
     const [faviconUploading, setFaviconUploading] = useState(false);
     const logoInputRef = useRef(null);
@@ -75,6 +85,13 @@ const AdminSettings = () => {
         productApproval: {
             sellerCreateRequiresApproval: false,
             sellerEditRequiresApproval: false,
+        },
+        platformControl: {
+            planMyEventEnabled: true,
+            retailEnabled: true,
+            wholesaleEnabled: true,
+            customerRegistration: true,
+            sellerRegistration: true,
         },
     });
 
@@ -143,6 +160,47 @@ const AdminSettings = () => {
         }));
     };
 
+    const handleNestedControlToggle = (engine, field) => {
+        setSettings((prev) => ({
+            ...prev,
+            [engine]: {
+                ...(prev[engine] || {}),
+                [field]: !Boolean(prev[engine]?.[field]),
+            },
+        }));
+    };
+
+    const handleNestedControlChange = (engine, field, value) => {
+        setSettings((prev) => ({
+            ...prev,
+            [engine]: {
+                ...(prev[engine] || {}),
+                [field]: value,
+            },
+        }));
+    };
+
+    const handlePlatformControlToggle = (field) => handleNestedControlToggle('platformControl', field);
+    const handlePricingControlToggle = (field) => handleNestedControlToggle('pricingControl', field);
+    const handlePricingControlChange = (field, value) => handleNestedControlChange('pricingControl', field, value);
+    const handlePaymentControlToggle = (field) => handleNestedControlToggle('paymentControl', field);
+    const handlePaymentControlChange = (field, value) => handleNestedControlChange('paymentControl', field, value);
+    const handleBookingControlToggle = (field) => handleNestedControlToggle('bookingControl', field);
+    const handleBookingControlChange = (field, value) => handleNestedControlChange('bookingControl', field, value);
+    
+    // New Engine Handlers
+    const handleAiControlToggle = (field) => handleNestedControlToggle('aiControl', field);
+    const handleAiControlChange = (field, value) => handleNestedControlChange('aiControl', field, value);
+    const handleNotificationControlToggle = (field) => handleNestedControlToggle('notificationControl', field);
+    const handleNotificationControlChange = (field, value) => handleNestedControlChange('notificationControl', field, value);
+    const handleSubscriptionControlToggle = (field) => handleNestedControlToggle('subscriptionControl', field);
+    const handleSubscriptionControlChange = (field, value) => handleNestedControlChange('subscriptionControl', field, value);
+    const handleSecurityControlToggle = (field) => handleNestedControlToggle('securityControl', field);
+    const handleSecurityControlChange = (field, value) => handleNestedControlChange('securityControl', field, value);
+    const handleAnalyticsControlToggle = (field) => handleNestedControlToggle('analyticsControl', field);
+    const handleKnowledgeBaseControlToggle = (field) => handleNestedControlToggle('knowledgeBaseControl', field);
+    const handleKnowledgeBaseControlChange = (field, value) => handleNestedControlChange('knowledgeBaseControl', field, value);
+
     const handleLogoUpload = async (e) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -196,6 +254,16 @@ const AdminSettings = () => {
     };
 
     const tabs = [
+        { id: 'platform', label: 'Platform Control (GASP)', icon: Settings },
+        { id: 'pricing', label: 'Pricing Engine', icon: CircleDollarSign },
+        { id: 'payment', label: 'Payment Engine', icon: Wallet },
+        { id: 'booking', label: 'Booking Engine', icon: CalendarRange },
+        { id: 'ai', label: 'AI Engine', icon: Smartphone },
+        { id: 'notifications', label: 'Notifications', icon: Mail },
+        { id: 'subscriptions', label: 'Subscriptions', icon: CreditCard },
+        { id: 'security', label: 'Security', icon: Search },
+        { id: 'analytics', label: 'Analytics', icon: Search },
+        { id: 'knowledge', label: 'Knowledge Base', icon: Search },
         { id: 'general', label: 'General', icon: Settings },
         { id: 'branding', label: 'Branding', icon: Globe },
         { id: 'legal', label: 'Legal & Contact', icon: Building2 },
@@ -262,6 +330,544 @@ const AdminSettings = () => {
                         <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden">
                             <div className="p-8 flex items-center justify-center">
                                 <div className="h-8 w-8 border-2 border-slate-200 border-t-slate-500 rounded-full animate-spin" />
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Platform Control Settings (GASP) */}
+                    {activeTab === 'platform' && (
+                        <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden">
+                            <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                                    Platform Control Engine (GASP)
+                                </h3>
+                            </div>
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Plan My Event Status</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Enable or disable the 'Plan My Event' module for customers.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.platformControl?.planMyEventEnabled ?? true)}
+                                        onClick={() => handlePlatformControlToggle('planMyEventEnabled')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.platformControl?.planMyEventEnabled ?? true) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.platformControl?.planMyEventEnabled ?? true) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Retail Marketplace Status</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Enable or disable the Retail Marketplace globally.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.platformControl?.retailEnabled ?? true)}
+                                        onClick={() => handlePlatformControlToggle('retailEnabled')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.platformControl?.retailEnabled ?? true) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.platformControl?.retailEnabled ?? true) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Wholesale Marketplace Status</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Enable or disable the Wholesale Marketplace globally.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.platformControl?.wholesaleEnabled ?? true)}
+                                        onClick={() => handlePlatformControlToggle('wholesaleEnabled')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.platformControl?.wholesaleEnabled ?? true) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.platformControl?.wholesaleEnabled ?? true) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Pricing Configuration Engine */}
+                    {activeTab === 'pricing' && (
+                        <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden">
+                            <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                                    Pricing Configuration Engine
+                                </h3>
+                            </div>
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Global Commission (%)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.pricingControl?.commissionPercentage ?? 5}
+                                        onChange={(e) => handlePricingControlChange('commissionPercentage', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Platform Fee (Fixed)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.pricingControl?.platformFee ?? 0}
+                                        onChange={(e) => handlePricingControlChange('platformFee', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Cancellation Charges (%)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.pricingControl?.cancellationCharges ?? 0}
+                                        onChange={(e) => handlePricingControlChange('cancellationCharges', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Refund Processing Fee</label>
+                                    <input
+                                        type="number"
+                                        value={settings.pricingControl?.refundCharges ?? 0}
+                                        onChange={(e) => handlePricingControlChange('refundCharges', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4 mt-2">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Wallet Rules Enabled</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Allow wallet balance deductions and cashback logic.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.pricingControl?.walletRulesEnabled ?? true)}
+                                        onClick={() => handlePricingControlToggle('walletRulesEnabled')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.pricingControl?.walletRulesEnabled ?? true) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.pricingControl?.walletRulesEnabled ?? true) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Payment Configuration Engine */}
+                    {activeTab === 'payment' && (
+                        <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden">
+                            <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                                    Payment Configuration Engine
+                                </h3>
+                            </div>
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Payment Gateway</label>
+                                    <select
+                                        value={settings.paymentControl?.paymentGateway ?? 'razorpay'}
+                                        onChange={(e) => handlePaymentControlChange('paymentGateway', e.target.value)}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    >
+                                        <option value="razorpay">Razorpay</option>
+                                        <option value="stripe">Stripe</option>
+                                        <option value="cashfree">Cashfree</option>
+                                        <option value="none">None (Offline Only)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Settlement Cycle (Days)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.paymentControl?.settlementCycleDays ?? 2}
+                                        onChange={(e) => handlePaymentControlChange('settlementCycleDays', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4 mt-2">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Escrow System Enabled</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Hold payments until event completion before seller settlement.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.paymentControl?.escrowEnabled ?? false)}
+                                        onClick={() => handlePaymentControlToggle('escrowEnabled')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.paymentControl?.escrowEnabled ?? false) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.paymentControl?.escrowEnabled ?? false) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4 mt-2">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Auto Settlement Enabled</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Automatically trigger API to transfer funds to sellers after cycle.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.paymentControl?.autoSettlementEnabled ?? false)}
+                                        onClick={() => handlePaymentControlToggle('autoSettlementEnabled')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.paymentControl?.autoSettlementEnabled ?? false) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.paymentControl?.autoSettlementEnabled ?? false) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Booking Configuration Engine */}
+                    {activeTab === 'booking' && (
+                        <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden">
+                            <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+                                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                                    Booking Configuration Engine
+                                </h3>
+                            </div>
+                            <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Max Advance Booking (Days)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.bookingControl?.bookingWindowDays ?? 365}
+                                        onChange={(e) => handleBookingControlChange('bookingWindowDays', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Advance Booking Limit (%)</label>
+                                    <input
+                                        type="number"
+                                        value={settings.bookingControl?.advanceBookingLimitPercent ?? 20}
+                                        onChange={(e) => handleBookingControlChange('advanceBookingLimitPercent', Number(e.target.value))}
+                                        className="w-full px-5 py-4 bg-slate-50 border-none rounded-2xl text-sm font-bold text-slate-900 outline-none focus:ring-2 focus:ring-brand-500/10 transition-all"
+                                    />
+                                </div>
+                                <div className="md:col-span-2 rounded-2xl bg-slate-50 border border-slate-200 px-5 py-4 flex items-center justify-between gap-4 mt-2">
+                                    <div>
+                                        <p className="text-sm font-black text-slate-900">Seller Confirmation Required</p>
+                                        <p className="text-xs font-bold text-slate-500 mt-1">
+                                            Booking remains pending until seller manually accepts it.
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        role="switch"
+                                        aria-checked={Boolean(settings.bookingControl?.sellerConfirmationRequired ?? true)}
+                                        onClick={() => handleBookingControlToggle('sellerConfirmationRequired')}
+                                        className={cn(
+                                            "relative inline-flex h-7 w-14 items-center rounded-full transition-colors duration-200",
+                                            (settings.bookingControl?.sellerConfirmationRequired ?? true) ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <span
+                                            className={cn(
+                                                "inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform duration-200",
+                                                (settings.bookingControl?.sellerConfirmationRequired ?? true) ? "translate-x-7" : "translate-x-1"
+                                            )}
+                                        />
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* AI Configuration Engine */}
+                    {activeTab === 'ai' && (
+                        <Card className="border-none shadow-sm shadow-slate-200/50 bg-white/70 backdrop-blur-xl mb-6 overflow-hidden">
+                            <div className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+                                    AI Configuration Engine
+                                </h2>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">AI Greeting Message</label>
+                                        <input
+                                            type="text"
+                                            value={settings.aiControl?.aiGreeting || ''}
+                                            onChange={(e) => handleAiControlChange('aiGreeting', e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">AI Tone</label>
+                                        <select
+                                            value={settings.aiControl?.aiTone || 'Friendly'}
+                                            onChange={(e) => handleAiControlChange('aiTone', e.target.value)}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700 focus:outline-none focus:border-slate-400 focus:bg-white transition-colors"
+                                        >
+                                            <option value="Professional">Professional</option>
+                                            <option value="Friendly">Friendly</option>
+                                            <option value="Enthusiastic">Enthusiastic</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-800 mb-1">AI Copilot Enabled</h3>
+                                        <p className="text-xs text-slate-500">Allow customers to use AI to plan events.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleAiControlToggle('aiEnabled')}
+                                        className={cn(
+                                            "w-12 h-6 rounded-full transition-colors relative",
+                                            settings.aiControl?.aiEnabled ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <div className={cn("w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform", settings.aiControl?.aiEnabled ? "translate-x-6" : "translate-x-0.5")} />
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Notification Configuration Engine */}
+                    {activeTab === 'notifications' && (
+                        <Card className="border-none shadow-sm shadow-slate-200/50 bg-white/70 backdrop-blur-xl mb-6 overflow-hidden">
+                            <div className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+                                    Notification Configuration Engine
+                                </h2>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="space-y-4">
+                                    {['smsEnabled', 'whatsappEnabled', 'pushEnabled', 'emailEnabled'].map(field => (
+                                        <div key={field} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                            <div>
+                                                <h3 className="text-sm font-bold text-slate-800 mb-1 capitalize">{field.replace('Enabled', '')} Notifications</h3>
+                                                <p className="text-xs text-slate-500">Enable or disable this notification channel globally.</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleNotificationControlToggle(field)}
+                                                className={cn(
+                                                    "w-12 h-6 rounded-full transition-colors relative",
+                                                    settings.notificationControl?.[field] ? "bg-emerald-500" : "bg-slate-300"
+                                                )}
+                                            >
+                                                <div className={cn("w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform", settings.notificationControl?.[field] ? "translate-x-6" : "translate-x-0.5")} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Subscriptions Configuration Engine */}
+                    {activeTab === 'subscriptions' && (
+                        <Card className="border-none shadow-sm shadow-slate-200/50 bg-white/70 backdrop-blur-xl mb-6 overflow-hidden">
+                            <div className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+                                    Subscription Configuration Engine
+                                </h2>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Basic Plan Price (₹)</label>
+                                        <input
+                                            type="number"
+                                            value={settings.subscriptionControl?.basicPlanPrice || 0}
+                                            onChange={(e) => handleSubscriptionControlChange('basicPlanPrice', Number(e.target.value))}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Premium Plan Price (₹)</label>
+                                        <input
+                                            type="number"
+                                            value={settings.subscriptionControl?.premiumPlanPrice || 0}
+                                            onChange={(e) => handleSubscriptionControlChange('premiumPlanPrice', Number(e.target.value))}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-800 mb-1">Free Plan Enabled</h3>
+                                        <p className="text-xs text-slate-500">Allow sellers to use the free plan with limited features.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleSubscriptionControlToggle('freePlanEnabled')}
+                                        className={cn(
+                                            "w-12 h-6 rounded-full transition-colors relative",
+                                            settings.subscriptionControl?.freePlanEnabled ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <div className={cn("w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform", settings.subscriptionControl?.freePlanEnabled ? "translate-x-6" : "translate-x-0.5")} />
+                                    </button>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Security & Analytics Configuration Engine */}
+                    {activeTab === 'security' && (
+                        <Card className="border-none shadow-sm shadow-slate-200/50 bg-white/70 backdrop-blur-xl mb-6 overflow-hidden">
+                            <div className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+                                    Security Configuration Engine
+                                </h2>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">OTP Expiry (Minutes)</label>
+                                        <input
+                                            type="number"
+                                            value={settings.securityControl?.otpExpiryMinutes || 5}
+                                            onChange={(e) => handleSecurityControlChange('otpExpiryMinutes', Number(e.target.value))}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Session Timeout (Hours)</label>
+                                        <input
+                                            type="number"
+                                            value={settings.securityControl?.sessionTimeoutHours || 24}
+                                            onChange={(e) => handleSecurityControlChange('sessionTimeoutHours', Number(e.target.value))}
+                                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700"
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Analytics Configuration Engine */}
+                    {activeTab === 'analytics' && (
+                        <Card className="border-none shadow-sm shadow-slate-200/50 bg-white/70 backdrop-blur-xl mb-6 overflow-hidden">
+                            <div className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+                                    Analytics Configuration Engine
+                                </h2>
+                            </div>
+                            <div className="p-8 space-y-4">
+                                {['revenueDashboardVisible', 'bookingDashboardVisible', 'sellerDashboardVisible', 'customerDashboardVisible'].map(field => (
+                                    <div key={field} className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-sm font-bold text-slate-800 mb-1 capitalize">{field.replace('Visible', '').replace(/([A-Z])/g, ' $1')} Visibility</h3>
+                                            <p className="text-xs text-slate-500">Toggle visibility for this dashboard component.</p>
+                                        </div>
+                                        <button
+                                            onClick={() => handleAnalyticsControlToggle(field)}
+                                            className={cn(
+                                                "w-12 h-6 rounded-full transition-colors relative",
+                                                settings.analyticsControl?.[field] ? "bg-emerald-500" : "bg-slate-300"
+                                            )}
+                                        >
+                                            <div className={cn("w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform", settings.analyticsControl?.[field] ? "translate-x-6" : "translate-x-0.5")} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    )}
+
+                    {/* Knowledge Base Configuration Engine */}
+                    {activeTab === 'knowledge' && (
+                        <Card className="border-none shadow-sm shadow-slate-200/50 bg-white/70 backdrop-blur-xl mb-6 overflow-hidden">
+                            <div className="bg-slate-50/50 p-6 border-b border-slate-100">
+                                <h2 className="text-lg font-black text-slate-800 tracking-tight uppercase flex items-center gap-2">
+                                    Knowledge Base Engine
+                                </h2>
+                            </div>
+                            <div className="p-8 space-y-8">
+                                <div className="space-y-2">
+                                    <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">SOP Visibility</label>
+                                    <select
+                                        value={settings.knowledgeBaseControl?.sopVisibility || 'Public'}
+                                        onChange={(e) => handleKnowledgeBaseControlChange('sopVisibility', e.target.value)}
+                                        className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-700"
+                                    >
+                                        <option value="Public">Public</option>
+                                        <option value="SellersOnly">Sellers Only</option>
+                                        <option value="Hidden">Hidden</option>
+                                    </select>
+                                </div>
+                                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-between">
+                                    <div>
+                                        <h3 className="text-sm font-bold text-slate-800 mb-1">FAQ Enabled</h3>
+                                        <p className="text-xs text-slate-500">Enable or disable the FAQ module.</p>
+                                    </div>
+                                    <button
+                                        onClick={() => handleKnowledgeBaseControlToggle('faqEnabled')}
+                                        className={cn(
+                                            "w-12 h-6 rounded-full transition-colors relative",
+                                            settings.knowledgeBaseControl?.faqEnabled ? "bg-emerald-500" : "bg-slate-300"
+                                        )}
+                                    >
+                                        <div className={cn("w-5 h-5 bg-white rounded-full absolute top-0.5 transition-transform", settings.knowledgeBaseControl?.faqEnabled ? "translate-x-6" : "translate-x-0.5")} />
+                                    </button>
+                                </div>
                             </div>
                         </Card>
                     )}

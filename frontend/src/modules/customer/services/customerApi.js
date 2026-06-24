@@ -114,8 +114,11 @@ export const customerApi = {
   updateEventBooking: (id, data) => axiosInstance.put(`/events/${id}`, data),
   cancelEventBooking: (id) => axiosInstance.delete(`/events/${id}`),
   getEventBookingDetails: (id) => axiosInstance.get(`/events/${id}`),
+  getAlternativeSellers: (bookingId, categoryId) => axiosInstance.get(`/events/${bookingId}/alternative-sellers/${categoryId}`),
+  reassignSeller: (bookingId, data) => axiosInstance.put(`/events/${bookingId}/reassign-seller`, data),
 
   createTicket: (data) => axiosInstance.post("/tickets/create", data),
+  createSupportTicket: (data) => axiosInstance.post("/support-tickets", data),
   getMyTickets: () => getWithDedupe("/tickets/my-tickets"),
   replyTicket: (ticketId, text, options = {}) => {
     const {

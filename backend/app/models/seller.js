@@ -177,6 +177,28 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 10
     },
+    // --- RELIABILITY ENGINE FIELDS ---
+    totalRequests: {
+      type: Number,
+      default: 0
+    },
+    acceptedRequests: {
+      type: Number,
+      default: 0
+    },
+    rejectedRequests: {
+      type: Number,
+      default: 0
+    },
+    avgResponseTimeMins: {
+      type: Number,
+      default: 0
+    },
+    reliabilityScore: {
+      type: Number,
+      default: 100 // Out of 100
+    },
+    // ---------------------------------
     bankDetails: {
       bankName: { type: String, trim: true },
       accountNo: { type: String, trim: true },

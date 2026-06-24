@@ -20,7 +20,7 @@ const eventServiceAssignmentSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ['PENDING_APPROVAL', 'ACCEPTED', 'REJECTED', 'CLARIFICATION_REQUESTED'],
+        enum: ['PENDING_APPROVAL', 'ACCEPTED', 'REJECTED', 'CLARIFICATION_REQUESTED', 'COMPLETED'],
         default: 'PENDING_APPROVAL'
     },
     preferences: [preferenceValueSchema],
@@ -55,7 +55,7 @@ const eventBookingSchema = new mongoose.Schema({
     totalAmount: { type: Number, required: true },
     paymentStatus: {
         type: String,
-        enum: ['PENDING', 'PAID', 'FAILED', 'REFUNDED'],
+        enum: ['PENDING', 'ADVANCE_PAID', 'PAID', 'FAILED', 'REFUNDED'],
         default: 'PENDING'
     },
     paymentMode: {
@@ -64,7 +64,7 @@ const eventBookingSchema = new mongoose.Schema({
     },
     overallStatus: {
         type: String,
-        enum: ['PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+        enum: ['PENDING', 'PAYMENT_PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
         default: 'PENDING'
     }
 }, {

@@ -103,24 +103,26 @@ const SupportPage = () => {
                 </div>
 
                 {/* FAQ Section */}
-                <div>
-                    <h2 className="text-base font-semibold text-slate-800 mb-3 px-1">Frequently Asked Questions</h2>
-                    <div className="space-y-3">
-                        {faqs.length > 0 ? (
-                            faqs.map((faq) => (
-                                <FAQItem
-                                    key={faq._id}
-                                    question={faq.question}
-                                    answer={faq.answer}
-                                />
-                            ))
-                        ) : (
-                            <div className="bg-white rounded-2xl shadow-[0_4px_10px_rgb(0,0,0,0.02)] border border-slate-100 px-5 py-4 text-sm text-slate-400 text-center">
-                                No FAQs available right now.
-                            </div>
-                        )}
+                {settings?.knowledgeBaseControl?.faqEnabled !== false && (
+                    <div>
+                        <h2 className="text-base font-semibold text-slate-800 mb-3 px-1">Frequently Asked Questions</h2>
+                        <div className="space-y-3">
+                            {faqs.length > 0 ? (
+                                faqs.map((faq) => (
+                                    <FAQItem
+                                        key={faq._id}
+                                        question={faq.question}
+                                        answer={faq.answer}
+                                    />
+                                ))
+                            ) : (
+                                <div className="bg-white rounded-2xl shadow-[0_4px_10px_rgb(0,0,0,0.02)] border border-slate-100 px-5 py-4 text-sm text-slate-400 text-center">
+                                    No FAQs available right now.
+                                </div>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Legal Links */}
                 <div className="bg-white rounded-xl p-4 border border-slate-200">
