@@ -1,6 +1,7 @@
 import EventType from '../models/event/EventType.js';
 import EventCategory from '../models/event/EventCategory.js';
 import PreferenceForm from '../models/event/PreferenceForm.js';
+import CategoryBusinessRule from '../models/event/CategoryBusinessRule.js';
 import City from '../models/City.js';
 import handleResponse from '../utils/helper.js';
 
@@ -24,18 +25,21 @@ export const getEventTypes = async (req, res) => {
     }
 };
 
-// Get all active event categories with their preference forms
+// Get all active event categories with their preference forms and business rules
 export const getEventCategories = async (req, res) => {
     try {
         const categories = await EventCategory.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
         const forms = await PreferenceForm.find({ isActive: true }).lean();
+        const businessRules = await CategoryBusinessRule.find().lean();
 
-        // Attach forms to their respective categories
+        // Attach forms and rules to their respective categories
         const categoriesWithForms = categories.map(cat => {
             const form = forms.find(f => f.category.toString() === cat._id.toString());
+            const rules = businessRules.find(r => r.category.toString() === cat._id.toString());
             return {
                 ...cat,
-                fields: form ? form.fields : []
+                fields: form ? form.fields : [],
+                businessRules: rules || {}
             };
         });
 

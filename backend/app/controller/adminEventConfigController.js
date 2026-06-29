@@ -2,6 +2,7 @@ import EventType from '../models/event/EventType.js';
 import EventCategory from '../models/event/EventCategory.js';
 import PreferenceForm from '../models/event/PreferenceForm.js';
 import PackageTemplate from '../models/event/PackageTemplate.js';
+import CategoryBusinessRule from '../models/event/CategoryBusinessRule.js';
 import handleResponse from '../utils/helper.js';
 
 // ---- Event Types ----
@@ -53,12 +54,15 @@ export const getEventCategories = async (req, res) => {
     try {
         const categories = await EventCategory.find().sort({ sortOrder: 1 }).lean();
         const forms = await PreferenceForm.find().lean();
+        const businessRules = await CategoryBusinessRule.find().lean();
 
         const categoriesWithForms = categories.map(cat => {
             const form = forms.find(f => f.category.toString() === cat._id.toString());
+            const rules = businessRules.find(r => r.category.toString() === cat._id.toString());
             return {
                 ...cat,
-                fields: form ? form.fields : []
+                fields: form ? form.fields : [],
+                businessRules: rules || {}
             };
         });
 
@@ -70,7 +74,7 @@ export const getEventCategories = async (req, res) => {
 
 export const createEventCategory = async (req, res) => {
     try {
-        const { name, icon, sortOrder, isActive, fields, activePlugins } = req.body;
+        const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules } = req.body;
         
         // 1. Create Category
         const cat = await EventCategory.create({ name, icon, sortOrder, isActive, activePlugins });
@@ -86,6 +90,13 @@ export const createEventCategory = async (req, res) => {
             }
         }
 
+        // 3. Create Business Rules
+        if (businessRules) {
+            await CategoryBusinessRule.create({ category: cat._id, ...businessRules });
+        } else {
+            await CategoryBusinessRule.create({ category: cat._id }); // default rules
+        }
+
         return handleResponse(res, 201, 'Event category created', cat);
     } catch (error) {
         console.error('Failed to create event category:', error);
@@ -96,7 +107,7 @@ export const createEventCategory = async (req, res) => {
 export const updateEventCategory = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, icon, sortOrder, isActive, fields, activePlugins } = req.body;
+        const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules } = req.body;
 
         const cat = await EventCategory.findByIdAndUpdate(id, { name, icon, sortOrder, isActive, activePlugins }, { new: true });
         if (!cat) return handleResponse(res, 404, 'Event category not found');
@@ -109,6 +120,17 @@ export const updateEventCategory = async (req, res) => {
                 await form.save();
             } else {
                 await PreferenceForm.create({ category: cat._id, fields });
+            }
+        }
+
+        // Update business rules if provided
+        if (businessRules) {
+            let rules = await CategoryBusinessRule.findOne({ category: cat._id });
+            if (rules) {
+                Object.assign(rules, businessRules);
+                await rules.save();
+            } else {
+                await CategoryBusinessRule.create({ category: cat._id, ...businessRules });
             }
         }
 
@@ -125,8 +147,9 @@ export const deleteEventCategory = async (req, res) => {
         const cat = await EventCategory.findByIdAndDelete(id);
         if (!cat) return handleResponse(res, 404, 'Event category not found');
 
-        // Clean up preference form
+        // Clean up preference form and business rules
         await PreferenceForm.findOneAndDelete({ category: id });
+        await CategoryBusinessRule.findOneAndDelete({ category: id });
 
         return handleResponse(res, 200, 'Event category deleted');
     } catch (error) {

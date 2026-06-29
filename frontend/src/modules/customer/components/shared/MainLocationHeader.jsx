@@ -16,7 +16,7 @@ import {
   shiftHex,
   buildHeaderOpacityGradient,
 } from "../../utils/headerTheme";
-import LogoImage from "../../../../assets/Logo.png";
+const LogoImage = '/logo1.jpeg';
 import retailerIcon from "../../../../assets/retailer.webp";
 import wholesalerIcon from "../../../../assets/wholesaler.webp";
 
@@ -173,7 +173,7 @@ const MainLocationHeader = ({
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
   const appName = settings?.appName || "Jalpaino";
-  const logoUrl = settings?.logoUrl || LogoImage;
+  const logoUrl = LogoImage;
   const navigate = useNavigate();
 
   // Search Logic

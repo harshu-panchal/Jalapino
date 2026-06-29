@@ -81,6 +81,7 @@ const Header = () => {
                 {/* Mode Switcher Cards */}
                 <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
                     {/* Retail Card */}
+                    {settings?.platformControl?.retailEnabled !== false && (
                     <button
                         type="button"
                         onClick={() => toggleMode('retail')}
@@ -101,8 +102,10 @@ const Header = () => {
                         />
                         <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
                     </button>
+                    )}
 
                     {/* Wholesale Card */}
+                    {settings?.platformControl?.wholesaleEnabled !== false && (
                     <button
                         type="button"
                         onClick={() => toggleMode('whole')}
@@ -123,6 +126,7 @@ const Header = () => {
                         />
                         <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
                     </button>
+                    )}
                 </div>
 
                 {/* Mobile Top Row: Location & Profile */}

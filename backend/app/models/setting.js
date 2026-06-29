@@ -220,7 +220,7 @@ const settingSchema = new mongoose.Schema(
         // GASP Platform Control Engine
         platformControl: {
             retailEnabled: { type: Boolean, default: true },
-            wholesaleEnabled: { type: Boolean, default: true },
+            wholesaleEnabled: { type: Boolean, default: false },
             planMyEventEnabled: { type: Boolean, default: true },
             customerRegistration: { type: Boolean, default: true },
             sellerRegistration: { type: Boolean, default: true },

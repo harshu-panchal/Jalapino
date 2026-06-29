@@ -1,15 +1,29 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { toast } from 'sonner';
+import { useSettings } from '@core/context/SettingsContext';
 
 const CustomerModeContext = createContext();
 
 export const CustomerModeProvider = ({ children }) => {
+    const { settings } = useSettings();
+    const isWholesaleEnabled = settings?.platformControl?.wholesaleEnabled !== false;
+
     const [mode, setMode] = useState(() => {
         return localStorage.getItem('customer-shopping-mode') || 'retail';
     });
 
+    // Effect to enforce wholesale enabled setting globally
+    useEffect(() => {
+        if (!isWholesaleEnabled && mode === 'whole') {
+            setMode('retail');
+            localStorage.setItem('customer-shopping-mode', 'retail');
+        }
+    }, [isWholesaleEnabled, mode]);
+
     const toggleMode = (newMode) => {
         if (newMode !== 'retail' && newMode !== 'whole') return;
+        if (newMode === 'whole' && !isWholesaleEnabled) return;
+
         setMode(newMode);
         localStorage.setItem('customer-shopping-mode', newMode);
         

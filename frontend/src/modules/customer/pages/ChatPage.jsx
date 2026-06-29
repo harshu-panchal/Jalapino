@@ -91,7 +91,7 @@ const ChatPage = () => {
 
   const appName = settings?.appName || "App";
   const [logoFailed, setLogoFailed] = useState(false);
-  const brandLogoUrl = String(settings?.logoUrl || settings?.faviconUrl || "").trim();
+  const brandLogoUrl = String(settings?.logoUrl || settings?.faviconUrl || "/logo1.jpeg").trim();
   const supportPhone = String(settings?.supportPhone || "").trim();
   const supportPhoneSanitized = supportPhone
     ? supportPhone.replace(/(?!^\+)[^\d]/g, "")

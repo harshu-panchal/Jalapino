@@ -1,11 +1,11 @@
 import React from 'react';
 import { Facebook, Twitter, Instagram, Youtube, Mail, MapPin, Phone } from 'lucide-react';
-import Logo from '@/assets/Logo.png';
+const Logo = '/logo1.jpeg';
 import { useSettings } from '@core/context/SettingsContext';
 
 const Footer = () => {
     const { settings } = useSettings();
-    const logoUrl = settings?.logoUrl || Logo;
+    const logoUrl = Logo;
     const primaryColor = settings?.primaryColor || 'var(--primary)';
 
     return (

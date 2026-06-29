@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner';
 import { customerApi } from '../services/customerApi';
 import BgImage from '@/assets/image.png';
-import LogoImage from '@/assets/Logo.png';
+const LogoImage = '/logo1.jpeg';
 
 const CATEGORIES = [
     {
@@ -67,7 +67,7 @@ const CustomerAuth = () => {
     const { login } = useAuth();
     const { settings } = useSettings();
     const appName = settings?.appName || 'App';
-    const logoUrl = settings?.logoUrl || '';
+    const logoUrl = '/logo1.jpeg';
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -269,7 +269,7 @@ const CustomerAuth = () => {
 
                     {/* Circular Carousel Control */}
                     <div className="relative -mt-14 flex justify-center z-20">
-                        <div className="w-28 h-28 rounded-full bg-white border-4 border-white shadow-[0_15px_40px_rgba(97,218,251,0.2)] flex items-center justify-center overflow-hidden transition-shadow duration-1000" style={{ boxShadow: `0 15px 40px ${activeCategory.shadow}` }}>
+                        <div className="w-28 h-28 rounded-full shadow-[0_15px_40px_rgba(97,218,251,0.2)] flex items-center justify-center overflow-hidden transition-shadow duration-1000" style={{ boxShadow: `0 15px 40px ${activeCategory.shadow}` }}>
                             <AnimatePresence mode="wait">
                                     <motion.div
                                         key={carouselIndex}
@@ -285,7 +285,7 @@ const CustomerAuth = () => {
                                                 src={logoUrl || LogoImage}
                                                 alt={`${appName} logo`}
                                                 loading="lazy"
-                                                className="w-full h-full object-cover"
+                                                className="w-full h-full object-cover scale-125"
                                             />
                                         ) : (
                                             <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: activeCategory.color }}>

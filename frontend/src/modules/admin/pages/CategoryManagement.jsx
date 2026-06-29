@@ -35,6 +35,7 @@ const CategoryManagement = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     const [parentUnits, setParentUnits] = useState([]);
+    const [hsnList, setHsnList] = useState([]);
 
     const [formData, setFormData] = useState({
         name: '',
@@ -58,9 +59,10 @@ const CategoryManagement = () => {
     const fetchCategories = async () => {
         setIsLoading(true);
         try {
-            const [categoriesRes, parentsRes] = await Promise.all([
+            const [categoriesRes, parentsRes, hsnsRes] = await Promise.all([
                 adminApi.getCategories(),
-                adminApi.getParentUnits()
+                adminApi.getParentUnits(),
+                import('@core/api/axios').then(module => module.default.get("/hsn/admin").catch(() => ({ data: { results: [] } })))
             ]);
 
             if (categoriesRes.data.success) {
@@ -68,6 +70,9 @@ const CategoryManagement = () => {
             }
             if (parentsRes.data.success) {
                 setParentUnits(parentsRes.data.results || parentsRes.data.result || []);
+            }
+            if (hsnsRes.data && (hsnsRes.data.results || hsnsRes.data.result)) {
+                setHsnList(hsnsRes.data.results || hsnsRes.data.result || []);
             }
         } catch (error) {
             toast.error('Failed to fetch data');
@@ -231,7 +236,8 @@ const CategoryManagement = () => {
                 description: item.description || '',
                 status: item.status || 'active',
                 type: item.type,
-                parentId: item.parentId || ''
+                parentId: item.parentId || '',
+                hsnId: item.hsnId || ''
             });
             setEditingItem(item);
             setPreviewUrl(item.image || null);
@@ -243,7 +249,8 @@ const CategoryManagement = () => {
                 description: '',
                 status: 'active',
                 type: type,
-                parentId: parentId || ''
+                parentId: parentId || '',
+                hsnId: ''
             });
             setEditingItem(null);
             setPreviewUrl(null);
@@ -727,6 +734,27 @@ const CategoryManagement = () => {
                                             </div>
                                         </div>
                                     )}
+
+                                    <div className="space-y-1">
+                                        <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">
+                                            HSN Code / GST %
+                                        </label>
+                                        <div className="relative">
+                                            <select
+                                                value={formData.hsnId}
+                                                onChange={(e) => setFormData({ ...formData, hsnId: e.target.value })}
+                                                className="w-full px-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-xs font-bold outline-none appearance-none cursor-pointer"
+                                            >
+                                                <option value="">Default/Global GST</option>
+                                                {hsnList.map(hsn => (
+                                                    <option key={hsn._id} value={hsn._id}>
+                                                        {hsn.hsnCode} ({hsn.gstPercentage}% GST) - {hsn.description}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                                        </div>
+                                    </div>
 
                                     <div className="space-y-1">
                                         <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Short Description</label>

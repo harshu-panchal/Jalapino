@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle } from 'lucide-react';
+import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle, CreditCard } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
@@ -163,6 +163,56 @@ const OrdersPage = () => {
             toast.dismiss('payment');
         } catch (error) {
             toast.error(error.message || "Failed to initiate Razorpay payment", { id: 'payment' });
+        }
+    };
+
+    const handleRemainingPayment = async (booking) => {
+        try {
+            toast.loading("Initiating Gateway...", { id: 'payment' });
+            
+            const advanceLimit = settings?.bookingControl?.advanceBookingLimitPercent ?? 20;
+            const advanceAmount = Math.round((booking.totalAmount * advanceLimit) / 100);
+            const remainingAmount = booking.totalAmount - advanceAmount;
+
+            const rzpRes = await customerApi.createRazorpayOrder(booking._id, { amount: remainingAmount });
+            
+            if (!rzpRes.data || !rzpRes.data.result) {
+                throw new Error("Failed to create Razorpay order");
+            }
+
+            const options = {
+                key: "rzp_test_S3IcSS1NbymL6D", 
+                amount: rzpRes.data.result.amount,
+                currency: "INR",
+                name: "Jalapino Events",
+                description: `Remaining Payment for Booking ${booking.bookingId}`,
+                order_id: rzpRes.data.result.id,
+                handler: async function (response) {
+                    try {
+                        toast.loading("Verifying payment...", { id: 'payment' });
+                        await customerApi.updateEventBooking(booking._id, { 
+                            paymentStatus: 'PAID' 
+                        });
+                        
+                        toast.success("Remaining Payment successful!", { id: 'payment' });
+                        setEventBookings(prev => prev.map(b => b._id === booking._id 
+                            ? { ...b, paymentStatus: 'PAID' } 
+                            : b));
+                    } catch (err) {
+                        toast.error("Failed to confirm payment.", { id: 'payment' });
+                    }
+                },
+                theme: { color: "#9333ea" }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.on('payment.failed', function (response){
+                toast.error("Payment failed: " + response.error.description, { id: 'payment' });
+            });
+            rzp.open();
+            toast.dismiss('payment');
+        } catch (error) {
+            toast.error(error.message || "Failed to initiate payment", { id: 'payment' });
         }
     };
 
@@ -417,13 +467,31 @@ const OrdersPage = () => {
                                 </div>
                             </div>
 
-                            <div className="border-t border-slate-100 pt-3 flex justify-between items-center mb-3">
-                                <span className="text-[11px] font-medium text-slate-500">
-                                    Payment: {booking.paymentMode || 'ONLINE'} ({booking.paymentStatus})
-                                </span>
-                                <span className="text-sm font-bold text-slate-900">
-                                    ₹{booking.totalAmount?.toLocaleString()}
-                                </span>
+                            <div className="border-t border-slate-100 pt-3 flex flex-col gap-1 mb-3">
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[11px] font-medium text-slate-500">
+                                        Payment: {booking.paymentMode || 'ONLINE'} ({booking.paymentStatus})
+                                    </span>
+                                    <span className="text-sm font-bold text-slate-900">
+                                        Total: ₹{booking.totalAmount?.toLocaleString()}
+                                    </span>
+                                </div>
+                                {booking.paymentStatus === 'ADVANCE_PAID' && (
+                                    <>
+                                        <div className="flex justify-between items-center">
+                                            <span className="text-[11px] font-medium text-slate-400">Advance Paid</span>
+                                            <span className="text-xs font-bold text-emerald-600">
+                                                - ₹{Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100).toLocaleString()}
+                                            </span>
+                                        </div>
+                                        <div className="flex justify-between items-center border-t border-slate-50 pt-1 mt-1">
+                                            <span className="text-[11px] font-bold text-slate-600">Remaining Balance</span>
+                                            <span className="text-xs font-bold text-slate-800">
+                                                ₹{(booking.totalAmount - Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100)).toLocaleString()}
+                                            </span>
+                                        </div>
+                                    </>
+                                )}
                             </div>
 
                             {booking.overallStatus === 'PAYMENT_PENDING' && (
@@ -434,23 +502,30 @@ const OrdersPage = () => {
                                     >
                                         Cash on Delivery
                                     </button>
-                                </div>
-                            )}
-                            
-                            {booking.overallStatus === 'PENDING' && booking.paymentStatus === 'PENDING' && (settings?.paymentControl?.paymentGateway && settings?.paymentControl?.paymentGateway !== 'none') && (
-                                <div className="border-t border-slate-100 pt-3">
-                                    <button
-                                        onClick={() => handleRazorpayPayment(booking)}
-                                        className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-3 rounded-xl text-sm font-bold transition-all shadow-lg shadow-purple-200"
-                                    >
-                                        <CreditCard className="h-4 w-4" />
-                                        Pay ₹{Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100).toLocaleString()} Advance ({settings?.bookingControl?.advanceBookingLimitPercent ?? 20}%) via {settings?.paymentControl?.paymentGateway === 'stripe' ? 'Stripe' : 'Razorpay'}
-                                    </button>
+                                    
+                                    {(settings?.paymentControl?.paymentGateway && settings?.paymentControl?.paymentGateway !== 'none') && (
+                                        <button
+                                            onClick={() => handleRazorpayPayment(booking)}
+                                            className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-200"
+                                        >
+                                            <CreditCard className="h-4 w-4" />
+                                            Pay ₹{Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100).toLocaleString()} Online
+                                        </button>
+                                    )}
                                 </div>
                             )}
 
                             {booking.overallStatus !== 'CANCELLED' && booking.overallStatus !== 'PAYMENT_PENDING' && (
-                                <div className="flex gap-2 border-t border-slate-100 pt-3">
+                                <div className="flex gap-2 border-t border-slate-100 pt-3 flex-wrap">
+                                    {booking.paymentStatus === 'ADVANCE_PAID' && (
+                                        <button 
+                                            onClick={() => handleRemainingPayment(booking)}
+                                            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-200 mb-1"
+                                        >
+                                            <CreditCard size={14} /> 
+                                            Pay Remaining ₹{(booking.totalAmount - Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100)).toLocaleString()} Online
+                                        </button>
+                                    )}
                                     <button 
                                         onClick={() => handleEditClick(booking)}
                                         className="flex-1 flex items-center justify-center gap-1 py-2 text-xs font-semibold text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"

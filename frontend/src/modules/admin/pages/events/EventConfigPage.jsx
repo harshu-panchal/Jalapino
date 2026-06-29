@@ -58,7 +58,16 @@ const EventConfigPage = () => {
     const [categories, setCategories] = useState([]);
     const [catModalOpen, setCatModalOpen] = useState(false);
     const [editingCat, setEditingCat] = useState(null);
-    const [catForm, setCatForm] = useState({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [] });
+    const defaultBusinessRules = {
+        advancePaymentPercentage: 0,
+        sellerApprovalRequired: true,
+        instantBookingEnabled: false,
+        venueVisitRequired: false,
+        availabilityValidationRequired: true,
+        autoAssignSeller: false
+    };
+
+    const [catForm, setCatForm] = useState({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules } });
     const [uploadingIcon, setUploadingIcon] = useState(false);
 
     useEffect(() => {
@@ -131,11 +140,12 @@ const EventConfigPage = () => {
                 sortOrder: cat.sortOrder, 
                 isActive: cat.isActive, 
                 fields: cat.fields || [],
-                activePlugins: cat.activePlugins || []
+                activePlugins: cat.activePlugins || [],
+                businessRules: cat.businessRules || { ...defaultBusinessRules }
             });
         } else {
             setEditingCat(null);
-            setCatForm({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [] });
+            setCatForm({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules } });
         }
         setCatModalOpen(true);
     };
@@ -225,7 +235,7 @@ const EventConfigPage = () => {
             </div>
 
             <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="scrollable" scrollButtons="auto">
+                <Tabs value={tabValue} onChange={(e, v) => setTabValue(v)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile>
                     <Tab label="Event Types" />
                     <Tab label="Service Categories & Forms" />
                     <Tab label="Package Templates" />
@@ -241,7 +251,7 @@ const EventConfigPage = () => {
                     </Button>
                 </div>
                 
-                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
@@ -488,6 +498,40 @@ const EventConfigPage = () => {
                                 control={<Switch checked={(catForm.activePlugins || []).includes('subscription')} onChange={() => handlePluginToggle('subscription')} color="primary" />}
                                 label={<span className="text-sm font-medium">Subscription Module</span>}
                             />
+                        </div>
+                    </div>
+
+                    <div className="border-t border-slate-200 pt-6 mt-6 mb-6">
+                        <h3 className="font-bold text-lg text-slate-800 mb-4">Business Rules</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <TextField 
+                                fullWidth type="number" label="Advance Payment %" 
+                                variant="outlined" size="small"
+                                value={catForm.businessRules.advancePaymentPercentage} 
+                                onChange={e => setCatForm({...catForm, businessRules: {...catForm.businessRules, advancePaymentPercentage: Number(e.target.value)}})} 
+                            />
+                            <div className="flex flex-col gap-2">
+                                <FormControlLabel
+                                    control={<Switch checked={catForm.businessRules.sellerApprovalRequired} onChange={e => setCatForm({...catForm, businessRules: {...catForm.businessRules, sellerApprovalRequired: e.target.checked}})} size="small" />}
+                                    label={<span className="text-sm font-medium">Seller Approval Required</span>}
+                                />
+                                <FormControlLabel
+                                    control={<Switch checked={catForm.businessRules.instantBookingEnabled} onChange={e => setCatForm({...catForm, businessRules: {...catForm.businessRules, instantBookingEnabled: e.target.checked}})} size="small" />}
+                                    label={<span className="text-sm font-medium">Instant Booking Enabled</span>}
+                                />
+                                <FormControlLabel
+                                    control={<Switch checked={catForm.businessRules.venueVisitRequired} onChange={e => setCatForm({...catForm, businessRules: {...catForm.businessRules, venueVisitRequired: e.target.checked}})} size="small" />}
+                                    label={<span className="text-sm font-medium">Venue Visit Required</span>}
+                                />
+                                <FormControlLabel
+                                    control={<Switch checked={catForm.businessRules.availabilityValidationRequired} onChange={e => setCatForm({...catForm, businessRules: {...catForm.businessRules, availabilityValidationRequired: e.target.checked}})} size="small" />}
+                                    label={<span className="text-sm font-medium">Availability Validation Required</span>}
+                                />
+                                <FormControlLabel
+                                    control={<Switch checked={catForm.businessRules.autoAssignSeller} onChange={e => setCatForm({...catForm, businessRules: {...catForm.businessRules, autoAssignSeller: e.target.checked}})} size="small" />}
+                                    label={<span className="text-sm font-medium">Auto-Assign Seller</span>}
+                                />
+                            </div>
                         </div>
                     </div>
 

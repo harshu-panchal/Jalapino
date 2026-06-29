@@ -36,7 +36,7 @@ const DeliveryAuth = () => {
   const navigate = useNavigate();
   const { settings } = useSettings();
   const appName = settings?.appName || "App";
-  const logoUrl = settings?.logoUrl || "";
+  const logoUrl = '/logo1.jpeg';
   const { login } = useAuth();
 
   // mode: "login" | "signup"

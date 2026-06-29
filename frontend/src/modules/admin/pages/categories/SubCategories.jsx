@@ -42,6 +42,7 @@ const SubCategories = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [hsnList, setHsnList] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -50,6 +51,7 @@ const SubCategories = () => {
     status: "active",
     type: "subcategory",
     parentId: "",
+    hsnId: "",
   });
 
   const [imageFile, setImageFile] = useState(null);
@@ -63,7 +65,10 @@ const SubCategories = () => {
   const fetchCategories = async () => {
     setIsLoading(true);
     try {
-      const res = await adminApi.getCategories();
+      const [res, hsnsRes] = await Promise.all([
+        adminApi.getCategories(),
+        import('@core/api/axios').then(module => module.default.get("/hsn/admin").catch(() => ({ data: { results: [] } })))
+      ]);
       if (res.data.success) {
         const payload = res.data.result;
         const results = res.data.results;
@@ -77,6 +82,9 @@ const SubCategories = () => {
         setCategories(allCats.filter((c) => c.type === "subcategory"));
         setLevel2Categories(allCats.filter((c) => c.type === "category"));
         setHeaderCategories(allCats.filter((c) => c.type === "header"));
+      }
+      if (hsnsRes.data && (hsnsRes.data.results || hsnsRes.data.result)) {
+        setHsnList(hsnsRes.data.results || hsnsRes.data.result || []);
       }
     } catch (error) {
       toast.error("Failed to fetch categories");
@@ -236,6 +244,7 @@ const SubCategories = () => {
       status: "active",
       type: "subcategory",
       parentId: "",
+      hsnId: "",
     });
     setImageFile(null);
     setPreviewUrl(null);
@@ -251,6 +260,7 @@ const SubCategories = () => {
       status: item.status,
       type: "subcategory",
       parentId: item.parentId?._id || item.parentId || "",
+      hsnId: item.hsnId || "",
     });
     const currentImage = item.image && typeof item.image === 'object' ? item.image.url : (item.image || null);
     setPreviewUrl(currentImage);
@@ -606,6 +616,25 @@ const SubCategories = () => {
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    HSN Code / GST %
+                  </label>
+                  <select
+                    value={formData.hsnId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hsnId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                    <option value="">Default/Global GST</option>
+                    {hsnList.map(hsn => (
+                      <option key={hsn._id} value={hsn._id}>
+                        {hsn.hsnCode} ({hsn.gstPercentage}% GST) - {hsn.description}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

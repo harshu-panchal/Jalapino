@@ -66,6 +66,7 @@ const HeaderCategories = () => {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);
+  const [hsnList, setHsnList] = useState([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -77,6 +78,7 @@ const HeaderCategories = () => {
     iconId: "",
     adminCommission: "",
     handlingFees: "",
+    hsnId: "",
     headerColor: "#FF1E1E",
     headerFontColor: "#111111",
     headerIconColor: "#111111",
@@ -121,7 +123,10 @@ const HeaderCategories = () => {
     try {
       const params = { type: "header", page: requestedPage, limit: pageSize };
       if (searchTerm) params.search = searchTerm;
-      const res = await adminApi.getCategories(params);
+      const [res, hsnsRes] = await Promise.all([
+        adminApi.getCategories(params),
+        import('@core/api/axios').then(module => module.default.get("/hsn/admin").catch(() => ({ data: { results: [] } })))
+      ]);
       if (res.data.success) {
         const payload = res.data.result || {};
         const list = Array.isArray(payload.items) ? payload.items : [];
@@ -130,6 +135,9 @@ const HeaderCategories = () => {
         setCategories(headers);
         setTotal(typeof payload.total === "number" ? payload.total : headers.length);
         setPage(typeof payload.page === "number" ? payload.page : requestedPage);
+      }
+      if (hsnsRes.data && (hsnsRes.data.results || hsnsRes.data.result)) {
+        setHsnList(hsnsRes.data.results || hsnsRes.data.result || []);
       }
     } catch (error) {
       toast.error("Failed to fetch header categories");
@@ -242,6 +250,7 @@ const HeaderCategories = () => {
       iconId: "",
       adminCommission: "",
       handlingFees: "",
+      hsnId: "",
       headerColor: "#FF1E1E",
       headerFontColor: "#111111",
       headerIconColor: "#111111",
@@ -263,6 +272,7 @@ const HeaderCategories = () => {
       iconId: item.iconId || "",
       adminCommission: item.adminCommission ?? "",
       handlingFees: item.handlingFees ?? "",
+      hsnId: item.hsnId || "",
       headerColor: item.headerColor || "#FF1E1E",
       headerFontColor: item.headerFontColor || "#FFFFFF",
       headerIconColor: item.headerIconColor || "#111111",
@@ -688,7 +698,6 @@ const HeaderCategories = () => {
                     placeholder="e.g., electronics"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700">
                     Status
@@ -701,6 +710,25 @@ const HeaderCategories = () => {
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    HSN Code / GST %
+                  </label>
+                  <select
+                    value={formData.hsnId}
+                    onChange={(e) =>
+                      setFormData({ ...formData, hsnId: e.target.value })
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500">
+                    <option value="">Default/Global GST</option>
+                    {hsnList.map(hsn => (
+                      <option key={hsn._id} value={hsn._id}>
+                        {hsn.hsnCode} ({hsn.gstPercentage}% GST) - {hsn.description}
+                      </option>
+                    ))}
                   </select>
                 </div>
 

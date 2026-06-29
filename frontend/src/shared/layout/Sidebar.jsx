@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { HiChevronDown } from "react-icons/hi2";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-import defaultLogo from "@/assets/Logo.png";
+const defaultLogo = "/logo1.jpeg";
 
 const colorMap = {
   indigo:
@@ -227,9 +227,9 @@ const SidebarContent = ({ items, title, onClose, openMenu, handleToggle, hovered
     <div className="flex flex-col h-full min-h-0">
       <div className="flex-shrink-0 flex h-16 items-center justify-between px-5 border-b border-white/5 bg-gradient-to-b from-white/[0.02] to-transparent z-10">
         <div className="flex items-center space-x-2.5">
-          {settings?.logoUrl || defaultLogo ? (
+          {defaultLogo ? (
             <div className="h-9 w-9 rounded-xl overflow-hidden shadow-sm ring-1 ring-white/10 group-hover:scale-110 transition-all duration-500 ease-out">
-              <img src={settings?.logoUrl || defaultLogo} alt={appName} className="h-full w-full object-contain" />
+              <img src={defaultLogo} alt={appName} className="h-full w-full object-contain" />
             </div>
           ) : (
             <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white shadow-sm transform -rotate-6 hover:rotate-0 transition-all duration-500 ease-out">
@@ -286,9 +286,9 @@ const SidebarContent = ({ items, title, onClose, openMenu, handleToggle, hovered
         <div className="bg-white/5 rounded-lg p-3 shadow-sm border border-white/5 hover:bg-white/[0.08] hover:border-white/10 transition-all group cursor-pointer">
           <div className="flex items-center space-x-2.5">
             <div className="relative group">
-              {settings?.logoUrl || defaultLogo ? (
+              {defaultLogo ? (
                 <div className="h-8 w-8 rounded-lg overflow-hidden border border-white/10 shadow-lg group-hover:scale-110 transition-all duration-500">
-                  <img src={settings?.logoUrl || defaultLogo} alt={appName} className="h-full w-full object-contain" />
+                  <img src={defaultLogo} alt={appName} className="h-full w-full object-contain" />
                 </div>
               ) : (
                 <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary via-brand-500 to-violet-600 flex items-center justify-center text-white font-black text-xs shadow-lg group-hover:scale-110 transition-all duration-500">

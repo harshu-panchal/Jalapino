@@ -93,6 +93,11 @@ const categorySchema = new mongoose.Schema(
       type: String,
       trim: true, // Hex color for icons (e.g. #ffffff)
     },
+    hsnId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "HSN",
+      default: null,
+    },
   },
   {
     timestamps: true,

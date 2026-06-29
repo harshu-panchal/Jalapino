@@ -183,20 +183,27 @@ const EventCategoriesPage = () => {
                                             <h3 className="font-bold text-lg text-slate-800">{category.name} Details</h3>
                                         </div>
 
-                                        {/* Dynamic Plugin Indicators */}
-                                        {category.activePlugins && category.activePlugins.length > 0 && (
-                                            <div className="flex flex-wrap gap-2 mb-4">
-                                                {category.activePlugins.includes('package_builder') && (
-                                                    <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md border border-indigo-100 uppercase tracking-wider">Packages Available in next step</span>
-                                                )}
-                                                {category.activePlugins.includes('ingredient_transparency') && (
-                                                    <span className="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-1 rounded-md border border-green-100 uppercase tracking-wider">Ingredient Transparency enabled</span>
-                                                )}
-                                                {category.activePlugins.includes('venue_visit') && (
-                                                    <span className="text-[10px] font-bold bg-orange-50 text-orange-600 px-2 py-1 rounded-md border border-orange-100 uppercase tracking-wider">Venue Visit available</span>
-                                                )}
-                                            </div>
-                                        )}
+                                        {/* Dynamic Plugin and Business Rule Indicators */}
+                                        <div className="flex flex-wrap gap-2 mb-4">
+                                            {category.activePlugins?.includes('package_builder') && (
+                                                <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md border border-indigo-100 uppercase tracking-wider">Packages Available</span>
+                                            )}
+                                            {category.activePlugins?.includes('ingredient_transparency') && (
+                                                <span className="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-1 rounded-md border border-green-100 uppercase tracking-wider">Ingredient Transparency</span>
+                                            )}
+                                            {category.activePlugins?.includes('availability_calendar') && (
+                                                <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md border border-blue-100 uppercase tracking-wider">Availability Calendar</span>
+                                            )}
+                                            {category.businessRules?.instantBookingEnabled && (
+                                                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md border border-emerald-100 uppercase tracking-wider">⚡ Instant Booking</span>
+                                            )}
+                                            {category.businessRules?.advancePaymentPercentage > 0 && (
+                                                <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-1 rounded-md border border-amber-100 uppercase tracking-wider">{category.businessRules.advancePaymentPercentage}% Advance</span>
+                                            )}
+                                            {category.businessRules?.venueVisitRequired && (
+                                                <span className="text-[10px] font-bold bg-orange-50 text-orange-600 px-2 py-1 rounded-md border border-orange-100 uppercase tracking-wider">Venue Visit</span>
+                                            )}
+                                        </div>
                                         
                                         <div className="space-y-4">
                                             {category.fields.map(field => (

@@ -423,8 +423,9 @@ export async function generateOrderPaymentBreakdown({
 
   const categoryQuery = Category.find({ _id: { $in: headerIds } })
     .select(
-      "_id name adminCommission adminCommissionType adminCommissionValue adminCommissionFixedRule handlingFees handlingFeeType handlingFeeValue",
+      "_id name adminCommission adminCommissionType adminCommissionValue adminCommissionFixedRule handlingFees handlingFeeType handlingFeeValue hsnId",
     )
+    .populate("hsnId", "hsnCode gstPercentage status")
     .lean();
   if (session) categoryQuery.session(session);
   const categories = await categoryQuery;
@@ -450,7 +451,21 @@ export async function generateOrderPaymentBreakdown({
       commission.adminCommission,
     );
 
-    const appliedGstPercentage = item.hsnCode ? (item.gstPercentage || 0) : (item.gstPercentage || effectiveSettings.gstPercentage || 0);
+    // Resolve HSN and GST
+    // Priority: Category HSN > Product HSN > Global Settings
+    let appliedHsnCode = null;
+    let appliedGstPercentage = 0;
+
+    if (category?.hsnId && category.hsnId.status === "active") {
+      appliedHsnCode = category.hsnId.hsnCode;
+      appliedGstPercentage = category.hsnId.gstPercentage || 0;
+    } else if (item.hsnCode) {
+      appliedHsnCode = item.hsnCode;
+      appliedGstPercentage = item.gstPercentage || 0;
+    } else {
+      appliedGstPercentage = effectiveSettings.gstPercentage || 0;
+    }
+
     const itemTax = roundCurrency((commission.itemSubtotal * appliedGstPercentage) / 100);
     calculatedTax = addMoney(calculatedTax, itemTax);
 
@@ -467,7 +482,7 @@ export async function generateOrderPaymentBreakdown({
       appliedCommissionType: commission.appliedCommissionType,
       appliedCommissionValue: commission.appliedCommissionValue,
       appliedCommissionFixedRule: commission.appliedFixedRule,
-      hsnCode: item.hsnCode || null,
+      hsnCode: appliedHsnCode,
       gstPercentage: appliedGstPercentage,
       taxAmount: itemTax,
     };

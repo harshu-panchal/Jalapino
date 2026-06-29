@@ -112,6 +112,11 @@ const EventSellersPage = () => {
                                             {cat.name}
                                         </span>
                                     ))}
+                                    {seller.serviceCategories?.some(c => c.businessRules?.instantBookingEnabled) && (
+                                        <span className="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-1 rounded-md font-bold uppercase tracking-wider flex items-center gap-1">
+                                            ⚡ Instant Book
+                                        </span>
+                                    )}
                                 </div>
 
                                 <button
