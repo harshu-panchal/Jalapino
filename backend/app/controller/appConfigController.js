@@ -16,7 +16,7 @@ export const getAllConfigs = async (req, res) => {
 export const updateConfig = async (req, res) => {
     try {
         if (req.user.role !== 'admin') return handleResponse(res, 403, 'Unauthorized');
-        
+
         const { key, value, description, group } = req.body;
         if (!key || value === undefined) {
             return handleResponse(res, 400, 'Key and value are required');

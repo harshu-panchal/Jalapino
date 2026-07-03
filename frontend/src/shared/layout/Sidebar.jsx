@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import { HiChevronDown } from "react-icons/hi2";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
-const defaultLogo = "/logo1.jpeg";
+const defaultLogo = "/logo2.png";
 
 const colorMap = {
   indigo:

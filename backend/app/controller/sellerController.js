@@ -138,6 +138,7 @@ export const requestWithdrawal = async (req, res) => {
 /* ===============================
    GET SELLER PROFILE
 ================================ */
+
 export const getSellerProfile = async (req, res) => {
   try {
     const seller = await Seller.findById(req.user.id);
@@ -218,3 +219,5 @@ export const updateSellerProfile = async (req, res) => {
     return handleResponse(res, 500, error.message);
   }
 };
+
+

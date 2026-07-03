@@ -148,6 +148,7 @@ export const updateQuantity = async (req, res) => {
 /* ===============================
    REMOVE FROM CART
 ================================ */
+
 export const removeFromCart = async (req, res) => {
   try {
     const customerId = req.user.id;
@@ -183,6 +184,7 @@ export const removeFromCart = async (req, res) => {
 /* ===============================
    CLEAR CART
 ================================ */
+
 export const clearCart = async (req, res) => {
   try {
     const customerId = req.user.id;

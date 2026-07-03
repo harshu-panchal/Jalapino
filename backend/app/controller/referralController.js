@@ -12,7 +12,7 @@ async function generateReferralCode(name) {
         .replace(/[^a-zA-Z]/g, "")
         .substring(0, 5)
         .toUpperCase();
-    
+
     let attempts = 0;
     while (attempts < 10) {
         const rand = crypto.randomBytes(3).toString("hex").toUpperCase();
@@ -30,7 +30,7 @@ async function generateReferralCode(name) {
 export const getCustomerReferralDetails = async (req, res) => {
     try {
         const customerId = req.user.id;
-        
+
         let customer = await Customer.findById(customerId);
         if (!customer) {
             return handleResponse(res, 404, "Customer not found");
@@ -73,11 +73,11 @@ export const getCustomerReferralDetails = async (req, res) => {
         }));
 
         const totalEarnedAgg = await LedgerEntry.aggregate([
-            { 
-                $match: { 
+            {
+                $match: {
                     actorId: customer._id,
                     reference: { $regex: /^REF-BONUS-/ }
-                } 
+                }
             },
             {
                 $group: {
@@ -165,10 +165,10 @@ export const getAdminReferralStats = async (req, res) => {
 
         // Calculate total cashback paid out in referrals
         const totalPayoutAgg = await LedgerEntry.aggregate([
-            { 
-                $match: { 
+            {
+                $match: {
                     reference: { $regex: /^REF-BONUS-/ }
-                } 
+                }
             },
             {
                 $group: {

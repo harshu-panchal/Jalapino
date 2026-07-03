@@ -84,7 +84,7 @@ export const updateRequestStatus = async (req, res) => {
         } else if (allAccepted) {
             // ALL SELLERS APPROVED! PAYMENT ENABLED.
             booking.overallStatus = 'PAYMENT_PENDING';
-            
+
             emitCustomerNotification('EVENT_BOOKING_APPROVED', {
                 userId: booking.customer,
                 bookingId: booking._id,
@@ -100,7 +100,7 @@ export const updateRequestStatus = async (req, res) => {
             if (sellerDoc) {
                 const responseTimeMins = Math.round((Date.now() - booking.createdAt.getTime()) / 60000);
                 const newTotal = (sellerDoc.totalRequests || 0) + 1;
-                
+
                 let newAccepted = sellerDoc.acceptedRequests || 0;
                 let newRejected = sellerDoc.rejectedRequests || 0;
                 let newAvgResponse = sellerDoc.avgResponseTimeMins || 0;

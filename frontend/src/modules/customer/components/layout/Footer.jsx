@@ -1,6 +1,6 @@
 import React from 'react';
 import { Facebook, Twitter, Instagram, Youtube, Mail, MapPin, Phone } from 'lucide-react';
-const Logo = '/logo1.jpeg';
+const Logo = '/logo2.png';
 import { useSettings } from '@core/context/SettingsContext';
 
 const Footer = () => {

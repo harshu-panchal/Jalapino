@@ -25,31 +25,37 @@ const walletSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+
     pendingBalance: {
       type: Number,
       default: 0,
       min: 0,
     },
+
     cashInHand: {
       type: Number,
       default: 0,
       min: 0,
     },
+
     totalCredited: {
       type: Number,
       default: 0,
       min: 0,
     },
+
     totalDebited: {
       type: Number,
       default: 0,
       min: 0,
     },
+
     status: {
       type: String,
       enum: ALL_WALLET_STATUSES,
       default: "ACTIVE",
     },
+
     meta: {
       type: Object,
       default: {},
@@ -64,3 +70,4 @@ walletSchema.index(
 );
 
 export default mongoose.model("Wallet", walletSchema);
+

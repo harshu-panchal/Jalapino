@@ -64,10 +64,10 @@ const ShopByStoreManagement = () => {
       const list = Array.isArray(res.data.results)
         ? res.data.results
         : Array.isArray(raw?.items)
-        ? raw.items
-        : Array.isArray(raw)
-        ? raw
-        : [];
+          ? raw.items
+          : Array.isArray(raw)
+            ? raw
+            : [];
       setProductsFiltered(list);
     } catch (e) {
       console.error(e);
@@ -244,12 +244,12 @@ const ShopByStoreManagement = () => {
             );
             const catNames = (store.categoryIds || []).length
               ? (store.categoryIds || [])
-                  .map((c) =>
-                    typeof c === "object" && c?.name
-                      ? c.name
-                      : categoryMap[c]?.name || c
-                  )
-                  .join(", ")
+                .map((c) =>
+                  typeof c === "object" && c?.name
+                    ? c.name
+                    : categoryMap[c]?.name || c
+                )
+                .join(", ")
               : "—";
             const productCount = (store.productIds || []).length;
             return (

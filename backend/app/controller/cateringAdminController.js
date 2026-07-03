@@ -19,7 +19,7 @@ export const getServices = async (req, res) => {
     try {
         const query = { deletedAt: null };
         if (req.query.status) query.status = req.query.status;
-        
+
         const services = await CateringService.find(query).sort({ createdAt: -1 });
         return handleResponse(res, 200, "Services fetched", services);
     } catch (error) {
@@ -69,7 +69,7 @@ export const getPackages = async (req, res) => {
     try {
         const query = { deletedAt: null };
         if (req.query.status) query.status = req.query.status;
-        
+
         const packages = await CateringPackage.find(query).sort({ createdAt: -1 });
         return handleResponse(res, 200, "Packages fetched", packages);
     } catch (error) {
@@ -166,9 +166,9 @@ export const updateBookingStatus = async (req, res) => {
 
         booking.status = status;
         booking.statusHistory.push({ status, note: note || `Status updated to ${status}` });
-        
+
         await booking.save();
-        
+
         return handleResponse(res, 200, "Booking status updated", booking);
     } catch (error) {
         return handleResponse(res, 500, error.message);
@@ -182,9 +182,9 @@ export const updatePaymentStatus = async (req, res) => {
         if (!booking) return handleResponse(res, 404, "Booking not found");
 
         booking.paidAmount = (booking.paidAmount || 0) + Number(paidAmount);
-        
+
         await booking.save(); // middleware will handle paymentStatus
-        
+
         return handleResponse(res, 200, "Payment updated", booking);
     } catch (error) {
         return handleResponse(res, 500, error.message);
@@ -195,7 +195,7 @@ export const updatePaymentStatus = async (req, res) => {
 export const getDashboardStats = async (req, res) => {
     try {
         const bookings = await CateringBooking.find();
-        
+
         let totalRevenue = 0;
         let pendingBookings = 0;
         let confirmedBookings = 0;
@@ -207,7 +207,7 @@ export const getDashboardStats = async (req, res) => {
             if (b.status === "Confirmed") confirmedBookings++;
             if (b.status === "Completed") completedBookings++;
             if (b.status === "Cancelled") cancelledBookings++;
-            
+
             if (b.status !== "Cancelled") {
                 totalRevenue += (b.paidAmount || 0);
             }
@@ -217,9 +217,9 @@ export const getDashboardStats = async (req, res) => {
             status: { $in: ["Confirmed", "In Progress"] },
             eventDate: { $gte: new Date() }
         })
-        .populate("serviceId", "name")
-        .sort({ eventDate: 1 })
-        .limit(5);
+            .populate("serviceId", "name")
+            .sort({ eventDate: 1 })
+            .limit(5);
 
         return handleResponse(res, 200, "Dashboard stats", {
             totalBookings: bookings.length,

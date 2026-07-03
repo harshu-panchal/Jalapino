@@ -37,7 +37,7 @@ import sellerApprovalRoute from "./sellerApprovalRoutes.js";
 import eventPayoutRoute from "./eventPayoutRoutes.js";
 import appConfigRoute from "./appConfigRoutes.js";
 import sellerCalendarRoute from "./sellerCalendarRoutes.js";
-
+import liveKitchenRoute from "./liveKitchenRoutes.js";
 import express from "express";
 import { checkMaintenanceMode } from "../middleware/maintenanceMiddleware.js";
 
@@ -107,6 +107,7 @@ const setupRoutes = (app) => {
     router.use("/seller/calendar", sellerCalendarRoute);
     router.use("/seller/packages", sellerPackageRoute);
     router.use("/seller", sellerApprovalRoute);
+    router.use("/kitchen", liveKitchenRoute);
 
     app.use("/api", router);
 }

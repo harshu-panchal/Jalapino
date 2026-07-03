@@ -11,7 +11,7 @@ const ApplicationPending = () => {
   const { settings } = useSettings();
 
   const appName = settings?.appName || "App";
-  const logoUrl = '/logo1.jpeg';
+  const logoUrl = '/logo2.png';
 
   const applicationStatus =
     location.state?.applicationStatus ||

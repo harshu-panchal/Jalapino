@@ -7,7 +7,7 @@ import handleResponse from '../utils/helper.js';
 export const getAvailableTemplates = async (req, res) => {
     try {
         const sellerId = req.user.sellerId || req.user.id;
-        
+
         // Find the seller to get their service categories
         const seller = await Seller.findById(sellerId).select('serviceCategories');
         if (!seller || !seller.serviceCategories || seller.serviceCategories.length === 0) {
@@ -64,7 +64,7 @@ export const createOrUpdateSellerPackage = async (req, res) => {
             if (availability !== undefined) sellerPackage.availability = availability;
             if (capacity !== undefined) sellerPackage.capacity = capacity;
             if (customDescription !== undefined) sellerPackage.customDescription = customDescription;
-            
+
             await sellerPackage.save();
             return handleResponse(res, 200, 'Seller package updated successfully', sellerPackage);
         } else {
@@ -95,7 +95,7 @@ export const deleteSellerPackage = async (req, res) => {
         const { id } = req.params;
 
         const deletedPackage = await SellerPackage.findOneAndDelete({ _id: id, seller: sellerId });
-        
+
         if (!deletedPackage) {
             return handleResponse(res, 404, 'Seller package not found');
         }

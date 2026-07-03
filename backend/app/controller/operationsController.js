@@ -8,7 +8,7 @@ export const getSystemHealth = async (req, res) => {
     try {
         const cpus = os.cpus();
         const memoryUsage = process.memoryUsage();
-        
+
         const health = {
             status: mongoose.connection.readyState === 1 ? 'Healthy' : 'Critical',
             database: mongoose.connection.readyState === 1 ? 'Connected' : 'Disconnected',
@@ -22,7 +22,7 @@ export const getSystemHealth = async (req, res) => {
                 heapUsed: memoryUsage.heapUsed
             },
             activeIncidents: await SystemLog.countDocuments({ level: 'critical', resolved: false }),
-            errorCount24h: await SystemLog.countDocuments({ 
+            errorCount24h: await SystemLog.countDocuments({
                 createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
                 level: { $in: ['error', 'critical'] }
             })
@@ -56,7 +56,7 @@ export const getSystemLogs = async (req, res) => {
 export const createSystemLog = async (req, res) => {
     try {
         const { level, category, message, details, path, method } = req.body;
-        
+
         const log = await SystemLog.create({
             level,
             category,

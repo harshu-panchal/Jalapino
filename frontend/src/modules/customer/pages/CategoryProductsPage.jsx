@@ -37,7 +37,7 @@ const CategoryProductsPage = () => {
     useEffect(() => {
         import('@/assets/lottie/animation.json')
             .then((m) => setNoServiceData(m.default))
-            .catch(() => {});
+            .catch(() => { });
     }, []);
 
     const fetchData = async () => {
@@ -64,18 +64,18 @@ const CategoryProductsPage = () => {
                 const dbProds = Array.isArray(prodRes.data.results)
                     ? prodRes.data.results
                     : Array.isArray(rawResult?.items)
-                    ? rawResult.items
-                    : Array.isArray(rawResult)
-                    ? rawResult
-                    : [];
+                        ? rawResult.items
+                        : Array.isArray(rawResult)
+                            ? rawResult
+                            : [];
 
                 const formattedProds = dbProds.map(p => ({
                     ...p,
                     id: p._id,
                     image:
-                      p.mainImage ||
-                      p.image ||
-                      "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=400&h=400",
+                        p.mainImage ||
+                        p.image ||
+                        "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=400&h=400",
                     price: p.salePrice || p.price,
                     originalPrice: p.price,
                     weight: p.weight || "1 unit",
@@ -170,7 +170,7 @@ const CategoryProductsPage = () => {
                         <p className="text-slate-500 font-bold text-sm max-w-[280px] mb-8 leading-relaxed">
                             {settings?.appName || 'Our service'} is not available in your area yet. We're expanding fast!
                         </p>
-                        <button 
+                        <button
                             onClick={fetchData}
                             className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-slate-800 active:scale-95 transition-all shadow-xl shadow-black/10"
                         >

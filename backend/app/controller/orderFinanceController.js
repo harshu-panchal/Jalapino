@@ -50,9 +50,9 @@ export const previewCheckoutFinance = async (req, res) => {
 
     const distanceDebug = String(process.env.FINANCE_DEBUG_DISTANCE || "").toLowerCase() === "true"
       ? sellerBreakdowns.map((item) => ({
-          sellerId: item.sellerId,
-          distanceKmDerived: item.distanceKm,
-        }))
+        sellerId: item.sellerId,
+        distanceKmDerived: item.distanceKm,
+      }))
       : undefined;
 
     return handleResponse(res, 200, "Checkout preview generated", {

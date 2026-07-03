@@ -498,8 +498,8 @@ const OrderDetail = () => {
                     }}>
                         {/* Header: Centered Brand */}
                         <div style={{ textAlign: "center", marginBottom: "50px" }}>
-                            {(settings?.logoUrl || '/logo1.jpeg') ? (
-                                <img src={settings?.logoUrl || '/logo1.jpeg'} alt="Logo" width="130" style={{ display: "inline-block", marginBottom: "16px" }} crossOrigin="anonymous" />
+                            {(settings?.logoUrl || '/logo2.png') ? (
+                                <img src={settings?.logoUrl || '/logo2.png'} alt="Logo" width="130" style={{ display: "inline-block", marginBottom: "16px" }} crossOrigin="anonymous" />
                             ) : (
                                 <div style={{ fontSize: "26px", fontWeight: "900", color: "#0f172a", marginBottom: "4px" }}>{settings?.appName || 'NOYO KART'}</div>
                             )}

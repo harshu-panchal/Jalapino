@@ -82,50 +82,50 @@ const Header = () => {
                 <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
                     {/* Retail Card */}
                     {settings?.platformControl?.retailEnabled !== false && (
-                    <button
-                        type="button"
-                        onClick={() => toggleMode('retail')}
-                        className={cn(
-                            "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                            mode === 'retail'
-                                ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
-                                : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
-                        )}
-                    >
-                        <img 
-                            src={retailerIcon} 
-                            alt="Retail" 
+                        <button
+                            type="button"
+                            onClick={() => toggleMode('retail')}
                             className={cn(
-                                "h-7 w-7 object-contain transition-all duration-300",
-                                mode === 'retail' ? "opacity-100 scale-105" : "opacity-70 hover:opacity-100"
+                                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                                mode === 'retail'
+                                    ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
+                                    : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
                             )}
-                        />
-                        <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
-                    </button>
+                        >
+                            <img
+                                src={retailerIcon}
+                                alt="Retail"
+                                className={cn(
+                                    "h-7 w-7 object-contain transition-all duration-300",
+                                    mode === 'retail' ? "opacity-100 scale-105" : "opacity-70 hover:opacity-100"
+                                )}
+                            />
+                            <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
+                        </button>
                     )}
 
                     {/* Wholesale Card */}
                     {settings?.platformControl?.wholesaleEnabled !== false && (
-                    <button
-                        type="button"
-                        onClick={() => toggleMode('whole')}
-                        className={cn(
-                            "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                            mode === 'whole'
-                                ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
-                                : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
-                        )}
-                    >
-                        <img 
-                            src={wholesalerIcon} 
-                            alt="Wholesale" 
+                        <button
+                            type="button"
+                            onClick={() => toggleMode('whole')}
                             className={cn(
-                                "h-7 w-7 object-contain transition-all duration-300",
-                                mode === 'whole' ? "opacity-100 scale-105" : "opacity-70 hover:opacity-100"
+                                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                                mode === 'whole'
+                                    ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
+                                    : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
                             )}
-                        />
-                        <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
-                    </button>
+                        >
+                            <img
+                                src={wholesalerIcon}
+                                alt="Wholesale"
+                                className={cn(
+                                    "h-7 w-7 object-contain transition-all duration-300",
+                                    mode === 'whole' ? "opacity-100 scale-105" : "opacity-70 hover:opacity-100"
+                                )}
+                            />
+                            <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
+                        </button>
                     )}
                 </div>
 

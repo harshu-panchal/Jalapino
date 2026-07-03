@@ -10,7 +10,7 @@ export const getEventDashboardStats = async (req, res) => {
         const query = { "services.seller": sellerId };
 
         const totalReservations = await EventBooking.countDocuments(query);
-        
+
         // Count pending (services status PENDING_APPROVAL)
         const pendingRequests = await EventBooking.countDocuments({
             ...query,
@@ -22,7 +22,7 @@ export const getEventDashboardStats = async (req, res) => {
             ...query,
             "services": { $elemMatch: { seller: sellerId, status: "ACCEPTED" } }
         });
-        
+
         // Find recent requests
         const recentRequestsRaw = await EventBooking.find(query)
             .sort({ createdAt: -1 })
@@ -151,7 +151,7 @@ export const updateReservationStatus = async (req, res) => {
             const allAccepted = booking.services.every(s => s.status === 'ACCEPTED');
             const anyRejected = booking.services.some(s => s.status === 'REJECTED');
             const allCompleted = booking.services.every(s => s.status === 'COMPLETED');
-            
+
             if (anyRejected) {
                 // If any seller rejects, notify customer so they can pick alternative
                 try {
@@ -181,15 +181,15 @@ export const updateReservationStatus = async (req, res) => {
                     const Setting = await import('../models/setting.js').then(m => m.default);
                     const EventPayout = await import('../models/event/EventPayout.js').then(m => m.default);
                     const Seller = await import('../models/seller.js').then(m => m.default);
-                    
+
                     const globalSettings = await Setting.findOne({});
                     const globalEventFee = globalSettings?.eventPlatformFee ?? 10;
-                    
+
                     for (const service of booking.services) {
                         if (service.status === 'COMPLETED' || service.status === 'ACCEPTED' || service.status === 'CONFIRMED') {
                             const seller = await Seller.findById(service.seller);
                             const commissionRate = seller?.commissionRate || globalEventFee;
-                            
+
                             const validServicesCount = booking.services.filter(s => ['COMPLETED', 'ACCEPTED', 'CONFIRMED'].includes(s.status)).length;
                             const serviceAmount = booking.totalAmount / (validServicesCount || 1);
 
@@ -215,7 +215,7 @@ export const updateReservationStatus = async (req, res) => {
                     console.error("Payout generation error:", payoutErr);
                 }
             }
-            
+
             await booking.save();
         }
 
@@ -226,7 +226,7 @@ export const updateReservationStatus = async (req, res) => {
                 if (sellerDoc) {
                     const responseTimeMins = Math.round((Date.now() - booking.createdAt.getTime()) / 60000);
                     const newTotal = (sellerDoc.totalRequests || 0) + 1;
-                    
+
                     let newAccepted = sellerDoc.acceptedRequests || 0;
                     let newRejected = sellerDoc.rejectedRequests || 0;
                     let newAvgResponse = sellerDoc.avgResponseTimeMins || 0;

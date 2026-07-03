@@ -175,7 +175,7 @@ const AddProduct = () => {
       data.append("shelfLife", formData.shelfLife || "");
       data.append("countryOfOrigin", formData.countryOfOrigin || "");
       data.append("fssaiLicense", formData.fssaiLicense || "");
-      
+
       if (formData.hsnId) {
         data.append("hsnId", formData.hsnId);
       }
@@ -381,7 +381,7 @@ const AddProduct = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="space-y-1.5 flex flex-col">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
@@ -776,7 +776,7 @@ const AddProduct = () => {
             </div>
           )}
 
-          
+
         </div>
       </div>
     </div>

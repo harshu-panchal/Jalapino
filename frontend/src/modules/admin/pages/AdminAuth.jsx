@@ -26,7 +26,7 @@ const AdminAuth = () => {
     const { settings } = useSettings();
     const navigate = useNavigate();
     const appName = settings?.appName || 'App';
-    const logoUrl = '/logo1.jpeg';
+    const logoUrl = '/logo2.png';
 
     const [formData, setFormData] = useState({
         email: '',

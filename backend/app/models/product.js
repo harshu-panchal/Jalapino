@@ -150,6 +150,48 @@ const productSchema = new mongoose.Schema(
             type: String,
             trim: true,
             default: "",
+        },
+        // --- Food Transparency Engine ---
+        ingredients: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        ingredientBrands: [{
+            type: String,
+            trim: true,
+        }],
+        vegNonVeg: {
+            type: String,
+            enum: ["Veg", "Non-Veg", "Jain", "Egg", ""],
+            default: "",
+        },
+        allergenInfo: [{
+            type: String,
+            trim: true,
+        }],
+        spiceLevel: {
+            type: String,
+            enum: ["Mild", "Medium", "Spicy", "Extra Spicy", ""],
+            default: "",
+        },
+        preparationTime: {
+            type: Number, // in minutes
+            default: 0,
+        },
+        storageInstructions: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        safetyInstructions: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        transparencyEnabled: {
+            type: Boolean,
+            default: true,
         }
     },
     { timestamps: true }

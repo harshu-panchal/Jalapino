@@ -9,7 +9,7 @@ export const adminEventPayoutApi = {
             throw error.response?.data?.message || 'Failed to fetch payouts';
         }
     },
-    
+
     settlePayout: async (id, payload) => {
         try {
             const response = await axiosInstance.put(`/admin/event-payouts/${id}/settle`, payload);

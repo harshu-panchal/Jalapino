@@ -26,7 +26,7 @@ const CartPage = () => {
         if (cart.length === 0) {
             import('../../../assets/lottie/Empty box.json')
                 .then((m) => setEmptyBoxData(m.default))
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [cart.length === 0]); // eslint-disable-line react-hooks/exhaustive-deps
 

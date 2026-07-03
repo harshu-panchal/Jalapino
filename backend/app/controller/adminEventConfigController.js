@@ -75,10 +75,10 @@ export const getEventCategories = async (req, res) => {
 export const createEventCategory = async (req, res) => {
     try {
         const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules } = req.body;
-        
+
         // 1. Create Category
         const cat = await EventCategory.create({ name, icon, sortOrder, isActive, activePlugins });
-        
+
         // 2. Create associated form fields if provided
         if (fields && fields.length > 0) {
             try {

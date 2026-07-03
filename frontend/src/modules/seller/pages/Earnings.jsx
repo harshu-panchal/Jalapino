@@ -320,7 +320,7 @@ const Earnings = () => {
         )}
       </AnimatePresence>
     </div>
-  );
+  )
 };
 
 export default Earnings;

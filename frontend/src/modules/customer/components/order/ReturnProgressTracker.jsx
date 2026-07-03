@@ -63,15 +63,14 @@ const ReturnProgressTracker = ({ returnStatus }) => {
               className="relative transition-opacity duration-200">
               <div className="flex items-center gap-3">
                 <div
-                  className={`relative z-10 h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                    isRejected && step.id === "return_rejected"
-                      ? "bg-rose-100 text-rose-600 border border-rose-300"
-                      : isCompleted
-                        ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
-                        : isActive
-                          ? "bg-amber-100 text-amber-700 border border-amber-300"
-                          : "bg-slate-100 text-slate-400"
-                  }`}
+                  className={`relative z-10 h-10 w-10 rounded-full flex items-center justify-center flex-shrink-0 ${isRejected && step.id === "return_rejected"
+                    ? "bg-rose-100 text-rose-600 border border-rose-300"
+                    : isCompleted
+                      ? "bg-primary text-primary-foreground shadow-md shadow-primary/20"
+                      : isActive
+                        ? "bg-amber-100 text-amber-700 border border-amber-300"
+                        : "bg-slate-100 text-slate-400"
+                    }`}
                 >
                   {isCompleted || (isRejected && step.id === "return_rejected") ? (
                     <CheckCircle2 size={18} />
@@ -84,15 +83,14 @@ const ReturnProgressTracker = ({ returnStatus }) => {
 
                 <div className="flex-1">
                   <p
-                    className={`text-sm font-bold ${
-                      isRejected && step.id === "return_rejected"
-                        ? "text-rose-700"
-                        : isCompleted
-                          ? "text-slate-900"
-                          : isActive
-                            ? "text-amber-700"
-                            : "text-slate-400"
-                    }`}
+                    className={`text-sm font-bold ${isRejected && step.id === "return_rejected"
+                      ? "text-rose-700"
+                      : isCompleted
+                        ? "text-slate-900"
+                        : isActive
+                          ? "text-amber-700"
+                          : "text-slate-400"
+                      }`}
                   >
                     {step.label}
                   </p>
@@ -102,9 +100,8 @@ const ReturnProgressTracker = ({ returnStatus }) => {
               {index < steps.length - 1 && (
                 <div className="absolute left-5 top-10 bottom-0 w-0.5 -mb-4">
                   <div
-                    className={`h-full w-full ${
-                      isCompleted ? "bg-primary" : "bg-slate-200"
-                    }`}
+                    className={`h-full w-full ${isCompleted ? "bg-primary" : "bg-slate-200"
+                      }`}
                   />
                 </div>
               )}

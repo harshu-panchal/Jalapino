@@ -68,6 +68,7 @@ export const getPendingReviews = async (req, res) => {
             total,
             totalPages: Math.ceil(total / limit) || 1,
         });
+
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

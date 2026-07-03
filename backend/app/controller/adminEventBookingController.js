@@ -74,11 +74,11 @@ export const deleteAdminEventBooking = async (req, res) => {
     try {
         const { id } = req.params;
         const deletedBooking = await EventBooking.findByIdAndDelete(id);
-        
+
         if (!deletedBooking) {
             return handleResponse(res, 404, 'Booking not found');
         }
-        
+
         return handleResponse(res, 200, 'Event booking deleted successfully');
     } catch (error) {
         console.error('Error deleting event booking:', error);

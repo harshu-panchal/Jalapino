@@ -22,7 +22,7 @@ import {
 import { toast } from 'sonner';
 import { customerApi } from '../services/customerApi';
 import BgImage from '@/assets/image.png';
-const LogoImage = '/logo1.jpeg';
+const LogoImage = '/logo2.png';
 
 const CATEGORIES = [
     {
@@ -67,7 +67,7 @@ const CustomerAuth = () => {
     const { login } = useAuth();
     const { settings } = useSettings();
     const appName = settings?.appName || 'App';
-    const logoUrl = '/logo1.jpeg';
+    const logoUrl = '/logo2.png';
     const navigate = useNavigate();
 
     useEffect(() => {

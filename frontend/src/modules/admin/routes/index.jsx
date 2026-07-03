@@ -270,29 +270,29 @@ const AdminRoutes = () => {
 
   const navItemsWithBadges = React.useMemo(() => {
     const subRole = user?.subRole || "super_admin";
-    
+
     const count = Number.isFinite(totalUnread) ? totalUnread : 0;
-    
+
     // Filter items based on subRole
     let filteredItems = navItems.filter((item) => {
       if (subRole === "super_admin") return true;
-      
+
       const label = item.label;
       if (subRole === "finance") {
         return ["Dashboard", "Orders", "Wallet", "Money Requests", "Seller Payments", "Collect Cash", "Fees & Charges", "My Profile"].includes(label);
       }
-      
+
       if (subRole === "marketing") {
         return ["Dashboard", "Marketing Tools", "My Profile"].includes(label);
       }
-      
+
       if (subRole === "sub_admin") {
         return !["Wallet", "Money Requests", "Seller Payments", "Collect Cash", "Fees & Charges", "System Settings", "Admin Management", "Marketing Tools"].includes(label);
       }
-      
+
       return true;
     });
-    
+
     // Add "Admin Management" for super_admin
     if (subRole === "super_admin") {
       const systemSettingsIndex = filteredItems.findIndex(i => i.label === "System Settings");
@@ -310,7 +310,7 @@ const AdminRoutes = () => {
     }
 
     if (count <= 0) return filteredItems;
-    
+
     return filteredItems.map((item) => {
       if (item?.label !== "Customer Support") return item;
       return { ...item, badgeCount: count };
@@ -371,16 +371,16 @@ const AdminRoutes = () => {
         <Route path="/settings" element={<AdminSettings />} />
         <Route path="/env" element={<EnvSettings />} />
         <Route path="/operations" element={<OperationsDashboard />} />
-        
+
         <Route path="/catering/dashboard" element={<CateringDashboard />} />
         <Route path="/catering/services" element={<CateringServices />} />
         <Route path="/catering/packages" element={<CateringPackages />} />
         <Route path="/catering/bookings" element={<CateringBookings />} />
-        
+
         <Route path="/events/config" element={<EventConfigPage />} />
         <Route path="/events/cities" element={<CityManagementPage />} />
         <Route path="/events/bookings" element={<EventBookingsPage />} />
-        
+
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </DashboardLayout>

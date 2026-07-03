@@ -78,7 +78,7 @@ const Auth = () => {
     };
   }, []);
   const appName = settings?.appName || "App";
-  const logoUrl = '/logo1.jpeg';
+  const logoUrl = '/logo2.png';
   const [verifications, setVerifications] = useState({
     email: createInitialVerificationState(),
     phone: createInitialVerificationState(),

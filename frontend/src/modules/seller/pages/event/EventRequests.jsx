@@ -56,7 +56,7 @@ const EventRequests = () => {
             ) : (
                 <div className="grid gap-6">
                     {requests.map((req) => (
-                        <motion.div 
+                        <motion.div
                             key={req._id}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -64,16 +64,15 @@ const EventRequests = () => {
                         >
                             <div className="space-y-3 flex-1">
                                 <div className="flex items-center gap-3">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                                        req.myServiceStatus === 'PENDING_APPROVAL' ? 'bg-orange-100 text-orange-700' :
-                                        req.myServiceStatus === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
-                                        'bg-red-100 text-red-700'
-                                    }`}>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.myServiceStatus === 'PENDING_APPROVAL' ? 'bg-orange-100 text-orange-700' :
+                                            req.myServiceStatus === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                                                'bg-red-100 text-red-700'
+                                        }`}>
                                         {req.myServiceStatus.replace('_', ' ')}
                                     </span>
                                     <span className="text-sm font-medium text-slate-500">Booking ID: {req.bookingId}</span>
                                 </div>
-                                
+
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800 capitalize">{req.eventType} Event</h3>
                                     <p className="text-slate-600 mt-1">
@@ -95,14 +94,14 @@ const EventRequests = () => {
 
                             {req.myServiceStatus === 'PENDING_APPROVAL' && (
                                 <div className="flex gap-3 w-full md:w-auto">
-                                    <button 
+                                    <button
                                         onClick={() => handleUpdateStatus(req._id, 'REJECTED')}
                                         className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-red-200 text-red-600 font-bold hover:bg-red-50 flex items-center justify-center gap-2 transition-colors"
                                     >
                                         <HiOutlineXCircle className="w-5 h-5" />
                                         Reject
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => handleUpdateStatus(req._id, 'ACCEPTED')}
                                         className="flex-1 md:flex-none px-6 py-3 rounded-xl bg-green-600 text-white font-bold hover:bg-green-700 flex items-center justify-center gap-2 transition-colors shadow-lg shadow-green-600/20"
                                     >

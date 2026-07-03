@@ -52,16 +52,16 @@ export const getPublicOfferSections = async (req, res) => {
         return sections.map((section) => {
           const sellerIds = Array.isArray(section.sellerIds)
             ? section.sellerIds.filter((seller) => {
-                const sid = String(seller?._id || seller || "");
-                return sid && nearbySellerSet.has(sid);
-              })
+              const sid = String(seller?._id || seller || "");
+              return sid && nearbySellerSet.has(sid);
+            })
             : [];
 
           const productIds = Array.isArray(section.productIds)
             ? section.productIds.filter((product) => {
-                const sid = String(product?.sellerId?._id || product?.sellerId || "");
-                return sid && nearbySellerSet.has(sid);
-              })
+              const sid = String(product?.sellerId?._id || product?.sellerId || "");
+              return sid && nearbySellerSet.has(sid);
+            })
             : [];
 
           return {

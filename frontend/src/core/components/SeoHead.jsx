@@ -47,23 +47,20 @@ export default function SeoHead() {
         metaKw.setAttribute('content', keywordsContent);
 
         // Update or create dynamic favicon
-        const faviconUrl = settings.faviconUrl || '';
+        const faviconUrl = settings.faviconUrl || '/logo2.png?v=3';
         let linkFavicon = metaRefs.current.favicon;
         if (!linkFavicon) {
-            linkFavicon = document.getElementById('dynamic-favicon');
-            if (!linkFavicon && faviconUrl) {
+            linkFavicon = document.getElementById('dynamic-favicon') || document.querySelector('link[rel="icon"]');
+            if (!linkFavicon) {
                 linkFavicon = document.createElement('link');
                 linkFavicon.id = 'dynamic-favicon';
                 linkFavicon.rel = 'icon';
-                linkFavicon.type = 'image/x-icon';
                 document.head.appendChild(linkFavicon);
-                metaRefs.current.favicon = linkFavicon;
-            } else if (linkFavicon) {
-                metaRefs.current.favicon = linkFavicon;
             }
+            metaRefs.current.favicon = linkFavicon;
         }
         if (linkFavicon) {
-            linkFavicon.href = faviconUrl || '/vite.svg';
+            linkFavicon.href = faviconUrl;
         }
     }, [settings]);
 

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-    HiOutlineClipboardDocumentList, 
-    HiOutlineCalendar, 
-    HiOutlineCurrencyDollar, 
+import {
+    HiOutlineClipboardDocumentList,
+    HiOutlineCalendar,
+    HiOutlineCurrencyDollar,
     HiOutlineClock,
     HiOutlineCheckCircle
 } from 'react-icons/hi2';
@@ -73,11 +73,11 @@ const EventDashboard = () => {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {statCards.map((card, i) => (
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: i * 0.1 }}
-                        key={i} 
+                        key={i}
                         className={`p-6 rounded-2xl border ${card.bg} ${card.border} flex items-center justify-between`}
                     >
                         <div>
@@ -95,14 +95,14 @@ const EventDashboard = () => {
             <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden mt-8 shadow-sm">
                 <div className="px-6 py-5 border-b border-slate-200 flex justify-between items-center bg-slate-50">
                     <h2 className="text-lg font-bold text-slate-800">Recent Booking Requests</h2>
-                    <button 
+                    <button
                         onClick={() => navigate('/seller/reservations')}
                         className="text-sm font-bold text-red-500 hover:text-red-600 transition-colors"
                     >
                         View All
                     </button>
                 </div>
-                
+
                 <div className="p-0">
                     {stats?.recentRequests && stats.recentRequests.length > 0 ? (
                         <div className="divide-y divide-slate-100">
@@ -112,10 +112,10 @@ const EventDashboard = () => {
                                         <div className="flex items-center gap-3 mb-1">
                                             <h3 className="font-bold text-slate-800 text-lg">{req.customerInfo?.name || "Customer"}</h3>
                                             <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide
-                                                ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' : 
-                                                  req.status === 'confirmed' ? 'bg-green-100 text-green-700' : 
-                                                  req.status === 'rejected' ? 'bg-red-100 text-red-700' : 
-                                                  'bg-slate-100 text-slate-700'}`}
+                                                ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' :
+                                                    req.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                                                        req.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                            'bg-slate-100 text-slate-700'}`}
                                             >
                                                 {req.status}
                                             </span>
@@ -124,7 +124,7 @@ const EventDashboard = () => {
                                             {new Date(req.eventDate).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} • {req.guestCount} Guests
                                         </p>
                                     </div>
-                                    <button 
+                                    <button
                                         onClick={() => navigate('/seller/reservations')}
                                         className="px-5 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200"
                                     >

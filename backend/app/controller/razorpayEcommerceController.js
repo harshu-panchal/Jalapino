@@ -7,7 +7,7 @@ export const createRazorpayEcommerceOrder = async (req, res) => {
     try {
         const orderId = req.params.id;
         const { amount } = req.body;
-        
+
         const razorpay = new Razorpay({
             key_id: process.env.RAZORPAY_KEY_ID,
             key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -39,13 +39,13 @@ export const verifyRazorpayEcommerceOrder = async (req, res) => {
 
         if (expectedSignature === razorpay_signature) {
             // Mark order as paid
-            const orders = await Order.find({ 
+            const orders = await Order.find({
                 $or: [
                     { orderId: orderId },
-                    { checkoutGroupId: orderId } 
-                ] 
+                    { checkoutGroupId: orderId }
+                ]
             });
-            
+
             if (orders && orders.length > 0) {
                 for (let o of orders) {
                     o.paymentStatus = 'PAID';

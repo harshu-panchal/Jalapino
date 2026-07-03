@@ -16,7 +16,7 @@ import {
   shiftHex,
   buildHeaderOpacityGradient,
 } from "../../utils/headerTheme";
-const LogoImage = '/logo1.jpeg';
+const LogoImage = '/logo2.png';
 import retailerIcon from "../../../../assets/retailer.webp";
 import wholesalerIcon from "../../../../assets/wholesaler.webp";
 

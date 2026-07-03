@@ -30,7 +30,7 @@ const MaintenancePage = () => {
                 <p className="text-slate-500 mb-8 font-medium">
                     Jalapino is currently undergoing scheduled maintenance to improve your experience. Please check back soon!
                 </p>
-                <button 
+                <button
                     onClick={checkStatus}
                     disabled={checking}
                     className="w-full bg-slate-900 text-white font-bold py-3.5 rounded-xl hover:bg-slate-800 transition-colors flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20 disabled:opacity-70"

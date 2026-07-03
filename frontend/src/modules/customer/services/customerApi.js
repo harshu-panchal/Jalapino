@@ -162,12 +162,12 @@ export const customerApi = {
   testPushNotification: () => axiosInstance.post("/push/test"),
   getTestPushNotificationStatus: (orderId) =>
     axiosInstance.get(`/push/test-status/${encodeURIComponent(String(orderId || "").trim())}`),
-  
+
   // Gamification (Spin Wheel & Scratch Card)
   getWheelState: () => getWithDedupe("/gamification/state", {}, { ttl: 0 }),
   spinWheel: () => axiosInstance.post("/gamification/spin"),
   scratchCard: (spinId) => axiosInstance.post("/gamification/scratch", { spinId }),
-  
+
   // Refer & Earn
   getReferralDetails: () => axiosInstance.get("/referral/details"),
 };

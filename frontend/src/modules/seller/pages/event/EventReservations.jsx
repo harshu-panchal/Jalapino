@@ -3,7 +3,8 @@ import { sellerEventApi } from '../../services/sellerEventApi';
 import CircularProgress from '@mui/material/CircularProgress';
 import { motion, AnimatePresence } from 'framer-motion';
 import Dialog from '@mui/material/Dialog';
-import { HiOutlineCheck, HiOutlineXMark, HiOutlineCalendarDays, HiOutlineUserGroup, HiOutlineMapPin, HiOutlineClock } from 'react-icons/hi2';
+import { HiOutlineCheck, HiOutlineXMark, HiOutlineCalendarDays, HiOutlineUserGroup, HiOutlineMapPin, HiOutlineClock, HiOutlineCamera, HiOutlineVideoCamera } from 'react-icons/hi2';
+import axiosInstance from '@core/api/axios';
 
 const EventReservations = () => {
     const [reservations, setReservations] = useState([]);
@@ -13,6 +14,26 @@ const EventReservations = () => {
     const [actionLoading, setActionLoading] = useState(false);
     const [loadingResId, setLoadingResId] = useState(null);
     const [filter, setFilter] = useState('all');
+
+    // Restore modal state from session storage on initial load
+    useEffect(() => {
+        if (reservations.length > 0) {
+            const savedResId = sessionStorage.getItem('openReservationId');
+            if (savedResId) {
+                const res = reservations.find(r => r._id === savedResId);
+                if (res && !modalOpen) {
+                    setSelectedRes(res);
+                    setModalOpen(true);
+                }
+            }
+        }
+    }, [reservations]);
+
+    // Live Kitchen State
+    const [liveStreamUrl, setLiveStreamUrl] = useState('');
+    const [livePhotoDescription, setLivePhotoDescription] = useState('');
+    const [livePhoto, setLivePhoto] = useState(null);
+    const [isLiveKitchenLoading, setIsLiveKitchenLoading] = useState(false);
 
     // Helper to fix localhost port mismatches for uploaded images
     const getResolvedImageUrl = (url) => {
@@ -59,6 +80,56 @@ const EventReservations = () => {
             alert('Failed to update status');
         } finally {
             setActionLoading(false);
+        }
+    };
+
+    const handleStreamSubmit = async () => {
+        if (!liveStreamUrl) return;
+        setIsLiveKitchenLoading(true);
+        try {
+            await axiosInstance.post('/kitchen/stream', { orderId: selectedRes._id, streamUrl: liveStreamUrl });
+            alert('Live stream URL updated successfully!');
+            setLiveStreamUrl('');
+        } catch (error) {
+            alert('Failed to update stream URL');
+        } finally {
+            setIsLiveKitchenLoading(false);
+        }
+    };
+
+    const handlePhotoSubmit = async () => {
+        if (!livePhoto) return;
+        setIsLiveKitchenLoading(true);
+        try {
+            // First, upload the image to the generic media endpoint
+            const formData = new FormData();
+            formData.append('file', livePhoto);
+            
+            const uploadRes = await axiosInstance.post('/media/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            
+            const imageUrl = uploadRes.data?.url || uploadRes.data?.data?.url || uploadRes.data?.result?.url || uploadRes.data;
+
+            if (typeof imageUrl !== 'string') {
+                throw new Error("Invalid image URL received from upload endpoint");
+            }
+
+            // Save to Live Kitchen
+            await axiosInstance.post('/kitchen/photo', { 
+                orderId: selectedRes._id, 
+                imageUrl: imageUrl, 
+                description: livePhotoDescription 
+            });
+
+            alert('Photo uploaded successfully to Live Kitchen!');
+            setLivePhoto(null);
+            setLivePhotoDescription('');
+        } catch (error) {
+            console.error("Live Kitchen Upload Error:", error);
+            alert('Failed to upload photo update. Please ensure the media endpoint is running.');
+        } finally {
+            setIsLiveKitchenLoading(false);
         }
     };
 
@@ -112,7 +183,7 @@ const EventReservations = () => {
                             animate={{ opacity: 1, scale: 1 }}
                             exit={{ opacity: 0, scale: 0.9 }}
                             key={res._id}
-                            onClick={() => { setSelectedRes(res); setModalOpen(true); }}
+                            onClick={() => { setSelectedRes(res); setModalOpen(true); sessionStorage.setItem('openReservationId', res._id); }}
                             className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm cursor-pointer hover:shadow-md transition-shadow hover:border-red-200 group"
                         >
                             <div className="flex justify-between items-start mb-4">
@@ -176,7 +247,10 @@ const EventReservations = () => {
             {/* Detail Modal */}
             <Dialog
                 open={modalOpen}
-                onClose={() => setModalOpen(false)}
+                onClose={() => {
+                    setModalOpen(false);
+                    sessionStorage.removeItem('openReservationId');
+                }}
                 maxWidth="sm"
                 fullWidth
                 PaperProps={{ sx: { borderRadius: 4, padding: 1 } }}
@@ -281,9 +355,89 @@ const EventReservations = () => {
                             </div>
                         )}
 
+                        {/* LIVE KITCHEN SECTION */}
+                        {['confirmed', 'active'].includes(selectedRes.status) && (
+                            <div className="mb-8">
+                                <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100 flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                                    Live Kitchen Updates
+                                </h3>
+                                <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                                    
+                                    {/* Stream Update */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                            <HiOutlineVideoCamera className="w-4 h-4" /> Live Stream URL
+                                        </label>
+                                        <div className="flex flex-col sm:flex-row gap-3 w-full">
+                                            <input 
+                                                type="text" 
+                                                value={liveStreamUrl}
+                                                onChange={(e) => setLiveStreamUrl(e.target.value)}
+                                                placeholder="e.g., YouTube Live Link" 
+                                                className="w-full flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-red-500"
+                                            />
+                                            <button 
+                                                onClick={handleStreamSubmit}
+                                                disabled={isLiveKitchenLoading || !liveStreamUrl}
+                                                className="w-full sm:w-auto px-5 py-2 bg-red-500 text-white text-sm font-bold rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 shadow-sm"
+                                            >
+                                                Update
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="w-full h-px bg-slate-200"></div>
+
+                                    {/* Photo Update */}
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                                            <HiOutlineCamera className="w-4 h-4" /> Photo Update
+                                        </label>
+                                        <div className="flex flex-col md:flex-row gap-3 items-start md:items-center w-full">
+                                            <div className="flex items-center gap-2 w-full md:w-auto flex-1 overflow-hidden">
+                                                <input 
+                                                    type="file" 
+                                                    accept="image/*"
+                                                    onChange={(e) => setLivePhoto(e.target.files[0])}
+                                                    className="w-full text-sm text-slate-500 file:mr-2 file:py-2 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer"
+                                                />
+                                                {livePhoto && (
+                                                    <img 
+                                                        src={URL.createObjectURL(livePhoto)} 
+                                                        alt="Preview" 
+                                                        className="w-10 h-10 object-cover rounded-md border border-slate-200 shrink-0 shadow-sm"
+                                                    />
+                                                )}
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                value={livePhotoDescription}
+                                                onChange={(e) => setLivePhotoDescription(e.target.value)}
+                                                placeholder="Status (e.g. Preparing...)" 
+                                                className="w-full md:flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-red-500"
+                                            />
+                                            <button 
+                                                onClick={handlePhotoSubmit}
+                                                disabled={isLiveKitchenLoading || !livePhoto}
+                                                className="w-full md:w-auto px-5 py-2 bg-slate-800 text-white text-sm font-bold rounded-lg hover:bg-slate-900 transition-colors disabled:opacity-50 whitespace-nowrap shadow-sm"
+                                            >
+                                                {isLiveKitchenLoading ? "Uploading..." : "Upload"}
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                </div>
+                            </div>
+                        )}
+
+
                         <div className="flex gap-3 mt-8">
                             <button 
-                                onClick={() => setModalOpen(false)}
+                                onClick={() => {
+                                    setModalOpen(false);
+                                    sessionStorage.removeItem('openReservationId');
+                                }}
                                 className="px-6 py-3 bg-slate-100 text-slate-700 rounded-xl font-bold hover:bg-slate-200 transition-colors w-full"
                             >
                                 Close
@@ -291,14 +445,22 @@ const EventReservations = () => {
                             {selectedRes.status === 'pending' && (
                                 <>
                                     <button 
-                                        onClick={() => { handleStatusUpdate(selectedRes._id, 'rejected'); setModalOpen(false); }}
+                                        onClick={() => { 
+                                            handleStatusUpdate(selectedRes._id, 'rejected'); 
+                                            setModalOpen(false); 
+                                            sessionStorage.removeItem('openReservationId');
+                                        }}
                                         disabled={actionLoading}
                                         className="px-6 py-3 bg-red-50 text-red-600 rounded-xl font-bold hover:bg-red-100 transition-colors w-full disabled:opacity-50"
                                     >
                                         Reject
                                     </button>
                                     <button 
-                                        onClick={() => { handleStatusUpdate(selectedRes._id, 'confirmed'); setModalOpen(false); }}
+                                        onClick={() => { 
+                                            handleStatusUpdate(selectedRes._id, 'confirmed'); 
+                                            setModalOpen(false); 
+                                            sessionStorage.removeItem('openReservationId');
+                                        }}
                                         disabled={actionLoading}
                                         className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-colors w-full disabled:opacity-50"
                                     >

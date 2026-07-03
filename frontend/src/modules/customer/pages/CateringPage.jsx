@@ -58,7 +58,7 @@ export default function CateringPage() {
     if (!formData.customerName || !formData.mobileNumber || !formData.eventDate || !formData.eventAddress) {
       return toast.error("Please fill all required fields");
     }
-    
+
     try {
       setSubmitting(true);
       const payload = { ...formData };
@@ -67,7 +67,7 @@ export default function CateringPage() {
       } else {
         payload.packageId = selectedItem.data._id;
       }
-      
+
       const res = await customerCateringApi.submitBooking(payload);
       if (res.data?.success) {
         toast.success("Booking request sent successfully! We will contact you soon.");
@@ -86,8 +86,8 @@ export default function CateringPage() {
       {/* Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
         <div className="h-16 flex items-center px-4 max-w-2xl mx-auto w-full">
-          <button 
-            onClick={() => navigate(-1)} 
+          <button
+            onClick={() => navigate(-1)}
             className="w-10 h-10 flex items-center justify-center rounded-full active:bg-slate-100 transition-colors"
           >
             <ChevronLeft className="w-6 h-6 text-slate-800" />
@@ -106,13 +106,13 @@ export default function CateringPage() {
 
         {/* Tabs */}
         <div className="flex p-1 bg-slate-200/60 rounded-xl mb-6">
-          <button 
+          <button
             className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === "services" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"}`}
             onClick={() => setActiveTab("services")}
           >
             Custom Services
           </button>
-          <button 
+          <button
             className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all ${activeTab === "packages" ? "bg-white text-amber-600 shadow-sm" : "text-slate-500"}`}
             onClick={() => setActiveTab("packages")}
           >
@@ -170,9 +170,9 @@ export default function CateringPage() {
       <AnimatePresence>
         {isModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center bg-black/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, y: "100%" }} 
-              animate={{ opacity: 1, y: 0 }} 
+            <motion.div
+              initial={{ opacity: 0, y: "100%" }}
+              animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: "100%" }}
               className="bg-white w-full max-w-md rounded-t-3xl md:rounded-3xl max-h-[90vh] flex flex-col"
             >
@@ -180,7 +180,7 @@ export default function CateringPage() {
                 <h3 className="font-bold text-lg text-slate-800">Booking Request</h3>
                 <button onClick={() => setIsModalOpen(false)} className="w-8 h-8 flex items-center justify-center bg-slate-100 rounded-full text-slate-500 font-bold">✕</button>
               </div>
-              
+
               <div className="p-5 overflow-y-auto flex-1">
                 <div className="bg-amber-50 rounded-xl p-4 mb-6 flex gap-3 items-start border border-amber-100">
                   <Info className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -193,47 +193,47 @@ export default function CateringPage() {
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Full Name *</label>
-                    <input required type="text" value={formData.customerName} onChange={e => setFormData({...formData, customerName: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors" placeholder="e.g. Rahul Sharma" />
+                    <input required type="text" value={formData.customerName} onChange={e => setFormData({ ...formData, customerName: e.target.value })} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors" placeholder="e.g. Rahul Sharma" />
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Mobile Number *</label>
-                    <input 
-                      required 
-                      type="tel" 
-                      value={formData.mobileNumber} 
+                    <input
+                      required
+                      type="tel"
+                      value={formData.mobileNumber}
                       onChange={e => {
                         const val = e.target.value.replace(/\D/g, '').slice(0, 10);
-                        setFormData({...formData, mobileNumber: val});
-                      }} 
+                        setFormData({ ...formData, mobileNumber: val });
+                      }}
                       maxLength={10}
                       pattern="[0-9]{10}"
-                      className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors" 
-                      placeholder="10-digit mobile number" 
+                      className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors"
+                      placeholder="10-digit mobile number"
                     />
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Event Date *</label>
-                      <input required type="date" value={formData.eventDate} onChange={e => setFormData({...formData, eventDate: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors text-sm" />
+                      <input required type="date" value={formData.eventDate} onChange={e => setFormData({ ...formData, eventDate: e.target.value })} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors text-sm" />
                     </div>
                     <div>
                       <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Event Time</label>
-                      <input type="time" value={formData.eventTime} onChange={e => setFormData({...formData, eventTime: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors text-sm" />
+                      <input type="time" value={formData.eventTime} onChange={e => setFormData({ ...formData, eventTime: e.target.value })} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors text-sm" />
                     </div>
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Number of Guests *</label>
-                    <input required type="number" value={formData.numberOfGuests} onChange={e => setFormData({...formData, numberOfGuests: e.target.value})} readOnly={selectedItem?.type === "package"} className={`w-full h-12 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors ${selectedItem?.type === "package" ? "bg-slate-100 text-slate-500" : "bg-slate-50"}`} placeholder="e.g. 100" />
+                    <input required type="number" value={formData.numberOfGuests} onChange={e => setFormData({ ...formData, numberOfGuests: e.target.value })} readOnly={selectedItem?.type === "package"} className={`w-full h-12 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors ${selectedItem?.type === "package" ? "bg-slate-100 text-slate-500" : "bg-slate-50"}`} placeholder="e.g. 100" />
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Event Address *</label>
-                    <textarea required value={formData.eventAddress} onChange={e => setFormData({...formData, eventAddress: e.target.value})} className="w-full h-24 py-3 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors resize-none" placeholder="Complete address of the venue"></textarea>
+                    <textarea required value={formData.eventAddress} onChange={e => setFormData({ ...formData, eventAddress: e.target.value })} className="w-full h-24 py-3 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors resize-none" placeholder="Complete address of the venue"></textarea>
                   </div>
                   <div>
                     <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-1 block">Any Special Instructions?</label>
-                    <input type="text" value={formData.specialInstructions} onChange={e => setFormData({...formData, specialInstructions: e.target.value})} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors" placeholder="Optional" />
+                    <input type="text" value={formData.specialInstructions} onChange={e => setFormData({ ...formData, specialInstructions: e.target.value })} className="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl px-4 outline-none focus:border-amber-500 focus:bg-white transition-colors" placeholder="Optional" />
                   </div>
-                  
+
                   <div className="pt-4 pb-4">
                     <button disabled={submitting} type="submit" className="w-full h-14 bg-amber-500 text-white font-black text-lg rounded-2xl active:scale-[0.98] transition-transform disabled:opacity-70">
                       {submitting ? "Submitting..." : "Send Request"}

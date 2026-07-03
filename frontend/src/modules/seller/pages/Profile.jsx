@@ -172,15 +172,13 @@ const SellerProfile = () => {
               </span>
               <button
                 onClick={toggleStatus}
-                className={`group flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-[2px] rounded-full border transition-all hover:scale-105 active:scale-95 ${
-                  profile?.isActive
-                    ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
-                    : "bg-rose-500 text-white border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.4)]"
-                }`}>
+                className={`group flex items-center gap-2 px-4 py-1.5 text-[10px] font-black uppercase tracking-[2px] rounded-full border transition-all hover:scale-105 active:scale-95 ${profile?.isActive
+                  ? "bg-emerald-500 text-white border-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                  : "bg-rose-500 text-white border-rose-400 shadow-[0_0_20px_rgba(244,63,94,0.4)]"
+                  }`}>
                 <div
-                  className={`w-2 h-2 rounded-full animate-pulse ${
-                    profile?.isActive ? "bg-emerald-200" : "bg-rose-200"
-                  }`}
+                  className={`w-2 h-2 rounded-full animate-pulse ${profile?.isActive ? "bg-emerald-200" : "bg-rose-200"
+                    }`}
                 />
                 {profile?.isActive ? "Active" : "Inactive"}
               </button>
@@ -336,11 +334,10 @@ const SellerProfile = () => {
                 <div className="flex items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
                     <div
-                      className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${
-                        formData.lat
-                          ? "bg-brand-100 text-brand-600 shadow-[0_8px_20px_-6px_rgba(16,185,129,0.3)]"
-                          : "bg-white text-slate-400 shadow-sm"
-                      }`}>
+                      className={`h-12 w-12 rounded-xl flex items-center justify-center transition-all ${formData.lat
+                        ? "bg-brand-100 text-brand-600 shadow-[0_8px_20px_-6px_rgba(16,185,129,0.3)]"
+                        : "bg-white text-slate-400 shadow-sm"
+                        }`}>
                       <MapPin size={24} />
                     </div>
                     <div className="space-y-1">

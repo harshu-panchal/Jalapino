@@ -26,7 +26,7 @@ const Topbar = ({ onMenuClick }) => {
     const location = useLocation();
 
     const appName = settings?.appName || 'App';
-    const logoUrl = '/logo1.jpeg';
+    const logoUrl = '/logo2.png';
 
     const [searchQuery, setSearchQuery] = React.useState('');
     const [notifications, setNotifications] = React.useState([]);
