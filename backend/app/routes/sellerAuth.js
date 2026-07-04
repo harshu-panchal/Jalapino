@@ -8,6 +8,7 @@ import {
 import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings } from "../controller/sellerStatsController.js";
 import { getSellerWalletSummaryController } from "../controller/adminFinanceController.js";
+import { saveFcmToken } from "../modules/notifications/notification.controller.js";
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 import {
     authRouteRateLimiter,
@@ -44,6 +45,7 @@ router.post(
     signupSeller
 );
 router.post("/login", loginSeller);
+router.post("/save-fcm-token", verifyToken, saveFcmToken);
 router.get("/nearby", getNearbySellers);
 
 // Profile routes

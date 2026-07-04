@@ -16,6 +16,7 @@ import {
   updateDeliveryLocation,
 } from "../controller/deliveryController.js";
 import { getRiderWalletSummaryController } from "../controller/adminFinanceController.js";
+import { saveFcmToken } from "../modules/notifications/notification.controller.js";
 
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 import multer from "multer";
@@ -30,6 +31,7 @@ router.post(
 );
 router.post("/send-login-otp", loginDelivery);
 router.post("/verify-otp", verifyDeliveryOTP);
+router.post("/save-fcm-token", verifyToken, saveFcmToken);
 
 // Profile routes
 router.get("/profile", verifyToken, getDeliveryProfile);

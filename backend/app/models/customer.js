@@ -142,6 +142,16 @@ const userSchema = new mongoose.Schema(
             type: Number,
             default: 0,
         },
+        fcmtoken: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        fcmtokenMobile: {
+            type: String,
+            trim: true,
+            default: "",
+        },
     },
     {
         timestamps: true,

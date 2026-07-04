@@ -312,6 +312,16 @@ export const loginSeller = async (req, res) => {
         }
 
         seller.lastLogin = new Date();
+        
+        const { fcmToken, platform } = req.body || {};
+        if (fcmToken) {
+            if (platform === 'web') {
+                seller.fcmtoken = fcmToken;
+            } else {
+                seller.fcmtokenMobile = fcmToken;
+            }
+        }
+
         await seller.save();
 
         const token = generateToken(seller);

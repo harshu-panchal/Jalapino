@@ -111,11 +111,42 @@ export async function sendSellerVerificationOtpEmail({
     subject: "Verify your seller signup email",
     text: `Your seller signup verification code is ${otp}. This code expires in ${expiresInMinutes} minutes.`,
     html: `
-      <div style="font-family: Arial, sans-serif; color: #0f172a;">
-        <p>Your seller signup verification code is:</p>
-        <p style="font-size: 28px; font-weight: 700; letter-spacing: 6px;">${otp}</p>
-        <p>This code expires in ${expiresInMinutes} minutes.</p>
-      </div>
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); overflow: hidden; }
+              .header { background-color: #e11d48; padding: 30px 20px; text-align: center; color: white; }
+              .header h1 { margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px; }
+              .content { padding: 40px 30px; text-align: center; color: #333333; }
+              .content p { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px; }
+              .otp-box { background-color: #fff1f2; border: 2px dashed #e11d48; border-radius: 8px; padding: 20px; margin: 30px auto; max-width: 250px; }
+              .otp-text { font-size: 36px; font-weight: 800; color: #e11d48; letter-spacing: 8px; margin: 0; text-align: center; }
+              .footer { background-color: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eeeeee; }
+              .footer p { margin: 0; font-size: 12px; color: #999999; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>Jalapino</h1>
+              </div>
+              <div class="content">
+                  <h2>Verify your email</h2>
+                  <p>Please use the verification code below to complete your authentication process. This code is valid for <strong>${expiresInMinutes} minutes</strong>.</p>
+                  <div class="otp-box">
+                      <p class="otp-text">${otp}</p>
+                  </div>
+                  <p>If you didn't request this code, you can safely ignore this email.</p>
+              </div>
+              <div class="footer">
+                  <p>&copy; ${new Date().getFullYear()} Jalapino. All rights reserved.</p>
+                  <p>This is an automated message, please do not reply.</p>
+              </div>
+          </div>
+      </body>
+      </html>
     `,
   });
 

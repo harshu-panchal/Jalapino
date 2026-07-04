@@ -107,6 +107,18 @@ const deliverySchema = new mongoose.Schema(
             select: false,
         },
 
+        fcmtoken: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        
+        fcmtokenMobile: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
         lastLogin: Date,
 
         /** Last GPS fix from POST /delivery/location (for radius matching). */

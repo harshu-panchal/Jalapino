@@ -133,15 +133,10 @@ const DeliveryAuth = () => {
         const dlKeywords = ["driving", "licence", "license", "india", "union", "government", "transport", "validity", "form", "rj"];
         const hasDlKeywords = dlKeywords.some(k => rawText.includes(k));
 
-        if (isMatch) {
-          setDlVerified(true);
-          setDlFile(file);
-          toast.success("Driving License Verified!");
-        } else {
-          setDlVerified(false);
-          setDlFile(null);
-          toast.error("DL Number mismatch. Make sure you typed the exact number from the photo.");
-        }
+        // Bypass AI strict match for DL as requested
+        setDlVerified(true);
+        setDlFile(file);
+        toast.success("Driving License Uploaded Successfully!");
       } else if (type === "pan") {
         targetNumber = signupPanNumber.toLowerCase().replace(/[^a-z0-9]/g, "");
         const normalizedTarget = normalize(targetNumber);
@@ -152,15 +147,10 @@ const DeliveryAuth = () => {
         isMatch = (targetNumber && cleanText.includes(targetNumber)) ||
           (normalizedTarget && normalizedCleanText.includes(normalizedTarget));
 
-        if (isMatch || (hasPanKeywords && isMatch)) {
-          setPanVerified(true);
-          setPanFile(file);
-          toast.success("PAN Card Verified!");
-        } else {
-          setPanVerified(false);
-          setPanFile(null);
-          toast.error("PAN mismatch. Photo must be clear and show the PAN number.");
-        }
+        // Bypass AI strict match for PAN as requested
+        setPanVerified(true);
+        setPanFile(file);
+        toast.success("PAN Card Uploaded Successfully!");
       } else if (type === "aadhar") {
         targetNumber = signupAadharNumber.toLowerCase().replace(/[^a-z0-9]/g, "");
         const normalizedTarget = normalize(targetNumber);
@@ -171,15 +161,10 @@ const DeliveryAuth = () => {
         isMatch = (targetNumber && cleanText.includes(targetNumber)) ||
           (normalizedTarget && normalizedCleanText.includes(normalizedTarget));
 
-        if (isMatch || (hasAadharKeywords && isMatch)) {
-          setAadharVerified(true);
-          setAadharFile(file);
-          toast.success("Aadhar Card Verified!");
-        } else {
-          setAadharVerified(false);
-          setAadharFile(null);
-          toast.error("Aadhar mismatch. 12-digit number should be clearly visible.");
-        }
+        // Bypass AI strict match for Aadhar as requested
+        setAadharVerified(true);
+        setAadharFile(file);
+        toast.success("Aadhar Card Uploaded Successfully!");
       }
     } catch (error) {
       console.error("OCR Error:", error);

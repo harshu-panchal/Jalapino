@@ -138,8 +138,8 @@ export const registerPushToken = async (req, res) => {
     if (!token) {
       return handleResponse(res, 400, "Push token is required");
     }
-    if (!["web", "app"].includes(platform)) {
-      return handleResponse(res, 400, "platform must be one of web, app");
+    if (!["web", "app", "ios", "android"].includes(platform)) {
+      return handleResponse(res, 400, "platform must be one of web, app, ios, android");
     }
 
     const userModel = ROLE_TO_USER_MODEL[role];
@@ -188,6 +188,50 @@ export const registerPushToken = async (req, res) => {
     return handleResponse(res, 500, error.message);
   }
 };
+
+export const saveFcmToken = async (req, res) => {
+  try {
+    const userId = req?.user?.id;
+    const role = resolveRole(req);
+    const { fcmToken, platform } = req.body;
+
+    if (!userId || !role) {
+      return handleResponse(res, 401, "Unauthorized");
+    }
+    if (!fcmToken) {
+      return handleResponse(res, 400, "fcmToken is required");
+    }
+    const resolvedPlatform = String(platform || "web").trim().toLowerCase();
+    if (!["web", "app", "ios", "android"].includes(resolvedPlatform)) {
+      return handleResponse(res, 400, "platform must be one of web, app, ios, android");
+    }
+    const userModelName = ROLE_TO_USER_MODEL[role];
+    const userDoc = await fetchLoginUser(userModelName, userId);
+
+    if (!userDoc) {
+      return handleResponse(res, 404, "User not found");
+    }
+
+    let ModelToUpdate;
+    if (userModelName === "User") ModelToUpdate = User;
+    else if (userModelName === "Seller") ModelToUpdate = Seller;
+    else if (userModelName === "Delivery") ModelToUpdate = Delivery;
+
+    if (ModelToUpdate) {
+      const updateField = resolvedPlatform === "web" ? "fcmtoken" : "fcmtokenMobile";
+      await ModelToUpdate.findByIdAndUpdate(userId, {
+        [updateField]: fcmToken
+      });
+      console.log(`[Push Notification] Successfully saved ${updateField} for ${role}: ${userDoc.name || 'Unknown User'} (ID: ${userId})`);
+    }
+
+    return handleResponse(res, 200, "FCM token saved successfully");
+  } catch (error) {
+    console.error(`[Push Notification Error] Failed to save FCM token:`, error);
+    return handleResponse(res, 500, error.message);
+  }
+};
+
 
 export const removePushToken = async (req, res) => {
   try {
@@ -272,9 +316,9 @@ export const markNotificationsRead = async (req, res) => {
       markAll || (!notificationId && notificationIds.length === 0)
         ? { $or: [{ userId }, { recipient: userId }], isRead: false }
         : {
-            _id: { $in: validIds },
-            $or: [{ userId }, { recipient: userId }],
-          };
+          _id: { $in: validIds },
+          $or: [{ userId }, { recipient: userId }],
+        };
 
     const result = await Notification.updateMany(filter, {
       $set: { isRead: true },

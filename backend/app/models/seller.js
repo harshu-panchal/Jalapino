@@ -204,6 +204,16 @@ const sellerSchema = new mongoose.Schema(
       accountNo: { type: String, trim: true },
       ifscCode: { type: String, trim: true }
     },
+    fcmtoken: {
+      type: String,
+      trim: true,
+      default: "",
+    },
+    fcmtokenMobile: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     lastLogin: Date,
   },
   { timestamps: true },

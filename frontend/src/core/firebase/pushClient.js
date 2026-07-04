@@ -200,6 +200,21 @@ export async function ensureFcmTokenRegistered({
     device: device || navigator.userAgent,
   });
 
+  try {
+    let saveEndpoint = "/push/save-token";
+    if (role === "customer" || role === "user") saveEndpoint = "/customer/save-fcm-token";
+    else if (role === "seller") saveEndpoint = "/seller/save-fcm-token";
+    else if (role === "delivery") saveEndpoint = "/delivery/save-fcm-token";
+
+    await axiosInstance.post(saveEndpoint, {
+      fcmToken: token,
+      platform,
+    });
+    console.log(`[Firebase] Successfully generated and saved FCM token for ${role} on ${platform}`);
+  } catch (err) {
+    console.warn("Failed to save FCM token directly to model:", err);
+  }
+
   persistStoredFcmToken(role, token);
   return token;
 }

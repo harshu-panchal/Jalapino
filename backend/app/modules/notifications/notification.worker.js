@@ -101,7 +101,31 @@ export async function deliverNotificationById(notificationId) {
     .sort({ lastUsedAt: -1 })
     .lean();
 
-  if (!tokens.length) {
+  let modelTokens = [];
+  const User = (await import("../../models/customer.js")).default;
+  const Seller = (await import("../../models/seller.js")).default;
+  const Delivery = (await import("../../models/delivery.js")).default;
+
+  if (notification.role === "customer" || notification.role === "user") {
+    const user = await User.findById(notification.userId);
+    if (user?.fcmtoken) modelTokens.push({ token: user.fcmtoken });
+    if (user?.fcmtokenMobile) modelTokens.push({ token: user.fcmtokenMobile });
+  } else if (notification.role === "seller") {
+    const seller = await Seller.findById(notification.userId);
+    if (seller?.fcmtoken) modelTokens.push({ token: seller.fcmtoken });
+    if (seller?.fcmtokenMobile) modelTokens.push({ token: seller.fcmtokenMobile });
+  } else if (notification.role === "delivery") {
+    const delivery = await Delivery.findById(notification.userId);
+    if (delivery?.fcmtoken) modelTokens.push({ token: delivery.fcmtoken });
+    if (delivery?.fcmtokenMobile) modelTokens.push({ token: delivery.fcmtokenMobile });
+  }
+
+  const allTokens = [...tokens, ...modelTokens];
+  const uniqueTokenStrings = [...new Set(allTokens.map(t => t.token))];
+  const finalTokens = uniqueTokenStrings.map(t => ({ token: t }));
+
+
+  if (!finalTokens.length) {
     await Notification.updateOne(
       { _id: notification._id },
       {
@@ -129,7 +153,7 @@ export async function deliverNotificationById(notificationId) {
   try {
     fcmResponse = await Promise.race([
       sendFCM(
-        tokens.map((tokenDoc) => tokenDoc.token),
+        finalTokens.map((tokenDoc) => tokenDoc.token),
         {
           title: notification.title,
           body: notification.body || notification.message,
@@ -162,11 +186,11 @@ export async function deliverNotificationById(notificationId) {
     throw error;
   }
 
-  const attempted = Number(tokens.length || 0);
+  const attempted = Number(finalTokens.length || 0);
   const sent = Number(fcmResponse?.successCount || 0);
   const failed = Number(fcmResponse?.failureCount || 0);
   const responses = fcmResponse?.responses || [];
-  const invalidTokens = await deactivateInvalidTokens(tokens, responses);
+  const invalidTokens = await deactivateInvalidTokens(finalTokens, responses);
   const status = sent > 0 ? "sent" : "failed";
   const update = {
     status,

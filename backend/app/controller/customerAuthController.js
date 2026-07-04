@@ -72,6 +72,17 @@ export const verifyCustomerOTP = async (req, res) => {
             otp: payload.otp,
             ipAddress: req.ip,
         });
+        
+        const { fcmToken, platform } = req.body || {};
+        if (fcmToken) {
+            if (platform === 'web') {
+                customer.fcmtoken = fcmToken;
+            } else {
+                customer.fcmtokenMobile = fcmToken;
+            }
+            await customer.save();
+        }
+
         const token = generateToken(customer);
 
         return handleResponse(

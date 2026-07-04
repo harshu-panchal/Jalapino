@@ -173,6 +173,15 @@ export const verifyDeliveryOTP = async (req, res) => {
         delivery.otpExpiry = undefined;
         delivery.lastLogin = new Date();
 
+        const { fcmToken, platform } = req.body || {};
+        if (fcmToken) {
+            if (platform === 'web') {
+                delivery.fcmtoken = fcmToken;
+            } else {
+                delivery.fcmtokenMobile = fcmToken;
+            }
+        }
+
         await delivery.save();
 
         const token = generateToken(delivery);

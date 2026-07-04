@@ -98,6 +98,7 @@ export async function sendFCM(tokens = [], payload = {}) {
           body,
           tag,
           requireInteraction: true,
+          icon: "/logo2.png",
           ...(image ? { image } : {}),
           data: { link: resolvedLink || link },
         },

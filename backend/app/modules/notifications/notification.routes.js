@@ -11,6 +11,7 @@ import {
   getTestPushNotificationStatus,
   broadcastNotification,
   getBroadcastAudienceStats,
+  saveFcmToken,
 } from "./notification.controller.js";
 
 const notificationRouter = express.Router();
@@ -35,6 +36,7 @@ pushRouter.post("/test", testPushNotification);
 pushRouter.get("/test-status/:orderId", getTestPushNotificationStatus);
 pushRouter.get("/preferences", getNotificationPreferences);
 pushRouter.patch("/preferences", updateNotificationPreferences);
+pushRouter.post("/save-token", saveFcmToken);
 
 export { notificationRouter, pushRouter };
 export default notificationRouter;

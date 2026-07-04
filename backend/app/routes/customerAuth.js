@@ -7,6 +7,7 @@ import {
     updateCustomerProfile,
     getCustomerTransactions,
 } from "../controller/customerAuthController.js";
+import { saveFcmToken } from "../modules/notifications/notification.controller.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import {
     authRouteRateLimiter,
@@ -22,6 +23,7 @@ const smallAuthPayload = createContentLengthGuard(
 router.post("/send-signup-otp", authRouteRateLimiter, otpRouteRateLimiter, smallAuthPayload, signupCustomer);
 router.post("/send-login-otp", authRouteRateLimiter, otpRouteRateLimiter, smallAuthPayload, loginCustomer);
 router.post("/verify-otp", authRouteRateLimiter, otpRouteRateLimiter, smallAuthPayload, verifyCustomerOTP);
+router.post("/save-fcm-token", verifyToken, saveFcmToken);
 
 // Profile routes
 router.get("/profile", verifyToken, getCustomerProfile);
