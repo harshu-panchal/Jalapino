@@ -53,7 +53,7 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
 
     const year = new Date().getFullYear().toString();
     const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
-    
+
     // Create year/month subdirectories
     const targetDir = path.join(STORAGE_BASE_PATH, folder, year, month);
     await fs.mkdir(targetDir, { recursive: true });
@@ -65,7 +65,7 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
 
     try {
         let pipeline = sharp(fileBuffer);
-        
+
         if (options.width || options.height) {
             pipeline = pipeline.resize({
                 width: options.width,
@@ -80,8 +80,8 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
             .toFile(targetPath);
 
         const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
-        const domain = process.env.API_DOMAIN || "http://localhost:7000"; // fallback
-        
+        const domain = process.env.API_DOMAIN || "https://jalpaino.com"; // fallback
+
         return `${domain}${relativeUrlPath}`;
     } catch (error) {
         logger.error(`Error processing image: ${error.message}`);
@@ -96,7 +96,7 @@ export async function saveRawFile(fileBuffer, folder = "docs", originalName = ""
 
     const year = new Date().getFullYear().toString();
     const month = (new Date().getMonth() + 1).toString().padStart(2, '0');
-    
+
     const targetDir = path.join(STORAGE_BASE_PATH, folder, year, month);
     await fs.mkdir(targetDir, { recursive: true });
 
@@ -119,10 +119,10 @@ export async function deleteLocalFile(fileUrl) {
     try {
         const domain = process.env.API_DOMAIN || "http://localhost:7000";
         if (!fileUrl.startsWith(domain)) return; // Only process if it's our domain
-        
+
         const relativePath = fileUrl.replace(domain, "").replace("/images/", "");
         const absolutePath = path.join(STORAGE_BASE_PATH, relativePath);
-        
+
         await fs.unlink(absolutePath);
         logger.info(`Deleted local file: ${absolutePath}`);
     } catch (error) {
