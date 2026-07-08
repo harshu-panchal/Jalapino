@@ -40,6 +40,11 @@ const sellerSchema = new mongoose.Schema(
       trim: true,
     },
 
+    mainProducts: {
+      type: String,
+      trim: true,
+    },
+
     description: {
       type: String,
       trim: true,
@@ -119,6 +124,10 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    isPickupPointEligible: {
+      type: Boolean,
+      default: false,
+    },
     location: {
       type: {
         type: String,
@@ -138,6 +147,10 @@ const sellerSchema = new mongoose.Schema(
     isEventSeller: {
       type: Boolean,
       default: false
+    },
+    hasProductAccess: {
+      type: Boolean,
+      default: true
     },
     serviceCategories: [{
       type: mongoose.Schema.Types.ObjectId,
@@ -199,11 +212,29 @@ const sellerSchema = new mongoose.Schema(
       default: 100 // Out of 100
     },
     // ---------------------------------
+    // Module Permissions
+    retailEnabled: {
+      type: Boolean,
+      default: true
+    },
+    planMyEventEnabled: {
+      type: Boolean,
+      default: false
+    },
+    // ---------------------------------
     bankDetails: {
       bankName: { type: String, trim: true },
       accountNo: { type: String, trim: true },
       ifscCode: { type: String, trim: true }
     },
+    
+    otherDocumentExpiryDate: {
+      type: Date,
+    },
+    lastExpiryNotificationSentAt: {
+      type: Date,
+    },
+
     fcmtoken: {
       type: String,
       trim: true,

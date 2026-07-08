@@ -51,7 +51,8 @@ export const DEFAULT_SETTINGS = {
 export function applyThemeVariables(settings) {
   if (!settings) return;
   const root = document.documentElement;
-  const primary = settings.primaryColor || DEFAULT_SETTINGS.primaryColor;
+  // Force the new maroon brand color globally for the user app (slightly lighter for buttons)
+  const primary = "#A00D2D";
   const secondary = settings.secondaryColor || DEFAULT_SETTINGS.secondaryColor;
   
   root.style.setProperty("--primary", primary);

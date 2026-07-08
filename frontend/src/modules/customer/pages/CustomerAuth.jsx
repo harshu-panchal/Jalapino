@@ -516,7 +516,8 @@ const CustomerAuth = () => {
                         initial={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         transition={{ duration: 0.6, ease: "easeInOut" }}
-                        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#D62828] to-[#800000] font-sans"
+                        className="fixed inset-0 z-50 flex flex-col items-center justify-center font-sans"
+                        style={{ background: "var(--customer-header-gradient, var(--primary))" }}
                     >
                         <div className="flex flex-col items-center gap-8">
                             {/* Logo */}

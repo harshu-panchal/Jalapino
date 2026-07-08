@@ -215,8 +215,24 @@ const ActiveSellers = () => {
         note: "Recently approved",
       },
     ],
-    [stats],
+    [stats]
   );
+
+  const handleToggleProductAccess = async (sellerId, currentAccess) => {
+    try {
+      const res = await adminApi.updateSeller(sellerId, { hasProductAccess: !currentAccess });
+      if (res.data.success) {
+        toast.success("Permissions updated successfully");
+        // Update the seller list state and selected seller to immediately reflect
+        setSellers(prev => prev.map(s => String(s._id || s.id) === String(sellerId) ? { ...s, hasProductAccess: !currentAccess } : s));
+        if (selectedSeller && String(selectedSeller._id || selectedSeller.id) === String(sellerId)) {
+          setSelectedSeller(prev => ({ ...prev, hasProductAccess: !currentAccess }));
+        }
+      }
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Failed to update permissions");
+    }
+  };
 
   return (
     <div className="ds-section-spacing animate-in fade-in slide-in-from-bottom-2 duration-700 pb-16">
@@ -621,6 +637,32 @@ const ActiveSellers = () => {
                           <span>Last order</span>
                           <span>{selectedSeller.lastOrderLabel || "No orders yet"}</span>
                         </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                        Permissions
+                      </p>
+                      <div className="p-4 bg-white rounded-2xl ring-1 ring-slate-100 flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-bold text-slate-800">Product Management</p>
+                          <p className="text-[10px] font-medium text-slate-400 mt-0.5">Allow adding/editing products</p>
+                        </div>
+                        <button
+                          onClick={() => handleToggleProductAccess(selectedSeller._id || selectedSeller.id, selectedSeller.hasProductAccess)}
+                          className={cn(
+                            "relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2",
+                            selectedSeller.hasProductAccess !== false ? "bg-brand-500" : "bg-slate-200"
+                          )}
+                        >
+                          <span
+                            className={cn(
+                              "pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out",
+                              selectedSeller.hasProductAccess !== false ? "translate-x-4" : "translate-x-0"
+                            )}
+                          />
+                        </button>
                       </div>
                     </div>
                   </div>

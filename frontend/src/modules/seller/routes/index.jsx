@@ -15,6 +15,7 @@ import {
   HiOutlineChartBarSquare,
   HiOutlineCreditCard,
   HiOutlineMapPin,
+  HiOutlineVideoCamera
 } from "react-icons/hi2";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -31,6 +32,7 @@ const Transactions = React.lazy(() => import("../pages/Transactions"));
 const DeliveryTracking = React.lazy(() => import("../pages/DeliveryTracking"));
 const Profile = React.lazy(() => import("../pages/Profile"));
 const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
+const LiveStream = React.lazy(() => import("../pages/LiveStream"));
 
 // Event Seller Pages
 const EventDashboard = React.lazy(() => import("../pages/event/EventDashboard"));
@@ -42,6 +44,7 @@ const EventRequests = React.lazy(() => import("../pages/event/EventRequests"));
 
 const navItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
+  { label: "Go Live", path: "/seller/live", icon: HiOutlineVideoCamera },
   { label: "Products", path: "/seller/products", icon: HiOutlineCube },
   { label: "Stock", path: "/seller/inventory", icon: HiOutlineArchiveBox },
   { label: "Orders", path: "/seller/orders", icon: HiOutlineTruck },
@@ -72,6 +75,7 @@ const navItems = [
 
 const eventNavItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
+  { label: "Go Live", path: "/seller/live", icon: HiOutlineVideoCamera },
   { label: "Event Requests", path: "/seller/event-requests", icon: HiOutlineClipboardDocumentList },
   { label: "Packages", path: "/seller/packages", icon: HiOutlineCube },
   { label: "Reservations", path: "/seller/reservations", icon: HiOutlineClipboardDocumentList },
@@ -87,7 +91,12 @@ const SellerRoutes = () => {
   }, []);
 
   const isEventSeller = user?.isEventSeller === true;
-  const activeNavItems = isEventSeller ? eventNavItems : navItems;
+  const hasProductAccess = user?.hasProductAccess !== false;
+
+  let activeNavItems = isEventSeller ? eventNavItems : navItems;
+  if (!hasProductAccess) {
+    activeNavItems = activeNavItems.filter(item => !['Products', 'Stock', 'Packages'].includes(item.label));
+  }
 
   return (
     <DashboardLayout navItems={activeNavItems} title={isEventSeller ? "Event Management" : "Seller Panel"}>
@@ -99,6 +108,7 @@ const SellerRoutes = () => {
             <Route path="/packages" element={<EventPackages />} />
             <Route path="/reservations" element={<EventReservations />} />
             <Route path="/calendar" element={<EventCalendar />} />
+            <Route path="/live" element={<LiveStream />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
@@ -115,6 +125,7 @@ const SellerRoutes = () => {
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/withdrawals" element={<Withdrawals />} />
+            <Route path="/live" element={<LiveStream />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>

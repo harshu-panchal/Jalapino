@@ -15,7 +15,9 @@ const CityManagementPage = () => {
         state: '',
         cityName: '',
         readinessStatus: 'Ready',
-        isActive: true
+        isActive: true,
+        retailEnabled: true,
+        planMyEventEnabled: false
     });
     const [editingId, setEditingId] = useState(null);
 
@@ -40,13 +42,15 @@ const CityManagementPage = () => {
             if (editingId) {
                 await axiosInstance.put(`/admin/event-config/cities/${editingId}`, newCity);
                 alert('City updated successfully');
+                fetchCities();
+                // We keep the form in edit mode so the user sees their updated toggles
             } else {
                 await axiosInstance.post('/admin/event-config/cities', newCity);
                 alert('City added successfully');
+                fetchCities();
+                setEditingId(null);
+                setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false });
             }
-            fetchCities();
-            setEditingId(null);
-            setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true });
         } catch (error) {
             alert('Failed to save city');
         }
@@ -58,7 +62,9 @@ const CityManagementPage = () => {
             state: city.state,
             cityName: city.cityName,
             readinessStatus: city.readinessStatus,
-            isActive: city.isActive
+            isActive: city.isActive,
+            retailEnabled: city.retailEnabled ?? true,
+            planMyEventEnabled: city.planMyEventEnabled ?? false
         });
     };
 
@@ -87,12 +93,12 @@ const CityManagementPage = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {/* Form */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 h-fit">
                     <div className="flex justify-between items-center mb-4">
                         <h2 className="text-lg font-bold text-slate-800">{editingId ? 'Edit City' : 'Add New City'}</h2>
                         {editingId && (
                             <button 
-                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true }); }}
+                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false }); }}
                                 className="text-xs text-blue-600 hover:underline"
                             >
                                 Cancel Edit
@@ -132,6 +138,33 @@ const CityManagementPage = () => {
                                 <option value="Not Ready">Not Ready</option>
                             </select>
                         </div>
+                        
+                        <div className="pt-2 pb-2 border-t border-slate-100">
+                            <p className="text-xs font-bold text-slate-600 mb-2 uppercase">Module Permissions</p>
+                            
+                            <label className="flex items-center justify-between mb-3 cursor-pointer">
+                                <div>
+                                    <span className="text-sm font-semibold text-slate-800">Retail Module</span>
+                                    <p className="text-[10px] text-slate-500">Enable Quick Commerce Retail</p>
+                                </div>
+                                <div className="relative">
+                                    <input type="checkbox" className="sr-only peer" checked={newCity.retailEnabled} onChange={(e) => setNewCity({...newCity, retailEnabled: e.target.checked})} />
+                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                </div>
+                            </label>
+
+                            <label className="flex items-center justify-between cursor-pointer">
+                                <div>
+                                    <span className="text-sm font-semibold text-slate-800">Plan My Event</span>
+                                    <p className="text-[10px] text-slate-500">Enable Event Commerce</p>
+                                </div>
+                                <div className="relative">
+                                    <input type="checkbox" className="sr-only peer" checked={newCity.planMyEventEnabled} onChange={(e) => setNewCity({...newCity, planMyEventEnabled: e.target.checked})} />
+                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                </div>
+                            </label>
+                        </div>
+
                         <button type="submit" className="w-full bg-purple-600 text-white rounded-xl p-3 font-bold hover:bg-purple-700">
                             {editingId ? 'Update City' : 'Add City'}
                         </button>
@@ -141,18 +174,28 @@ const CityManagementPage = () => {
                 {/* List */}
                 <div className="md:col-span-2 space-y-4">
                     {cities.map(city => (
-                        <div key={city._id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center">
+                        <div key={city._id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                 <h3 className="font-bold text-slate-800 text-lg">{city.cityName}</h3>
                                 <p className="text-sm text-slate-500">{city.state}</p>
+                                <div className="flex flex-wrap items-center gap-2 mt-2">
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${city.retailEnabled ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
+                                        RETAIL {city.retailEnabled ? 'ON' : 'OFF'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${city.planMyEventEnabled ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
+                                        EVENT {city.planMyEventEnabled ? 'ON' : 'OFF'}
+                                    </span>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-3">
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${city.readinessStatus === 'Ready' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                                    {city.readinessStatus}
-                                </span>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${city.isActive ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
-                                    {city.isActive ? 'Active' : 'Inactive'}
-                                </span>
+                            <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                                <div className="flex gap-2">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${city.readinessStatus === 'Ready' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                                        {city.readinessStatus}
+                                    </span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${city.isActive ? 'bg-blue-100 text-blue-700' : 'bg-red-100 text-red-700'}`}>
+                                        {city.isActive ? 'Active' : 'Inactive'}
+                                    </span>
+                                </div>
                                 <div className="flex items-center ml-2 border-l pl-2">
                                     <button onClick={() => handleEditClick(city)} className="p-1 text-slate-400 hover:text-blue-600">
                                         <EditIcon fontSize="small" />

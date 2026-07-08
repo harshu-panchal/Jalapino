@@ -45,6 +45,10 @@ import {
   getFirebaseTrackingCleanupJobInterval,
   isFirebaseTrackingCleanupJobEnabled,
 } from "./app/jobs/firebaseTrackingCleanupJob.js";
+import {
+  getDocumentExpiryNotificationJobHandler,
+  getDocumentExpiryNotificationJobInterval,
+} from "./app/jobs/documentExpiryNotificationJob.js";
 import logger from "./app/services/logger.js";
 import { stopScheduledJobs } from "./app/services/distributedScheduler.js";
 
@@ -358,11 +362,18 @@ async function startScheduler() {
     );
   }
 
+  // Register document expiry notification job
+  registerScheduledJob(
+    'documentExpiryNotificationJob',
+    getDocumentExpiryNotificationJobInterval(),
+    getDocumentExpiryNotificationJobHandler()
+  );
+
   // Start all registered jobs
   await startScheduledJobs();
   registerSchedulerStopper(stopScheduledJobs);
 
-  const scheduledJobs = ['orderAutoCancelJob', 'returnWindowReleaseJob'];
+  const scheduledJobs = ['orderAutoCancelJob', 'returnWindowReleaseJob', 'documentExpiryNotificationJob'];
   if (isPayoutBatchJobEnabled()) scheduledJobs.push('payoutBatchJob');
   if (isWalletLedgerVerifierEnabled()) scheduledJobs.push('walletLedgerVerifierJob');
   if (isFirebaseTrackingCleanupJobEnabled()) scheduledJobs.push('firebaseTrackingCleanupJob');

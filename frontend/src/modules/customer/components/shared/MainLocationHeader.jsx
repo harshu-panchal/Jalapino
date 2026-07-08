@@ -168,7 +168,7 @@ const MainLocationHeader = ({
       .then((m) => setCartAnimData(m.default))
       .catch(() => { });
   }, []);
-  const { currentLocation, refreshLocation, isFetchingLocation } =
+  const { currentLocation, refreshLocation, isFetchingLocation, availableModules } =
     useLocation();
   const { isOpen: isProductDetailOpen } = useProductDetail();
   const { settings } = useSettings();
@@ -280,7 +280,8 @@ const MainLocationHeader = ({
   const displayNav = "flex";
   const displayCart = "block";
 
-  const baseHeaderColor = activeCategory?.headerColor || localStorage.getItem('customer-header-base-color') || "var(--primary)";
+  // Force the premium maroon color for the header
+  const baseHeaderColor = "#66001D";
   const headerFontColor = activeCategory?.headerFontColor || "#111827";
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
 
@@ -329,7 +330,7 @@ const MainLocationHeader = ({
           {/* Mode Switcher Cards */}
           <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
             {/* Retail Card */}
-            {settings?.platformControl?.retailEnabled !== false && (
+            {availableModules?.retailEnabled && (
               <button
                 type="button"
                 onClick={() => toggleMode('retail')}
@@ -357,7 +358,7 @@ const MainLocationHeader = ({
             )}
 
             {/* Wholesale Card */}
-            {settings?.platformControl?.wholesaleEnabled !== false && (
+            {settings?.platformControl?.wholesaleEnabled !== false && availableModules?.wholesaleEnabled && (
               <button
                 type="button"
                 onClick={() => toggleMode('whole')}
@@ -385,7 +386,7 @@ const MainLocationHeader = ({
             )}
 
             {/* Plan My Event Card */}
-            {settings?.platformControl?.planMyEventEnabled !== false && (
+            {availableModules?.planMyEventEnabled && (
               <button
                 type="button"
                 onClick={() => {
@@ -397,15 +398,15 @@ const MainLocationHeader = ({
                 }}
                 className={cn(
                   "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                  "bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-[0_8px_24px_rgba(236,72,153,0.3)] hover:scale-[1.02]"
+                  "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:scale-[1.02]"
                 )}
                 style={{
                   borderWidth: '3px',
                   borderColor: 'transparent'
                 }}
               >
-                <div className="flex items-center justify-center w-7 h-7 bg-white/20 rounded-full">
-                  <CelebrationIcon sx={{ fontSize: 18, color: 'white' }} />
+                <div className="flex items-center justify-center w-7 h-7 bg-purple-100 rounded-full">
+                  <CelebrationIcon sx={{ fontSize: 18, color: '#9333ea' }} />
                 </div>
                 <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br/>Event</span>
               </button>

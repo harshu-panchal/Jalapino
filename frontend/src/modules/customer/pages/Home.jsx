@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useInViewAnimation } from "@/core/hooks/useInViewAnimation";
-import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, Search, Coffee } from "lucide-react";
-
+import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, Search } from "lucide-react";
 // MUI Icons (shared with admin & icon selector)
 import HomeIcon from "@mui/icons-material/Home";
 import DevicesIcon from "@mui/icons-material/Devices";
@@ -495,7 +494,7 @@ const Home = () => {
       ) : (
         <>
           {/* Search Bar on Page (above banners) */}
-          <div className="w-full max-w-2xl mx-auto px-4 pt-8 md:pt-12 pb-8 md:pb-12 flex items-center gap-3">
+          <div className="sticky top-[180px] md:top-[155px] z-[100] w-full max-w-2xl mx-auto px-4 py-3 md:py-4 mb-4 flex items-center gap-3 bg-[#FAF8F6] shadow-[0_8px_20px_-12px_rgba(0,0,0,0.1)] transition-all">
             <motion.div
               onClick={() => navigate("/search")}
               whileHover={{ scale: 1.005 }}
@@ -528,16 +527,6 @@ const Home = () => {
               </div>
             </motion.button>
 
-            <motion.button
-              onClick={() => navigate("/catering")}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              className="w-12 h-12 flex items-center justify-center cursor-pointer bg-white rounded-[12px] md:rounded-full border border-slate-200 shadow-sm hover:shadow-md transition-all shrink-0 relative overflow-hidden"
-              title="Catering Services"
-            >
-              <div className="absolute inset-0 bg-amber-50 opacity-0 hover:opacity-100 transition-opacity"></div>
-              <Coffee className="w-5 h-5 text-amber-500 relative z-10" />
-            </motion.button>
           </div>
 
           {heroConfig.banners?.items?.length > 0 && (

@@ -89,3 +89,20 @@ export async function getNotificationQueueStats() {
     size: waiting + active + delayed,
   };
 }
+
+/**
+ * Enqueue a notification job into the Bull queue.
+ * @param {Object} payload - Notification payload
+ */
+export async function enqueueNotification(payload) {
+  return notificationQueue.add(NOTIFICATION_JOB_NAMES.SEND, payload, {
+    attempts: NOTIFICATION_QUEUE_ATTEMPTS(),
+    backoff: {
+      type: "exponential",
+      delay: NOTIFICATION_QUEUE_BACKOFF_MS(),
+    },
+    removeOnComplete: true,
+    removeOnFail: false,
+  });
+}
+

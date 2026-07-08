@@ -167,7 +167,10 @@ export const updateSellerDetails = async (req, res) => {
       address, 
       sellerStatus, 
       commissionRate, 
-      bankDetails 
+      bankDetails,
+      hasProductAccess,
+      retailEnabled,
+      planMyEventEnabled
     } = req.body;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
@@ -180,6 +183,9 @@ export const updateSellerDetails = async (req, res) => {
     if (sellerStatus) updateData.sellerStatus = sellerStatus;
     if (commissionRate !== undefined) updateData.commissionRate = Number(commissionRate);
     if (bankDetails) updateData.bankDetails = bankDetails;
+    if (hasProductAccess !== undefined) updateData.hasProductAccess = hasProductAccess;
+    if (retailEnabled !== undefined) updateData.retailEnabled = retailEnabled;
+    if (planMyEventEnabled !== undefined) updateData.planMyEventEnabled = planMyEventEnabled;
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(

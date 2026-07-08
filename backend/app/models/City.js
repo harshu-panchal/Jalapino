@@ -23,6 +23,14 @@ const citySchema = new mongoose.Schema({
         type: String,
         enum: ['Ready', 'Partially Ready', 'Not Ready'],
         default: 'Not Ready'
+    },
+    retailEnabled: {
+        type: Boolean,
+        default: true
+    },
+    planMyEventEnabled: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

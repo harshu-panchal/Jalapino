@@ -170,53 +170,60 @@ const ReelItem = ({ product, isActive, activeIndex, index }) => {
                     </div>
 
                     {/* Title */}
-                    <h2 className="text-lg font-black tracking-tight leading-tight line-clamp-1 drop-shadow-md">
+                    <h2 className="text-lg font-black tracking-tight leading-tight line-clamp-1 drop-shadow-md flex items-center gap-2">
                         {product.name}
+                        {product.isLiveStream && (
+                            <span className="bg-red-500 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full animate-pulse">
+                                LIVE
+                            </span>
+                        )}
                     </h2>
 
                     {/* Short Description snippet */}
                     <p className="text-xs text-zinc-300 font-medium leading-relaxed line-clamp-2 drop-shadow-md opacity-90">
-                        {product.description || "Premium quality product sourced directly to provide the freshest experience."}
+                        {product.description || (product.isLiveStream ? "Watch the live kitchen stream from this seller." : "Premium quality product sourced directly to provide the freshest experience.")}
                     </p>
 
                     {/* Price and Action Button */}
-                    <div className="flex items-center gap-4 pt-1">
-                        <div className="flex flex-col">
-                            <span className="text-2xl font-black text-primary drop-shadow-md">
-                                ₹{product.salePrice || product.price}
-                            </span>
-                            {product.salePrice && product.salePrice < product.price && (
-                                <span className="text-[10px] text-zinc-400 line-through font-bold">
-                                    ₹{product.price}
+                    {!product.isLiveStream && (
+                        <div className="flex items-center gap-4 pt-1">
+                            <div className="flex flex-col">
+                                <span className="text-2xl font-black text-primary drop-shadow-md">
+                                    ₹{product.salePrice || product.price}
                                 </span>
+                                {product.salePrice && product.salePrice < product.price && (
+                                    <span className="text-[10px] text-zinc-400 line-through font-bold">
+                                        ₹{product.price}
+                                    </span>
+                                )}
+                            </div>
+
+                            {quantity > 0 ? (
+                                <div className="flex items-center bg-primary text-white rounded-xl h-10 px-1.5 shadow-lg shadow-brand-500/20">
+                                    <button
+                                        onClick={() => updateQuantity(product.id || product._id, -1, variantKey)}
+                                        className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-lg transition-all"
+                                    >
+                                        -
+                                    </button>
+                                    <span className="w-8 text-center font-black text-sm">{quantity}</span>
+                                    <button
+                                        onClick={() => updateQuantity(product.id || product._id, 1, variantKey)}
+                                        className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-lg transition-all"
+                                    >
+                                        +
+                                    </button>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={handleAddToCart}
+                                    className="h-10 px-5 bg-primary hover:bg-[var(--brand-400)] text-white text-xs font-black rounded-xl shadow-lg shadow-brand-500/20 active:scale-95 transition-all flex items-center gap-1.5"
+                                >
+                                    <ShoppingCart size={14} /> ADD TO CART
+                                </button>
                             )}
                         </div>
-
-                        {quantity > 0 ? (
-                            <div className="flex items-center bg-primary text-white rounded-xl h-10 px-1.5 shadow-lg shadow-brand-500/20">
-                                <button
-                                    onClick={() => updateQuantity(product.id || product._id, -1, variantKey)}
-                                    className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-lg transition-all"
-                                >
-                                    -
-                                </button>
-                                <span className="w-8 text-center font-black text-sm">{quantity}</span>
-                                <button
-                                    onClick={() => updateQuantity(product.id || product._id, 1, variantKey)}
-                                    className="w-7 h-7 flex items-center justify-center hover:bg-white/10 rounded-lg transition-all"
-                                >
-                                    +
-                                </button>
-                            </div>
-                        ) : (
-                            <button
-                                onClick={handleAddToCart}
-                                className="h-10 px-5 bg-primary hover:bg-[var(--brand-400)] text-white text-xs font-black rounded-xl shadow-lg shadow-brand-500/20 active:scale-95 transition-all flex items-center gap-1.5"
-                            >
-                                <ShoppingCart size={14} /> ADD TO CART
-                            </button>
-                        )}
-                    </div>
+                    )}
                 </div>
 
                 {/* Vertical actions sidebar (Likes, Shares, Details) */}
@@ -251,17 +258,19 @@ const ReelItem = ({ product, isActive, activeIndex, index }) => {
                     </button>
 
                     {/* View Details */}
-                    <button
-                        onClick={() => openProduct(product)}
-                        className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none"
-                    >
-                        <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 active:scale-90 text-white">
-                            <Eye size={20} />
-                        </div>
-                        <span className="text-[10px] font-bold tracking-wider text-zinc-300 drop-shadow-md">
-                            Details
-                        </span>
-                    </button>
+                    {!product.isLiveStream && (
+                        <button
+                            onClick={() => openProduct(product)}
+                            className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none"
+                        >
+                            <div className="w-12 h-12 rounded-full flex items-center justify-center transition-all bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 active:scale-90 text-white">
+                                <Eye size={20} />
+                            </div>
+                            <span className="text-[10px] font-bold tracking-wider text-zinc-300 drop-shadow-md">
+                                Details
+                            </span>
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -294,17 +303,41 @@ const ReelsPage = () => {
                     params.lat = currentLocation.latitude;
                     params.lng = currentLocation.longitude;
                 }
-                const res = await customerApi.getProducts(params);
-                if (res.data.success) {
-                    const items = res.data.result?.items || res.data.results || [];
-                    const filtered = items.filter(item => item.videoUrl);
-                    setProducts(filtered);
+                const [productsRes, streamsRes] = await Promise.allSettled([
+                    customerApi.getProducts(params),
+                    customerApi.getLiveKitchenStreams()
+                ]);
 
-                    if (initialProductId) {
-                        const idx = filtered.findIndex(item => String(item._id || item.id) === String(initialProductId));
-                        if (idx !== -1) {
-                            setActiveIndex(idx);
-                        }
+                let combinedFeed = [];
+
+                if (productsRes.status === 'fulfilled' && productsRes.value?.data?.success) {
+                    const items = productsRes.value.data.result?.items || productsRes.value.data.results || [];
+                    combinedFeed = combinedFeed.concat(items.filter(item => item.videoUrl));
+                }
+
+                if (streamsRes.status === 'fulfilled' && streamsRes.value?.data?.success) {
+                    const streams = streamsRes.value.data.results || streamsRes.value.data.result || streamsRes.value.data.data || [];
+                    const mappedStreams = (Array.isArray(streams) ? streams : [streams]).map(stream => ({
+                        _id: stream._id,
+                        name: stream.sellerId?.shopName ? `${stream.sellerId.shopName} - Live Kitchen` : "Live Kitchen",
+                        description: "Watch live preparation straight from our kitchen.",
+                        videoUrl: stream.streamUrl,
+                        isLiveStream: true,
+                        brand: stream.sellerId?.shopName || "Kitchen",
+                        price: 0
+                    }));
+                    combinedFeed = combinedFeed.concat(mappedStreams);
+                }
+
+                // Shuffle combined feed for better UX
+                combinedFeed.sort(() => Math.random() - 0.5);
+
+                setProducts(combinedFeed);
+
+                if (initialProductId) {
+                    const idx = combinedFeed.findIndex(item => String(item._id || item.id) === String(initialProductId));
+                    if (idx !== -1) {
+                        setActiveIndex(idx);
                     }
                 }
             } catch (err) {

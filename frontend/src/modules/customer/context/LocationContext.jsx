@@ -9,6 +9,7 @@ import React, {
 import { customerApi } from "../services/customerApi";
 import { hasValidStoredAuthToken } from "@core/utils/authStorage";
 import { getJSON, setJSON, STORAGE_KEYS } from "@core/utils/storage";
+import axiosInstance from "@core/api/axios";
 
 const LocationContext = createContext(undefined);
 const STORAGE_KEY = STORAGE_KEYS.LOCATION;
@@ -34,6 +35,33 @@ export const LocationProvider = ({ children }) => {
 
   const [isFetchingLocation, setIsFetchingLocation] = useState(false);
   const [locationError, setLocationError] = useState(null);
+
+  const [citiesConfig, setCitiesConfig] = useState([]);
+
+  const fetchCitiesConfig = async () => {
+    try {
+      const res = await axiosInstance.get('/event-config/cities');
+      setCitiesConfig(res.data?.result || res.data?.results || res.data?.data || []);
+    } catch (error) {
+      console.error('Failed to fetch cities config', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCitiesConfig();
+  }, []);
+
+  const availableModules = useMemo(() => {
+    const currentCityName = currentLocation?.city?.trim()?.toLowerCase();
+    const cityConfig = citiesConfig.find(c => c.cityName?.trim()?.toLowerCase() === currentCityName);
+    
+    // Default to true if not configured or fallback logic
+    return {
+      retailEnabled: cityConfig ? (cityConfig.retailEnabled ?? true) : true,
+      planMyEventEnabled: cityConfig ? (cityConfig.planMyEventEnabled ?? false) : false,
+      wholesaleEnabled: false // We can pull from settings if needed, but defaulting to false or settings logic
+    };
+  }, [currentLocation?.city, citiesConfig]);
 
   // Update the current location.
   // By default this does NOT change saved addresses; only explicit
@@ -327,8 +355,9 @@ export const LocationProvider = ({ children }) => {
     isFetchingLocation,
     locationError,
     refreshLocation: fetchAndCacheLocation,
+    availableModules,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [currentLocation, savedAddresses, isFetchingLocation, locationError, refreshAddresses]);
+  }), [currentLocation, savedAddresses, isFetchingLocation, locationError, refreshAddresses, availableModules]);
 
   return (
     <LocationContext.Provider value={locationValue}>

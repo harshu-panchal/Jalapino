@@ -6,7 +6,8 @@ import { useSettings } from '@core/context/SettingsContext';
 const Footer = () => {
     const { settings } = useSettings();
     const logoUrl = Logo;
-    const primaryColor = settings?.primaryColor || 'var(--primary)';
+    // Always use the global primary color to match the theme override
+    const primaryColor = 'var(--primary)';
 
     return (
         <footer className="relative bg-[#051108] pt-20 pb-10 mt-20 text-slate-300 md:bg-gradient-to-br md:from-brand-700 md:via-brand-800 md:to-brand-900 md:pt-32 md:pb-16 md:mt-32 overflow-hidden">

@@ -14,6 +14,7 @@ export const customerApi = {
     getWithDedupe("/categories", params, { ttl: 60 * 1000 }), // 1 min for categories
   getProducts: (params) => getWithDedupe("/products", params),
   getProductById: (id, params) => getWithDedupe(`/products/${id}`, params),
+  getLiveKitchenStreams: () => getWithDedupe("/kitchen/public/streams"),
 
   // Sellers & Location
   getNearbySellers: (params) => getWithDedupe("/seller/nearby", params),

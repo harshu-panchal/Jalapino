@@ -142,7 +142,7 @@ const PlanMyEventPage = () => {
                                     disabled={isLoading}
                                 >
                                     <option value="">{isLoading ? "Loading..." : "Select City"}</option>
-                                    {cities.map(city => (
+                                    {cities.filter(city => city.planMyEventEnabled !== false).map(city => (
                                         <option key={city._id} value={city.cityName}>{city.cityName}, {city.state}</option>
                                     ))}
                                 </select>

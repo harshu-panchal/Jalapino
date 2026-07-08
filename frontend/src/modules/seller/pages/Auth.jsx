@@ -24,6 +24,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  ChevronDown,
 } from "lucide-react";
 import { toast } from "sonner";
 import Lottie from "lottie-react";
@@ -42,9 +43,9 @@ const createInitialVerificationState = () => ({
 });
 
 const REQUIRED_DOCUMENT_CONFIG = [
-  { id: "tradeLicense", label: "Trade License" },
-  { id: "gstCertificate", label: "GST Certificate" },
-  { id: "idProof", label: "ID Proof" },
+  { id: "idProof", label: "ID Proof (Aadhar & PAN Card)", required: true },
+  { id: "gstCertificate", label: "GST Certificate", required: false },
+  { id: "other", label: "Other Documents", required: false },
 ];
 
 const Auth = () => {
@@ -95,11 +96,14 @@ const Auth = () => {
     city: "",
     state: "",
     category: "",
+    mainProducts: "",
     description: "",
+    otherDocumentExpiryDate: "",
     lat: null,
     lng: null,
     radius: 5,
     address: "",
+    isPickupPointEligible: false,
   });
 
   const handleLocationSelect = (location) => {
@@ -116,14 +120,32 @@ const Auth = () => {
     }));
   };
 
-  const [documents, setDocuments] = useState({
-    tradeLicense: null,
-    gstCertificate: null,
-    idProof: null,
-  });
+  const [documents, setDocuments] = useState({});
+  const [categoriesList, setCategoriesList] = useState([]);
+
+  React.useEffect(() => {
+    if (!isLogin) {
+      // Fetch all categories from DB dynamically
+      sellerApi.getCategories().then(res => {
+        // Backend returns { results: [...] } when data is an array
+        let list = res.data?.results || res.data?.result || res.data || [];
+        if (list && list.items) list = list.items;
+        if (!Array.isArray(list)) list = [];
+        // Priority: header > category > subcategory > all (use whatever exists in DB)
+        const headers = list.filter(cat => cat.type === 'header');
+        const categories = list.filter(cat => cat.type === 'category');
+        const subcategories = list.filter(cat => cat.type === 'subcategory');
+        const best = headers.length > 0 ? headers
+          : categories.length > 0 ? categories
+          : subcategories.length > 0 ? subcategories
+          : list;
+        setCategoriesList(best);
+      }).catch(err => console.error("Failed to load categories", err));
+    }
+  }, [isLogin]);
 
   const getMissingRequiredDocuments = () =>
-    REQUIRED_DOCUMENT_CONFIG.filter((doc) => !documents[doc.id]);
+    REQUIRED_DOCUMENT_CONFIG.filter((doc) => doc.required && !documents[doc.id]);
 
   const updateVerificationState = (field, updates) => {
     setVerifications((prev) => ({
@@ -184,8 +206,8 @@ const Auth = () => {
     }
   };
 
-  const handleDocumentChange = (e, docName) => {
-    setDocuments({ ...documents, [docName]: e.target.files[0] });
+  const handleDocumentChange = (e, docId) => {
+    setDocuments({ ...documents, [docId]: e.target.files[0] });
   };
 
   const handleSendVerificationOtp = async (field) => {
@@ -363,6 +385,7 @@ const Auth = () => {
             }
           });
 
+
           Object.entries(documents).forEach(([key, file]) => {
             if (file) {
               signupPayload.append(key, file);
@@ -385,7 +408,7 @@ const Auth = () => {
         setIsLogin(true);
         setSignupStep(1);
         setDocuments({
-          tradeLicense: null,
+          other: null,
           gstCertificate: null,
           idProof: null,
         });
@@ -567,6 +590,39 @@ const Auth = () => {
                             placeholder="Shop / Business Name"
                             className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                             value={formData.shopName}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors pointer-events-none">
+                            <LayoutList size={18} />
+                          </div>
+                          <select
+                            name="category"
+                            required
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all cursor-pointer"
+                            value={formData.category}
+                            onChange={(e) => {
+                              setFormData(prev => ({ ...prev, category: e.target.value }));
+                            }}
+                          >
+                            <option value="" disabled hidden>Select Shop Category</option>
+                            {categoriesList.map(cat => (
+                                <option key={cat._id} value={cat.name}>{cat.name}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                            <ShoppingBag size={18} />
+                          </div>
+                          <input
+                            type="text"
+                            name="mainProducts"
+                            required
+                            placeholder="Main Products (e.g., Cakes, Sweets, Decor)"
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
+                            value={formData.mainProducts}
                             onChange={handleChange}
                           />
                         </div>
@@ -861,6 +917,21 @@ const Auth = () => {
                         onChange={handleChange}
                       />
                     </div>
+
+                    <div className="flex items-start gap-3 p-4 bg-slate-50 rounded-lg border-2 border-transparent">
+                      <input
+                        type="checkbox"
+                        name="isPickupPointEligible"
+                        id="isPickupPointEligible"
+                        checked={formData.isPickupPointEligible}
+                        onChange={(e) => setFormData(prev => ({...prev, isPickupPointEligible: e.target.checked}))}
+                        className="mt-0.5 w-5 h-5 rounded text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
+                      />
+                      <label htmlFor="isPickupPointEligible" className="text-sm font-bold text-slate-700 cursor-pointer select-none">
+                        Pickup Point Eligible
+                        <p className="text-xs font-medium text-slate-500 mt-0.5">Select if this address is also a pickup point for delivery partners or customers.</p>
+                      </label>
+                    </div>
                   </div>
                 )}
 
@@ -909,6 +980,27 @@ const Auth = () => {
                                 </div>
                               </div>
                             </label>
+                            {doc.id === "other" && (
+                              <div className="mt-2 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                                <div className="flex-shrink-0 mt-0.5">
+                                  <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                </div>
+                                <div className="flex-1">
+                                  <label className="block text-[10px] font-black text-amber-700 uppercase tracking-wider mb-1">
+                                    📅 Certificate Expiry Date <span className="text-red-500">*</span>
+                                  </label>
+                                  <p className="text-[9px] text-amber-600 font-medium mb-2">Enter expiry date — you will receive a real-time alert notification before it expires</p>
+                                  <input
+                                    type="date"
+                                    name="otherDocumentExpiryDate"
+                                    min={new Date().toISOString().split('T')[0]}
+                                    className="w-full px-3 py-2 text-sm font-bold text-slate-700 bg-white border-2 border-amber-200 rounded-lg outline-none focus:border-amber-400 transition-all"
+                                    value={formData.otherDocumentExpiryDate}
+                                    onChange={handleChange}
+                                  />
+                                </div>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

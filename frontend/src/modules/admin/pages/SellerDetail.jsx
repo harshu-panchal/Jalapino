@@ -93,6 +93,9 @@ const SellerDetail = () => {
                 phone: data.phone,
                 location: data.address || data.location,
                 isEventSeller: data.isEventSeller || false,
+                hasProductAccess: data.hasProductAccess !== false,
+                retailEnabled: data.retailEnabled ?? true,
+                planMyEventEnabled: data.planMyEventEnabled ?? false,
                 eventCategory: (data.serviceCategories && data.serviceCategories.length > 0) ? data.serviceCategories[0] : '',
                 maxCapacity: data.maxGuestCapacity || 500,
                 commissionRate: data.commissionRate ? `${data.commissionRate}%` : '10%',
@@ -139,6 +142,16 @@ const SellerDetail = () => {
         }
     };
 
+    const handleToggleProductAccess = async (sellerId, currentAccess) => {
+        try {
+            await adminUsersApi.updateSeller(sellerId, { hasProductAccess: !currentAccess });
+            showToast('Permissions updated successfully', 'success');
+            setSeller(prev => ({ ...prev, hasProductAccess: !currentAccess }));
+        } catch (error) {
+            showToast('Failed to update permissions', 'error');
+        }
+    };
+
     const handleRefresh = () => {
         setIsRefreshing(true);
         fetchCategories();
@@ -153,7 +166,9 @@ const SellerDetail = () => {
             address: seller.location,
             sellerStatus: seller.status,
             commissionRate: seller.commissionRate?.replace('%', '') || '10',
-            bankDetails: seller.bankInfo
+            bankDetails: seller.bankInfo,
+            retailEnabled: seller.retailEnabled,
+            planMyEventEnabled: seller.planMyEventEnabled
         });
         setIsEditingShop(true);
     };
@@ -471,6 +486,36 @@ const SellerDetail = () => {
                                     </div>
 
                                     <div className="ds-section-spacing">
+                                        {/* PRODUCT SELLER SETTINGS */}
+                                        <div className="mb-8">
+                                            <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Product Seller Settings</h5>
+                                            <div className="p-6 bg-slate-50 rounded-xl border border-slate-200">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <p className="text-sm font-bold text-slate-900">Enable Product Flow</p>
+                                                        <p className="text-[10px] text-slate-500 font-medium">Allow seller to add/edit standard products.</p>
+                                                    </div>
+                                                    <div className="flex items-center gap-3">
+                                                        <span className={cn(
+                                                            "text-xs font-black uppercase tracking-wider transition-colors",
+                                                            seller.hasProductAccess !== false ? "text-brand-600" : "text-slate-400"
+                                                        )}>
+                                                            {seller.hasProductAccess !== false ? "ON" : "OFF"}
+                                                        </span>
+                                                        <label className="relative inline-flex items-center cursor-pointer">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="sr-only peer" 
+                                                                checked={seller.hasProductAccess !== false}
+                                                                onChange={() => handleToggleProductAccess(seller.id, seller.hasProductAccess !== false)}
+                                                            />
+                                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-600 shadow-inner"></div>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
                                         {/* EVENT SELLER SETTINGS */}
                                         <div>
                                             <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Event Seller Settings</h5>
@@ -732,6 +777,42 @@ const SellerDetail = () => {
                                     onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, ifscCode: e.target.value}})}
                                     className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                                 />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-slate-100 pt-6">
+                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Module Permissions</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-800">Retail Module</h4>
+                                    <p className="text-[10px] text-slate-500">Enable Quick Commerce Retail</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={editFormData.retailEnabled ?? true} 
+                                        onChange={(e) => setEditFormData({...editFormData, retailEnabled: e.target.checked})} 
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-800">Plan My Event</h4>
+                                    <p className="text-[10px] text-slate-500">Enable Event Commerce</p>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input 
+                                        type="checkbox" 
+                                        className="sr-only peer" 
+                                        checked={editFormData.planMyEventEnabled ?? false} 
+                                        onChange={(e) => setEditFormData({...editFormData, planMyEventEnabled: e.target.checked})} 
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                                </label>
                             </div>
                         </div>
                     </div>

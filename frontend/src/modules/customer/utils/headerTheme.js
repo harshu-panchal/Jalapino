@@ -93,9 +93,13 @@ export function hexToRgba(hex, alpha = 1) {
 
 /** Build the 135deg gradient with opacity from a base header color */
 export function buildHeaderOpacityGradient(baseHeaderColor, alpha = 0.95) {
-  const base = baseHeaderColor && baseHeaderColor.startsWith("#") ? baseHeaderColor : "#8B1E24";
-  const darker = shiftHex(base, -65);
-  return `linear-gradient(135deg, ${hexToRgba(base, alpha)} 0%, ${hexToRgba(darker, alpha)} 100%)`;
+  // If we are given our specific maroon or default, return a stunning premium gradient
+  if (!baseHeaderColor || !baseHeaderColor.startsWith("#") || baseHeaderColor.toUpperCase() === "#66001D" || baseHeaderColor.toUpperCase() === "#A80022") {
+    // Premium, rich ruby-maroon gradient with a beautiful sheen
+    return `linear-gradient(135deg, rgba(138,0,39,${alpha}) 0%, rgba(102,0,29,${alpha}) 40%, rgba(50,0,14,${alpha}) 100%)`;
+  }
+  const darker = shiftHex(baseHeaderColor, -30);
+  return `linear-gradient(135deg, ${hexToRgba(baseHeaderColor, alpha)} 0%, ${hexToRgba(darker, alpha)} 100%)`;
 }
 
 

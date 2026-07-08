@@ -13,7 +13,7 @@ export const sellerApi = {
     deleteProduct: (id) => axiosInstance.delete(`/products/${id}`),
 
     // Categories (Public)
-    getCategories: () => axiosInstance.get('/admin/categories'),
+    getCategories: () => axiosInstance.get('/categories'),
     getCategoryTree: () => axiosInstance.get('/admin/categories?tree=true'),
     getActiveHsns: () => axiosInstance.get('/hsn/active'),
 
@@ -48,4 +48,7 @@ export const sellerApi = {
     // Event Requests
     getEventRequests: () => axiosInstance.get('/seller/event-requests'),
     updateEventRequestStatus: (id, data) => axiosInstance.put(`/seller/event-requests/${id}/status`, data),
+
+    // Live Kitchen
+    updateLiveStreamUrl: (orderId, streamUrl) => axiosInstance.post('/kitchen/stream', { orderId, streamUrl }),
 };

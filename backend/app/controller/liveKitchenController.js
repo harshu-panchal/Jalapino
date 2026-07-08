@@ -16,7 +16,7 @@ export const updateStreamUrl = async (req, res) => {
             liveKitchen.isActive = true;
             await liveKitchen.save();
         } else {
-            liveKitchen = await LiveKitchen.create({ sellerId, orderId, streamUrl });
+            liveKitchen = await LiveKitchen.create({ sellerId, orderId: orderId || null, streamUrl });
         }
         
         return handleResponse(res, 200, "Stream URL updated successfully", liveKitchen);
@@ -73,6 +73,24 @@ export const getLiveKitchenStatus = async (req, res) => {
         }
         
         return handleResponse(res, 200, "Live kitchen fetched", liveKitchen);
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+// @route   GET /api/kitchen/public/streams
+// @desc    Get all active public live kitchen streams for Reels
+// @access  Public
+export const getPublicLiveStreams = async (req, res) => {
+    try {
+        const query = { isActive: true, isCustomerVisible: true, streamUrl: { $ne: "" } };
+        
+        const liveKitchens = await LiveKitchen.find(query)
+            .sort({ updatedAt: -1 })
+            .populate("sellerId", "name shopName logo")
+            .limit(20);
+        
+        return handleResponse(res, 200, "Public live streams fetched", liveKitchens);
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

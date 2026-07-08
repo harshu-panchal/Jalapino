@@ -358,6 +358,13 @@ function eventDefinition(eventType) {
           return `Only ${currentStock} left for ${itemLabel}. Restock soon.`;
         },
       };
+    case NOTIFICATION_EVENTS.DOCUMENT_EXPIRY_ALERT:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: (payload) => String(payload.title || "⏰ Certificate Expiry Alert"),
+        body: (payload) => String(payload.body || "Your uploaded certificate is expiring soon. Please renew it."),
+      };
     default:
       return null;
   }
@@ -390,6 +397,16 @@ function eventData(eventType, payload = {}, role) {
       eventType,
       ticketId,
       link,
+      ...(payload.data || {}),
+    };
+  }
+
+  if (eventType === NOTIFICATION_EVENTS.DOCUMENT_EXPIRY_ALERT) {
+    const baseUrl = getFrontendBaseUrl();
+    return {
+      eventType,
+      link: `${baseUrl}/seller/profile`,
+      type: "document_expiry",
       ...(payload.data || {}),
     };
   }

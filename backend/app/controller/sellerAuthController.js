@@ -18,12 +18,12 @@ const generateToken = (seller) =>
     });
 
 const SELLER_DOCUMENT_FIELDS = {
-    tradeLicense: "Trade License",
+    idProof: "ID Proof (Aadhar & PAN Card)",
     gstCertificate: "GST Certificate",
-    idProof: "ID Proof",
+    other: "Other Documents",
 };
 
-const REQUIRED_SELLER_DOCUMENT_FIELDS = Object.keys(SELLER_DOCUMENT_FIELDS);
+const REQUIRED_SELLER_DOCUMENT_FIELDS = ["idProof"];
 
 const parseDocumentsPayload = (documents) => {
     if (!documents) {
@@ -54,7 +54,7 @@ const resolveSellerDocuments = (body = {}, parsedDocuments = {}) => {
     const resolved = { ...(parsedDocuments || {}) };
 
     const directFields = {
-        tradeLicense: body.tradeLicenseUrl || body.tradeLicense,
+        other: body.otherUrl || body.other,
         gstCertificate: body.gstCertificateUrl || body.gstCertificate,
         idProof: body.idProofUrl || body.idProof,
     };
@@ -88,6 +88,8 @@ export const signupSeller = async (req, res) => {
             phoneVerificationToken,
             shopName,
             category,
+            mainProducts,
+            otherDocumentExpiryDate,
             description,
             address,
             locality,
@@ -97,7 +99,8 @@ export const signupSeller = async (req, res) => {
             documents,
             lat,
             lng,
-            radius
+            radius,
+            isPickupPointEligible
         } = req.body || {};
 
         // 1. Handle file uploads if they exist in req.files (multipart form)
@@ -184,6 +187,8 @@ export const signupSeller = async (req, res) => {
             password,
             shopName,
             category,
+            mainProducts,
+            otherDocumentExpiryDate: otherDocumentExpiryDate || null,
             description,
             address,
             locality,
@@ -196,6 +201,7 @@ export const signupSeller = async (req, res) => {
             emailVerified: true,
             phoneVerified: true,
             isActive: false,
+            isPickupPointEligible: isPickupPointEligible === true || isPickupPointEligible === 'true',
         };
 
         if (parsedLat !== undefined && parsedLng !== undefined) {
