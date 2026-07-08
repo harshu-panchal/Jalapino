@@ -5,9 +5,9 @@
 
 :root {
   /* Brand colors: overridden at runtime by SettingsContext from API (settings.primaryColor, settings.secondaryColor) */
-  --primary: #BE123C;
+  --primary: #A00D2D;
   /* Default brand blue */
-  --primary-color: #BE123C;
+  --primary-color: #A00D2D;
 
   /* Dynamic Brand Shades based on primary */
   --brand-50: color-mix(in srgb, var(--primary), white 95%);
@@ -52,10 +52,10 @@
   --customer-mini-cart-color: #0284c7;
 
   /* Header Background Gradient: defaults to the brand maroon */
-  --customer-header-gradient: linear-gradient(135deg, rgba(190,18,60,0.95) 0%, rgba(159,18,57,0.95) 100%);
+  --customer-header-gradient: linear-gradient(135deg, rgba(102,0,29,0.95) 0%, rgba(60,0,15,0.95) 100%);
 
   /* Header Base Color: defaults to brand maroon */
-  --customer-header-base-color: #BE123C;
+  --customer-header-base-color: #66001D;
 }
 
 body {

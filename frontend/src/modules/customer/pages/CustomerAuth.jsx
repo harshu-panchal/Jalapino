@@ -396,10 +396,11 @@ const CustomerAuth = () => {
                                         <button
                                             type="submit"
                                             disabled={isLoading}
-                                            className="w-full bg-slate-900 hover:bg-black text-white py-5 rounded-2xl text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] uppercase group"
+                                            className="w-full text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all uppercase"
+                                            style={{ backgroundColor: activeCategory.theme, boxShadow: `0 20px 40px ${activeCategory.shadow}` }}
                                         >
                                             {isLoading ? 'Verifying...' : 'Continue'}
-                                            <ChevronRight size={18} className="group-hover:translate-x-2 transition-transform" />
+                                            <ChevronRight size={18} />
                                         </button>
                                     </form>
 
