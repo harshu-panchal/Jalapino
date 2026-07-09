@@ -55,11 +55,10 @@ const isValidUploadedDocumentReference = (value) => {
 const resolveSellerDocuments = (body = {}, parsedDocuments = {}) => {
     const resolved = { ...(parsedDocuments || {}) };
 
-    const directFields = {
-        other: body.otherUrl || body.other,
-        gstCertificate: body.gstCertificateUrl || body.gstCertificate,
-        idProof: body.idProofUrl || body.idProof,
-    };
+    const directFields = {};
+    for (const key of Object.keys(SELLER_DOCUMENT_FIELDS)) {
+        directFields[key] = body[`${key}Url`] || body[key];
+    }
 
     for (const [field, candidate] of Object.entries(directFields)) {
         const normalized = String(candidate || "").trim();
@@ -113,7 +112,7 @@ export const signupSeller = async (req, res) => {
             for (const file of documentFiles) {
                 try {
                     const fieldName = file.fieldname;
-                    if (fieldName && REQUIRED_SELLER_DOCUMENT_FIELDS.includes(fieldName)) {
+                    if (fieldName && Object.keys(SELLER_DOCUMENT_FIELDS).includes(fieldName)) {
                         const url = await saveRawFile(file.buffer, "docs", file.originalname);
                         uploadedDocs[fieldName] = url;
                     }
