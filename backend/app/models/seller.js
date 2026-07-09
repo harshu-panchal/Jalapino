@@ -75,7 +75,8 @@ const sellerSchema = new mongoose.Schema(
       tradeLicense: { type: String, trim: true },
       gstCertificate: { type: String, trim: true },
       idProof: { type: String, trim: true }, // Retained for backwards compatibility
-      aadharCard: { type: String, trim: true },
+      aadharCardFront: { type: String, trim: true },
+      aadharCardBack: { type: String, trim: true },
       panCard: { type: String, trim: true },
       businessRegistration: { type: String, trim: true },
       fssaiLicense: { type: String, trim: true },

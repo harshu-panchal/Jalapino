@@ -44,7 +44,8 @@ const createInitialVerificationState = () => ({
 });
 
 const REQUIRED_DOCUMENT_CONFIG = [
-  { id: "aadharCard", label: "Aadhar Card", required: true },
+  { id: "aadharCardFront", label: "Aadhar Card (Front)", required: true },
+  { id: "aadharCardBack", label: "Aadhar Card (Back)", required: true },
   { id: "panCard", label: "PAN Card", required: true },
   { id: "gstCertificate", label: "GST Certificate", required: false },
   { id: "other", label: "Other Documents", required: false },
@@ -1022,7 +1023,7 @@ const Auth = () => {
                               accept="image/*,.pdf"
                               onChange={(e) => handleDocumentChange(e, doc.id)}
                             />
-                            {doc.id === 'aadharCard' || doc.id === 'panCard' ? (
+                            {doc.id === 'aadharCardFront' || doc.id === 'aadharCardBack' || doc.id === 'panCard' ? (
                               <button
                                 type="button"
                                 onClick={() => setActiveDocAction(doc.id)}

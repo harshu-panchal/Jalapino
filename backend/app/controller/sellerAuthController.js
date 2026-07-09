@@ -18,14 +18,20 @@ const generateToken = (seller) =>
     });
 
 const SELLER_DOCUMENT_FIELDS = {
-    aadharCard: "Aadhar Card",
+    tradeLicense: "Trade License",
+    gstCertificate: "GST Certificate",
+    aadharCardFront: "Aadhar Card Front",
+    aadharCardBack: "Aadhar Card Back",
     panCard: "PAN Card",
     idProof: "ID Proof (Aadhar & PAN Card)", // Retained for backwards compatibility
-    gstCertificate: "GST Certificate",
     other: "Other Documents",
 };
 
-const REQUIRED_SELLER_DOCUMENT_FIELDS = ["aadharCard", "panCard"];
+const REQUIRED_SELLER_DOCUMENT_FIELDS = [
+    "aadharCardFront",
+    "aadharCardBack",
+    "panCard",
+];
 
 const parseDocumentsPayload = (documents) => {
     if (!documents) {
@@ -113,7 +119,24 @@ export const signupSeller = async (req, res) => {
                 try {
                     const fieldName = file.fieldname;
                     if (fieldName && Object.keys(SELLER_DOCUMENT_FIELDS).includes(fieldName)) {
-                        const url = await saveRawFile(file.buffer, "docs", file.originalname);
+                        let url = await saveRawFile(file.buffer, "docs", file.originalname);
+                        
+                        // Dynamically use the request's domain instead of .env to handle both localhost and live automatically
+                        const reqDomain = `${req.protocol}://${req.get("host")}`;
+                        const envDomain = process.env.API_DOMAIN || "http://localhost:7000";
+                        
+                        // Only auto-replace if the saved URL is a localhost/host URL 
+                        // If it's a proper live URL like https://jalpaino.com/api, keep it as is
+                        if (url.includes("localhost") || url.includes("host:7000") || url.startsWith("http://10.0.2.2")) {
+                            if (url.startsWith(envDomain)) {
+                                url = url.replace(envDomain, reqDomain);
+                            } else if (url.startsWith("host:7000")) {
+                                url = url.replace("host:7000", reqDomain);
+                            } else if (url.startsWith("http://host:7000")) {
+                                url = url.replace("http://host:7000", reqDomain);
+                            }
+                        }
+
                         uploadedDocs[fieldName] = url;
                     }
                 } catch (err) {
