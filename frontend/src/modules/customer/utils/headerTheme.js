@@ -67,10 +67,9 @@ export function buildMiniCartColor(baseHeaderColor) {
 /** Gradient for floating mini cart pill (same palette as header, horizontal). */
 export function buildMiniCartGradient(baseHeaderColor) {
   const base = baseHeaderColor || DEFAULT_BASE;
-  const top = shiftHex(base, -12);
-  const mid = shiftHex(base, 20);
-  const deep = shiftHex(mid, -32);
-  return `linear-gradient(135deg, ${top} 0%, ${mid} 48%, ${deep} 100%)`;
+  const lighter = shiftHex(base, 25);
+  const darker = shiftHex(base, -20);
+  return `linear-gradient(to bottom, ${lighter} 0%, ${base} 40%, ${darker} 100%)`;
 }
 
 /** Convert hex to rgba string with specified opacity */
@@ -93,13 +92,12 @@ export function hexToRgba(hex, alpha = 1) {
 
 /** Build the 135deg gradient with opacity from a base header color */
 export function buildHeaderOpacityGradient(baseHeaderColor, alpha = 0.95) {
-  // If we are given our specific maroon or default, return a stunning premium gradient
   if (!baseHeaderColor || !baseHeaderColor.startsWith("#") || baseHeaderColor.toUpperCase() === "#66001D" || baseHeaderColor.toUpperCase() === "#A80022") {
-    // Premium, rich ruby-maroon gradient with a beautiful sheen
-    return `linear-gradient(135deg, rgba(138,0,39,${alpha}) 0%, rgba(102,0,29,${alpha}) 40%, rgba(50,0,14,${alpha}) 100%)`;
+    return `linear-gradient(to bottom, rgba(138,0,39,${alpha}) 0%, rgba(102,0,29,${alpha}) 40%, rgba(50,0,14,${alpha}) 100%)`;
   }
-  const darker = shiftHex(baseHeaderColor, -30);
-  return `linear-gradient(135deg, ${hexToRgba(baseHeaderColor, alpha)} 0%, ${hexToRgba(darker, alpha)} 100%)`;
+  const lighter = shiftHex(baseHeaderColor, 20);
+  const darker = shiftHex(baseHeaderColor, -15);
+  return `linear-gradient(to bottom, ${hexToRgba(lighter, alpha)} 0%, ${hexToRgba(baseHeaderColor, alpha)} 50%, ${hexToRgba(darker, alpha)} 100%)`;
 }
 
 

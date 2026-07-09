@@ -236,7 +236,7 @@ const CustomerAuth = () => {
                                     loading="lazy"
                                     alt="banner"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/10 to-transparent opacity-60" style={{ backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.1), ${activeCategory.theme})` }} />
+                                <div className="absolute inset-0" style={{ background: `linear-gradient(to bottom, color-mix(in srgb, ${activeCategory.theme}, white 20%) 0%, ${activeCategory.theme} 45%, color-mix(in srgb, ${activeCategory.theme}, black 15%) 100%)`, opacity: 0.95 }} />
                             </motion.div>
                         </AnimatePresence>
 
@@ -397,7 +397,10 @@ const CustomerAuth = () => {
                                             type="submit"
                                             disabled={isLoading}
                                             className="w-full text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 active:scale-95 transition-all uppercase"
-                                            style={{ backgroundColor: activeCategory.theme, boxShadow: `0 20px 40px ${activeCategory.shadow}` }}
+                                            style={{ 
+                                                background: `linear-gradient(to bottom, color-mix(in srgb, ${activeCategory.theme}, white 18%) 0%, ${activeCategory.theme} 50%, color-mix(in srgb, ${activeCategory.theme}, black 12%) 100%)`, 
+                                                boxShadow: `0 15px 30px ${activeCategory.shadow}, inset 0 2px 4px rgba(255,255,255,0.25)` 
+                                            }}
                                         >
                                             {isLoading ? 'Verifying...' : 'Continue'}
                                             <ChevronRight size={18} />
@@ -479,7 +482,11 @@ const CustomerAuth = () => {
                                             <button
                                                 type="submit"
                                                 disabled={isLoading}
-                                                className="w-full bg-gray-900 text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] shadow-2xl flex items-center justify-center gap-3 uppercase active:scale-95 transition-all"
+                                                className="w-full text-white py-5 rounded-[24px] text-xs font-black tracking-[4px] flex items-center justify-center gap-3 uppercase active:scale-95 transition-all"
+                                                style={{ 
+                                                    background: `linear-gradient(to bottom, color-mix(in srgb, ${activeCategory.theme}, white 18%) 0%, ${activeCategory.theme} 50%, color-mix(in srgb, ${activeCategory.theme}, black 12%) 100%)`, 
+                                                    boxShadow: `0 15px 30px ${activeCategory.shadow}, inset 0 2px 4px rgba(255,255,255,0.25)` 
+                                                }}
                                             >
                                                 {isLoading ? 'Authenticating...' : `Enter ${appName}`}
                                             </button>

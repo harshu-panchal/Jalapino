@@ -173,6 +173,15 @@ const MapPicker = ({
           };
           setCenter(newPos);
           setMarker(newPos);
+          
+          if (window.google?.maps) {
+            const geocoder = new window.google.maps.Geocoder();
+            geocoder.geocode({ location: newPos }, (results, status) => {
+              if (status === "OK" && results[0]) {
+                setAddress(results[0].formatted_address);
+              }
+            });
+          }
         },
         () => {
           if (fallbackToInitial && initialLocation) {
@@ -292,17 +301,17 @@ const MapPicker = ({
       title="Select Shop Location"
       size="md"
       footer={
-        <div className="flex justify-between w-full items-center">
-          <div className="text-sm text-gray-500">
-            {marker
+        <div className="flex flex-col sm:flex-row justify-between w-full items-start sm:items-center gap-4 sm:gap-0">
+          <div className="text-sm text-gray-500 font-medium line-clamp-2 w-full sm:max-w-xs pr-0 sm:pr-4">
+            {address ? address : marker
               ? `${marker.lat.toFixed(4)}, ${marker.lng.toFixed(4)}`
               : "No location selected"}
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose}>
+          <div className="flex gap-2 w-full sm:w-auto justify-end">
+            <Button variant="outline" onClick={onClose} className="flex-1 sm:flex-none">
               Cancel
             </Button>
-            <Button onClick={handleConfirm} disabled={!marker || isGeocoding}>
+            <Button onClick={handleConfirm} disabled={!marker || isGeocoding} className="flex-1 sm:flex-none">
               {isGeocoding ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-2" />
               ) : null}

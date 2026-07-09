@@ -18,12 +18,14 @@ const generateToken = (seller) =>
     });
 
 const SELLER_DOCUMENT_FIELDS = {
-    idProof: "ID Proof (Aadhar & PAN Card)",
+    aadharCard: "Aadhar Card",
+    panCard: "PAN Card",
+    idProof: "ID Proof (Aadhar & PAN Card)", // Retained for backwards compatibility
     gstCertificate: "GST Certificate",
     other: "Other Documents",
 };
 
-const REQUIRED_SELLER_DOCUMENT_FIELDS = ["idProof"];
+const REQUIRED_SELLER_DOCUMENT_FIELDS = ["aadharCard", "panCard"];
 
 const parseDocumentsPayload = (documents) => {
     if (!documents) {

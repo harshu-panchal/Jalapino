@@ -21,7 +21,7 @@ const startTime = Date.now();
  */
 async function checkMongoHealth() {
   const start = Date.now();
-  
+
   try {
     if (mongoose.connection.readyState !== 1) {
       return {
@@ -30,10 +30,10 @@ async function checkMongoHealth() {
         error: 'Not connected'
       };
     }
-    
+
     // Ping MongoDB to verify connectivity
     await mongoose.connection.db.admin().ping();
-    
+
     return {
       status: 'UP',
       responseTime: Date.now() - start
@@ -53,7 +53,7 @@ async function checkMongoHealth() {
  */
 async function checkRedisHealth() {
   const start = Date.now();
-  
+
   try {
     if (!isRedisEnabled()) {
       return {
@@ -61,7 +61,7 @@ async function checkRedisHealth() {
         responseTime: Date.now() - start
       };
     }
-    
+
     const client = getRedisClient();
     if (!client) {
       return {
@@ -70,7 +70,7 @@ async function checkRedisHealth() {
         error: 'Client not initialized'
       };
     }
-    
+
     if (client.status !== 'ready') {
       return {
         status: 'DOWN',
@@ -78,10 +78,10 @@ async function checkRedisHealth() {
         error: `Connection status: ${client.status}`
       };
     }
-    
+
     // Ping Redis to verify connectivity
     const result = await client.ping();
-    
+
     if (result === 'PONG') {
       return {
         status: 'UP',
@@ -158,7 +158,7 @@ async function getHealthStatus() {
 async function getReadinessStatus() {
   const checks = {};
   let ready = true;
-  
+
   // Check MongoDB
   const mongoHealth = await checkMongoHealth();
   checks.mongodb = mongoHealth;
@@ -166,12 +166,12 @@ async function getReadinessStatus() {
   if (mongoHealth.status !== 'UP') {
     ready = false;
   }
-  
+
   // Check Redis (only required in production)
   const redisHealth = await checkRedisHealth();
   checks.redis = redisHealth;
   setGauge("dependency_up", redisHealth.status === "UP" ? 1 : 0, { dependency: "redis" });
-  
+
   const isProduction = process.env.NODE_ENV === 'production';
   if (isProduction && redisHealth.status !== 'UP') {
     ready = false;
@@ -183,7 +183,7 @@ async function getReadinessStatus() {
   if (isComponentEnabled("worker") && queueHealth.status !== "UP") {
     ready = false;
   }
-  
+
   return {
     ready,
     checks,

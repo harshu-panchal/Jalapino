@@ -15,6 +15,7 @@ import {
   buildSearchBarBackgroundColor,
   shiftHex,
   buildHeaderOpacityGradient,
+  buildMiniCartGradient,
 } from "../../utils/headerTheme";
 const LogoImage = '/logo2.png';
 import retailerIcon from "../../../../assets/retailer.webp";
@@ -281,7 +282,7 @@ const MainLocationHeader = ({
   const displayCart = "block";
 
   // Force the premium maroon color for the header
-  const baseHeaderColor = "#66001D";
+  const baseHeaderColor = "#CC2020";
   const headerFontColor = activeCategory?.headerFontColor || "#111827";
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
 
@@ -294,10 +295,15 @@ const MainLocationHeader = ({
 
   useEffect(() => {
     const c = buildMiniCartColor(baseHeaderColor);
+    const cg = buildMiniCartGradient(baseHeaderColor);
     document.documentElement.style.setProperty("--customer-mini-cart-color", c);
+    document.documentElement.style.setProperty("--customer-mini-cart-gradient", cg);
     return () => {
       document.documentElement.style.removeProperty(
         "--customer-mini-cart-color",
+      );
+      document.documentElement.style.removeProperty(
+        "--customer-mini-cart-gradient",
       );
     };
   }, [baseHeaderColor]);

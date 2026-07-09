@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
+  ChevronLeft,
 } from "lucide-react";
 import { toast } from "sonner";
 import Lottie from "lottie-react";
@@ -43,7 +44,8 @@ const createInitialVerificationState = () => ({
 });
 
 const REQUIRED_DOCUMENT_CONFIG = [
-  { id: "idProof", label: "ID Proof (Aadhar & PAN Card)", required: true },
+  { id: "aadharCard", label: "Aadhar Card", required: true },
+  { id: "panCard", label: "PAN Card", required: true },
   { id: "gstCertificate", label: "GST Certificate", required: false },
   { id: "other", label: "Other Documents", required: false },
 ];
@@ -51,15 +53,30 @@ const REQUIRED_DOCUMENT_CONFIG = [
 const Auth = () => {
   const [searchParams] = useSearchParams();
   const isSignupMode = searchParams.get("mode") === "signup" || searchParams.get("signup") === "true";
-  const [isLogin, setIsLogin] = useState(!isSignupMode);
+  const [isLogin, setIsLogin] = useState(() => {
+    const saved = sessionStorage.getItem('sellerAuthIsLogin');
+    if (saved !== null) return saved === 'true';
+    return !isSignupMode;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [signupStep, setSignupStep] = useState(1);
+  const [signupStep, setSignupStep] = useState(() => {
+    const saved = sessionStorage.getItem('sellerAuthSignupStep');
+    return saved ? parseInt(saved, 10) : 1;
+  });
   const [isMapOpen, setIsMapOpen] = useState(false);
   const { login } = useAuth();
   const { settings } = useSettings();
   const navigate = useNavigate();
   const panelRef = React.useRef(null);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('sellerAuthIsLogin', isLogin);
+  }, [isLogin]);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('sellerAuthSignupStep', signupStep);
+  }, [signupStep]);
 
   React.useEffect(() => {
     const panel = panelRef.current;
@@ -85,26 +102,36 @@ const Auth = () => {
     phone: createInitialVerificationState(),
   });
 
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-    name: "",
-    shopName: "",
-    phone: "",
-    locality: "",
-    pincode: "",
-    city: "",
-    state: "",
-    category: "",
-    mainProducts: "",
-    description: "",
-    otherDocumentExpiryDate: "",
-    lat: null,
-    lng: null,
-    radius: 5,
-    address: "",
-    isPickupPointEligible: false,
+  const [formData, setFormData] = useState(() => {
+    const saved = sessionStorage.getItem('sellerAuthFormData');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) {}
+    }
+    return {
+      email: "",
+      password: "",
+      name: "",
+      shopName: "",
+      phone: "",
+      locality: "",
+      pincode: "",
+      city: "",
+      state: "",
+      category: "",
+      mainProducts: "",
+      description: "",
+      otherDocumentExpiryDate: "",
+      lat: null,
+      lng: null,
+      radius: 5,
+      address: "",
+      isPickupPointEligible: false,
+    };
   });
+
+  React.useEffect(() => {
+    sessionStorage.setItem('sellerAuthFormData', JSON.stringify(formData));
+  }, [formData]);
 
   const handleLocationSelect = (location) => {
     setFormData((prev) => ({
@@ -122,6 +149,35 @@ const Auth = () => {
 
   const [documents, setDocuments] = useState({});
   const [categoriesList, setCategoriesList] = useState([]);
+  const [activeDocAction, setActiveDocAction] = useState(null); // stores the doc id currently waiting for camera/gallery action
+  const fileInputRefs = React.useRef({});
+
+  const handleCameraCapture = async (docId) => {
+    setActiveDocAction(null); // close action sheet
+    try {
+      if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+        const result = await window.flutter_inappwebview.callHandler('openCamera');
+        if (result && result.success && result.base64) {
+          const byteCharacters = atob(result.base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const file = new File([byteArray], result.fileName || `camera_${docId}_${Date.now()}.jpg`, { type: result.mimeType || 'image/jpeg' });
+          setDocuments((prev) => ({ ...prev, [docId]: file }));
+          toast.success("Photo captured successfully!");
+        } else {
+          toast.error("Failed to capture photo.");
+        }
+      } else {
+        toast.error("Camera is only available in the app.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error opening camera.");
+    }
+  };
 
   React.useEffect(() => {
     if (!isLogin) {
@@ -423,6 +479,9 @@ const Auth = () => {
         toast.success(
           "Application submitted. Login is enabled only after admin approval.",
         );
+        sessionStorage.removeItem('sellerAuthIsLogin');
+        sessionStorage.removeItem('sellerAuthSignupStep');
+        sessionStorage.removeItem('sellerAuthFormData');
         navigate("/seller/pending-approval", {
           replace: true,
           state: {
@@ -513,8 +572,23 @@ const Auth = () => {
         {/* Form Content Side */}
         <div
           ref={panelRef}
-          className="w-full md:w-[55%] min-h-0 p-5 pt-8 md:p-12 md:pt-16 flex flex-col justify-center bg-white md:overflow-y-auto md:overscroll-contain custom-scrollbar relative"
+          className="w-full md:w-[55%] min-h-0 p-5 pt-14 md:p-12 md:pt-16 flex flex-col justify-center bg-white md:overflow-y-auto md:overscroll-contain custom-scrollbar relative"
           style={{ WebkitOverflowScrolling: "touch" }}>
+          
+          <button 
+            type="button"
+            onClick={() => {
+              if (!isLogin && signupStep > 1) {
+                setSignupStep(prev => prev - 1);
+              } else {
+                navigate(-1);
+              }
+            }}
+            className="absolute top-4 left-4 md:top-8 md:left-8 p-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center shadow-sm z-20 border border-slate-200"
+          >
+            <ChevronLeft size={22} />
+          </button>
+
           <div className="hidden md:flex absolute top-8 right-8 z-20">
             <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
               {logoUrl ? (
@@ -597,20 +671,15 @@ const Auth = () => {
                           <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors pointer-events-none">
                             <LayoutList size={18} />
                           </div>
-                          <select
+                          <input
+                            type="text"
                             name="category"
                             required
-                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all cursor-pointer"
+                            placeholder="Shop Category (Remarks) - e.g. Grocery, Fashion"
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
                             value={formData.category}
-                            onChange={(e) => {
-                              setFormData(prev => ({ ...prev, category: e.target.value }));
-                            }}
-                          >
-                            <option value="" disabled hidden>Select Shop Category</option>
-                            {categoriesList.map(cat => (
-                                <option key={cat._id} value={cat.name}>{cat.name}</option>
-                            ))}
-                          </select>
+                            onChange={handleChange}
+                          />
                         </div>
                         <div className="relative group">
                           <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
@@ -948,38 +1017,79 @@ const Auth = () => {
                             <input
                               type="file"
                               id={doc.id}
+                              ref={(el) => fileInputRefs.current[doc.id] = el}
                               className="hidden"
                               accept="image/*,.pdf"
                               onChange={(e) => handleDocumentChange(e, doc.id)}
                             />
-                            <label
-                              htmlFor={doc.id}
-                              className={`flex items-center justify-between p-3.5 rounded-lg border-2 border-dashed transition-all cursor-pointer ${documents[doc.id]
-                                ? "border-brand-200 bg-brand-50/50"
-                                : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                                }`}>
-                              <div className="flex items-center gap-3">
-                                <div
-                                  className={`p-2 rounded-md ${documents[doc.id] ? "bg-brand-100 text-brand-600" : "bg-white text-slate-600 shadow-sm"}`}>
-                                  {documents[doc.id] ? (
-                                    <CheckCircle className="w-4 h-4" />
-                                  ) : (
-                                    <Upload className="w-4 h-4" />
-                                  )}
+                            {doc.id === 'aadharCard' || doc.id === 'panCard' ? (
+                              <button
+                                type="button"
+                                onClick={() => setActiveDocAction(doc.id)}
+                                className={`w-full flex items-center justify-between p-3.5 rounded-lg border-2 border-dashed transition-all cursor-pointer ${documents[doc.id]
+                                  ? "border-brand-200 bg-brand-50/50"
+                                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                                  }`}>
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`relative flex items-center justify-center overflow-hidden rounded-md ${documents[doc.id] ? "w-10 h-10 bg-brand-100 text-brand-600 shrink-0" : "p-2 bg-white text-slate-600 shadow-sm shrink-0"}`}>
+                                    {documents[doc.id] ? (
+                                      documents[doc.id].type?.startsWith('image/') ? (
+                                        <img src={URL.createObjectURL(documents[doc.id])} alt="preview" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <CheckCircle className="w-5 h-5" />
+                                      )
+                                    ) : (
+                                      <Upload className="w-4 h-4" />
+                                    )}
+                                  </div>
+                                  <div className="text-left">
+                                    <p
+                                      className={`text-xs font-bold ${documents[doc.id] ? "text-brand-700" : "text-slate-600"}`}>
+                                      {doc.label}
+                                    </p>
+                                    <p className="text-xs text-slate-600 font-medium truncate max-w-[150px]">
+                                      {documents[doc.id]
+                                        ? documents[doc.id].name
+                                        : "Tap to capture or upload"}
+                                    </p>
+                                  </div>
                                 </div>
-                                <div className="text-left">
-                                  <p
-                                    className={`text-xs font-bold ${documents[doc.id] ? "text-brand-700" : "text-slate-600"}`}>
-                                    {doc.label}
-                                  </p>
-                                  <p className="text-xs text-slate-600 font-medium truncate max-w-[150px]">
-                                    {documents[doc.id]
-                                      ? documents[doc.id].name
-                                      : "Upload secure PDF or image"}
-                                  </p>
+                              </button>
+                            ) : (
+                              <label
+                                htmlFor={doc.id}
+                                className={`flex items-center justify-between p-3.5 rounded-lg border-2 border-dashed transition-all cursor-pointer ${documents[doc.id]
+                                  ? "border-brand-200 bg-brand-50/50"
+                                  : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                                  }`}>
+                                <div className="flex items-center gap-3">
+                                  <div
+                                    className={`relative flex items-center justify-center overflow-hidden rounded-md ${documents[doc.id] ? "w-10 h-10 bg-brand-100 text-brand-600 shrink-0" : "p-2 bg-white text-slate-600 shadow-sm shrink-0"}`}>
+                                    {documents[doc.id] ? (
+                                      documents[doc.id].type?.startsWith('image/') ? (
+                                        <img src={URL.createObjectURL(documents[doc.id])} alt="preview" className="w-full h-full object-cover" />
+                                      ) : (
+                                        <CheckCircle className="w-5 h-5" />
+                                      )
+                                    ) : (
+                                      <Upload className="w-4 h-4" />
+                                    )}
+                                  </div>
+                                  <div className="text-left">
+                                    <p
+                                      className={`text-xs font-bold ${documents[doc.id] ? "text-brand-700" : "text-slate-600"}`}>
+                                      {doc.label}
+                                    </p>
+                                    <p className="text-xs text-slate-600 font-medium truncate max-w-[150px]">
+                                      {documents[doc.id]
+                                        ? documents[doc.id].name
+                                        : "Upload secure PDF or image"}
+                                    </p>
+                                  </div>
                                 </div>
-                              </div>
-                            </label>
+                              </label>
+                            )}
                             {doc.id === "other" && (
                               <div className="mt-2 flex items-start gap-3 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                                 <div className="flex-shrink-0 mt-0.5">
@@ -987,7 +1097,7 @@ const Auth = () => {
                                 </div>
                                 <div className="flex-1">
                                   <label className="block text-[10px] font-black text-amber-700 uppercase tracking-wider mb-1">
-                                    📅 Certificate Expiry Date <span className="text-red-500">*</span>
+                                    📅 Certificate Expiry Date
                                   </label>
                                   <p className="text-[9px] text-amber-600 font-medium mb-2">Enter expiry date — you will receive a real-time alert notification before it expires</p>
                                   <input
@@ -1062,6 +1172,58 @@ const Auth = () => {
       <div className="absolute bottom-6 flex items-center gap-4 text-slate-300 text-[10px] font-black uppercase tracking-[6px]">
         Empowering Business Digitalization
       </div>
+
+      <AnimatePresence>
+        {activeDocAction && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center p-4"
+            onClick={() => setActiveDocAction(null)}
+          >
+            <motion.div
+              initial={{ y: "100%" }}
+              animate={{ y: 0 }}
+              exit={{ y: "100%" }}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full max-w-sm overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl"
+            >
+              <div className="p-4 border-b text-center border-slate-100">
+                <h3 className="font-bold text-slate-800">Select Upload Option</h3>
+              </div>
+              <div className="p-2 space-y-2">
+                <button
+                  type="button"
+                  onClick={() => handleCameraCapture(activeDocAction)}
+                  className="w-full p-4 flex items-center justify-center gap-3 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl font-bold transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                  Take Photo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    fileInputRefs.current[activeDocAction]?.click();
+                    setActiveDocAction(null);
+                  }}
+                  className="w-full p-4 flex items-center justify-center gap-3 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+                >
+                  <Upload className="w-5 h-5" />
+                  Upload from Gallery
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveDocAction(null)}
+                  className="w-full p-4 mt-2 flex items-center justify-center gap-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {isMapOpen && (
         <MapPicker
