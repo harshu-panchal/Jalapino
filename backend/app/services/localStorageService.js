@@ -79,6 +79,7 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
             .webp({ quality: options.quality || 80 })
             .toFile(targetPath);
 
+        const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
         const isLocal = process.platform === "win32";
         const domain = process.env.API_DOMAIN || (isLocal ? "http://localhost:7000" : "https://jalpaino.com/api");
         return `${domain}${relativeUrlPath}`;
