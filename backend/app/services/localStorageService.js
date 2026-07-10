@@ -80,7 +80,8 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
             .toFile(targetPath);
 
         const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
-        const domain = process.env.API_DOMAIN || "http://localhost:7000"; // fallback
+        const isProd = process.env.NODE_ENV === "production";
+        const domain = process.env.API_DOMAIN || (isProd ? "https://jalpaino.com/api" : "http://localhost:7000");
         return `${domain}${relativeUrlPath}`;
     } catch (error) {
         logger.error(`Error processing image: ${error.message}`);
@@ -106,7 +107,8 @@ export async function saveRawFile(fileBuffer, folder = "docs", originalName = ""
     try {
         await fs.writeFile(targetPath, fileBuffer);
         const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
-        const domain = process.env.API_DOMAIN || "http://localhost:7000";
+        const isProd = process.env.NODE_ENV === "production";
+        const domain = process.env.API_DOMAIN || (isProd ? "https://jalpaino.com/api" : "http://localhost:7000");
         return `${domain}${relativeUrlPath}`;
     } catch (error) {
         logger.error(`Error saving raw file: ${error.message}`);
@@ -116,7 +118,8 @@ export async function saveRawFile(fileBuffer, folder = "docs", originalName = ""
 
 export async function deleteLocalFile(fileUrl) {
     try {
-        const domain = process.env.API_DOMAIN || "http://localhost:7000";
+        const isProd = process.env.NODE_ENV === "production";
+        const domain = process.env.API_DOMAIN || (isProd ? "https://jalpaino.com/api" : "http://localhost:7000");
         if (!fileUrl.startsWith(domain)) return; // Only process if it's our domain
 
         const relativePath = fileUrl.replace(domain, "").replace("/images/", "");
