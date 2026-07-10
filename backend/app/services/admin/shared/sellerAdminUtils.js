@@ -84,6 +84,13 @@ export function formatSellerApplication(seller) {
     documentFiles,
     location: seller.address || "Not provided",
     description: seller.description || "No application note provided.",
+    retailEnabled: seller.retailEnabled ?? true,
+    planMyEventEnabled: seller.planMyEventEnabled ?? false,
+    productsEnabled: seller.productsEnabled ?? true,
+    stockEnabled: seller.stockEnabled ?? true,
+    ordersEnabled: seller.ordersEnabled ?? true,
+    walletEnabled: seller.walletEnabled ?? true,
+    analyticsEnabled: seller.analyticsEnabled ?? true,
     verificationScore: docs.length
       ? Math.min(100, 55 + docs.length * 12 + (seller.address ? 10 : 0))
       : 40,

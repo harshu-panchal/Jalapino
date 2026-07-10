@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import {
@@ -23,9 +23,11 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { adminApi } from '../services/adminApi';
+import { PermissionToggle } from '../components/PermissionToggle';
 
 const PendingSellers = () => {
     const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
     const [pendingSellers, setPendingSellers] = useState([]);
     const [summaryStats, setSummaryStats] = useState({
         totalApplications: 0,
@@ -37,6 +39,15 @@ const PendingSellers = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
     const [viewingSeller, setViewingSeller] = useState(null);
+    const [permissions, setPermissions] = useState({
+        retailEnabled: true,
+        planMyEventEnabled: false,
+        productsEnabled: true,
+        stockEnabled: true,
+        ordersEnabled: true,
+        walletEnabled: true,
+        analyticsEnabled: true
+    });
     const [isProcessing, setIsProcessing] = useState(false);
 
     const fetchPendingSellers = async () => {
@@ -52,6 +63,27 @@ const PendingSellers = () => {
                 missingInfo: payload.stats?.missingInfo ?? items.filter((s) => (s.documents || []).length < 3).length,
                 avgReviewTimeHours: payload.stats?.avgReviewTimeHours ?? 24
             });
+
+            // Check if we need to open a specific review modal from URL
+            const reviewId = searchParams.get('review');
+            if (reviewId) {
+                const s = items.find(s => s.id === reviewId);
+                if (s) {
+                    setViewingSeller(s);
+                    setPermissions({
+                        retailEnabled: s.retailEnabled ?? true,
+                        planMyEventEnabled: s.planMyEventEnabled ?? false,
+                        productsEnabled: s.productsEnabled ?? true,
+                        stockEnabled: s.stockEnabled ?? true,
+                        ordersEnabled: s.ordersEnabled ?? true,
+                        walletEnabled: s.walletEnabled ?? true,
+                        analyticsEnabled: s.analyticsEnabled ?? true
+                    });
+                    setIsReviewModalOpen(true);
+                } else {
+                    setSearchParams({});
+                }
+            }
         } catch (error) {
             console.error('Failed to fetch pending sellers', error);
             toast.error(error.response?.data?.message || 'Failed to load seller applications');
@@ -100,8 +132,9 @@ const PendingSellers = () => {
     const handleApprove = async (id) => {
         setIsProcessing(true);
         try {
-            await adminApi.approveSeller(id);
+            await adminApi.approveSeller(id, { permissions });
             setIsReviewModalOpen(false);
+            setSearchParams({});
             setViewingSeller(null);
             toast.success('Seller approved successfully');
             await fetchPendingSellers();
@@ -120,6 +153,7 @@ const PendingSellers = () => {
                 const reason = window.prompt('Optional rejection reason (leave blank if not needed):') || '';
                 await adminApi.rejectSeller(id, { reason });
                 setIsReviewModalOpen(false);
+                setSearchParams({});
                 setViewingSeller(null);
                 toast.success('Seller application rejected');
                 await fetchPendingSellers();
@@ -214,7 +248,20 @@ const PendingSellers = () => {
                                     <td className="px-6 py-5 align-middle">
                                         <div
                                             className="flex items-center gap-4 cursor-pointer group/name"
-                                            onClick={() => navigate(`/admin/sellers/active/${s.id}`)}
+                                            onClick={() => {
+                                                setViewingSeller(s);
+                                                setPermissions({
+                                                    retailEnabled: s.retailEnabled ?? true,
+                                                    planMyEventEnabled: s.planMyEventEnabled ?? false,
+                                                    productsEnabled: s.productsEnabled ?? true,
+                                                    stockEnabled: s.stockEnabled ?? true,
+                                                    ordersEnabled: s.ordersEnabled ?? true,
+                                                    walletEnabled: s.walletEnabled ?? true,
+                                                    analyticsEnabled: s.analyticsEnabled ?? true
+                                                });
+                                                setSearchParams({ review: s.id });
+                                                setIsReviewModalOpen(true);
+                                            }}
                                         >
                                             <div className="h-10 w-10 rounded-xl overflow-hidden bg-slate-100 ring-2 ring-slate-100 group-hover:ring-primary/20 transition-all">
                                                 <div className="h-full w-full flex items-center justify-center bg-slate-100 text-slate-400">
@@ -260,7 +307,20 @@ const PendingSellers = () => {
                                             </button>
                                             <div className="w-[1px] h-4 bg-slate-200 mx-1" />
                                             <button
-                                                onClick={() => { setViewingSeller(s); setIsReviewModalOpen(true); }}
+                                                onClick={() => {
+                                                    setViewingSeller(s);
+                                                    setPermissions({
+                                                        retailEnabled: s.retailEnabled ?? true,
+                                                        planMyEventEnabled: s.planMyEventEnabled ?? false,
+                                                        productsEnabled: s.productsEnabled ?? true,
+                                                        stockEnabled: s.stockEnabled ?? true,
+                                                        ordersEnabled: s.ordersEnabled ?? true,
+                                                        walletEnabled: s.walletEnabled ?? true,
+                                                        analyticsEnabled: s.analyticsEnabled ?? true
+                                                    });
+                                                    setSearchParams({ review: s.id });
+                                                    setIsReviewModalOpen(true);
+                                                }}
                                                 className="h-9 px-4 bg-black  text-primary-foreground rounded-xl text-[10px] font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-100 hover:-translate-y-0.5 flex items-center gap-2"
                                             >
                                                 <HiOutlineEye className="h-4 w-4" />
@@ -296,14 +356,17 @@ const PendingSellers = () => {
                                 animate={{ opacity: 1 }}
                                 exit={{ opacity: 0 }}
                                 className="fixed inset-0 bg-slate-900/80 backdrop-blur-md"
-                                onClick={() => setIsReviewModalOpen(false)}
+                                onClick={() => {
+                                    setIsReviewModalOpen(false);
+                                    setSearchParams({});
+                                }}
                             />
 
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.9, y: 30 }}
                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                 exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                                className="w-full max-w-4xl relative z-10 bg-white rounded-2xl shadow-2xl overflow-hidden"
+                                className="w-full max-w-4xl relative z-10 bg-white rounded-2xl shadow-2xl overflow-y-auto max-h-[95vh]"
                             >
                                 <div className="grid grid-cols-1 lg:grid-cols-12">
                                     {/* Sidebar Info */}
@@ -313,7 +376,10 @@ const PendingSellers = () => {
                                                 {(viewingSeller.shopName || 'S').charAt(0)}
                                             </div>
                                             <button
-                                                onClick={() => setIsReviewModalOpen(false)}
+                                                onClick={() => {
+                                                    setIsReviewModalOpen(false);
+                                                    setSearchParams({});
+                                                }}
                                                 className="lg:hidden p-2 hover:bg-slate-200 rounded-full"
                                             >
                                                 <HiOutlineXMark className="h-5 w-5" />
@@ -357,7 +423,10 @@ const PendingSellers = () => {
                                     {/* Main Review Section */}
                                     <div className="lg:col-span-8 p-4 lg:p-5 bg-white relative">
                                         <button
-                                            onClick={() => setIsReviewModalOpen(false)}
+                                            onClick={() => {
+                                                setIsReviewModalOpen(false);
+                                                setSearchParams({});
+                                            }}
                                             className="hidden lg:block absolute right-8 top-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
                                         >
                                             <HiOutlineXMark className="h-6 w-6 text-slate-300" />
@@ -377,8 +446,8 @@ const PendingSellers = () => {
                                                     <div
                                                         key={doc.key}
                                                         className={`p-4 rounded-2xl border-2 transition-all group ${doc.isViewable
-                                                                ? 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-brand-100'
-                                                                : 'border-slate-100 bg-slate-50/70'
+                                                            ? 'border-slate-50 bg-slate-50/50 hover:bg-white hover:border-brand-100'
+                                                            : 'border-slate-100 bg-slate-50/70'
                                                             }`}
                                                     >
                                                         <div className="flex items-center justify-between gap-4">
@@ -433,6 +502,148 @@ const PendingSellers = () => {
                                                             Our system automatically checked all basic identity and shop locations. You need to check documents manually now.
                                                         </p>
                                                     </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Permissions Toggles */}
+                                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                                <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                    <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Module Access Permissions</h5>
+                                                    <p className="text-[10px] text-slate-500 font-medium">Enable or disable specific features for this seller before approval.</p>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                                                    <PermissionToggle
+                                                        label="Retail Store (Master)"
+                                                        description="Main toggle for retail store access"
+                                                        checked={permissions.retailEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, retailEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { retailEnabled: checked });
+                                                                toast.success('Retail master permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, retailEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update retail master permission');
+                                                                setPermissions(prev => ({ ...prev, retailEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+
+                                                    <PermissionToggle
+                                                        label="Products & Catalog"
+                                                        description="Allow adding and managing products"
+                                                        checked={permissions.productsEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, productsEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { productsEnabled: checked });
+                                                                toast.success('Products permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, productsEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update products permission');
+                                                                setPermissions(prev => ({ ...prev, productsEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
+                                                        label="Stock & Inventory"
+                                                        description="Allow managing product inventory"
+                                                        checked={permissions.stockEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, stockEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { stockEnabled: checked });
+                                                                toast.success('Stock permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, stockEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update stock permission');
+                                                                setPermissions(prev => ({ ...prev, stockEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
+                                                        label="Orders & Returns"
+                                                        description="Allow viewing and managing orders"
+                                                        checked={permissions.ordersEnabled}
+                                                        activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, ordersEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { ordersEnabled: checked });
+                                                                toast.success('Orders permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ordersEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update orders permission');
+                                                                setPermissions(prev => ({ ...prev, ordersEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
+                                                        label="Wallet & Earnings"
+                                                        description="Allow access to payouts and earnings"
+                                                        checked={permissions.walletEnabled}
+                                                        activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, walletEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { walletEnabled: checked });
+                                                                toast.success('Wallet permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, walletEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update wallet permission');
+                                                                setPermissions(prev => ({ ...prev, walletEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
+                                                        label="Analytics & Reports"
+                                                        description="Allow viewing sales analytics"
+                                                        checked={permissions.analyticsEnabled}
+                                                        activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, analyticsEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { analyticsEnabled: checked });
+                                                                toast.success('Analytics permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, analyticsEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update analytics permission');
+                                                                setPermissions(prev => ({ ...prev, analyticsEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
+                                                        label="Plan My Event"
+                                                        description="Allow event service bookings"
+                                                        checked={permissions.planMyEventEnabled}
+                                                        activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
+                                                                toast.success('Plan my event permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update plan my event permission');
+                                                                setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
                                                 </div>
                                             </div>
 

@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import MainLocationHeader from '../components/shared/MainLocationHeader';
 import { customerApi } from '../services/customerApi';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
+import { Search, X } from 'lucide-react';
+
 
 const CategoriesPage = () => {
     const [categories, setCategories] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [isScrolled, setIsScrolled] = useState(false);
+    const navigate = useNavigate();
+
+
 
     const fetchCategories = async () => {
         setIsLoading(true);
@@ -42,19 +49,54 @@ const CategoriesPage = () => {
 
     useEffect(() => {
         fetchCategories();
+        const handleScroll = () => setIsScrolled(window.scrollY > 80);
+        window.addEventListener('scroll', handleScroll, { passive: true });
+        return () => window.removeEventListener('scroll', handleScroll);
     }, []);
+
 
     return (
         <div className="min-h-screen bg-[#FAF8F6]">
-            <MainLocationHeader hideSearchBar={true} />
-            <div className="max-w-3xl mx-auto px-6 pt-[210px] md:pt-[230px] pb-24">
+            <MainLocationHeader hideSearchBar={true} isAbsolute={true} />
+            <div className="max-w-3xl mx-auto px-4 pt-[200px] md:pt-[220px] pb-24">
+                {/* Search Box - Sticky top-0 */}
+                <div 
+                    className="sticky top-0 z-[100] bg-[#FAF8F6] py-3 -mx-4 px-4 transition-all"
+                    style={{
+                        boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
+                    }}
+                >
+                    <div className="flex items-center gap-3 bg-white rounded-2xl px-4 h-12 shadow-sm border border-slate-200 hover:shadow-md transition-all">
+                        <Search className="text-slate-400 w-5 h-5 shrink-0" />
+                        <input
+                            type="text"
+                            placeholder="Search categories..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && searchQuery.trim()) {
+                                    navigate(`/search`, { state: { query: searchQuery.trim() } });
+                                }
+                            }}
+                            className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm"
+                        />
+                        {searchQuery && (
+                            <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600">
+                                <X className="w-4 h-4" />
+                            </button>
+                        )}
+                    </div>
+                </div>
+
                 {isLoading ? (
                     <div className="flex justify-center py-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--customer-header-base-color)]" />
                     </div>
                 ) : (
                     <div className="grid grid-cols-4 gap-x-6 sm:gap-x-8 md:gap-x-10 gap-y-10 md:gap-y-14">
-                        {categories.map((category, idx) => (
+                        {categories
+                            .filter(cat => cat.name.toLowerCase().includes(searchQuery.toLowerCase()))
+                            .map((category, idx) => (
                             <div 
                                 key={category.id} 
                                 className="flex flex-col group cursor-pointer text-center animate-in fade-in slide-in-from-bottom-4 duration-500"

@@ -41,7 +41,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
 
     const intervalId = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % totalItems);
-    }, 4500);
+    }, 2500);
 
     return () => clearInterval(intervalId);
   }, [totalItems]);

@@ -31,9 +31,11 @@ export const getPendingSellers = async (req, res) => {
 export const approveSellerApplication = async (req, res) => {
   try {
     const { id } = req.params;
+    const { permissions } = req.body || {};
     const seller = await approveSellerApplicationById({
       sellerId: id,
       reviewedBy: req.user.id,
+      permissions,
     });
 
     if (!seller) {

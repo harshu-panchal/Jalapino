@@ -95,19 +95,43 @@ export async function getPendingSellerApplications({
   };
 }
 
-export async function approveSellerApplicationById({ sellerId, reviewedBy }) {
+export async function approveSellerApplicationById({ sellerId, reviewedBy, permissions }) {
+  const updateData = {
+    isVerified: true,
+    isActive: true,
+    applicationStatus: "approved",
+    reviewedAt: new Date(),
+    reviewedBy,
+    rejectionReason: null,
+  };
+
+  if (permissions) {
+    if (typeof permissions.retailEnabled === 'boolean') {
+      updateData.retailEnabled = permissions.retailEnabled;
+    }
+    if (typeof permissions.planMyEventEnabled === 'boolean') {
+      updateData.planMyEventEnabled = permissions.planMyEventEnabled;
+    }
+    if (typeof permissions.productsEnabled === 'boolean') {
+      updateData.productsEnabled = permissions.productsEnabled;
+    }
+    if (typeof permissions.stockEnabled === 'boolean') {
+      updateData.stockEnabled = permissions.stockEnabled;
+    }
+    if (typeof permissions.ordersEnabled === 'boolean') {
+      updateData.ordersEnabled = permissions.ordersEnabled;
+    }
+    if (typeof permissions.walletEnabled === 'boolean') {
+      updateData.walletEnabled = permissions.walletEnabled;
+    }
+    if (typeof permissions.analyticsEnabled === 'boolean') {
+      updateData.analyticsEnabled = permissions.analyticsEnabled;
+    }
+  }
+
   const seller = await Seller.findByIdAndUpdate(
     sellerId,
-    {
-      $set: {
-        isVerified: true,
-        isActive: true,
-        applicationStatus: "approved",
-        reviewedAt: new Date(),
-        reviewedBy,
-        rejectionReason: null,
-      },
-    },
+    { $set: updateData },
     { new: true },
   );
 

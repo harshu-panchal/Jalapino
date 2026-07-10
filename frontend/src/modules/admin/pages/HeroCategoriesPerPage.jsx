@@ -138,12 +138,75 @@ export default function HeroCategoriesPerPage() {
     setFormBanners((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const handleBannerFileChange = async (idx, file) => {
-    if (!file) return;
+  const handleBannerFileChange = async (idx, filesList) => {
+    const files = Array.from(filesList || []);
+    if (!files.length) return;
+
+    const firstFile = files[0];
     updateBannerItem(idx, { isUploading: true });
+
+    const remainingFiles = files.slice(1);
+    if (remainingFiles.length > 0) {
+      setFormBanners((prev) => {
+        const next = [...prev];
+        const startingIdx = next.length;
+        const newSlots = remainingFiles.map(() => ({
+          imageUrl: "",
+          title: "",
+          subtitle: "",
+          linkType: "none",
+          linkValue: "",
+          isUploading: true,
+        }));
+
+        const nextBanners = [...next, ...newSlots];
+
+        remainingFiles.forEach((file, index) => {
+          const targetIndex = startingIdx + index;
+          const upload = async () => {
+            try {
+              const fd = new FormData();
+              fd.append("image", file);
+              const res = await adminApi.uploadExperienceBanner(fd);
+              const url = res.data?.result?.url || res.data?.url;
+              if (!url) throw new Error("Upload failed");
+              
+              setFormBanners((latest) => {
+                const updated = [...latest];
+                if (updated[targetIndex]) {
+                  updated[targetIndex] = {
+                    ...updated[targetIndex],
+                    imageUrl: url,
+                    isUploading: false,
+                  };
+                }
+                return updated;
+              });
+            } catch (err) {
+              console.error(err);
+              setFormBanners((latest) => {
+                const updated = [...latest];
+                if (updated[targetIndex]) {
+                  updated[targetIndex] = {
+                    ...updated[targetIndex],
+                    isUploading: false,
+                  };
+                }
+                return updated;
+              });
+              showToast(`Image upload failed`, "error");
+            }
+          };
+          upload();
+        });
+
+        return nextBanners;
+      });
+    }
+
     try {
       const fd = new FormData();
-      fd.append("image", file);
+      fd.append("image", firstFile);
       const res = await adminApi.uploadExperienceBanner(fd);
       const url = res.data?.result?.url || res.data?.url;
       if (!url) throw new Error("Upload failed");
@@ -154,6 +217,73 @@ export default function HeroCategoriesPerPage() {
       updateBannerItem(idx, { isUploading: false });
       showToast("Failed to upload banner image", "error");
     }
+  };
+
+  const handleBulkBannerUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setFormBanners((prev) => {
+      let currentBanners = [...prev];
+      if (currentBanners.length === 1 && !currentBanners[0].imageUrl && !currentBanners[0].isUploading) {
+        currentBanners = [];
+      }
+
+      const startingIdx = currentBanners.length;
+      const newSlots = files.map(() => ({
+        imageUrl: "",
+        title: "",
+        subtitle: "",
+        linkType: "none",
+        linkValue: "",
+        isUploading: true,
+      }));
+
+      const nextBanners = [...currentBanners, ...newSlots];
+
+      files.forEach((file, index) => {
+        const targetIndex = startingIdx + index;
+        const upload = async () => {
+          try {
+            const fd = new FormData();
+            fd.append("image", file);
+            const res = await adminApi.uploadExperienceBanner(fd);
+            const url = res.data?.result?.url || res.data?.url;
+            if (!url) throw new Error("Upload failed");
+            
+            setFormBanners((latest) => {
+              const updated = [...latest];
+              if (updated[targetIndex]) {
+                updated[targetIndex] = {
+                  ...updated[targetIndex],
+                  imageUrl: url,
+                  isUploading: false,
+                };
+              }
+              return updated;
+            });
+          } catch (err) {
+            console.error(err);
+            setFormBanners((latest) => {
+              const updated = [...latest];
+              if (updated[targetIndex]) {
+                updated[targetIndex] = {
+                  ...updated[targetIndex],
+                  isUploading: false,
+                };
+              }
+              return updated;
+            });
+            showToast(`Image upload failed`, "error");
+          }
+        };
+        upload();
+      });
+
+      return nextBanners;
+    });
+
+    e.target.value = "";
   };
 
   const toggleCategory = (catId) => {
@@ -325,16 +455,25 @@ export default function HeroCategoriesPerPage() {
                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
                   Hero banners
                 </label>
-                <button
-                  type="button"
-                  onClick={addBannerItem}
-                  className="flex items-center gap-1 text-[10px] font-bold text-primary"
-                >
-                  <HiOutlinePlus className="h-3 w-3" />
-                  Add banner
-                </button>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    id="add-banner-file-input"
+                    onChange={handleBulkBannerUpload}
+                  />
+                  <label
+                    htmlFor="add-banner-file-input"
+                    className="flex items-center gap-1 text-[10px] font-bold text-primary cursor-pointer hover:underline"
+                  >
+                    <HiOutlinePlus className="h-3 w-3" />
+                    + Add Banner(s)
+                  </label>
+                </div>
               </div>
-              <div className="space-y-3 max-h-48 overflow-y-auto">
+              <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
                 {formBanners.map((item, idx) => (
                   <Card key={idx} className="p-3 bg-white border-slate-100">
                     <div className="flex items-start gap-3">
@@ -355,9 +494,10 @@ export default function HeroCategoriesPerPage() {
                             <input
                               type="file"
                               accept="image/*"
+                              multiple
                               className="hidden"
                               id={`hero-banner-file-${idx}`}
-                              onChange={(e) => handleBannerFileChange(idx, e.target.files?.[0])}
+                              onChange={(e) => handleBannerFileChange(idx, e.target.files)}
                             />
                             <label
                               htmlFor={`hero-banner-file-${idx}`}

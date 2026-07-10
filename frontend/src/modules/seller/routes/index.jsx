@@ -90,12 +90,27 @@ const SellerRoutes = () => {
     setActiveRole(ROLES.SELLER);
   }, []);
 
-  const isEventSeller = user?.isEventSeller === true;
-  const hasProductAccess = user?.hasProductAccess !== false;
+  const isEventSeller = user?.isEventSeller === true || user?.planMyEventEnabled === true;
+  const hasProductAccess = user?.hasProductAccess !== false && user?.retailEnabled !== false;
 
   let activeNavItems = isEventSeller ? eventNavItems : navItems;
-  if (!hasProductAccess) {
-    activeNavItems = activeNavItems.filter(item => !['Products', 'Stock', 'Packages'].includes(item.label));
+  
+  if (!isEventSeller) {
+    if (user?.productsEnabled === false) {
+      activeNavItems = activeNavItems.filter(item => !['Products'].includes(item.label));
+    }
+    if (user?.stockEnabled === false) {
+      activeNavItems = activeNavItems.filter(item => !['Stock'].includes(item.label));
+    }
+    if (user?.ordersEnabled === false) {
+      activeNavItems = activeNavItems.filter(item => !['Orders', 'Returns', 'Track Orders'].includes(item.label));
+    }
+    if (user?.walletEnabled === false) {
+      activeNavItems = activeNavItems.filter(item => !['Earnings', 'Money Request', 'Payment History'].includes(item.label));
+    }
+    if (user?.analyticsEnabled === false) {
+      activeNavItems = activeNavItems.filter(item => !['Sales Reports'].includes(item.label));
+    }
   }
 
   return (

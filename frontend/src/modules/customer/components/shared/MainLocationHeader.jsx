@@ -157,11 +157,14 @@ const MainLocationHeader = ({
   activeCategory,
   onCategorySelect,
   hideSearchBar = false,
+  isAbsolute = false,
 }) => {
   const { mode, toggleMode } = useCustomerMode();
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [cartAnimData, setCartAnimData] = useState(null);
+
+
 
   // Dynamically load shopping-cart Lottie on mount
   useEffect(() => {
@@ -313,7 +316,7 @@ const MainLocationHeader = ({
       <div
         style={{ fontFamily: "'Inter', sans-serif" }}
         className={cn(
-          "fixed top-0 left-0 right-0 z-200",
+          isAbsolute ? "absolute top-0 left-0 right-0 z-[200]" : "fixed top-0 left-0 right-0 z-[200]",
           isProductDetailOpen && "hidden md:block",
         )}>
         <motion.div
@@ -360,34 +363,6 @@ const MainLocationHeader = ({
                   )}
                 />
                 <span className="text-[10px] tracking-wider uppercase font-black">Retail</span>
-              </button>
-            )}
-
-            {/* Wholesale Card */}
-            {settings?.platformControl?.wholesaleEnabled !== false && availableModules?.wholesaleEnabled && (
-              <button
-                type="button"
-                onClick={() => toggleMode('whole')}
-                className={cn(
-                  "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                  mode === 'whole'
-                    ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
-                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
-                )}
-                style={{
-                  borderWidth: '3px',
-                  borderColor: 'transparent'
-                }}
-              >
-                <img 
-                  src={wholesalerIcon} 
-                  alt="Wholesale"
-                  className={cn(
-                    "h-7 w-7 object-contain transition-all duration-300",
-                    mode === 'whole' ? "opacity-100 scale-105" : "opacity-100"
-                  )}
-                />
-                <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
               </button>
             )}
 

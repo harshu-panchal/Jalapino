@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import adminUsersApi from '../services/api/usersApi';
 import { adminEventConfigApi } from '../services/adminEventConfigApi';
+import { PermissionToggle } from '../components/PermissionToggle';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
 import {
@@ -108,7 +109,15 @@ const SellerDetail = () => {
                 walletBalance: data.stats?.walletBalance || 0,
                 totalOrders: data.stats?.totalOrders || 0,
                 totalRevenue: data.stats?.totalRevenue || 0,
-                rating: data.stats?.rating || 0
+                rating: data.stats?.rating || 0,
+                status: data.applicationStatus === 'pending' ? 'pending' : (data.isVerified && data.isActive ? 'active' : (data.applicationStatus || 'inactive')),
+                retailEnabled: data.retailEnabled ?? true,
+                planMyEventEnabled: data.planMyEventEnabled ?? false,
+                productsEnabled: data.productsEnabled ?? true,
+                stockEnabled: data.stockEnabled ?? true,
+                ordersEnabled: data.ordersEnabled ?? true,
+                walletEnabled: data.walletEnabled ?? true,
+                analyticsEnabled: data.analyticsEnabled ?? true
             }));
         } catch (error) {
             console.error(error);
@@ -142,11 +151,11 @@ const SellerDetail = () => {
         }
     };
 
-    const handleToggleProductAccess = async (sellerId, currentAccess) => {
+    const handleToggleRetail = async (sellerId, currentAccess) => {
         try {
-            await adminUsersApi.updateSeller(sellerId, { hasProductAccess: !currentAccess });
+            await adminUsersApi.updateSeller(sellerId, { retailEnabled: !currentAccess });
             showToast('Permissions updated successfully', 'success');
-            setSeller(prev => ({ ...prev, hasProductAccess: !currentAccess }));
+            setSeller(prev => ({ ...prev, retailEnabled: !currentAccess }));
         } catch (error) {
             showToast('Failed to update permissions', 'error');
         }
@@ -486,97 +495,134 @@ const SellerDetail = () => {
                                     </div>
 
                                     <div className="ds-section-spacing">
-                                        {/* PRODUCT SELLER SETTINGS */}
+                                        {/* MODULE SETTINGS */}
                                         <div className="mb-8">
-                                            <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Product Seller Settings</h5>
-                                            <div className="p-6 bg-slate-50 rounded-xl border border-slate-200">
-                                                <div className="flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-900">Enable Product Flow</p>
-                                                        <p className="text-[10px] text-slate-500 font-medium">Allow seller to add/edit standard products.</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={cn(
-                                                            "text-xs font-black uppercase tracking-wider transition-colors",
-                                                            seller.hasProductAccess !== false ? "text-brand-600" : "text-slate-400"
-                                                        )}>
-                                                            {seller.hasProductAccess !== false ? "ON" : "OFF"}
-                                                        </span>
-                                                        <label className="relative inline-flex items-center cursor-pointer">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                className="sr-only peer" 
-                                                                checked={seller.hasProductAccess !== false}
-                                                                onChange={() => handleToggleProductAccess(seller.id, seller.hasProductAccess !== false)}
-                                                            />
-                                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-600 shadow-inner"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* EVENT SELLER SETTINGS */}
-                                        <div>
-                                            <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Event Seller Settings</h5>
-                                            <div className="p-6 bg-brand-50 rounded-xl border border-brand-200">
-                                                <div className="flex items-center justify-between mb-4">
-                                                    <div>
-                                                        <p className="text-sm font-bold text-slate-900">Enable Event Flow</p>
-                                                        <p className="text-[10px] text-slate-500 font-medium">Switch this seller to the Event Management dashboard.</p>
-                                                    </div>
-                                                    <div className="flex items-center gap-3">
-                                                        <span className={cn(
-                                                            "text-xs font-black uppercase tracking-wider transition-colors",
-                                                            seller.isEventSeller ? "text-brand-600" : "text-slate-400"
-                                                        )}>
-                                                            {seller.isEventSeller ? "ON" : "OFF"}
-                                                        </span>
-                                                        <label className="relative inline-flex items-center cursor-pointer">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                className="sr-only peer" 
-                                                                checked={seller.isEventSeller}
-                                                                onChange={(e) => setSeller({...seller, isEventSeller: e.target.checked})}
-                                                            />
-                                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-600 shadow-inner"></div>
-                                                        </label>
-                                                    </div>
-                                                </div>
+                                            <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Module Access Permissions</h5>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
                                                 
-                                                {seller.isEventSeller && (
-                                                    <div className="space-y-4 pt-4 border-t border-brand-200/50">
-                                                        <div>
-                                                            <label className="text-[10px] font-bold text-slate-600 uppercase">Service Category</label>
-                                                            <select 
-                                                                className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500"
-                                                                value={seller.eventCategory}
-                                                                onChange={(e) => setSeller({...seller, eventCategory: e.target.value})}
-                                                            >
-                                                                <option value="">Select Category</option>
-                                                                {eventCategories.map((cat) => (
-                                                                    <option key={cat._id || cat.id} value={cat._id || cat.id}>{cat.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        </div>
-                                                        <div>
-                                                            <label className="text-[10px] font-bold text-slate-600 uppercase">Max Guest Capacity</label>
-                                                            <input 
-                                                                type="number" 
-                                                                className="w-full mt-1 p-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-brand-500"
-                                                                value={seller.maxCapacity}
-                                                                onChange={(e) => setSeller({...seller, maxCapacity: parseInt(e.target.value) || 0})}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                <PermissionToggle
+                                                    label="Retail Store (Master)"
+                                                    description="Main toggle for retail store access"
+                                                    checked={seller.retailEnabled}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, retailEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { retailEnabled: checked });
+                                                            showToast('Retail master permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, retailEnabled: !checked }));
+                                                            showToast('Failed to update retail master permission', 'error');
+                                                        }
+                                                    }}
+                                                />
 
-                                                <button 
-                                                    onClick={handleUpdateEventSettings}
-                                                    className="w-full mt-6 py-3 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg"
-                                                >
-                                                    SAVE EVENT SETTINGS
-                                                </button>
+                                                <PermissionToggle
+                                                    label="Products & Catalog"
+                                                    description="Allow adding and managing products"
+                                                    checked={seller.productsEnabled}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, productsEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { productsEnabled: checked });
+                                                            showToast('Products permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, productsEnabled: !checked }));
+                                                            showToast('Failed to update products permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Stock & Inventory"
+                                                    description="Allow managing product inventory"
+                                                    checked={seller.stockEnabled}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, stockEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { stockEnabled: checked });
+                                                            showToast('Stock permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, stockEnabled: !checked }));
+                                                            showToast('Failed to update stock permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Orders & Returns"
+                                                    description="Allow viewing and managing orders"
+                                                    checked={seller.ordersEnabled}
+                                                    activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, ordersEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { ordersEnabled: checked });
+                                                            showToast('Orders permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, ordersEnabled: !checked }));
+                                                            showToast('Failed to update orders permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Wallet & Earnings"
+                                                    description="Allow access to payouts and earnings"
+                                                    checked={seller.walletEnabled}
+                                                    activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, walletEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { walletEnabled: checked });
+                                                            showToast('Wallet permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, walletEnabled: !checked }));
+                                                            showToast('Failed to update wallet permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Analytics & Reports"
+                                                    description="Allow viewing sales analytics"
+                                                    checked={seller.analyticsEnabled}
+                                                    activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, analyticsEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { analyticsEnabled: checked });
+                                                            showToast('Analytics permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, analyticsEnabled: !checked }));
+                                                            showToast('Failed to update analytics permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Plan My Event"
+                                                    description="Allow event service bookings"
+                                                    checked={seller.planMyEventEnabled}
+                                                    activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, planMyEventEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { planMyEventEnabled: checked });
+                                                            showToast('Plan my event permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, planMyEventEnabled: !checked }));
+                                                            showToast('Failed to update plan my event permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
                                             </div>
                                         </div>
 

@@ -51,7 +51,23 @@ const REQUIRED_DOCUMENT_CONFIG = [
   { id: "other", label: "Other Documents", required: false },
 ];
 
+const SELLER_BANNERS = [
+  "/jal1.jpeg",
+  "/jal2.jpeg",
+  "/jal3.jpeg",
+  "/jal4.jpeg",
+  "/jal5.jpeg",
+];
+
 const Auth = () => {
+  const [bannerIndex, setBannerIndex] = useState(0);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % 5);
+    }, 2500); // 2.5 seconds autoplay
+    return () => clearInterval(timer);
+  }, []);
+
   const [searchParams] = useSearchParams();
   const isSignupMode = searchParams.get("mode") === "signup" || searchParams.get("signup") === "true";
   const [isLogin, setIsLogin] = useState(() => {
@@ -106,7 +122,7 @@ const Auth = () => {
   const [formData, setFormData] = useState(() => {
     const saved = sessionStorage.getItem('sellerAuthFormData');
     if (saved) {
-      try { return JSON.parse(saved); } catch (e) {}
+      try { return JSON.parse(saved); } catch (e) { }
     }
     return {
       email: "",
@@ -194,8 +210,8 @@ const Auth = () => {
         const subcategories = list.filter(cat => cat.type === 'subcategory');
         const best = headers.length > 0 ? headers
           : categories.length > 0 ? categories
-          : subcategories.length > 0 ? subcategories
-          : list;
+            : subcategories.length > 0 ? subcategories
+              : list;
         setCategoriesList(best);
       }).catch(err => console.error("Failed to load categories", err));
     }
@@ -524,49 +540,31 @@ const Auth = () => {
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
         className="relative z-10 w-full max-w-[1000px] min-h-0 md:min-h-[600px] max-h-none md:max-h-[90vh] bg-white rounded-2xl md:rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row md:overflow-hidden">
-        {/* Visual Side Panel */}
-        <div className="hidden md:flex w-[45%] bg-linear-to-br from-slate-900 via-slate-950 to-black relative flex-col items-center justify-center p-10 overflow-hidden">
-          {/* Abstract Decorative Circles */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2" />
-            <div className="absolute bottom-0 right-0 w-96 h-96 bg-slate-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2" />
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="relative z-10 w-full flex flex-col items-center">
-            {/* Lottie Animation for Seller */}
-            <div className="w-full max-w-[350px] drop-shadow-[0_20px_60px_rgba(0,0,0,0.5)]">
-              <Lottie
-                animationData={sellerAnimation}
-                loop={true}
-                className="w-full h-auto"
-              />
-            </div>
-
-            <div className="mt-8 text-center space-y-4">
-              <h2 className="text-2xl font-black text-white tracking-tight leading-tight uppercase underline decoration-white/20 underline-offset-8">
-                Seller <span className="text-slate-600">Expansion.</span>
-              </h2>
-            </div>
-          </motion.div>
-
-          {/* Partner Badges */}
-          <div className="absolute bottom-12 left-0 right-0 px-12 flex justify-between items-center opacity-60">
-            <div className="flex items-center gap-2 text-white/80">
-              <Rocket size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                Growth First
-              </span>
-            </div>
-            <div className="flex items-center gap-2 text-white/80">
-              <Globe size={16} />
-              <span className="text-[10px] font-black uppercase tracking-widest">
-                Pan India
-              </span>
-            </div>
+        {/* Visual Side Panel - 5 Banner Slideshow */}
+        <div className="hidden md:block w-[45%] relative overflow-hidden bg-slate-950">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={bannerIndex}
+              src={SELLER_BANNERS[bannerIndex]}
+              initial={{ opacity: 0, scale: 1.02 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.6, ease: "easeInOut" }}
+              className="absolute inset-0 w-full h-full object-cover"
+              alt="Seller Banner"
+            />
+          </AnimatePresence>
+          {/* Burgundy / Dark Gradient Overlay for premium look */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
+          
+          {/* Logo & Slogan overlay on left panel */}
+          <div className="absolute bottom-10 left-8 right-8 z-10 text-left">
+            <h2 className="text-2xl font-black text-white tracking-tight uppercase leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
+              Seller Partner
+            </h2>
+            <p className="text-xs font-semibold text-white/90 tracking-wider mt-2 uppercase drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">
+              Empowering Business Digitalization
+            </p>
           </div>
         </div>
 
@@ -575,8 +573,8 @@ const Auth = () => {
           ref={panelRef}
           className="w-full md:w-[55%] min-h-0 p-5 pt-14 md:p-12 md:pt-16 flex flex-col justify-center bg-white md:overflow-y-auto md:overscroll-contain custom-scrollbar relative"
           style={{ WebkitOverflowScrolling: "touch" }}>
-          
-          <button 
+
+          <button
             type="button"
             onClick={() => {
               if (!isLogin && signupStep > 1) {
@@ -612,6 +610,54 @@ const Auth = () => {
               transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
               className="space-y-8 py-4 md:py-6">
               <div className="space-y-4">
+                 {/* Mobile Brand Header (visible on mobile view only) */}
+                 <div className="flex md:hidden items-center gap-4 mb-6">
+                   <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                     {logoUrl ? (
+                       <img
+                         src={logoUrl}
+                         alt={`${appName} logo`}
+                         className="w-8 h-8 object-contain"
+                       />
+                     ) : (
+                       <Store size={20} className="text-slate-700" />
+                     )}
+                   </div>
+                   <div className="text-left">
+                     <h2 className="text-sm font-black text-slate-800 tracking-tight uppercase leading-none">
+                       {appName} <span className="text-slate-500">Partner</span>
+                     </h2>
+                     <p className="text-[10px] text-slate-500 font-semibold tracking-wider mt-1 uppercase">
+                       Empowering Business
+                     </p>
+                   </div>
+                 </div>
+
+                  {/* Mobile Banner Slideshow */}
+                  <div className="block md:hidden w-full h-36 rounded-2xl relative overflow-hidden mb-6 bg-slate-950">
+                    <AnimatePresence mode="wait">
+                      <motion.img
+                        key={bannerIndex}
+                        src={SELLER_BANNERS[bannerIndex]}
+                        initial={{ opacity: 0, scale: 1.02 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        alt="Seller Banner"
+                      />
+                    </AnimatePresence>
+                    {/* Overlay gradient */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+                    
+                    {/* Overlay Text */}
+                    <div className="absolute bottom-3 left-4 right-4 z-10 text-left">
+                      <h3 className="text-xs font-black text-white uppercase tracking-widest leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                        Seller Partner
+                      </h3>
+                    </div>
+                  </div>
+
                 <span className="inline-block px-4 py-1 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
                   {isLogin
                     ? "Welcome Back"
@@ -994,7 +1040,7 @@ const Auth = () => {
                         name="isPickupPointEligible"
                         id="isPickupPointEligible"
                         checked={formData.isPickupPointEligible}
-                        onChange={(e) => setFormData(prev => ({...prev, isPickupPointEligible: e.target.checked}))}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isPickupPointEligible: e.target.checked }))}
                         className="mt-0.5 w-5 h-5 rounded text-brand-600 focus:ring-brand-500 border-slate-300 cursor-pointer"
                       />
                       <label htmlFor="isPickupPointEligible" className="text-sm font-bold text-slate-700 cursor-pointer select-none">

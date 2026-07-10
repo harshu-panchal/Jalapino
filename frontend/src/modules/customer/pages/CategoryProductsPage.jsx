@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronLeft, Heart, Search, Minus, Plus } from 'lucide-react';
+import { ChevronLeft, Heart, Search, Minus, Plus, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
@@ -32,6 +32,8 @@ const CategoryProductsPage = () => {
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [noServiceData, setNoServiceData] = useState(null);
+    const [searchQuery, setSearchQuery] = useState('');
+
 
     // Dynamically load no-service Lottie on mount
     useEffect(() => {
@@ -122,8 +124,10 @@ const CategoryProductsPage = () => {
     const safeProducts = Array.isArray(products) ? products : [];
 
     const filteredProducts = safeProducts.filter(p =>
-        selectedSubCategory === 'all' || p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory
+        (selectedSubCategory === 'all' || p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory)
+        && (!searchQuery.trim() || (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
     );
+
 
     const productsById = React.useMemo(() => {
         const map = {};
@@ -137,7 +141,7 @@ const CategoryProductsPage = () => {
         <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto relative font-sans">
             {/* Header */}
             <header className={cn(
-                "sticky top-0 z-50 bg-white border-b border-gray-50 px-4 py-4 flex items-center justify-between",
+                "sticky top-0 z-50 bg-white border-b border-gray-50 px-4 py-3 flex flex-col gap-2",
                 isProductDetailOpen && "hidden md:flex"
             )}>
                 <div className="flex items-center gap-3">
@@ -151,8 +155,24 @@ const CategoryProductsPage = () => {
                         {category?.name || catId}
                     </h1>
                 </div>
-
+                {/* Search Box */}
+                <div className="flex items-center gap-3 bg-[#F4F6F8] rounded-2xl px-4 h-11">
+                    <Search size={18} className="text-slate-400 shrink-0" />
+                    <input
+                        type="text"
+                        placeholder={`Search in ${category?.name || 'category'}...`}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm"
+                    />
+                    {searchQuery && (
+                        <button onClick={() => setSearchQuery('')} className="text-slate-400">
+                            <X size={16} />
+                        </button>
+                    )}
+                </div>
             </header>
+
 
             <div className="flex flex-1 relative items-start">
                 {(safeProducts.length === 0 && !isLoading) ? (

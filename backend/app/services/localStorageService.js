@@ -80,8 +80,7 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
             .toFile(targetPath);
 
         const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
-        const domain = process.env.API_DOMAIN || "https://jalpaino.com"; // fallback
-
+        const domain = process.env.API_DOMAIN || "http://localhost:7000"; // fallback
         return `${domain}${relativeUrlPath}`;
     } catch (error) {
         logger.error(`Error processing image: ${error.message}`);

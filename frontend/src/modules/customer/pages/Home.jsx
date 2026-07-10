@@ -473,6 +473,14 @@ const Home = () => {
     if (allSections.some((s) => s._id === pendingReturn.sectionId)) { const el = document.getElementById(`section-${pendingReturn.sectionId}`); if (el) { el.scrollIntoView({ behavior: "instant", block: "start" }); removeStorage(STORAGE_KEYS.EXPERIENCE_RETURN, { storage: "session" }); setPendingReturn(null); } }
   }, [headerSections, experienceSections, pendingReturn]);
 
+  const [isScrolled, setIsScrolled] = useState(false);
+  useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 80);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+
   const renderFloatingElements = (type, isVisible = true) => {
     if (isMobile) return null;
     return null; // Particles were already simplified out earlier
@@ -481,7 +489,7 @@ const Home = () => {
   return (
     <div className={`min-h-screen pt-[190px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
-        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} />
+        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} isAbsolute={true} />
       </div>
 
       {products.length === 0 && !isLoading ? (
@@ -493,8 +501,13 @@ const Home = () => {
         </div>
       ) : (
         <>
-          {/* Search Bar on Page (above banners) */}
-          <div className="sticky top-[180px] md:top-[155px] z-[100] w-full max-w-2xl mx-auto px-4 py-3 md:py-4 mb-4 flex items-center gap-3 bg-[#FAF8F6] shadow-[0_8px_20px_-12px_rgba(0,0,0,0.1)] transition-all">
+          {/* Search Bar - sticky top-0, header scrolls out naturally */}
+          <div
+            className="sticky top-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 mb-4 flex items-center gap-3 bg-[#FAF8F6] transition-all"
+            style={{
+              boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
+            }}
+          >
             <motion.div
               onClick={() => navigate("/search")}
               whileHover={{ scale: 1.005 }}
@@ -530,7 +543,7 @@ const Home = () => {
           </div>
 
           {heroConfig.banners?.items?.length > 0 && (
-            <motion.div ref={heroRef} className="block md:hidden will-change-transform" style={isMobile ? { opacity: 1 } : { opacity, y, scale, pointerEvents }}>
+            <motion.div ref={heroRef} className="block will-change-transform" style={isMobile ? { opacity: 1 } : { opacity, y, scale, pointerEvents }}>
               <div className="relative w-full overflow-hidden">
                 <ExperienceBannerCarousel section={{ title: "" }} items={heroConfig.banners.items} fullWidth edgeToEdge />
               </div>

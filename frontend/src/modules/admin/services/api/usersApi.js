@@ -22,7 +22,7 @@ export const adminUsersApi = {
     updateSeller: (id, payload) => axiosInstance.put(`/admin/sellers/${id}`, payload),
     updateSellerType: (id, payload) =>
         axiosInstance.patch(`/admin/sellers/${id}/type`, payload),
-    approveSeller: (id) => axiosInstance.patch(`/admin/sellers/approve/${id}`),
+    approveSeller: (id, payload) => axiosInstance.patch(`/admin/sellers/approve/${id}`, payload),
     rejectSeller: (id, data) =>
         axiosInstance.delete(`/admin/sellers/reject/${id}`, { data }),
 };

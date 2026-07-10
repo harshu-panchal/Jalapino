@@ -224,6 +224,26 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    productsEnabled: {
+      type: Boolean,
+      default: true
+    },
+    stockEnabled: {
+      type: Boolean,
+      default: true
+    },
+    ordersEnabled: {
+      type: Boolean,
+      default: true
+    },
+    walletEnabled: {
+      type: Boolean,
+      default: true
+    },
+    analyticsEnabled: {
+      type: Boolean,
+      default: true
+    },
     // ---------------------------------
     bankDetails: {
       bankName: { type: String, trim: true },

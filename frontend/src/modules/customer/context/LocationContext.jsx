@@ -316,8 +316,7 @@ export const LocationProvider = ({ children }) => {
     refreshAddresses();
   }, [refreshAddresses]);
 
-  // On mount: only restore from cache. Do NOT auto-fetch – browsers block the
-  // location prompt unless it's triggered by a user gesture (e.g. tap).
+  // On mount: restore from cache first, then auto-fetch live location
   useEffect(() => {
     const parsed = getJSON(STORAGE_KEY, null);
     const addressName = parsed?.address || parsed?.name;
@@ -342,7 +341,9 @@ export const LocationProvider = ({ children }) => {
         updateSavedHome: false,
       });
     }
-    // Live fetch happens only when user taps location pill or "Use current location"
+    
+    // Auto-fetch live location on load
+    fetchAndCacheLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
