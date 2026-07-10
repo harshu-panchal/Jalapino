@@ -7,6 +7,43 @@ import mongoose from "mongoose";
 import { buildKey, getOrSet, getTTL, invalidate } from "../services/cacheService.js";
 import { uploadToCloudinary } from "../services/mediaService.js";
 
+const rewriteImageUrl = (url) => {
+  if (!url) return url;
+  const imagesIdx = url.indexOf("/images/");
+  if (imagesIdx !== -1) {
+    const relative = url.substring(imagesIdx);
+    const isProd = process.env.NODE_ENV === "production";
+    const activeDomain = process.env.API_DOMAIN || (isProd ? "https://jalpaino.com/api" : "http://localhost:7000");
+    return `${activeDomain}${relative}`;
+  }
+  return url;
+};
+
+const normalizeBanners = (banners) => {
+  if (!banners || !Array.isArray(banners.items)) return banners;
+  return {
+    ...banners,
+    items: banners.items.map((item) => ({
+      ...item,
+      imageUrl: rewriteImageUrl(item.imageUrl),
+    })),
+  };
+};
+
+const normalizeSection = (section) => {
+  if (!section) return section;
+  const config = { ...section.config };
+  if (config.banners) {
+    config.banners = normalizeBanners(config.banners);
+  }
+  return {
+    ...section,
+    config,
+  };
+};
+
+
+
 /* ===============================
    Helpers
 ================================ */
@@ -214,7 +251,9 @@ export const getAdminExperienceSections = async (req, res) => {
       .sort({ order: 1, createdAt: 1 })
       .lean();
 
-    return handleResponse(res, 200, "Experience sections fetched", sections);
+    const normalizedSections = Array.isArray(sections) ? sections.map(normalizeSection) : [];
+
+    return handleResponse(res, 200, "Experience sections fetched", normalizedSections);
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }
@@ -373,7 +412,9 @@ export const getPublicExperienceSections = async (req, res) => {
       getTTL("homepage"),
     );
 
-    return handleResponse(res, 200, "Experience sections fetched", sections);
+    const normalizedSections = Array.isArray(sections) ? sections.map(normalizeSection) : [];
+
+    return handleResponse(res, 200, "Experience sections fetched", normalizedSections);
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }
@@ -450,7 +491,7 @@ export const getPublicHeroConfig = async (req, res) => {
 
     const payload = config
       ? {
-          banners: config.banners || { items: [] },
+          banners: normalizeBanners(config.banners || { items: [] }),
           categoryIds: config.categoryIds || [],
         }
       : { banners: { items: [] }, categoryIds: [] };
@@ -478,11 +519,18 @@ export const getAdminHeroConfig = async (req, res) => {
       headerId: pageType === "header" ? headerId : null,
     }).lean();
 
+    const normalizedConfig = config
+      ? {
+          ...config,
+          banners: normalizeBanners(config.banners),
+        }
+      : { banners: { items: [] }, categoryIds: [] };
+
     return handleResponse(
       res,
       200,
       "Hero config fetched",
-      config || { banners: { items: [] }, categoryIds: [] }
+      normalizedConfig
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);
