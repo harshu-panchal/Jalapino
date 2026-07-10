@@ -12,8 +12,8 @@ const rewriteImageUrl = (url) => {
   const imagesIdx = url.indexOf("/images/");
   if (imagesIdx !== -1) {
     const relative = url.substring(imagesIdx);
-    const isProd = process.env.NODE_ENV === "production";
-    const activeDomain = process.env.API_DOMAIN || (isProd ? "https://jalpaino.com/api" : "http://localhost:7000");
+    const isLocal = process.platform === "win32";
+    const activeDomain = process.env.API_DOMAIN || (isLocal ? "http://localhost:7000" : "https://jalpaino.com/api");
     return `${activeDomain}${relative}`;
   }
   return url;
