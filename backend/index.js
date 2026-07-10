@@ -189,6 +189,7 @@ function createApp() {
   // Serve uploaded files statically
   const STORAGE_BASE_PATH = process.env.STORAGE_BASE_PATH || path.join(process.cwd(), "uploads");
   app.use("/images", express.static(STORAGE_BASE_PATH));
+  app.use("/api/images", express.static(STORAGE_BASE_PATH));
 
   // Root endpoint
   app.get("/", (req, res) => {
