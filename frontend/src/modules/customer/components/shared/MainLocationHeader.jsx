@@ -470,14 +470,14 @@ const MainLocationHeader = ({
                   onClick={handleSearchClick}
                   whileHover={{ scale: 1.01 }}
                   whileTap={{ scale: 0.99 }}
-                  style={{ backgroundColor: "rgba(17, 24, 39, 0.45)" }}
-                  className="rounded-full px-4 h-11 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
-                  <SearchIcon sx={{ color: "#E5E7EB", fontSize: 20 }} />
+                  style={{ backgroundColor: "#FFFFFF" }}
+                  className="rounded-full px-4 h-11 shadow-sm flex items-center border border-slate-200 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
+                  <SearchIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
                   <input
                     type="text"
                     placeholder={searchPlaceholder || "Search Products..."}
                     readOnly
-                    className="flex-1 bg-transparent border-none outline-none pl-2 text-white font-medium placeholder:text-gray-400 text-[15px] cursor-pointer"
+                    className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-medium placeholder:text-slate-400 text-[15px] cursor-pointer"
                   />
                 </motion.div>
               </div>
@@ -572,18 +572,18 @@ const MainLocationHeader = ({
 
           {/* Search Bar (MOBILE ONLY) */}
           {!hideSearchBar && (
-            <div className="relative z-10 mt-[1.5px] flex items-center gap-2 md:hidden">
+            <div className="relative z-10 mt-1 flex items-center gap-2 md:hidden">
               <motion.div
                 onClick={handleSearchClick}
                 whileTap={{ scale: 0.98 }}
-                style={{ backgroundColor: "rgba(17, 24, 39, 0.45)" }}
-                className="flex-1 rounded-[10px] px-3 h-10 shadow-sm flex items-center border border-white/10 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
-                <SearchIcon sx={{ color: "#E5E7EB", fontSize: 18 }} />
+                style={{ backgroundColor: "#FFFFFF" }}
+                className="flex-1 rounded-[12px] px-3 h-11 shadow-sm flex items-center border border-slate-200 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
+                <SearchIcon sx={{ color: "#94A3B8", fontSize: 18 }} />
                 <input
                   type="text"
                   placeholder={searchPlaceholder || "Search Products..."}
                   readOnly
-                  className="flex-1 bg-transparent border-none outline-none pl-2 text-white font-medium placeholder:text-gray-400 text-[14px] cursor-pointer"
+                  className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-medium placeholder:text-slate-400 text-[14px] cursor-pointer"
                 />
               </motion.div>
             </div>

@@ -3,6 +3,7 @@ import { getFirebaseApp } from "./client";
 import axiosInstance from "@core/api/axios";
 import AppZetoBridge from "../../lib/appZetoBridge";
 import { rawGet, rawSet, rawRemove, KEY_PREFIXES } from "@core/utils/storage";
+import { toast } from "sonner";
 
 let foregroundListenerStarted = false;
 let foregroundUnsubscribe = null;
@@ -97,6 +98,20 @@ async function ensureServiceWorkerRegistration() {
 }
 
 async function showSystemNotification({ title, body, data } = {}) {
+  // If the document is active/visible, show a premium in-app toast instead of popping a native OS notification.
+  // This prevents double-notifications in Web Apps and iOS PWAs.
+  if (typeof document !== "undefined" && document.visibilityState === "visible") {
+    try {
+      toast.info(`${title}: ${body}`, {
+        duration: 7000,
+        id: `fcm-${data?.orderId || data?.eventType || Date.now()}`,
+      });
+      return;
+    } catch (e) {
+      console.warn("Toast trigger error:", e);
+    }
+  }
+
   const safeTitle = String(title || "Notification");
   const safeBody = String(body || "");
   const link = data?.link || "/";

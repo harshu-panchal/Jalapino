@@ -411,11 +411,18 @@ const PendingSellers = () => {
                                                 </div>
                                             </div>
 
-                                            <div className="pt-6 border-t border-slate-200">
-                                                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Application Memo</h4>
-                                                <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
-                                                    "{viewingSeller.description}"
-                                                </p>
+                                            <div className="pt-6 border-t border-slate-200 space-y-3">
+                                                <div>
+                                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Shop Category & Products</h4>
+                                                    <p className="text-xs font-semibold text-slate-700">Category: <span className="font-normal text-slate-600">{viewingSeller.category || 'Not specified'}</span></p>
+                                                    <p className="text-xs font-semibold text-slate-700 mt-1">Main Products: <span className="font-normal text-slate-600">{viewingSeller.mainProducts || 'Not specified'}</span></p>
+                                                </div>
+                                                <div>
+                                                    <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">Application Memo</h4>
+                                                    <p className="text-xs font-medium text-slate-600 italic leading-relaxed">
+                                                        "{viewingSeller.description}"
+                                                    </p>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

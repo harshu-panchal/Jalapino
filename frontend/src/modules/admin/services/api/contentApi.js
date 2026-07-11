@@ -59,6 +59,14 @@ export const adminContentApi = {
     createCoupon: (data) => axiosInstance.post('/admin/coupons', data),
     updateCoupon: (id, data) => axiosInstance.put(`/admin/coupons/${id}`, data),
     deleteCoupon: (id) => axiosInstance.delete(`/admin/coupons/${id}`),
+
+    // Homepage videos
+    getHomeVideos: () => axiosInstance.get('/admin/home-videos'),
+    createHomeVideo: (formData) => axiosInstance.post('/admin/home-videos', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    updateHomeVideo: (id, data) => axiosInstance.patch(`/admin/home-videos/${id}`, data),
+    deleteHomeVideo: (id) => axiosInstance.delete(`/admin/home-videos/${id}`),
 };
 
 export default adminContentApi;

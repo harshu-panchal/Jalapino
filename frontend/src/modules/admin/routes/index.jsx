@@ -97,6 +97,7 @@ const EnvSettings = React.lazy(() => import("../pages/EnvSettings"));
 const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
 const RewardManagement = React.lazy(() => import("../pages/RewardManagement"));
 const ReferralSettings = React.lazy(() => import("../pages/ReferralSettings"));
+const HomeVideosManagement = React.lazy(() => import("../pages/HomeVideosManagement"));
 
 const CateringDashboard = React.lazy(() => import("../pages/catering/CateringDashboard"));
 const CateringServices = React.lazy(() => import("../pages/catering/CateringServices"));
@@ -143,6 +144,7 @@ const navItems = [
       { label: "Refer & Earn", path: "/admin/referral" },
       { label: "Offer Sections", path: "/admin/offer-sections" },
       { label: "Shop by Store", path: "/admin/shop-by-store" },
+      { label: "Homepage Videos", path: "/admin/home-videos" },
     ],
   },
   {
@@ -345,6 +347,7 @@ const AdminRoutes = () => {
         <Route path="/offers" element={<OffersManagement />} />
         <Route path="/offer-sections" element={<OfferSectionsManagement />} />
         <Route path="/shop-by-store" element={<ShopByStoreManagement />} />
+        <Route path="/home-videos" element={<HomeVideosManagement />} />
         <Route path="/coupons" element={<CouponManagement />} />
         <Route path="/gamification" element={<RewardManagement />} />
         <Route path="/referral" element={<ReferralSettings />} />

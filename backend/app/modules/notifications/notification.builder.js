@@ -358,12 +358,33 @@ function eventDefinition(eventType) {
           return `Only ${currentStock} left for ${itemLabel}. Restock soon.`;
         },
       };
-    case NOTIFICATION_EVENTS.DOCUMENT_EXPIRY_ALERT:
+      case NOTIFICATION_EVENTS.DOCUMENT_EXPIRY_ALERT:
       return {
         role: NOTIFICATION_ROLES.SELLER,
         recipientIds: (payload) => normalizeIdList(payload.userId),
         title: (payload) => String(payload.title || "⏰ Certificate Expiry Alert"),
         body: (payload) => String(payload.body || "Your uploaded certificate is expiring soon. Please renew it."),
+      };
+    case NOTIFICATION_EVENTS.NEW_EVENT_BOOKING_REQUEST:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "New Event Booking Request",
+        body: (payload) => payload.message || "You have received a new event booking request.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_BOOKING_APPROVED:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Event Booking Approved",
+        body: (payload) => payload.message || "Your event booking request has been approved.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_BOOKING_REJECTED:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Event Booking Rejected",
+        body: (payload) => payload.message || "Your event booking request has been rejected.",
       };
     default:
       return null;
@@ -407,6 +428,24 @@ function eventData(eventType, payload = {}, role) {
       eventType,
       link: `${baseUrl}/seller/profile`,
       type: "document_expiry",
+      ...(payload.data || {}),
+    };
+  }
+
+  if (
+    eventType === NOTIFICATION_EVENTS.NEW_EVENT_BOOKING_REQUEST ||
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_APPROVED ||
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REJECTED
+  ) {
+    const bookingId = String(payload.bookingId || "").trim() || undefined;
+    const baseUrl = getFrontendBaseUrl();
+    const link = role === NOTIFICATION_ROLES.SELLER
+      ? `${baseUrl}/seller/bookings?bookingId=${encodeURIComponent(bookingId)}`
+      : `${baseUrl}/orders?bookingId=${encodeURIComponent(bookingId)}`;
+    return {
+      eventType,
+      bookingId,
+      link,
       ...(payload.data || {}),
     };
   }

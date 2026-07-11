@@ -569,6 +569,10 @@ export const upsertHeroConfig = async (req, res) => {
         }))
       : [];
 
+    if (bannerItems.length > 10) {
+      return handleResponse(res, 400, "Maximum of 10 banners are allowed at a time");
+    }
+
     const ids = Array.isArray(categoryIds) ? categoryIds.filter(Boolean) : [];
 
     const filter = {

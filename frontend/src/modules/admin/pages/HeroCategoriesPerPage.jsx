@@ -31,6 +31,7 @@ export default function HeroCategoriesPerPage() {
   const [editingRow, setEditingRow] = useState(null);
   const [formBanners, setFormBanners] = useState([emptyBannerItem()]);
   const [formCategoryIds, setFormCategoryIds] = useState([]);
+  const [allProducts, setAllProducts] = useState([]);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -85,6 +86,19 @@ export default function HeroCategoriesPerPage() {
           })
         );
 
+        const productsRes = await adminApi.getProducts({ limit: 1000 }).catch(() => null);
+        if (productsRes && productsRes.data) {
+          const rawResult = productsRes.data.result;
+          const prodList = Array.isArray(productsRes.data.results)
+              ? productsRes.data.results
+              : Array.isArray(rawResult?.items)
+                  ? rawResult.items
+                  : Array.isArray(rawResult)
+                      ? rawResult
+                      : [];
+          if (!cancelled) setAllProducts(prodList);
+        }
+
         if (!cancelled) setPageData(rows);
       } catch (e) {
         if (!cancelled) console.error(e);
@@ -131,6 +145,10 @@ export default function HeroCategoriesPerPage() {
   };
 
   const addBannerItem = () => {
+    if (formBanners.length >= 10) {
+      showToast("Maximum of 10 banners are allowed", "error");
+      return;
+    }
     setFormBanners((prev) => [...prev, emptyBannerItem()]);
   };
 
@@ -147,6 +165,11 @@ export default function HeroCategoriesPerPage() {
 
     const remainingFiles = files.slice(1);
     if (remainingFiles.length > 0) {
+      if (formBanners.length + remainingFiles.length > 10) {
+        showToast("Maximum of 10 banners are allowed", "error");
+        updateBannerItem(idx, { isUploading: false });
+        return;
+      }
       setFormBanners((prev) => {
         const next = [...prev];
         const startingIdx = next.length;
@@ -223,12 +246,17 @@ export default function HeroCategoriesPerPage() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    setFormBanners((prev) => {
-      let currentBanners = [...prev];
-      if (currentBanners.length === 1 && !currentBanners[0].imageUrl && !currentBanners[0].isUploading) {
-        currentBanners = [];
-      }
+    let currentBanners = [...formBanners];
+    if (currentBanners.length === 1 && !currentBanners[0].imageUrl && !currentBanners[0].isUploading) {
+      currentBanners = [];
+    }
 
+    if (currentBanners.length + files.length > 10) {
+      showToast("Maximum of 10 banners are allowed", "error");
+      return;
+    }
+
+    setFormBanners(() => {
       const startingIdx = currentBanners.length;
       const newSlots = files.map(() => ({
         imageUrl: "",
@@ -511,12 +539,64 @@ export default function HeroCategoriesPerPage() {
                               className="w-full p-2 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none"
                               placeholder="Title (optional)"
                             />
-                            <input
+                             <input
                               value={item.subtitle || ""}
                               onChange={(e) => updateBannerItem(idx, { subtitle: e.target.value })}
                               className="w-full p-2 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none"
                               placeholder="Subtitle (optional)"
                             />
+                            {/* Link Settings */}
+                            <div className="flex gap-2 pt-1">
+                              <select
+                                value={item.linkType || "none"}
+                                onChange={(e) => updateBannerItem(idx, { linkType: e.target.value })}
+                                className="w-1/3 p-2 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none cursor-pointer"
+                              >
+                                <option value="none">No Link</option>
+                                <option value="product">Link Product</option>
+                                <option value="category">Link Category</option>
+                                <option value="url">External Link</option>
+                              </select>
+                              {item.linkType === "product" ? (
+                                <select
+                                  value={item.linkValue || ""}
+                                  onChange={(e) => updateBannerItem(idx, { linkValue: e.target.value })}
+                                  className="flex-1 p-2 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none cursor-pointer"
+                                >
+                                  <option value="">Select Product...</option>
+                                  {allProducts.map((p) => (
+                                    <option key={p._id} value={p._id}>
+                                      {p.name}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : item.linkType === "category" ? (
+                                <select
+                                  value={item.linkValue || ""}
+                                  onChange={(e) => updateBannerItem(idx, { linkValue: e.target.value })}
+                                  className="flex-1 p-2 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none cursor-pointer"
+                                >
+                                  <option value="">Select Category...</option>
+                                  {allCategories.map((c) => (
+                                    <option key={c._id} value={c._id}>
+                                      {c.name} {c.headerName ? `(${c.headerName})` : ""}
+                                    </option>
+                                  ))}
+                                </select>
+                              ) : (
+                                <input
+                                  value={item.linkValue || ""}
+                                  onChange={(e) => updateBannerItem(idx, { linkValue: e.target.value })}
+                                  className="flex-1 p-2 bg-slate-50 rounded-xl text-xs font-bold border-none outline-none"
+                                  placeholder={
+                                    item.linkType === "url"
+                                      ? "Enter URL (https://...)"
+                                      : "No Link Value needed"
+                                  }
+                                  disabled={item.linkType === "none"}
+                                />
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>

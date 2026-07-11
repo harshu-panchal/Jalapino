@@ -280,6 +280,35 @@ const Home = () => {
   const [pendingReturn, setPendingReturn] = useState(null);
   const [offerSections, setOfferSections] = useState(() => cachedHomePageData?.offerSections || []);
   const [noServiceData, setNoServiceData] = useState(null);
+  const [homeVideos, setHomeVideos] = useState([]);
+
+  useEffect(() => {
+    const fetchVideos = async () => {
+      try {
+        const res = await customerApi.getHomeVideos();
+        if (res.data?.success) {
+          setHomeVideos(res.data.result || []);
+        }
+      } catch (e) {
+        console.warn("Failed to load home videos", e);
+      }
+    };
+    fetchVideos();
+  }, []);
+
+  const handleVideoClick = (item) => {
+    if (item.linkType === "product") {
+      if (!item.linkValue) {
+        toast.error("No Product");
+        return;
+      }
+      navigate(`/product/${item.linkValue}`);
+    } else if (item.linkType === "category") {
+      navigate(`/category/${item.linkValue}`);
+    } else if (item.linkType === "url") {
+      window.open(item.linkValue, "_blank");
+    }
+  };
 
   useEffect(() => {
     productsRef.current = products || [];
@@ -487,9 +516,9 @@ const Home = () => {
   };
 
   return (
-    <div className={`min-h-screen pt-[190px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
+    <div className={`min-h-screen pt-[240px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
-        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} isAbsolute={true} />
+        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={false} isAbsolute={true} />
       </div>
 
       {products.length === 0 && !isLoading ? (
@@ -503,7 +532,10 @@ const Home = () => {
         <>
           {/* Search Bar - sticky top-0, header scrolls out naturally */}
           <div
-            className="sticky top-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 mb-4 flex items-center gap-3 bg-[#FAF8F6] transition-all"
+            className={cn(
+              "sticky top-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 mb-4 items-center gap-3 bg-[#FAF8F6] transition-all",
+              isScrolled ? "flex" : "hidden md:flex"
+            )}
             style={{
               boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
             }}
@@ -551,6 +583,54 @@ const Home = () => {
           )}
 
           <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} />
+
+          {/* Promotional Videos Section */}
+          {homeVideos.length > 0 && (
+            <div className="w-full max-w-7xl mx-auto px-4 md:px-8 lg:px-[50px] mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                <h2 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-wide">Featured Clips</h2>
+              </div>
+              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x">
+                {homeVideos.map((vid) => (
+                  <motion.div
+                    key={vid._id}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleVideoClick(vid)}
+                    className="relative shrink-0 w-[180px] md:w-[220px] aspect-[9/16] rounded-2xl overflow-hidden shadow-md cursor-pointer snap-start bg-slate-900 border border-slate-100 group"
+                  >
+                    <video
+                      src={vid.videoUrl}
+                      className="w-full h-full object-cover"
+                      autoPlay
+                      loop
+                      muted
+                      playsInline
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
+                      {vid.title && (
+                        <h4 className="text-white font-black text-xs md:text-sm leading-tight uppercase">
+                          {vid.title}
+                        </h4>
+                      )}
+                      {vid.subtitle && (
+                        <p className="text-slate-300 text-[10px] font-semibold mt-1 opacity-90 truncate">
+                          {vid.subtitle}
+                        </p>
+                      )}
+                      {vid.linkType !== "none" && (
+                        <span className="inline-block mt-2 px-2 py-0.5 bg-white/20 backdrop-blur-md rounded-full text-[9px] font-black text-white uppercase tracking-wider text-center max-w-fit">
+                          Tap to Shop
+                        </span>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <LowestPriceSection products={products} onSeeAll={() => navigate("/category/all")} />
           <OfferSections sections={offerSections} noServiceData={noServiceData} />
 

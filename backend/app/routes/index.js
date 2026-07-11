@@ -43,6 +43,7 @@ import { checkMaintenanceMode } from "../middleware/maintenanceMiddleware.js";
 
 import operationsRoute from "./operationsRoutes.js";
 import supportTicketRoute from "./supportTicketRoutes.js";
+import homeVideoRoute from "./homeVideoRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -87,6 +88,7 @@ const setupRoutes = (app) => {
     router.use("/", experienceRoute);
     router.use("/", offerRoute);
     router.use("/", couponRoute);
+    router.use("/", homeVideoRoute);
     router.use("/notifications", notificationRoute);
     router.use("/auth/otp", authOtpRoute);
     router.use("/push", pushRoute);

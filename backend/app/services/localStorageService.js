@@ -80,9 +80,7 @@ export async function processAndSaveImage(fileBuffer, folder = "misc", originalN
             .toFile(targetPath);
 
         const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
-        const isLocal = process.platform === "win32";
-        const domain = process.env.API_DOMAIN || (isLocal ? "http://localhost:7000" : "https://jalpaino.com/api");
-        return `${domain}${relativeUrlPath}`;
+        return relativeUrlPath;
     } catch (error) {
         logger.error(`Error processing image: ${error.message}`);
         throw error;
@@ -107,9 +105,7 @@ export async function saveRawFile(fileBuffer, folder = "docs", originalName = ""
     try {
         await fs.writeFile(targetPath, fileBuffer);
         const relativeUrlPath = `/images/${folder}/${year}/${month}/${filename}`;
-        const isLocal = process.platform === "win32";
-        const domain = process.env.API_DOMAIN || (isLocal ? "http://localhost:7000" : "https://jalpaino.com/api");
-        return `${domain}${relativeUrlPath}`;
+        return relativeUrlPath;
     } catch (error) {
         logger.error(`Error saving raw file: ${error.message}`);
         throw error;
@@ -118,13 +114,21 @@ export async function saveRawFile(fileBuffer, folder = "docs", originalName = ""
 
 export async function deleteLocalFile(fileUrl) {
     try {
+        if (!fileUrl) return;
+        let relativePath = fileUrl;
+        
         const isLocal = process.platform === "win32";
         const domain = process.env.API_DOMAIN || (isLocal ? "http://localhost:7000" : "https://jalpaino.com/api");
-        if (!fileUrl.startsWith(domain)) return; // Only process if it's our domain
-
-        const relativePath = fileUrl.replace(domain, "").replace("/images/", "");
+        
+        if (relativePath.startsWith(domain)) {
+            relativePath = relativePath.replace(domain, "");
+        }
+        
+        if (!relativePath.startsWith("/images/")) return;
+ 
+        relativePath = relativePath.replace("/images/", "");
         const absolutePath = path.join(STORAGE_BASE_PATH, relativePath);
-
+ 
         await fs.unlink(absolutePath);
         logger.info(`Deleted local file: ${absolutePath}`);
     } catch (error) {

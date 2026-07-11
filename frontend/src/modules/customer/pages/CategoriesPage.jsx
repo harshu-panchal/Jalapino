@@ -57,16 +57,16 @@ const CategoriesPage = () => {
 
     return (
         <div className="min-h-screen bg-[#FAF8F6]">
-            <MainLocationHeader hideSearchBar={true} isAbsolute={true} />
-            <div className="max-w-3xl mx-auto px-4 pt-[200px] md:pt-[220px] pb-24">
+            <MainLocationHeader hideSearchBar={false} isAbsolute={true} />
+            <div className="max-w-3xl mx-auto px-4 pt-[240px] md:pt-[220px] pb-24">
                 {/* Search Box - Sticky top-0 */}
                 <div 
-                    className="sticky top-0 z-[100] bg-[#FAF8F6] py-3 -mx-4 px-4 transition-all"
+                    className={`sticky top-0 z-[100] bg-[#FAF8F6] py-3 -mx-4 px-4 transition-all ${isScrolled ? "block" : "hidden md:block"}`}
                     style={{
                         boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
                     }}
                 >
-                    <div className="flex items-center gap-3 bg-white rounded-2xl px-4 h-12 shadow-sm border border-slate-200 hover:shadow-md transition-all">
+                    <div className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 h-12 shadow-sm border border-slate-200 hover:shadow-md transition-all">
                         <Search className="text-slate-400 w-5 h-5 shrink-0" />
                         <input
                             type="text"

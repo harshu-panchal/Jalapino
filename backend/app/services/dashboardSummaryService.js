@@ -36,13 +36,13 @@ export async function updateDashboardStat(metric, data) {
         new: true,
       }
     );
-    
+
     // Invalidate cache
     const cacheKey = buildKey("dashboard", "stat", metric);
     await set(cacheKey, null, 0); // Delete cache
-    
+
     logger.debug(`[DashboardSummary] Updated metric: ${metric}`);
-    
+
   } catch (error) {
     logger.error(`[DashboardSummary] Error updating metric ${metric}:`, error);
     throw error;
@@ -58,31 +58,31 @@ export async function updateDashboardStat(metric, data) {
 export async function getDashboardStat(metric, filters = {}) {
   try {
     const cacheKey = buildKey("dashboard", "stat", metric);
-    
+
     // Try cache first
     const cached = await get(cacheKey);
     if (cached) {
       logger.debug(`[DashboardSummary] Cache hit for metric: ${metric}`);
       return cached;
     }
-    
+
     // Fetch from database
-    const readOptions = USE_SECONDARY_PREFERRED 
+    const readOptions = USE_SECONDARY_PREFERRED
       ? { readPreference: "secondaryPreferred" }
       : {};
-    
+
     const stat = await DashboardStats.findOne({ metric }, null, readOptions).lean();
-    
+
     if (!stat) {
       logger.warn(`[DashboardSummary] Metric not found: ${metric}`);
       return null;
     }
-    
+
     // Cache the result
     await set(cacheKey, stat, CACHE_DASHBOARD_TTL);
-    
+
     return stat;
-    
+
   } catch (error) {
     logger.error(`[DashboardSummary] Error getting metric ${metric}:`, error);
     throw error;
@@ -97,16 +97,16 @@ export async function getDashboardStat(metric, filters = {}) {
 export async function checkStaleness(metric) {
   try {
     const stat = await DashboardStats.findOne({ metric }).select("lastUpdated").lean();
-    
+
     if (!stat) {
       return { stale: true, age: Infinity };
     }
-    
+
     const age = Date.now() - new Date(stat.lastUpdated).getTime();
     const stale = age > STALENESS_THRESHOLD_MS;
-    
+
     return { stale, age };
-    
+
   } catch (error) {
     logger.error(`[DashboardSummary] Error checking staleness for ${metric}:`, error);
     return { stale: true, age: Infinity };
@@ -127,7 +127,7 @@ async function refreshOrderCounts() {
         },
       },
     ]);
-    
+
     const data = {
       totalOrders: 0,
       pendingOrders: 0,
@@ -135,19 +135,19 @@ async function refreshOrderCounts() {
       completedOrders: 0,
       cancelledOrders: 0,
     };
-    
+
     counts.forEach(({ _id, count }) => {
       data.totalOrders += count;
-      
+
       if (_id === "pending") data.pendingOrders = count;
       else if (_id === "confirmed") data.confirmedOrders = count;
       else if (_id === "completed") data.completedOrders = count;
       else if (_id === "cancelled") data.cancelledOrders = count;
     });
-    
+
     await updateDashboardStat("order_counts", data);
     logger.debug(`[DashboardSummary] Refreshed order counts: ${data.totalOrders} total`);
-    
+
   } catch (error) {
     logger.error("[DashboardSummary] Error refreshing order counts:", error);
     throw error;
@@ -163,10 +163,10 @@ async function refreshSellerMetrics(date = new Date()) {
   try {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     const metrics = await Order.aggregate([
       {
         $match: {
@@ -183,7 +183,7 @@ async function refreshSellerMetrics(date = new Date()) {
         },
       },
     ]);
-    
+
     // Bulk upsert seller metrics
     const bulkOps = metrics.map(({ _id, orderCount, revenue, commission }) => ({
       updateOne: {
@@ -199,12 +199,12 @@ async function refreshSellerMetrics(date = new Date()) {
         upsert: true,
       },
     }));
-    
+
     if (bulkOps.length > 0) {
       await SellerMetrics.bulkWrite(bulkOps);
       logger.debug(`[DashboardSummary] Refreshed seller metrics for ${date.toISOString().split('T')[0]}: ${metrics.length} sellers`);
     }
-    
+
   } catch (error) {
     logger.error("[DashboardSummary] Error refreshing seller metrics:", error);
     throw error;
@@ -220,10 +220,10 @@ async function refreshFinanceReports(date = new Date()) {
   try {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
-    
+
     const endOfDay = new Date(date);
     endOfDay.setHours(23, 59, 59, 999);
-    
+
     const report = await Order.aggregate([
       {
         $match: {
@@ -240,16 +240,16 @@ async function refreshFinanceReports(date = new Date()) {
         },
       },
     ]);
-    
+
     const data = report[0] || {
       totalRevenue: 0,
       totalCommission: 0,
       orderCount: 0,
     };
-    
+
     // Calculate total payouts (revenue - commission)
     data.totalPayouts = data.totalRevenue - data.totalCommission;
-    
+
     await FinanceReports.findOneAndUpdate(
       { date: startOfDay },
       {
@@ -266,9 +266,9 @@ async function refreshFinanceReports(date = new Date()) {
         new: true,
       }
     );
-    
+
     logger.debug(`[DashboardSummary] Refreshed finance report for ${date.toISOString().split('T')[0]}: ${data.orderCount} orders, ${data.totalRevenue} revenue`);
-    
+
   } catch (error) {
     logger.error("[DashboardSummary] Error refreshing finance reports:", error);
     throw error;
@@ -282,17 +282,17 @@ async function refreshFinanceReports(date = new Date()) {
 export async function refreshAllSummaries() {
   try {
     logger.info("[DashboardSummary] Starting full refresh of all summaries...");
-    
+
     const today = new Date();
-    
+
     await Promise.all([
       refreshOrderCounts(),
       refreshSellerMetrics(today),
       refreshFinanceReports(today),
     ]);
-    
+
     logger.debug("[DashboardSummary] All summaries refreshed successfully");
-    
+
   } catch (error) {
     logger.error("[DashboardSummary] Error refreshing all summaries:", error);
     throw error;
