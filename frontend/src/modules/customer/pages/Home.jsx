@@ -518,7 +518,7 @@ const Home = () => {
   return (
     <div className={`min-h-screen pt-[240px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
-        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={false} isAbsolute={true} />
+        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} isAbsolute={true} />
       </div>
 
       {products.length === 0 && !isLoading ? (
@@ -532,10 +532,7 @@ const Home = () => {
         <>
           {/* Search Bar - sticky top-0, header scrolls out naturally */}
           <div
-            className={cn(
-              "sticky top-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 mb-4 items-center gap-3 bg-[#FAF8F6] transition-all",
-              isScrolled ? "flex" : "hidden md:flex"
-            )}
+            className="sticky top-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 mb-4 flex items-center gap-3 bg-[#FAF8F6] transition-all"
             style={{
               boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
             }}

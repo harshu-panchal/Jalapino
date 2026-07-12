@@ -55,7 +55,7 @@ const parseDocumentsPayload = (documents) => {
 
 const isValidUploadedDocumentReference = (value) => {
     const normalized = String(value || "").trim();
-    return /^https?:\/\//i.test(normalized);
+    return /^https?:\/\//i.test(normalized) || normalized.startsWith("/");
 };
 
 const resolveSellerDocuments = (body = {}, parsedDocuments = {}) => {
@@ -68,7 +68,7 @@ const resolveSellerDocuments = (body = {}, parsedDocuments = {}) => {
 
     for (const [field, candidate] of Object.entries(directFields)) {
         const normalized = String(candidate || "").trim();
-        if (normalized && /^https?:\/\//i.test(normalized)) {
+        if (normalized && (/^https?:\/\//i.test(normalized) || normalized.startsWith("/"))) {
             resolved[field] = normalized;
         }
     }
@@ -124,6 +124,10 @@ export const signupSeller = async (req, res) => {
                         // Dynamically use the request's domain instead of .env to handle both localhost and live automatically
                         const reqDomain = `${req.protocol}://${req.get("host")}`;
                         const envDomain = process.env.API_DOMAIN || "http://localhost:7000";
+                        
+                        if (url.startsWith("/")) {
+                            url = `${reqDomain}${url}`;
+                        }
                         
                         // Only auto-replace if the saved URL is a localhost/host URL 
                         // If it's a proper live URL like https://jalpaino.com/api, keep it as is
