@@ -144,18 +144,16 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                 <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
                   Become Seller
                 </div>
-                {(!banner.linkType || banner.linkType === "none" || !banner.linkValue) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setZoomImageUrl(banner.imageUrl);
-                      setZoomScale(1);
-                    }}
-                    className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
-                  >
-                    🔍 Tap to Zoom
-                  </button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setZoomImageUrl(banner.imageUrl);
+                    setZoomScale(1);
+                  }}
+                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
+                >
+                  🔍 Tap to Zoom
+                </button>
               </>
             ) : (
               <div className="w-full aspect-[1448/650] rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05),_0_2px_8px_rgba(0,0,0,0.03)] bg-white relative overflow-hidden">
@@ -185,18 +183,16 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                 <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
                   Become Seller
                 </div>
-                {(!banner.linkType || banner.linkType === "none" || !banner.linkValue) && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setZoomImageUrl(banner.imageUrl);
-                      setZoomScale(1);
-                    }}
-                    className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
-                  >
-                    🔍 Tap to Zoom
-                  </button>
-                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setZoomImageUrl(banner.imageUrl);
+                    setZoomScale(1);
+                  }}
+                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
+                >
+                  🔍 Tap to Zoom
+                </button>
                 {/* Subtle burgundy border overlay */}
                 <div className="absolute inset-0 border border-[var(--customer-header-base-color)]/15 rounded-3xl pointer-events-none" />
               </div>

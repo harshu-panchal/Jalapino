@@ -57,11 +57,13 @@ const CategoriesPage = () => {
 
     return (
         <div className="min-h-screen bg-[#FAF8F6]">
-            <MainLocationHeader hideSearchBar={true} isAbsolute={true} />
+            <MainLocationHeader hideSearchBar={false} isAbsolute={true} />
             <div className="max-w-3xl mx-auto px-4 pt-[240px] md:pt-[220px] pb-24">
-                {/* Search Box - Sticky top-0 */}
+                {/* Search Box - Fixed top-0, shows only when scrolled */}
                 <div 
-                    className="sticky top-0 z-[100] bg-[#FAF8F6] py-3 -mx-4 px-4 transition-all block"
+                    className={`fixed top-0 left-0 right-0 z-[100] bg-[#FAF8F6] py-3 px-4 max-w-3xl mx-auto transition-all duration-200 ${
+                        isScrolled ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none -translate-y-2"
+                    }`}
                     style={{
                         boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
                     }}

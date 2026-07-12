@@ -518,7 +518,7 @@ const Home = () => {
   return (
     <div className={`min-h-screen pt-[240px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
-        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={true} isAbsolute={true} />
+        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={false} isAbsolute={true} />
       </div>
 
       {products.length === 0 && !isLoading ? (
@@ -530,11 +530,14 @@ const Home = () => {
         </div>
       ) : (
         <>
-          {/* Search Bar - sticky top-0, header scrolls out naturally */}
+          {/* Search Bar - fixed top-0, shows only when scrolled */}
           <div
-            className="sticky top-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 mb-4 flex items-center gap-3 bg-[#FAF8F6] transition-all"
+            className={cn(
+              "fixed top-0 left-0 right-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 flex items-center gap-3 bg-[#FAF8F6] transition-all duration-200",
+              isScrolled ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none -translate-y-2"
+            )}
             style={{
-              boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
+              boxShadow: '0 8px 20px -12px rgba(0,0,0,0.15)',
             }}
           >
             <motion.div
