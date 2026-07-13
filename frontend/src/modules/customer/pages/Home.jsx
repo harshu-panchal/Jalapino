@@ -504,9 +504,21 @@ const Home = () => {
 
   const [isScrolled, setIsScrolled] = useState(false);
   useEffect(() => {
-    const handleScroll = () => setIsScrolled(window.scrollY > 80);
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    const handleScroll = () => {
+      const scrollPosition = window.scrollY || window.pageYOffset || document.documentElement.scrollTop || 0;
+      setIsScrolled(scrollPosition > 80);
+    };
+    // Use capture phase and listen to both window and document to ensure it fires in tricky WebViews
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    
+    // Initial check
+    handleScroll();
+    
+    return () => {
+      window.removeEventListener('scroll', handleScroll, { capture: true });
+      document.removeEventListener('scroll', handleScroll, { capture: true });
+    };
   }, []);
 
 
@@ -555,7 +567,7 @@ const Home = () => {
                 className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm md:text-base cursor-pointer"
               />
             </motion.div>
-            
+
             <motion.button
               onClick={() => navigate("/spin")}
               whileHover={{ scale: 1.08 }}
