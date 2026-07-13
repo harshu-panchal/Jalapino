@@ -287,7 +287,7 @@ const Home = () => {
       try {
         const res = await customerApi.getHomeVideos();
         if (res.data?.success) {
-          setHomeVideos(res.data.result || []);
+          setHomeVideos(res.data.results || res.data.result || []);
         }
       } catch (e) {
         console.warn("Failed to load home videos", e);
@@ -511,10 +511,10 @@ const Home = () => {
     // Use capture phase and listen to both window and document to ensure it fires in tricky WebViews
     window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     document.addEventListener('scroll', handleScroll, { passive: true, capture: true });
-    
+
     // Initial check
     handleScroll();
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll, { capture: true });
       document.removeEventListener('scroll', handleScroll, { capture: true });

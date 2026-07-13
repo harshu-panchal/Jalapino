@@ -36,7 +36,7 @@ export default function HomeVideosManagement() {
     try {
       const res = await adminApi.getHomeVideos();
       if (res.data?.success) {
-        setVideos(res.data.result || []);
+        setVideos(res.data.results || res.data.result || []);
       }
     } catch (err) {
       showToast("Failed to fetch homepage videos", "error");
