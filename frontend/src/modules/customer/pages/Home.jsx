@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { useInViewAnimation } from "@/core/hooks/useInViewAnimation";
 import { Sparkles, Heart, Snowflake, ChevronLeft, ChevronRight, Search } from "lucide-react";
 // MUI Icons (shared with admin & icon selector)
@@ -19,7 +20,9 @@ import { customerApi } from "../services/customerApi";
 import { toast } from "sonner";
 import ProductCard from "../components/shared/ProductCard";
 import MainLocationHeader from "../components/shared/MainLocationHeader";
+import SearchInput from "../components/shared/SearchInput";
 import { useProductDetail } from "../context/ProductDetailContext";
+import { useSearch } from "../context/SearchContext";
 import { cn } from "@/lib/utils";
 import CardBanner from "@/assets/CardBanner.jpg";
 import SectionRenderer from "../components/experience/SectionRenderer";
@@ -172,6 +175,7 @@ const getCachedHomePageData = (location) =>
 const Home = () => {
   const { scrollY } = useScroll();
   const { isOpen: isProductDetailOpen } = useProductDetail();
+  const { openSearch } = useSearch();
   const { currentLocation } = useLocation();
   const { settings } = useSettings();
   const navigate = useNavigate();
@@ -181,6 +185,10 @@ const Home = () => {
   const { ref: particleContainerRef, isVisible: particlesVisible } = useInViewAnimation();
   const heroRef = useRef(null);
   const [heroVisible, setHeroVisible] = useState(true);
+  const [zoomVideoUrl, setZoomVideoUrl] = useState(null);
+  const [zoomVideoScale, setZoomVideoScale] = useState(1);
+  const categoriesRef = useRef(null);
+  const [categoriesVisible, setCategoriesVisible] = useState(true);
 
   // Search placeholder animation
   const [searchPlaceholder, setSearchPlaceholder] = useState("Search ");
@@ -260,6 +268,19 @@ const Home = () => {
     }
     const observer = new IntersectionObserver(([entry]) => setHeroVisible(entry.isIntersecting), { rootMargin: "0px" });
     const el = heroRef.current;
+    if (el) observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (typeof IntersectionObserver === "undefined") {
+      setCategoriesVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(([entry]) => {
+      setCategoriesVisible(entry.isIntersecting);
+    }, { rootMargin: "-80px 0px 0px 0px" });
+    const el = categoriesRef.current;
     if (el) observer.observe(el);
     return () => observer.disconnect();
   }, []);
@@ -552,49 +573,38 @@ const Home = () => {
               boxShadow: '0 8px 20px -12px rgba(0,0,0,0.15)',
             }}
           >
-            <motion.div
-              onClick={() => navigate("/search")}
-              whileHover={{ scale: 1.005 }}
-              whileTap={{ scale: 0.995 }}
-              style={{ backgroundColor: "#FFFFFF" }}
-              className="flex-1 rounded-[12px] md:rounded-full px-4 h-12 shadow-sm border border-slate-200 flex items-center cursor-pointer transition-all hover:shadow-md"
-            >
-              <Search className="text-slate-400 w-5 h-5 mr-3 shrink-0" />
-              <input
-                type="text"
-                placeholder={searchPlaceholder || "Search Products..."}
-                readOnly
-                className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm md:text-base cursor-pointer"
-              />
-            </motion.div>
+            <SearchInput placeholder={searchPlaceholder} />
 
-            <motion.button
+            <motion.div
               onClick={() => navigate("/spin")}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.92 }}
-              className="w-12 h-12 flex items-center justify-center cursor-pointer relative shrink-0"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="w-11 h-11 md:w-12 md:h-12 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 md:p-1 border-2 border-amber-300 relative overflow-hidden"
               title="Spin & Win"
             >
-              <div className="w-12 h-12 flex items-center justify-center z-10">
+              <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
                 <DotLottieReact
                   src={spinWheelLottie}
                   loop
                   autoplay
+                  style={{ width: '100%', height: '100%' }}
                 />
               </div>
-            </motion.button>
+            </motion.div>
 
           </div>
 
           {heroConfig.banners?.items?.length > 0 && (
-            <motion.div ref={heroRef} className="block will-change-transform" style={isMobile ? { opacity: 1 } : { opacity, y, scale, pointerEvents }}>
+            <motion.div ref={heroRef} className="block w-full">
               <div className="relative w-full overflow-hidden">
                 <ExperienceBannerCarousel section={{ title: "" }} items={heroConfig.banners.items} fullWidth edgeToEdge />
               </div>
             </motion.div>
           )}
 
-          <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} />
+          <div ref={categoriesRef}>
+            <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} isScrolled={isScrolled && !categoriesVisible} />
+          </div>
 
           {/* Promotional Videos Section */}
           {homeVideos.length > 0 && (
@@ -620,6 +630,16 @@ const Home = () => {
                       muted
                       playsInline
                     />
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoomVideoUrl(vid.videoUrl);
+                        setZoomVideoScale(1);
+                      }}
+                      className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-20 cursor-pointer active:scale-95 transition-transform"
+                    >
+                      🔍 Tap to Zoom
+                    </button>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent flex flex-col justify-end p-4">
                       {vid.title && (
                         <h4 className="text-white font-black text-xs md:text-sm leading-tight uppercase">
@@ -652,6 +672,69 @@ const Home = () => {
             </div>
           )}
         </>
+      )}
+
+      {zoomVideoUrl && createPortal(
+        <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center select-none backdrop-blur-md">
+          {/* Header controls */}
+          <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-[10000]">
+            <span className="text-white/80 text-xs font-semibold uppercase tracking-wider bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md">
+              Zoom Mode ({Math.round(zoomVideoScale * 100)}%)
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setZoomVideoScale(prev => Math.min(prev + 0.5, 4)); }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center font-bold text-lg backdrop-blur-md transition-all cursor-pointer"
+              >
+                ＋
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setZoomVideoScale(prev => Math.max(prev - 0.5, 1)); }}
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center font-bold text-lg backdrop-blur-md transition-all cursor-pointer"
+              >
+                －
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setZoomVideoScale(1); }}
+                className="px-3 h-10 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white flex items-center justify-center font-semibold text-xs backdrop-blur-md transition-all cursor-pointer"
+              >
+                Reset
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); setZoomVideoUrl(null); setZoomVideoScale(1); }}
+                className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 active:scale-95 text-white flex items-center justify-center font-bold text-lg backdrop-blur-md transition-all cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+
+          {/* Video container */}
+          <div className="w-full h-full overflow-hidden flex items-center justify-center p-4" onClick={() => { setZoomVideoUrl(null); setZoomVideoScale(1); }}>
+            <motion.video
+              src={zoomVideoUrl}
+              onClick={(e) => e.stopPropagation()}
+              drag={zoomVideoScale > 1}
+              dragConstraints={{ left: -400, right: 400, top: -400, bottom: 400 }}
+              animate={{ scale: zoomVideoScale }}
+              transition={{ type: "spring", stiffness: 200, damping: 25 }}
+              onDoubleClick={(e) => { e.stopPropagation(); setZoomVideoScale(prev => prev > 1 ? 1 : 2.5); }}
+              className={cn(
+                "max-w-full max-h-[85vh] aspect-[9/16] object-contain rounded-lg shadow-2xl bg-black",
+                zoomVideoScale > 1 ? "cursor-grab active:cursor-grabbing" : "cursor-zoom-in"
+              )}
+              autoPlay
+              loop
+              muted
+              playsInline
+            />
+          </div>
+
+          <div className="absolute bottom-6 text-center text-white/50 text-[10px] pointer-events-none">
+            Double click/tap to quick-zoom. Drag to pan when zoomed in.
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -77,13 +77,7 @@ const SectionRenderer = ({ sections = [], productsById = {}, categoriesById = {}
         const heading = section.title;
 
         if (section.displayType === "banners") {
-          const items = section.config?.banners?.items || [];
-          if (!items.length) return null;
-          return (
-            <div key={section._id || sectionKey} className="-mt-2 md:-mt-3">
-              <ExperienceBannerCarousel section={section} items={items} slideGap={12} />
-            </div>
-          );
+          return null; // Skip rendering bottom banner carousels as requested
         }
 
         if (section.displayType === "categories") {

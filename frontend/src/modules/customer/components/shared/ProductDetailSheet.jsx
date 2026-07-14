@@ -724,37 +724,35 @@ const ProductDetailSheet = () => {
                     {/* MOBILE LAYOUT: Bottom sheet (hidden on desktop md+) */}
                     {/* ============================================================ */}
                     <motion.div
-                        drag={isExpanded ? false : "y"}
+                        drag="y"
                         dragConstraints={{ top: 0, bottom: 0 }}
-                        dragElastic={0.7}
+                        dragElastic={0.3}
                         onDragEnd={handleDragEnd}
                         initial={{
                             opacity: 0,
-                            scale: 0.9,
                             y: "100vh",
-                            top: "10%",
-                            bottom: "10%",
-                            left: "50%",
-                            x: "-50%",
-                            width: "min(90%, 400px)",
-                            borderRadius: "24px"
+                            top: 0,
+                            bottom: 0,
+                            left: 0,
+                            x: 0,
+                            width: "100%",
+                            borderRadius: 0
                         }}
                         animate={{
                             opacity: 1,
-                            scale: 1,
                             y: 0,
-                            top: isExpanded ? 0 : "10%",
-                            bottom: isExpanded ? 0 : "10%",
-                            left: isExpanded ? 0 : "50%",
-                            x: isExpanded ? 0 : "-50%",
-                            width: isExpanded ? "100%" : "min(90%, 400px)",
-                            borderRadius: isExpanded ? 0 : "24px"
+                            top: 0,
+                            bottom: 0,
+                            left: 0,
+                            x: 0,
+                            width: "100%",
+                            borderRadius: 0
                         }}
-                        exit={{ opacity: 0, scale: 0.9, y: "100vh", transition: { duration: 0.3 } }}
+                        exit={{ opacity: 0, y: "100vh", transition: { duration: 0.3 } }}
                         transition={{
                             type: "spring",
-                            damping: 25,
-                            stiffness: 400,
+                            damping: 30,
+                            stiffness: 350,
                             mass: 0.8
                         }}
                         className={cn(
@@ -762,13 +760,6 @@ const ProductDetailSheet = () => {
                         )}
                         style={{ willChange: "transform, top, bottom, left, width, border-radius" }}
                     >
-                        {/* Drag Handle (Visible only when not fully expanded) */}
-                        {!isExpanded && (
-                            <div className="absolute top-0 left-0 right-0 h-8 flex justify-center items-center z-50 pointer-events-none">
-                                <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
-                            </div>
-                        )}
-
                         {/* Header Actions (Absolute & Sticky) */}
                         <div className="absolute top-0 left-0 right-0 p-4 flex justify-between items-center z-40 pointer-events-none">
                             <motion.button
@@ -786,8 +777,7 @@ const ProductDetailSheet = () => {
                         {/* Scrollable Content */}
                         <div
                             className={cn(
-                                "flex-1 overflow-x-hidden no-scrollbar pb-24 bg-white",
-                                isExpanded ? "overflow-y-auto" : "overflow-y-hidden"
+                                "flex-1 overflow-x-hidden no-scrollbar pb-24 bg-white overflow-y-auto"
                             )}
                             onScroll={handleScroll}
                             onWheel={handleWheel}

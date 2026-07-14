@@ -456,6 +456,24 @@ const SellerProfile = () => {
               </div>
             </div>
           </Card>
+
+          {/* Admin Note Card - only if remark exists */}
+          {profile?.adminRemark && (
+            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-amber-50 border border-amber-100">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-8 w-8 rounded-xl bg-amber-100 flex items-center justify-center text-amber-700 text-base">
+                  📋
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[3px] text-amber-700">Platform Note</p>
+                  <p className="text-[10px] text-amber-600 font-medium">From Admin Team</p>
+                </div>
+              </div>
+              <p className="text-xs font-medium text-amber-900 leading-relaxed whitespace-pre-wrap">
+                {profile.adminRemark}
+              </p>
+            </Card>
+          )}
         </div>
       </div>
 

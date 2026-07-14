@@ -127,6 +127,9 @@ export async function approveSellerApplicationById({ sellerId, reviewedBy, permi
     if (typeof permissions.analyticsEnabled === 'boolean') {
       updateData.analyticsEnabled = permissions.analyticsEnabled;
     }
+    if (typeof permissions.wholesaleEnabled === 'boolean') {
+      updateData.wholesaleEnabled = permissions.wholesaleEnabled;
+    }
   }
 
   const seller = await Seller.findByIdAndUpdate(

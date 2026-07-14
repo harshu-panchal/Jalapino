@@ -24,6 +24,21 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { adminApi } from '../services/adminApi';
 import { PermissionToggle } from '../components/PermissionToggle';
+import { resolveSocketBaseUrl } from '@core/api/resolveApiBaseUrl';
+
+const getNormalizedDocUrl = (url) => {
+    if (!url) return '';
+    if (url.includes('localhost') || url.includes('127.0.0.1')) {
+        const baseServerUrl = resolveSocketBaseUrl();
+        try {
+            const parsedUrl = new URL(url);
+            return `${baseServerUrl}${parsedUrl.pathname}${parsedUrl.search}`;
+        } catch (e) {
+            return url.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, baseServerUrl);
+        }
+    }
+    return url;
+};
 
 const PendingSellers = () => {
     const navigate = useNavigate();
@@ -46,9 +61,12 @@ const PendingSellers = () => {
         stockEnabled: true,
         ordersEnabled: true,
         walletEnabled: true,
-        analyticsEnabled: true
+        analyticsEnabled: true,
+        wholesaleEnabled: false
     });
     const [isProcessing, setIsProcessing] = useState(false);
+    const [adminRemark, setAdminRemark] = useState('');
+    const [isSavingRemark, setIsSavingRemark] = useState(false);
 
     const fetchPendingSellers = async () => {
         setIsLoading(true);
@@ -77,8 +95,10 @@ const PendingSellers = () => {
                         stockEnabled: s.stockEnabled ?? true,
                         ordersEnabled: s.ordersEnabled ?? true,
                         walletEnabled: s.walletEnabled ?? true,
-                        analyticsEnabled: s.analyticsEnabled ?? true
+                        analyticsEnabled: s.analyticsEnabled ?? true,
+                        wholesaleEnabled: s.wholesaleEnabled ?? false
                     });
+                    setAdminRemark(s.adminRemark || '');
                     setIsReviewModalOpen(true);
                 } else {
                     setSearchParams({});
@@ -257,7 +277,8 @@ const PendingSellers = () => {
                                                     stockEnabled: s.stockEnabled ?? true,
                                                     ordersEnabled: s.ordersEnabled ?? true,
                                                     walletEnabled: s.walletEnabled ?? true,
-                                                    analyticsEnabled: s.analyticsEnabled ?? true
+                                                    analyticsEnabled: s.analyticsEnabled ?? true,
+                                                    wholesaleEnabled: s.wholesaleEnabled ?? false
                                                 });
                                                 setSearchParams({ review: s.id });
                                                 setIsReviewModalOpen(true);
@@ -289,26 +310,9 @@ const PendingSellers = () => {
                                     </td>
                                     <td className="px-6 py-5 text-right align-middle">
                                         <div className="flex items-center justify-end gap-3 h-full">
-                                            {s.documents && s.documents.length > 0 && (
-                                                <button
-                                                    onClick={() => handleApprove(s.id)}
-                                                    className="h-8 w-8 flex items-center justify-center rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-600 hover:text-white transition-all ring-1 ring-emerald-100"
-                                                    title="Quick Approve"
-                                                >
-                                                    <HiOutlineCheckCircle className="h-5 w-5" />
-                                                </button>
-                                            )}
-                                            <button
-                                                onClick={() => handleReject(s.id)}
-                                                className="h-8 w-8 flex items-center justify-center rounded-lg bg-rose-50 text-rose-600 hover:bg-rose-600 hover:text-white transition-all ring-1 ring-rose-100"
-                                                title="Quick Reject"
-                                            >
-                                                <HiOutlineXCircle className="h-5 w-5" />
-                                            </button>
-                                            <div className="w-[1px] h-4 bg-slate-200 mx-1" />
                                             <button
                                                 onClick={() => {
-                                                    setViewingSeller(s);
+                                                     setViewingSeller(s);
                                                     setPermissions({
                                                         retailEnabled: s.retailEnabled ?? true,
                                                         planMyEventEnabled: s.planMyEventEnabled ?? false,
@@ -316,8 +320,10 @@ const PendingSellers = () => {
                                                         stockEnabled: s.stockEnabled ?? true,
                                                         ordersEnabled: s.ordersEnabled ?? true,
                                                         walletEnabled: s.walletEnabled ?? true,
-                                                        analyticsEnabled: s.analyticsEnabled ?? true
+                                                        analyticsEnabled: s.analyticsEnabled ?? true,
+                                                        wholesaleEnabled: s.wholesaleEnabled ?? false
                                                     });
+                                                    setAdminRemark(s.adminRemark || '');
                                                     setSearchParams({ review: s.id });
                                                     setIsReviewModalOpen(true);
                                                 }}
@@ -424,6 +430,9 @@ const PendingSellers = () => {
                                                     </p>
                                                 </div>
                                             </div>
+
+
+
                                         </div>
                                     </div>
 
@@ -478,7 +487,7 @@ const PendingSellers = () => {
                                                             {doc.isViewable ? (
                                                                 <button
                                                                     type="button"
-                                                                    onClick={() => window.open(doc.url, '_blank', 'noopener,noreferrer')}
+                                                                    onClick={() => window.open(getNormalizedDocUrl(doc.url), '_blank', 'noopener,noreferrer')}
                                                                     className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider hover:bg-slate-800 transition-colors shrink-0"
                                                                 >
                                                                     <HiOutlineArrowTopRightOnSquare className="h-3.5 w-3.5" />
@@ -518,140 +527,198 @@ const PendingSellers = () => {
                                                     <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Module Access Permissions</h5>
                                                     <p className="text-[10px] text-slate-500 font-medium">Enable or disable specific features for this seller before approval.</p>
                                                 </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                 {/* Row 1: 2-column Layout (Retail Store, Plan My Event, Wholesale) */}
+                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
+                                                     <PermissionToggle
+                                                         label="Retail Store (Master)"
+                                                         description="Main toggle for retail store access"
+                                                         checked={permissions.retailEnabled}
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, retailEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { retailEnabled: checked });
+                                                                 toast.success('Retail master permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, retailEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update retail master permission');
+                                                                 setPermissions(prev => ({ ...prev, retailEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
 
-                                                    <PermissionToggle
-                                                        label="Retail Store (Master)"
-                                                        description="Main toggle for retail store access"
-                                                        checked={permissions.retailEnabled}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, retailEnabled: checked }));
+                                                     <PermissionToggle
+                                                         label="Plan My Event"
+                                                         description="Allow event service bookings"
+                                                         checked={permissions.planMyEventEnabled}
+                                                         activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
+                                                                 toast.success('Plan my event permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update plan my event permission');
+                                                                 setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Wholesale Marketplace"
+                                                         description="Allow selling in wholesale marketplace"
+                                                         checked={permissions.wholesaleEnabled}
+                                                         activeColor="bg-amber-600" hoverColor="group-hover:text-amber-700"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, wholesaleEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { wholesaleEnabled: checked });
+                                                                 toast.success('Wholesale marketplace permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, wholesaleEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update wholesale permission');
+                                                                 setPermissions(prev => ({ ...prev, wholesaleEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+                                                 </div>
+
+                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                                                     <PermissionToggle
+                                                         label="Products & Catalog"
+                                                         description="Allow adding and managing products"
+                                                         checked={permissions.productsEnabled}
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, productsEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { productsEnabled: checked });
+                                                                 toast.success('Products permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, productsEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update products permission');
+                                                                 setPermissions(prev => ({ ...prev, productsEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Stock & Inventory"
+                                                         description="Allow managing product inventory"
+                                                         checked={permissions.stockEnabled}
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, stockEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { stockEnabled: checked });
+                                                                 toast.success('Stock permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, stockEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update stock permission');
+                                                                 setPermissions(prev => ({ ...prev, stockEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Orders & Returns"
+                                                         description="Allow viewing and managing orders"
+                                                         checked={permissions.ordersEnabled}
+                                                         activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, ordersEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { ordersEnabled: checked });
+                                                                 toast.success('Orders permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ordersEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update orders permission');
+                                                                 setPermissions(prev => ({ ...prev, ordersEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Wallet & Earnings"
+                                                         description="Allow access to payouts and earnings"
+                                                         checked={permissions.walletEnabled}
+                                                         activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, walletEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { walletEnabled: checked });
+                                                                 toast.success('Wallet permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, walletEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update wallet permission');
+                                                                 setPermissions(prev => ({ ...prev, walletEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Analytics & Reports"
+                                                         description="Allow viewing sales analytics"
+                                                         checked={permissions.analyticsEnabled}
+                                                         activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, analyticsEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { analyticsEnabled: checked });
+                                                                 toast.success('Analytics permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, analyticsEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update analytics permission');
+                                                                 setPermissions(prev => ({ ...prev, analyticsEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                 </div>
+                                            </div>
+
+                                            {/* Admin Remarks Section */}
+                                            <div className="bg-amber-50 rounded-xl p-5 border border-amber-100 mt-4">
+                                                <div className="flex items-center justify-between mb-3">
+                                                    <div>
+                                                        <h5 className="text-xs font-bold text-amber-900 uppercase tracking-wider">📋 Admin Remarks & Terms</h5>
+                                                        <p className="text-[10px] text-amber-700/80 font-medium mt-0.5">This note will be visible to the seller in their profile &amp; application page.</p>
+                                                    </div>
+                                                    <button
+                                                        disabled={isSavingRemark}
+                                                        onClick={async () => {
+                                                            setIsSavingRemark(true);
                                                             try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { retailEnabled: checked });
-                                                                toast.success('Retail master permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, retailEnabled: checked } : seller));
+                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark });
+                                                                toast.success('Remark saved successfully');
+                                                                setPendingSellers(prev => prev.map(seller =>
+                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark } : seller
+                                                                ));
                                                             } catch (err) {
-                                                                toast.error('Failed to update retail master permission');
-                                                                setPermissions(prev => ({ ...prev, retailEnabled: !checked }));
+                                                                toast.error('Failed to save remark');
+                                                            } finally {
+                                                                setIsSavingRemark(false);
                                                             }
                                                         }}
-                                                    />
-
-
-                                                    <PermissionToggle
-                                                        label="Products & Catalog"
-                                                        description="Allow adding and managing products"
-                                                        checked={permissions.productsEnabled}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, productsEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { productsEnabled: checked });
-                                                                toast.success('Products permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, productsEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update products permission');
-                                                                setPermissions(prev => ({ ...prev, productsEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
-                                                    <PermissionToggle
-                                                        label="Stock & Inventory"
-                                                        description="Allow managing product inventory"
-                                                        checked={permissions.stockEnabled}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, stockEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { stockEnabled: checked });
-                                                                toast.success('Stock permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, stockEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update stock permission');
-                                                                setPermissions(prev => ({ ...prev, stockEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
-                                                    <PermissionToggle
-                                                        label="Orders & Returns"
-                                                        description="Allow viewing and managing orders"
-                                                        checked={permissions.ordersEnabled}
-                                                        activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, ordersEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { ordersEnabled: checked });
-                                                                toast.success('Orders permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ordersEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update orders permission');
-                                                                setPermissions(prev => ({ ...prev, ordersEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
-                                                    <PermissionToggle
-                                                        label="Wallet & Earnings"
-                                                        description="Allow access to payouts and earnings"
-                                                        checked={permissions.walletEnabled}
-                                                        activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, walletEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { walletEnabled: checked });
-                                                                toast.success('Wallet permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, walletEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update wallet permission');
-                                                                setPermissions(prev => ({ ...prev, walletEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
-                                                    <PermissionToggle
-                                                        label="Analytics & Reports"
-                                                        description="Allow viewing sales analytics"
-                                                        checked={permissions.analyticsEnabled}
-                                                        activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, analyticsEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { analyticsEnabled: checked });
-                                                                toast.success('Analytics permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, analyticsEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update analytics permission');
-                                                                setPermissions(prev => ({ ...prev, analyticsEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
-                                                    <PermissionToggle
-                                                        label="Plan My Event"
-                                                        description="Allow event service bookings"
-                                                        checked={permissions.planMyEventEnabled}
-                                                        activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
-                                                                toast.success('Plan my event permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update plan my event permission');
-                                                                setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
+                                                        className="ml-3 shrink-0 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer active:scale-95 disabled:opacity-60"
+                                                    >
+                                                        {isSavingRemark ? 'Saving...' : 'Save Remark'}
+                                                    </button>
                                                 </div>
+                                                <textarea
+                                                    value={adminRemark}
+                                                    onChange={e => setAdminRemark(e.target.value)}
+                                                    placeholder="Write any terms, conditions, instructions, or notes for this seller before approval (e.g. 'Please ensure GST documents are updated within 7 days of approval.')..."
+                                                    rows={4}
+                                                    className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
+                                                />
                                             </div>
 
                                             {/* Action Bar */}
@@ -663,25 +730,23 @@ const PendingSellers = () => {
                                                 >
                                                     REJECT APPLICATION
                                                 </button>
-                                                {reviewDocuments.length > 0 && (
-                                                    <button
-                                                        disabled={isProcessing}
-                                                        onClick={() => handleApprove(viewingSeller.id)}
-                                                        className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-bold tracking-widest shadow-2xl hover:bg-slate-800 transition-all transform active:scale-[0.98] uppercase flex items-center justify-center gap-2"
-                                                    >
-                                                        {isProcessing ? (
-                                                            <>
-                                                                <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
-                                                                <span>FINALIZING...</span>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <HiOutlineCheckCircle className="h-4 w-4" />
-                                                                <span>APPROVE SELLER</span>
-                                                            </>
-                                                        )}
-                                                    </button>
-                                                )}
+                                                <button
+                                                    disabled={isProcessing}
+                                                    onClick={() => handleApprove(viewingSeller.id)}
+                                                    className="flex-[2] py-4 bg-slate-900 text-white rounded-2xl text-[10px] font-bold tracking-widest shadow-2xl hover:bg-slate-800 transition-all transform active:scale-[0.98] uppercase flex items-center justify-center gap-2"
+                                                >
+                                                    {isProcessing ? (
+                                                        <>
+                                                            <HiOutlineArrowPath className="h-4 w-4 animate-spin" />
+                                                            <span>FINALIZING...</span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <HiOutlineCheckCircle className="h-4 w-4" />
+                                                            <span>APPROVE SELLER</span>
+                                                        </>
+                                                    )}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>

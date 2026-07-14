@@ -244,6 +244,16 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    wholesaleEnabled: {
+      type: Boolean,
+      default: false
+    },
+    // Admin Review Remark (shown to seller after review)
+    adminRemark: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     // ---------------------------------
     bankDetails: {
       bankName: { type: String, trim: true },

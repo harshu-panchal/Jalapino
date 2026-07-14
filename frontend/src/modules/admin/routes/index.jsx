@@ -98,6 +98,7 @@ const AdminProfile = React.lazy(() => import("../pages/AdminProfile"));
 const RewardManagement = React.lazy(() => import("../pages/RewardManagement"));
 const ReferralSettings = React.lazy(() => import("../pages/ReferralSettings"));
 const HomeVideosManagement = React.lazy(() => import("../pages/HomeVideosManagement"));
+const SellerSignupBanners = React.lazy(() => import("../pages/SellerSignupBanners"));
 
 const CateringDashboard = React.lazy(() => import("../pages/catering/CateringDashboard"));
 const CateringServices = React.lazy(() => import("../pages/catering/CateringServices"));
@@ -164,6 +165,7 @@ const navItems = [
       { label: "Active Sellers", path: "/admin/sellers/active" },
       { label: "Waiting for Review", path: "/admin/sellers/pending" },
       { label: "Seller Locations", path: "/admin/seller-locations" },
+      { label: "Signup Banners", path: "/admin/seller-banners" },
     ],
   },
   {
@@ -353,6 +355,7 @@ const AdminRoutes = () => {
         <Route path="/referral" element={<ReferralSettings />} />
         <Route path="/sellers/pending" element={<PendingSellers />} />
         <Route path="/seller-locations" element={<SellerLocations />} />
+        <Route path="/seller-banners" element={<SellerSignupBanners />} />
         <Route path="/delivery-boys/active" element={<ActiveDeliveryBoys />} />
         <Route
           path="/delivery-boys/pending"

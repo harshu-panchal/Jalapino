@@ -91,6 +91,8 @@ export function formatSellerApplication(seller) {
     ordersEnabled: seller.ordersEnabled ?? true,
     walletEnabled: seller.walletEnabled ?? true,
     analyticsEnabled: seller.analyticsEnabled ?? true,
+    wholesaleEnabled: seller.wholesaleEnabled ?? false,
+    adminRemark: seller.adminRemark || '',
     verificationScore: docs.length
       ? Math.min(100, 55 + docs.length * 12 + (seller.address ? 10 : 0))
       : 40,

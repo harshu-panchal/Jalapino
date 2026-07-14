@@ -67,6 +67,14 @@ export const adminContentApi = {
     }),
     updateHomeVideo: (id, data) => axiosInstance.patch(`/admin/home-videos/${id}`, data),
     deleteHomeVideo: (id) => axiosInstance.delete(`/admin/home-videos/${id}`),
+
+    // Seller Signup Banners
+    getSellerSignupBanners: (params) => axiosInstance.get('/admin/seller-signup-banners', { params }),
+    uploadSellerSignupBanners: (formData) => axiosInstance.post('/admin/seller-signup-banners', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    }),
+    updateSellerSignupBanner: (id, data) => axiosInstance.put(`/admin/seller-signup-banners/${id}`, data),
+    deleteSellerSignupBanner: (id) => axiosInstance.delete(`/admin/seller-signup-banners/${id}`),
 };
 
 export default adminContentApi;

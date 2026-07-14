@@ -85,6 +85,14 @@ const ApplicationPending = () => {
             </div>
           ) : null}
 
+          {/* Admin Remark / Platform Note */}
+          {user?.adminRemark ? (
+            <div className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
+              <span className="font-black uppercase tracking-widest text-[11px] text-amber-300">📋 Platform Note</span>
+              <p className="mt-1 font-medium whitespace-pre-wrap">{user.adminRemark}</p>
+            </div>
+          ) : null}
+
           {!isRejected ? (
             <div className="mt-6 rounded-2xl border border-brand-400/30 bg-brand-500/10 px-4 py-3 text-sm text-brand-200 flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-brand-400" />

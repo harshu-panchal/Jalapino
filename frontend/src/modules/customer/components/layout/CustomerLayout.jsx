@@ -4,6 +4,8 @@ import Footer from './Footer';
 import BottomNav from './BottomNav';
 import MiniCart from '../shared/MiniCart';
 import ProductDetailSheet from '../shared/ProductDetailSheet';
+import SearchOverlay from '../shared/SearchOverlay';
+import { useSearch } from '../../context/SearchContext';
 import MobileFooterMessage from './MobileFooterMessage';
 import { useProductDetail } from '../../context/ProductDetailContext';
 import { cn } from '@/lib/utils';
@@ -18,6 +20,7 @@ import { buildHeaderOpacityGradient } from '../../utils/headerTheme';
 const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = false, showCart: showCartProp, showBottomNav: showBottomNavProp }) => {
     const location = useLocation();
     const { isOpen: isProductDetailOpen } = useProductDetail();
+    const { isOpen: isSearchOpen, closeSearch } = useSearch();
     const { user, token } = useAuth();
 
     // Dynamically apply/sync the header background color set at All in Header Category
@@ -159,6 +162,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
 
             {showCart && <MiniCart />}
             <ProductDetailSheet />
+            <SearchOverlay isOpen={isSearchOpen} onClose={closeSearch} />
 
             <div className="hidden md:block">
                 <Footer />

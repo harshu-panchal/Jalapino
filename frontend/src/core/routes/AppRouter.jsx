@@ -11,6 +11,7 @@ import { WishlistProvider } from '../../modules/customer/context/WishlistContext
 import { CartProvider } from '../../modules/customer/context/CartContext';
 import { CartAnimationProvider } from '../../modules/customer/context/CartAnimationContext';
 import { ProductDetailProvider } from '../../modules/customer/context/ProductDetailContext';
+import { SearchProvider } from '../../modules/customer/context/SearchContext';
 import { LocationProvider } from '../../modules/customer/context/LocationContext';
 import { CustomerModeProvider } from '../../modules/customer/context/CustomerModeContext';
 import ScrollToTop from '../../modules/customer/components/shared/ScrollToTop';
@@ -76,12 +77,14 @@ const CustomerLayoutWrapper = () => {
                     <CartProvider>
                         <CartAnimationProvider>
                             <ProductDetailProvider>
-                                <ScrollToTop />
-                                <CustomerLayout>
-                                    <Suspense fallback={<div className="flex h-screen items-center justify-center font-sans">Loading...</div>}>
-                                        <Outlet />
-                                    </Suspense>
-                                </CustomerLayout>
+                                <SearchProvider>
+                                    <ScrollToTop />
+                                    <CustomerLayout>
+                                        <Suspense fallback={<div className="flex h-screen items-center justify-center font-sans">Loading...</div>}>
+                                            <Outlet />
+                                        </Suspense>
+                                    </CustomerLayout>
+                                </SearchProvider>
                             </ProductDetailProvider>
                         </CartAnimationProvider>
                     </CartProvider>

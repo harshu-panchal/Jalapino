@@ -1,5 +1,6 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { motion, useMotionValue } from "framer-motion";
 import { toast } from "sonner";
@@ -141,9 +142,11 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
-                  Become Seller
-                </div>
+                {idx !== 0 && (
+                  <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
+                    Become Seller
+                  </div>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -180,9 +183,11 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
-                  Become Seller
-                </div>
+                {idx !== 0 && (
+                  <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
+                    Become Seller
+                  </div>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -201,8 +206,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
         ))}
       </motion.div>
 
-      {/* Interactive Fullscreen Zoom Modal (Lightbox) */}
-      {zoomImageUrl && (
+      {zoomImageUrl && createPortal(
         <div className="fixed inset-0 z-[9999] bg-black/95 flex flex-col items-center justify-center select-none backdrop-blur-md">
           {/* Header controls */}
           <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-[10000]">
@@ -258,7 +262,8 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
           <div className="absolute bottom-6 text-center text-white/50 text-[10px] pointer-events-none">
             Double click/tap to quick-zoom. Drag to pan when zoomed in.
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

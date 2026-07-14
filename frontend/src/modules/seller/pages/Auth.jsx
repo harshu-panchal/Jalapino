@@ -51,7 +51,7 @@ const REQUIRED_DOCUMENT_CONFIG = [
   { id: "other", label: "Other Documents", required: false },
 ];
 
-const SELLER_BANNERS = [
+const DEFAULT_BANNERS = [
   "/jal1.jpeg",
   "/jal2.jpeg",
   "/jal3.jpeg",
@@ -61,12 +61,39 @@ const SELLER_BANNERS = [
 
 const Auth = () => {
   const [bannerIndex, setBannerIndex] = useState(0);
+  const [banners, setBanners] = useState([]);
+
   React.useEffect(() => {
-    const timer = setInterval(() => {
-      setBannerIndex((prev) => (prev + 1) % 5);
-    }, 2500); // 2.5 seconds autoplay
-    return () => clearInterval(timer);
+    // Fetch dynamic banners
+    const loadBanners = async () => {
+      try {
+        const response = await sellerApi.getSignupBanners();
+        const activeBanners = response.data?.results || response.data?.result || [];
+        if (activeBanners.length > 0) {
+          const domain = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:7000';
+          setBanners(activeBanners.map(b => ({
+            url: `${domain}${b.imageUrl}`,
+            width: b.width || '100%',
+            height: b.height || '100%'
+          })));
+        } else {
+          setBanners(DEFAULT_BANNERS.map(url => ({ url, width: '100%', height: '100%' })));
+        }
+      } catch (err) {
+        console.error("Failed to load banners", err);
+        setBanners(DEFAULT_BANNERS.map(url => ({ url, width: '100%', height: '100%' })));
+      }
+    };
+    loadBanners();
   }, []);
+
+  React.useEffect(() => {
+    if (banners.length === 0) return;
+    const timer = setInterval(() => {
+      setBannerIndex((prev) => (prev + 1) % banners.length);
+    }, 10000); // 10 seconds autoplay
+    return () => clearInterval(timer);
+  }, [banners.length]);
 
   const [searchParams] = useSearchParams();
   const isSignupMode = searchParams.get("mode") === "signup" || searchParams.get("signup") === "true";
@@ -543,16 +570,22 @@ const Auth = () => {
         {/* Visual Side Panel - 5 Banner Slideshow */}
         <div className="hidden md:block w-[45%] relative overflow-hidden bg-slate-950">
           <AnimatePresence mode="wait">
-            <motion.img
-              key={bannerIndex}
-              src={SELLER_BANNERS[bannerIndex]}
-              initial={{ opacity: 0, scale: 1.02 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.6, ease: "easeInOut" }}
-              className="absolute inset-0 w-full h-full object-cover"
-              alt="Seller Banner"
-            />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <motion.img
+                key={bannerIndex}
+                src={banners[bannerIndex]?.url}
+                initial={{ opacity: 0, scale: 1.02 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.6, ease: "easeInOut" }}
+                style={{
+                  width: banners[bannerIndex]?.width || '100%',
+                  height: banners[bannerIndex]?.height || '100%',
+                  objectFit: 'fill'
+                }}
+                alt="Seller Banner"
+              />
+            </div>
           </AnimatePresence>
           {/* Burgundy / Dark Gradient Overlay for premium look */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
@@ -634,18 +667,24 @@ const Auth = () => {
                  </div>
 
                   {/* Mobile Banner Slideshow */}
-                  <div className="block md:hidden w-full h-36 rounded-2xl relative overflow-hidden mb-6 bg-slate-950">
+                  <div className="block md:hidden w-full aspect-video rounded-2xl relative overflow-hidden mb-6 bg-slate-900 shadow-sm border border-slate-200">
                     <AnimatePresence mode="wait">
-                      <motion.img
-                        key={bannerIndex}
-                        src={SELLER_BANNERS[bannerIndex]}
-                        initial={{ opacity: 0, scale: 1.02 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.5, ease: "easeInOut" }}
-                        className="absolute inset-0 w-full h-full object-cover"
-                        alt="Seller Banner"
-                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <motion.img
+                          key={bannerIndex}
+                          src={banners[bannerIndex]?.url}
+                          initial={{ opacity: 0, scale: 1.02 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.5, ease: "easeInOut" }}
+                          style={{
+                            width: banners[bannerIndex]?.width || '100%',
+                            height: banners[bannerIndex]?.height || '100%',
+                            objectFit: 'fill'
+                          }}
+                          alt="Seller Banner"
+                        />
+                      </div>
                     </AnimatePresence>
                     {/* Overlay gradient */}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />

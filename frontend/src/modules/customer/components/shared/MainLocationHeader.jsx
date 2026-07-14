@@ -2,10 +2,13 @@ import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Lottie from "lottie-react";
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import LocationDrawer from "./LocationDrawer";
 import { useLocation } from "../../context/LocationContext";
 import { useProductDetail } from "../../context/ProductDetailContext";
+import { useSearch } from "../../context/SearchContext";
 import { useSettings } from "@core/context/SettingsContext";
+import SearchInput from "./SearchInput";
 import { cn } from "@/lib/utils";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 import { toast } from 'sonner';
@@ -20,6 +23,7 @@ import {
 const LogoImage = '/logo2.png';
 import retailerIcon from "../../../../assets/retailer.webp";
 import wholesalerIcon from "../../../../assets/wholesaler.webp";
+import spinWheelAnim from "../../../../assets/spin_wheel.lottie";
 
 // MUI Icons
 import LocationOnIcon from "@mui/icons-material/LocationOn";
@@ -175,6 +179,7 @@ const MainLocationHeader = ({
   const { currentLocation, refreshLocation, isFetchingLocation, availableModules } =
     useLocation();
   const { isOpen: isProductDetailOpen } = useProductDetail();
+  const { openSearch } = useSearch();
   const { settings } = useSettings();
   const appName = settings?.appName || "Jalpaino";
   const logoUrl = LogoImage;
@@ -182,7 +187,7 @@ const MainLocationHeader = ({
 
   // Search Logic
   const handleSearchClick = () => {
-    navigate("/search");
+    openSearch();
   };
 
   const handleSearchKeyDown = (e) => {
@@ -332,7 +337,7 @@ const MainLocationHeader = ({
             WebkitBackdropFilter: "blur(20px) saturate(180%)",
             borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
           }}
-          className="px-4 shadow-[0_8px_32px_rgba(0,0,0,0.25)] overflow-hidden transform-gpu will-change-transform">
+          className="px-4 shadow-[0_8px_32px_rgba(0,0,0,0.25)] overflow-visible transform-gpu will-change-transform">
           {/* Subtle Glow Overlay */}
           <div className="absolute inset-0 bg-white/8 pointer-events-none" />
 
@@ -463,22 +468,25 @@ const MainLocationHeader = ({
               </div>
             </div>
 
-            {/* Center Section: Search Bar */}
             {!hideSearchBar && (
-              <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6">
+              <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6 flex items-center gap-3">
+                <SearchInput placeholder={searchPlaceholder} />
+                {/* Spin & Win Icon */}
                 <motion.div
-                  onClick={handleSearchClick}
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
-                  style={{ backgroundColor: "#FFFFFF" }}
-                  className="rounded-full px-4 h-11 shadow-sm flex items-center border border-slate-200 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
-                  <SearchIcon sx={{ color: "#94A3B8", fontSize: 20 }} />
-                  <input
-                    type="text"
-                    placeholder={searchPlaceholder || "Search Products..."}
-                    readOnly
-                    className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-medium placeholder:text-slate-400 text-[15px] cursor-pointer"
-                  />
+                  onClick={() => navigate('/spin')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-11 h-11 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 border-2 border-amber-300 relative overflow-hidden"
+                  title="Spin & Win"
+                >
+                  <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
+                    <DotLottieReact
+                      src={spinWheelAnim}
+                      loop
+                      autoplay
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
                 </motion.div>
               </div>
             )}
@@ -573,18 +581,24 @@ const MainLocationHeader = ({
           {/* Search Bar (MOBILE ONLY) */}
           {!hideSearchBar && (
             <div className="relative z-10 mt-1 flex items-center gap-2 md:hidden">
+              <SearchInput placeholder={searchPlaceholder} />
+
+              {/* Spin & Win Icon */}
               <motion.div
-                onClick={handleSearchClick}
-                whileTap={{ scale: 0.98 }}
-                style={{ backgroundColor: "#FFFFFF" }}
-                className="flex-1 rounded-[12px] px-3 h-11 shadow-sm flex items-center border border-slate-200 transition-all duration-200 focus-within:ring-2 focus-within:ring-[var(--customer-header-base-color)]/50 cursor-pointer">
-                <SearchIcon sx={{ color: "#94A3B8", fontSize: 18 }} />
-                <input
-                  type="text"
-                  placeholder={searchPlaceholder || "Search Products..."}
-                  readOnly
-                  className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-medium placeholder:text-slate-400 text-[14px] cursor-pointer"
-                />
+                onClick={() => navigate('/spin')}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className="w-11 h-11 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 border-2 border-amber-300 relative overflow-hidden"
+                title="Spin & Win"
+              >
+                <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
+                  <DotLottieReact
+                    src={spinWheelAnim}
+                    loop
+                    autoplay
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                </div>
               </motion.div>
             </div>
           )}

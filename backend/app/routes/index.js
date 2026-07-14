@@ -44,6 +44,7 @@ import { checkMaintenanceMode } from "../middleware/maintenanceMiddleware.js";
 import operationsRoute from "./operationsRoutes.js";
 import supportTicketRoute from "./supportTicketRoutes.js";
 import homeVideoRoute from "./homeVideoRoutes.js";
+import sellerSignupBannerRoute from "./sellerSignupBannerRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -110,6 +111,7 @@ const setupRoutes = (app) => {
     router.use("/seller/packages", sellerPackageRoute);
     router.use("/seller", sellerApprovalRoute);
     router.use("/kitchen", liveKitchenRoute);
+    router.use("/", sellerSignupBannerRoute);
 
     app.use("/api", router);
 }
