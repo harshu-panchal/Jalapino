@@ -142,10 +142,16 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                {idx !== 0 && (
-                  <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
+                {idx === 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/seller/auth?mode=signup');
+                    }}
+                    className="absolute bottom-4 left-4 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg z-10 border border-white/20 active:scale-95 transition-transform"
+                  >
                     Become Seller
-                  </div>
+                  </button>
                 )}
                 <button
                   onClick={(e) => {
@@ -183,10 +189,16 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                {idx !== 0 && (
-                  <div className="absolute bottom-4 left-4 bg-[#D92B2B] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg pointer-events-none z-10 border border-white/20">
+                {idx === 1 && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigate('/seller/auth?mode=signup');
+                    }}
+                    className="absolute bottom-4 left-4 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg z-10 border border-white/20 active:scale-95 transition-transform"
+                  >
                     Become Seller
-                  </div>
+                  </button>
                 )}
                 <button
                   onClick={(e) => {
