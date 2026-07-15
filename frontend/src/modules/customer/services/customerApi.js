@@ -16,6 +16,7 @@ export const customerApi = {
   getProductById: (id, params) => getWithDedupe(`/products/${id}`, params),
   getLiveKitchenStreams: () => getWithDedupe("/kitchen/public/streams"),
   getHomeVideos: () => getWithDedupe("/home-videos", {}, { ttl: 30 * 1000 }),
+  getFooterBanners: () => getWithDedupe("/footer-banners", {}, { ttl: 60 * 1000 }),
 
   // Sellers & Location
   getNearbySellers: (params) => getWithDedupe("/seller/nearby", params),

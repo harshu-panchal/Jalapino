@@ -105,7 +105,7 @@ const sellerSchema = new mongoose.Schema(
 
     applicationStatus: {
       type: String,
-      enum: ["pending", "approved", "rejected"],
+      enum: ["pending", "approved", "rejected", "bounced_back"],
       default: "pending",
     },
 
@@ -250,6 +250,12 @@ const sellerSchema = new mongoose.Schema(
     },
     // Admin Review Remark (shown to seller after review)
     adminRemark: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    // Admin Terms & Conditions (shown to seller)
+    adminTerms: {
       type: String,
       trim: true,
       default: ''

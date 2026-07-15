@@ -10,30 +10,14 @@ import { getApprovedOrLegacyFilter } from "../services/productModerationService.
 export const getPublicOfferSections = async (req, res) => {
   try {
     const coords = parseCustomerCoordinates(req.query || {});
-    if (!coords.valid) {
-      return handleResponse(
-        res,
-        400,
-        "lat and lng are required for customer offer visibility",
-      );
-    }
-
-    // Round coordinates to 3 decimals for cache bucket
-    const cacheKey = buildKey(
-      "offersections",
-      "public",
-      `${coords.lat.toFixed(3)}:${coords.lng.toFixed(3)}`,
-    );
+    // If no valid coordinates, use a generic "all" cache key
+    const cacheKey = coords.valid 
+      ? buildKey("offersections", "public", `${coords.lat.toFixed(3)}:${coords.lng.toFixed(3)}`)
+      : buildKey("offersections", "public", "all");
 
     const filteredSections = await getOrSet(
       cacheKey,
       async () => {
-        const nearbySellerIds = await getNearbySellerIdsForCustomer(
-          coords.lat,
-          coords.lng,
-        );
-        const nearbySellerSet = new Set(nearbySellerIds.map(String));
-
         const sections = await OfferSection.find({ status: "active" })
           .sort({ order: 1, createdAt: 1 })
           .populate("categoryIds", "name slug image")
@@ -48,6 +32,16 @@ export const getPublicOfferSections = async (req, res) => {
             },
           })
           .lean();
+
+        if (!coords.valid) {
+          return sections; // Return all sections without filtering by nearby sellers
+        }
+
+        const nearbySellerIds = await getNearbySellerIdsForCustomer(
+          coords.lat,
+          coords.lng,
+        );
+        const nearbySellerSet = new Set(nearbySellerIds.map(String));
 
         return sections.map((section) => {
           const sellerIds = Array.isArray(section.sellerIds)
@@ -110,6 +104,7 @@ export const createOfferSection = async (req, res) => {
       productIds = [],
       order,
       status,
+      customImageUrls = [],
     } = req.body;
 
     if (!title || !title.trim()) {
@@ -121,6 +116,9 @@ export const createOfferSection = async (req, res) => {
     }
 
     const count = await OfferSection.countDocuments({});
+    if (count >= 5) {
+      return handleResponse(res, 400, "Maximum limit of 5 offer sections reached.");
+    }
     const section = await OfferSection.create({
       title: title.trim(),
       backgroundColor: backgroundColor || "#FCD34D",
@@ -130,6 +128,7 @@ export const createOfferSection = async (req, res) => {
       productIds: Array.isArray(productIds) ? productIds : [],
       order: typeof order === "number" ? order : count,
       status: status || "active",
+      customImageUrls: Array.isArray(customImageUrls) ? customImageUrls : [],
     });
 
     return handleResponse(res, 201, "Offer section created", section);
@@ -150,6 +149,8 @@ export const updateOfferSection = async (req, res) => {
       section.backgroundColor = payload.backgroundColor;
     if (payload.sideImageKey !== undefined)
       section.sideImageKey = payload.sideImageKey;
+    if (payload.customImageUrls !== undefined)
+      section.customImageUrls = Array.isArray(payload.customImageUrls) ? payload.customImageUrls : [];
     if (Array.isArray(payload.categoryIds))
       section.categoryIds = payload.categoryIds.filter(Boolean);
     if (Array.isArray(payload.sellerIds))

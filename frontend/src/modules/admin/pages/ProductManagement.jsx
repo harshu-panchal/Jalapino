@@ -101,9 +101,9 @@ const ProductManagement = () => {
                 setCategories(catRes.data.results || catRes.data.result || []);
             }
             if (hsnRes?.data?.success) {
-                 setDbHsns(hsnRes.data.results || []);
+                setDbHsns(hsnRes.data.results || []);
             } else if (hsnRes && hsnRes.success) {
-                 setDbHsns(hsnRes.results || []);
+                setDbHsns(hsnRes.results || []);
             }
         } catch (error) {
             console.error('Failed to fetch categories/hsns');
@@ -478,7 +478,7 @@ const ProductManagement = () => {
                                     filterStatus === 'inactive' ? "bg-amber-500 text-white shadow-md shadow-amber-100" :
                                         "bg-white ring-1 ring-slate-200 text-slate-600 hover:bg-slate-50"
                             )}
-                            >
+                        >
                             <HiOutlineFunnel className="h-4 w-4" />
                             <span>
                                 {filterStatus === 'active' ? 'ONLY LIVE' :

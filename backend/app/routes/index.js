@@ -45,6 +45,7 @@ import operationsRoute from "./operationsRoutes.js";
 import supportTicketRoute from "./supportTicketRoutes.js";
 import homeVideoRoute from "./homeVideoRoutes.js";
 import sellerSignupBannerRoute from "./sellerSignupBannerRoutes.js";
+import footerBannerRoute from "./footerBannerRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -90,6 +91,7 @@ const setupRoutes = (app) => {
     router.use("/", offerRoute);
     router.use("/", couponRoute);
     router.use("/", homeVideoRoute);
+    router.use("/footer-banners", footerBannerRoute);
     router.use("/notifications", notificationRoute);
     router.use("/auth/otp", authOtpRoute);
     router.use("/push", pushRoute);

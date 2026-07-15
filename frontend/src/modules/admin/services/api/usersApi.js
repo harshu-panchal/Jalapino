@@ -25,6 +25,8 @@ export const adminUsersApi = {
     approveSeller: (id, payload) => axiosInstance.patch(`/admin/sellers/approve/${id}`, payload),
     rejectSeller: (id, data) =>
         axiosInstance.delete(`/admin/sellers/reject/${id}`, { data }),
+    bounceBackSeller: (id, data) =>
+        axiosInstance.put(`/admin/sellers/bounce-back/${id}`, data),
 };
 
 export default adminUsersApi;

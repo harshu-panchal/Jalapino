@@ -52,15 +52,24 @@
   --customer-mini-cart-color: #CC2020;
 
   /* Header Background Gradient: defaults to the brand maroon */
-  --customer-header-gradient: linear-gradient(135deg, rgba(204,32,32,0.95) 0%, rgba(204,32,32,0.95) 100%);
+  --customer-header-gradient: linear-gradient(135deg, rgba(204, 32, 32, 0.95) 0%, rgba(204, 32, 32, 0.95) 100%);
 
   /* Header Base Color: defaults to brand maroon */
   --customer-header-base-color: #CC2020;
 }
 
-html, body {
+html,
+body {
   overflow-x: hidden;
-  max-width: 100%;
+  max-width: 100vw;
+  width: 100%;
+  position: relative;
+}
+
+#root {
+  overflow-x: hidden;
+  width: 100%;
+  position: relative;
 }
 
 body {
@@ -341,14 +350,24 @@ body {
   }
 
   @keyframes shine-sweep {
-    0% { transform: translateX(-150%) skewX(-20deg); }
-    15% { transform: translateX(200%) skewX(-20deg); }
-    100% { transform: translateX(200%) skewX(-20deg); }
+    0% {
+      transform: translateX(-150%) skewX(-20deg);
+    }
+
+    15% {
+      transform: translateX(200%) skewX(-20deg);
+    }
+
+    100% {
+      transform: translateX(200%) skewX(-20deg);
+    }
   }
+
   .animate-shine-sweep {
     position: relative;
     overflow: hidden;
   }
+
   .animate-shine-sweep::before {
     content: '';
     position: absolute;
@@ -356,7 +375,7 @@ body {
     left: 0;
     width: 30%;
     height: 100%;
-    background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.8) 50%, rgba(255,255,255,0) 100%);
+    background: linear-gradient(to right, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.8) 50%, rgba(255, 255, 255, 0) 100%);
     transform: translateX(-150%) skewX(-20deg);
     animation: shine-sweep 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 10;

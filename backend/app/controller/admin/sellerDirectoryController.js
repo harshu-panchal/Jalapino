@@ -179,6 +179,7 @@ export const updateSellerDetails = async (req, res) => {
       wholesaleEnabled
     } = req.body;
     const adminRemark = req.body.adminRemark;
+    const adminTerms = req.body.adminTerms;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -200,6 +201,7 @@ export const updateSellerDetails = async (req, res) => {
     if (analyticsEnabled !== undefined) updateData.analyticsEnabled = analyticsEnabled;
     if (wholesaleEnabled !== undefined) updateData.wholesaleEnabled = wholesaleEnabled;
     if (adminRemark !== undefined) updateData.adminRemark = adminRemark;
+    if (adminTerms !== undefined) updateData.adminTerms = adminTerms;
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(

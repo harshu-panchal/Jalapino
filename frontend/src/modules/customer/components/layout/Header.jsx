@@ -86,7 +86,7 @@ const Header = () => {
                             type="button"
                             onClick={() => toggleMode('retail')}
                             className={cn(
-                                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                                "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                                 mode === 'retail'
                                     ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
                                     : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"
@@ -110,7 +110,7 @@ const Header = () => {
                             type="button"
                             onClick={() => toggleMode('whole')}
                             className={cn(
-                                "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                                "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                                 mode === 'whole'
                                     ? "bg-slate-900 text-white border-slate-900 shadow-[0_8px_20px_rgba(15,23,42,0.15)] scale-[1.02] font-black"
                                     : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-700"

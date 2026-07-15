@@ -66,6 +66,7 @@ const PendingSellers = () => {
     });
     const [isProcessing, setIsProcessing] = useState(false);
     const [adminRemark, setAdminRemark] = useState('');
+    const [adminTerms, setAdminTerms] = useState('');
     const [isSavingRemark, setIsSavingRemark] = useState(false);
 
     const fetchPendingSellers = async () => {
@@ -99,6 +100,7 @@ const PendingSellers = () => {
                         wholesaleEnabled: s.wholesaleEnabled ?? false
                     });
                     setAdminRemark(s.adminRemark || '');
+                    setAdminTerms(s.adminTerms || '');
                     setIsReviewModalOpen(true);
                 } else {
                     setSearchParams({});
@@ -180,6 +182,25 @@ const PendingSellers = () => {
             } catch (error) {
                 console.error('Failed to reject seller', error);
                 toast.error(error.response?.data?.message || 'Failed to reject seller');
+            } finally {
+                setIsProcessing(false);
+            }
+        }
+    };
+
+    const handleBounceBack = async (id) => {
+        if (window.confirm('Are you sure you want to bounce back this application for revision?')) {
+            setIsProcessing(true);
+            try {
+                await adminApi.bounceBackSeller(id, {});
+                setIsReviewModalOpen(false);
+                setSearchParams({});
+                setViewingSeller(null);
+                toast.success('Seller application bounced back for revision');
+                await fetchPendingSellers();
+            } catch (error) {
+                console.error('Failed to bounce back seller', error);
+                toast.error(error.response?.data?.message || 'Failed to bounce back seller');
             } finally {
                 setIsProcessing(false);
             }
@@ -324,6 +345,7 @@ const PendingSellers = () => {
                                                         wholesaleEnabled: s.wholesaleEnabled ?? false
                                                     });
                                                     setAdminRemark(s.adminRemark || '');
+                                                    setAdminTerms(s.adminTerms || '');
                                                     setSearchParams({ review: s.id });
                                                     setIsReviewModalOpen(true);
                                                 }}
@@ -696,29 +718,44 @@ const PendingSellers = () => {
                                                         onClick={async () => {
                                                             setIsSavingRemark(true);
                                                             try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark });
-                                                                toast.success('Remark saved successfully');
+                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark, adminTerms });
+                                                                toast.success('Remarks & Terms saved successfully');
                                                                 setPendingSellers(prev => prev.map(seller =>
-                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark } : seller
+                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark, adminTerms } : seller
                                                                 ));
                                                             } catch (err) {
-                                                                toast.error('Failed to save remark');
+                                                                toast.error('Failed to save remarks & terms');
                                                             } finally {
                                                                 setIsSavingRemark(false);
                                                             }
                                                         }}
                                                         className="ml-3 shrink-0 px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white text-[10px] font-bold rounded-lg transition-all cursor-pointer active:scale-95 disabled:opacity-60"
                                                     >
-                                                        {isSavingRemark ? 'Saving...' : 'Save Remark'}
+                                                        {isSavingRemark ? 'Saving...' : 'Save Notes'}
                                                     </button>
                                                 </div>
-                                                <textarea
-                                                    value={adminRemark}
-                                                    onChange={e => setAdminRemark(e.target.value)}
-                                                    placeholder="Write any terms, conditions, instructions, or notes for this seller before approval (e.g. 'Please ensure GST documents are updated within 7 days of approval.')..."
-                                                    rows={4}
-                                                    className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
-                                                />
+                                                <div className="space-y-4">
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Admin Remarks (Internal/Seller Notes)</label>
+                                                        <textarea
+                                                            value={adminRemark}
+                                                            onChange={e => setAdminRemark(e.target.value)}
+                                                            placeholder="Write any instructions or notes for this seller..."
+                                                            rows={3}
+                                                            className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Terms & Conditions</label>
+                                                        <textarea
+                                                            value={adminTerms}
+                                                            onChange={e => setAdminTerms(e.target.value)}
+                                                            placeholder="Write any terms and conditions (e.g. 'Please ensure GST documents are updated within 7 days of approval.')..."
+                                                            rows={3}
+                                                            className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
+                                                        />
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Action Bar */}
@@ -728,7 +765,14 @@ const PendingSellers = () => {
                                                     onClick={() => handleReject(viewingSeller.id)}
                                                     className="flex-1 py-4 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 rounded-2xl text-[10px] font-bold tracking-widest transition-all uppercase"
                                                 >
-                                                    REJECT APPLICATION
+                                                    REJECT
+                                                </button>
+                                                <button
+                                                    disabled={isProcessing}
+                                                    onClick={() => handleBounceBack(viewingSeller.id)}
+                                                    className="flex-1 py-4 bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 rounded-2xl text-[10px] font-bold tracking-widest transition-all uppercase"
+                                                >
+                                                    BOUNCE BACK
                                                 </button>
                                                 <button
                                                     disabled={isProcessing}

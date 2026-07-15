@@ -89,6 +89,9 @@ const OffersManagement = React.lazy(
 const OfferSectionsManagement = React.lazy(
   () => import("../pages/OfferSectionsManagement"),
 );
+const FooterBannersManagement = React.lazy(
+  () => import("../pages/FooterBannersManagement"),
+);
 const ShopByStoreManagement = React.lazy(
   () => import("../pages/ShopByStoreManagement"),
 );
@@ -146,6 +149,7 @@ const navItems = [
       { label: "Offer Sections", path: "/admin/offer-sections" },
       { label: "Shop by Store", path: "/admin/shop-by-store" },
       { label: "Homepage Videos", path: "/admin/home-videos" },
+      { label: "Footer Banners", path: "/admin/footer-banners" },
     ],
   },
   {
@@ -350,6 +354,7 @@ const AdminRoutes = () => {
         <Route path="/offer-sections" element={<OfferSectionsManagement />} />
         <Route path="/shop-by-store" element={<ShopByStoreManagement />} />
         <Route path="/home-videos" element={<HomeVideosManagement />} />
+        <Route path="/footer-banners" element={<FooterBannersManagement />} />
         <Route path="/coupons" element={<CouponManagement />} />
         <Route path="/gamification" element={<RewardManagement />} />
         <Route path="/referral" element={<ReferralSettings />} />

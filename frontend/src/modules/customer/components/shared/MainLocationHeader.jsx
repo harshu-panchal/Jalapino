@@ -274,7 +274,7 @@ const MainLocationHeader = ({
   // Header layout properties (fixed, non-collapsible)
   const headerTopPadding = 16;
   const headerBottomPadding = 12;
-  const bgOpacity = 0.98;
+  const bgOpacity = 1;
 
   const contentHeight = "auto";
   const contentOpacity = 1;
@@ -295,7 +295,7 @@ const MainLocationHeader = ({
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
 
   const headerOpacityGradient = baseHeaderColor && baseHeaderColor.startsWith("#") 
-    ? buildHeaderOpacityGradient(baseHeaderColor) 
+    ? buildHeaderOpacityGradient(baseHeaderColor, 1) 
     : "var(--customer-header-gradient)";
   const headerGradient = buildHeaderGradient(baseHeaderColor);
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
@@ -344,12 +344,12 @@ const MainLocationHeader = ({
           {/* Mode Switcher Cards */}
           <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
             {/* Retail Card */}
-            {availableModules?.retailEnabled && (
+            {availableModules?.retailEnabled && settings?.platformControl?.retailEnabled !== false && (
               <button
                 type="button"
                 onClick={() => toggleMode('retail')}
                 className={cn(
-                  "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                  "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'retail'
                     ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
                     : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
@@ -371,8 +371,36 @@ const MainLocationHeader = ({
               </button>
             )}
 
+            {/* Wholesale Card */}
+            {settings?.platformControl?.wholesaleEnabled !== false && (
+              <button
+                type="button"
+                onClick={() => toggleMode('whole')}
+                className={cn(
+                  "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                  mode === 'whole'
+                    ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
+                )}
+                style={{
+                  borderWidth: '3px',
+                  borderColor: 'transparent'
+                }}
+              >
+                <img 
+                  src={wholesalerIcon} 
+                  alt="Wholesale"
+                  className={cn(
+                    "h-7 w-7 object-contain transition-all duration-300",
+                    mode === 'whole' ? "opacity-100 scale-105" : "opacity-100"
+                  )}
+                />
+                <span className="text-[10px] tracking-wider uppercase font-black">Wholesale</span>
+              </button>
+            )}
+
             {/* Plan My Event Card */}
-            {availableModules?.planMyEventEnabled && (
+            {availableModules?.planMyEventEnabled && settings?.platformControl?.planMyEventEnabled !== false && (
               <button
                 type="button"
                 onClick={() => {
@@ -383,7 +411,7 @@ const MainLocationHeader = ({
                   navigate('/plan-my-event');
                 }}
                 className={cn(
-                  "flex-1 flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
+                  "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:scale-[1.02]"
                 )}
                 style={{

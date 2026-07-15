@@ -1,12 +1,31 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 import { cn } from "@/lib/utils";
 
-const QuickCategorySlider = ({ categories, onCategoryClick, isScrolled }) => {
+const QuickCategorySlider = ({ categories, onCategoryClick }) => {
   const scrollRef = useRef(null);
+  const containerRef = useRef(null);
   const navigate = useNavigate();
+  const [isStuck, setIsStuck] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      const stickyThreshold = window.innerWidth >= 768 ? 170 : 240;
+      setIsStuck(rect.bottom <= stickyThreshold + 20);
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
+    document.addEventListener("scroll", handleScroll, { passive: true, capture: true });
+    handleScroll(); // Initial check
+    return () => {
+      window.removeEventListener("scroll", handleScroll, { capture: true });
+      document.removeEventListener("scroll", handleScroll, { capture: true });
+    };
+  }, []);
 
   const scroll = (direction) => {
     if (scrollRef.current) {
@@ -18,10 +37,12 @@ const QuickCategorySlider = ({ categories, onCategoryClick, isScrolled }) => {
   if (!categories || categories.length === 0) return null;
 
   return (
-    <>
-      <div className="relative bg-[#FAF8F6] pt-0 pb-5 md:pb-6 mt-8 md:mt-12 w-full font-['Inter'] z-20">
+    <div ref={containerRef} className="relative w-full z-20">
+      {/* 1. Original Circles View (Slides under header naturally) */}
+      <div 
+        className="relative bg-[#FAF8F6] pt-0 pb-5 md:pb-6 mt-8 md:mt-12 w-full font-['Inter'] transition-all duration-300"
+      >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px] relative">
-          
           <div className="flex justify-between items-center mb-6 md:mb-8 px-1">
             <h2 className="text-lg md:text-[22px] font-black tracking-tight text-primary leading-none font-['Inter']">
               Shop by Categories
@@ -50,7 +71,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick, isScrolled }) => {
             {categories.map((cat) => (
               <div
                 key={cat.id}
-                onClick={() => onCategoryClick(cat.id)}
+                onClick={() => !isStuck && onCategoryClick(cat.id)}
                 className="flex flex-col items-center cursor-pointer group/item snap-start min-w-[70px] sm:min-w-[88px] max-w-[96px] transition-transform active:scale-95"
               >
                 <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#FFFFFF] border border-[#E7DDD5] flex items-center justify-center transition-all duration-300 group-hover/item:scale-105 group-hover/item:border-[#d0bfb2] shadow group-hover/item:shadow-md">
@@ -80,31 +101,33 @@ const QuickCategorySlider = ({ categories, onCategoryClick, isScrolled }) => {
               <ChevronRight size={18} strokeWidth={3} />
             </button>
           </div>
-
         </div>
       </div>
 
-      {/* 2. Sticky Collapsed View (Pill chips, visible only on scroll) */}
-      {isScrolled && (
-        <div className="fixed top-[68px] left-0 right-0 z-[90] bg-[#FAF8F6]/95 backdrop-blur-md shadow-sm border-b border-slate-100/80 py-2.5 transition-all">
-          <div className="container mx-auto px-4 md:px-8 lg:px-[50px]">
-            <div className="flex items-center gap-2.5 overflow-x-auto no-scrollbar py-0.5 px-1">
-              {categories.map((cat) => (
-                <div
-                  key={cat.id}
-                  onClick={() => onCategoryClick(cat.id)}
-                  className="flex-row bg-white hover:bg-slate-50 border border-slate-200/60 px-4 py-1.5 rounded-full min-w-fit shadow-sm flex items-center cursor-pointer group/item transition-all duration-150 active:scale-95"
-                >
-                  <span className="text-slate-700 group-hover/item:text-primary text-[11px] font-bold whitespace-nowrap">
-                    {cat.name}
-                  </span>
-                </div>
-              ))}
-            </div>
+      {/* 2. Sticky Collapsed View (Text only, visible only on scroll, like Flipkart) */}
+      <div 
+        className={cn(
+          "fixed top-[240px] md:top-[170px] left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200 transition-all duration-300",
+          isStuck ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+        )}
+      >
+        <div className="container mx-auto px-4 md:px-8 lg:px-[50px]">
+          <div className="flex items-center gap-4 md:gap-8 overflow-x-auto no-scrollbar">
+            {categories.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => isStuck && onCategoryClick(cat.id)}
+                className="flex flex-col items-center justify-center cursor-pointer group/item transition-all duration-150 py-3 border-b-2 border-transparent hover:border-primary"
+              >
+                <span className="text-slate-700 group-hover/item:text-primary text-[13px] md:text-sm font-semibold whitespace-nowrap">
+                  {cat.name}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
-      )}
-    </>
+      </div>
+    </div>
   );
 };
 

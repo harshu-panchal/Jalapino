@@ -31,6 +31,8 @@ const ApplicationPending = () => {
   }
 
   const isRejected = applicationStatus === "rejected";
+  const isBouncedBack = applicationStatus === "bounced_back";
+  const isNeedsAction = isRejected || isBouncedBack;
 
   return (
     <div className="min-h-screen bg-slate-950 relative overflow-hidden font-sans">
@@ -62,19 +64,19 @@ const ApplicationPending = () => {
                   : "bg-amber-400/20 text-amber-100"
               }`}
             >
-              {isRejected ? <ShieldAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
-              {isRejected ? "Application Rejected" : "Application Pending"}
+              {isNeedsAction ? <ShieldAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+              {isRejected ? "Application Rejected" : isBouncedBack ? "Revision Required" : "Application Pending"}
             </div>
           </div>
 
           <h1 className="text-3xl md:text-4xl font-black text-white leading-tight">
-            {isRejected
+            {isNeedsAction
               ? "Your seller application needs action."
               : "Your seller application is under review."}
           </h1>
           <p className="mt-4 text-base md:text-lg text-slate-200/90 font-medium max-w-2xl">
-            {isRejected
-              ? "You cannot access the seller dashboard yet. Please contact admin support and re-submit with the required details."
+            {isNeedsAction
+              ? "You cannot access the seller dashboard yet. Please check the notes below and contact support to re-submit with the required details."
               : "Dashboard access unlocks automatically once admin approves your account."}
           </p>
 
@@ -93,7 +95,15 @@ const ApplicationPending = () => {
             </div>
           ) : null}
 
-          {!isRejected ? (
+          {/* Admin Terms and Conditions */}
+          {user?.adminTerms ? (
+            <div className="mt-4 rounded-2xl border border-indigo-400/25 bg-indigo-400/10 px-4 py-3 text-sm text-indigo-100">
+              <span className="font-black uppercase tracking-widest text-[11px] text-indigo-300">📝 Terms & Conditions</span>
+              <p className="mt-1 font-medium whitespace-pre-wrap">{user.adminTerms}</p>
+            </div>
+          ) : null}
+
+          {!isNeedsAction ? (
             <div className="mt-6 rounded-2xl border border-brand-400/30 bg-brand-500/10 px-4 py-3 text-sm text-brand-200 flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-brand-400" />
               <p className="font-semibold">

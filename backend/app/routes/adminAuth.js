@@ -21,6 +21,7 @@ import {
     getPendingSellers,
     approveSellerApplication,
     rejectSellerApplication,
+    bounceBackSellerApplication,
     getSellerWithdrawals,
     getDeliveryWithdrawals,
     updateWithdrawalStatus,
@@ -202,6 +203,7 @@ router.patch("/sellers/:id/type", verifyToken, allowRoles("admin"), requireAdmin
 router.put("/sellers/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), updateSellerDetails);
 router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerApplication);
 router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), rejectSellerApplication);
+router.put("/sellers/bounce-back/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), bounceBackSellerApplication);
 
 router.get(
     "/delivery-partners",

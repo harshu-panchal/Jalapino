@@ -31,6 +31,10 @@ const OfferSections = ({ sections, noServiceData }) => {
               deliveryTime: p.deliveryTime,
             }));
 
+          if (sectionProducts.length === 0) {
+            return null;
+          }
+
           return (
             <motion.div
               key={section._id}

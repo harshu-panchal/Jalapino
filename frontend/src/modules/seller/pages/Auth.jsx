@@ -114,6 +114,16 @@ const Auth = () => {
   const navigate = useNavigate();
   const panelRef = React.useRef(null);
 
+  const handleBack = () => {
+    if (!isLogin && signupStep > 1) {
+      setSignupStep(prev => prev - 1);
+    } else if (isSignupMode) {
+      navigate('/#footer-banner-carousel');
+    } else {
+      navigate(-1);
+    }
+  };
+
   React.useEffect(() => {
     sessionStorage.setItem('sellerAuthIsLogin', isLogin);
   }, [isLogin]);
@@ -590,6 +600,15 @@ const Auth = () => {
           {/* Burgundy / Dark Gradient Overlay for premium look */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
           
+          {/* Back Button on Left Panel */}
+          <button
+            type="button"
+            onClick={handleBack}
+            className="absolute top-8 left-8 p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full text-white transition-all shadow-lg z-50 border border-white/20 flex items-center justify-center cursor-pointer"
+          >
+            <ChevronLeft size={24} />
+          </button>
+          
           {/* Logo & Slogan overlay on left panel */}
           <div className="absolute bottom-10 left-8 right-8 z-10 text-left">
             <h2 className="text-2xl font-black text-white tracking-tight uppercase leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
@@ -607,32 +626,14 @@ const Auth = () => {
           className="w-full md:w-[55%] min-h-0 p-5 pt-14 md:p-12 md:pt-16 flex flex-col justify-center bg-white md:overflow-y-auto md:overscroll-contain custom-scrollbar relative"
           style={{ WebkitOverflowScrolling: "touch" }}>
 
-          <button
-            type="button"
-            onClick={() => {
-              if (!isLogin && signupStep > 1) {
-                setSignupStep(prev => prev - 1);
-              } else {
-                navigate(-1);
-              }
-            }}
-            className="absolute top-4 left-4 md:top-8 md:left-8 p-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center shadow-sm z-20 border border-slate-200"
-          >
-            <ChevronLeft size={22} />
-          </button>
-
-          <div className="hidden md:flex absolute top-8 right-8 z-20">
-            <div className="w-20 h-20 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden">
-              {logoUrl ? (
-                <img
-                  src={logoUrl}
-                  alt={`${appName} logo`}
-                  className="w-14 h-14 object-contain"
-                />
-              ) : (
-                <Store size={30} className="text-slate-700" />
-              )}
-            </div>
+          <div className="w-full flex items-center justify-between mb-2 md:hidden">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="p-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center shadow-sm z-20 border border-slate-200"
+            >
+              <ChevronLeft size={22} />
+            </button>
           </div>
           <AnimatePresence mode="wait">
             <motion.div
@@ -697,7 +698,36 @@ const Auth = () => {
                     </div>
                   </div>
 
-                <span className="inline-block px-4 py-1 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                <div className="hidden md:flex w-full items-center justify-between mb-4">
+                  <div className="flex items-center gap-4">
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      className="p-2.5 text-slate-500 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-full transition-all flex items-center justify-center shadow-sm border border-slate-200 shrink-0"
+                    >
+                      <ChevronLeft size={22} />
+                    </button>
+                    <span className="inline-block px-4 py-1.5 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
+                      {isLogin
+                        ? "Welcome Back"
+                        : `New Partnership - Step ${signupStep} of 3`}
+                    </span>
+                  </div>
+                  
+                  <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={`${appName} logo`}
+                        className="w-10 h-10 object-contain"
+                      />
+                    ) : (
+                      <Store size={24} className="text-slate-700" />
+                    )}
+                  </div>
+                </div>
+
+                <span className="md:hidden inline-block px-4 py-1 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
                   {isLogin
                     ? "Welcome Back"
                     : `New Partnership - Step ${signupStep} of 3`}

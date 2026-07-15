@@ -13,6 +13,7 @@ import {
 } from "react-icons/hi2";
 import { cn } from "@/lib/utils";
 import { adminApi } from "../services/adminApi";
+import { resolveImageUrl } from "@/core/utils/imageUtils";
 import {
   BACKGROUND_COLOR_OPTIONS,
   SIDE_IMAGE_OPTIONS,
@@ -34,8 +35,12 @@ const OfferSectionsManagement = () => {
     categoryIds: [],
     sellerIds: [],
     productIds: [],
+    categoryId: "",
     order: 0,
     status: "active",
+    status: "active",
+    customImageUrls: [],
+    isUploading: false,
   });
 
   const loadCategories = async () => {
@@ -134,8 +139,11 @@ const OfferSectionsManagement = () => {
       categoryIds: [],
       sellerIds: [],
       productIds: [],
+      categoryId: "",
       order: sections.length,
       status: "active",
+      customImageUrls: [],
+      isUploading: false,
     });
     setEditingSection(null);
   };
@@ -159,9 +167,12 @@ const OfferSectionsManagement = () => {
       sideImageKey: section.sideImageKey || "hair-care",
       categoryIds: catIds,
       sellerIds: selIds,
-      productIds: section.productIds || [],
-      order: section.order ?? 0,
+      productIds: section.productIds?.map((p) => p._id) || [],
+      categoryId: section.categoryId?._id || "",
+      order: section.order || 0,
       status: section.status || "active",
+      customImageUrls: Array.isArray(section.customImageUrls) ? section.customImageUrls : [],
+      isUploading: false,
     });
     loadProductsByCategoryAndSellers(catIds, selIds);
     setIsModalOpen(true);
@@ -178,9 +189,10 @@ const OfferSectionsManagement = () => {
       return;
     }
     const payload = {
-      title: formData.title.trim(),
+      title: formData.title,
       backgroundColor: formData.backgroundColor,
       sideImageKey: formData.sideImageKey,
+      customImageUrls: formData.customImageUrls,
       categoryIds: formData.categoryIds,
       sellerIds: formData.sellerIds || [],
       productIds: formData.productIds,
@@ -283,8 +295,6 @@ const OfferSectionsManagement = () => {
             const sideOpt = SIDE_IMAGE_OPTIONS.find(
               (o) => o.key === section.sideImageKey
             );
-            const sectionCatIds = (section.categoryIds || []).map((c) => (typeof c === "object" && c?._id ? c._id : c));
-            const sectionSellerIds = (section.sellerIds || []).map((s) => (typeof s === "object" && s?._id ? s._id : s));
             const catNames = (section.categoryIds || []).length
               ? (section.categoryIds || []).map((c) => (typeof c === "object" && c?.name ? c.name : categoryMap[c]?.name || c)).join(", ")
               : (section.categoryId?.name || "—");
@@ -298,15 +308,17 @@ const OfferSectionsManagement = () => {
                 className="px-4 py-4 flex flex-col md:flex-row md:items-center gap-4 hover:bg-slate-50/40 transition-colors"
               >
                 <div className="flex items-center gap-3 md:min-w-[200px]">
-                  <div
-                    className="h-14 w-14 rounded-2xl flex-shrink-0 bg-cover bg-center ring-2 ring-slate-100"
-                    style={{
-                      backgroundColor: section.backgroundColor || "#FCD34D",
-                      backgroundImage: sideOpt?.imageUrl
-                        ? `url(${sideOpt.imageUrl})`
-                        : undefined,
-                    }}
-                  />
+                  <div className="w-16 h-16 shrink-0 rounded-2xl overflow-hidden bg-slate-100 mb-3 md:mb-0">
+                    <img
+                      src={resolveImageUrl(
+                        (section.customImageUrls && section.customImageUrls.length > 0)
+                          ? section.customImageUrls[0] 
+                          : (sideOpt?.imageUrl || "/images/placeholder.png")
+                      )}
+                      alt={sideOpt?.label || "Section"}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
                   <div>
                     <p className="text-sm font-black text-slate-900">
                       #{idx + 1} {section.title}
@@ -546,36 +558,76 @@ const OfferSectionsManagement = () => {
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-              Side image (choose one)
+              Banner images (Upload up to 5)
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              {SIDE_IMAGE_OPTIONS.map((opt) => (
-                <button
-                  key={opt.key}
-                  type="button"
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      sideImageKey: opt.key,
-                    }))
-                  }
-                  className={cn(
-                    "rounded-xl overflow-hidden border-2 transition-all aspect-square bg-slate-100",
-                    formData.sideImageKey === opt.key
-                      ? "border-primary ring-2 ring-primary/30"
-                      : "border-slate-200 hover:border-slate-300"
-                  )}
-                >
-                  <img
-                    src={opt.imageUrl}
-                    alt={opt.label}
-                    className="w-full h-full object-cover"
-                  />
-                  <span className="block text-[10px] font-bold text-slate-600 p-1 truncate">
-                    {opt.label}
-                  </span>
-                </button>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {formData.customImageUrls?.map((url, idx) => (
+                <div key={idx} className="relative rounded-xl overflow-hidden border-2 border-slate-200 aspect-[2/1] bg-slate-50 group">
+                  <img src={resolveImageUrl(url)} className="w-full h-full object-cover" />
+                  <button 
+                    type="button"
+                    className="absolute top-1 right-1 bg-white text-red-500 rounded p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                    onClick={() => {
+                      setFormData(prev => ({
+                        ...prev,
+                        customImageUrls: prev.customImageUrls.filter((_, i) => i !== idx)
+                      }));
+                    }}
+                  >
+                    <HiOutlineTrash className="w-4 h-4" />
+                  </button>
+                </div>
               ))}
+              {(formData.customImageUrls?.length || 0) < 5 && (
+                <div className="relative rounded-xl overflow-hidden border-2 border-dashed border-slate-300 hover:border-primary transition-all aspect-[2/1] bg-slate-50 flex flex-col items-center justify-center cursor-pointer">
+                  <input 
+                    type="file" 
+                    accept="image/*"
+                    multiple
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files);
+                      if (!files.length) return;
+                      
+                      const remainingSlots = 5 - (formData.customImageUrls?.length || 0);
+                      const filesToUpload = files.slice(0, remainingSlots);
+
+                      setFormData(prev => ({ ...prev, isUploading: true }));
+                      try {
+                        const newUrls = [];
+                        for (const file of filesToUpload) {
+                          const fd = new FormData();
+                          fd.append("image", file);
+                          const res = await adminApi.uploadExperienceBanner(fd);
+                          const url = res.data?.result?.url || res.data?.url;
+                          if (url) newUrls.push(url);
+                        }
+                        
+                        setFormData(prev => ({ 
+                          ...prev, 
+                          customImageUrls: [...(prev.customImageUrls || []), ...newUrls], 
+                          sideImageKey: "", 
+                          isUploading: false 
+                        }));
+                        showToast(`${newUrls.length} image(s) uploaded successfully`, "success");
+                      } catch (err) {
+                        console.error(err);
+                        setFormData(prev => ({ ...prev, isUploading: false }));
+                        showToast("Image upload failed", "error");
+                      }
+                    }}
+                    disabled={formData.isUploading}
+                  />
+                  {formData.isUploading ? (
+                    <span className="text-[10px] font-bold text-slate-500">Uploading...</span>
+                  ) : (
+                    <>
+                      <HiOutlinePhoto className="w-6 h-6 text-slate-400 mb-1" />
+                      <span className="text-[10px] font-bold text-slate-500 text-center px-1">Upload Custom</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

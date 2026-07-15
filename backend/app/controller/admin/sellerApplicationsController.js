@@ -4,6 +4,7 @@ import {
   approveSellerApplicationById,
   getPendingSellerApplications,
   rejectSellerApplicationById,
+  bounceBackSellerApplicationById,
 } from "../../services/admin/sellerApplicationService.js";
 
 export const getPendingSellers = async (req, res) => {
@@ -63,6 +64,24 @@ export const rejectSellerApplication = async (req, res) => {
     }
 
     return handleResponse(res, 200, "Seller application rejected", seller);
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+export const bounceBackSellerApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const seller = await bounceBackSellerApplicationById({
+      sellerId: id,
+      reviewedBy: req.user.id,
+    });
+
+    if (!seller) {
+      return handleResponse(res, 404, "Seller not found");
+    }
+
+    return handleResponse(res, 200, "Seller application bounced back", seller);
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }

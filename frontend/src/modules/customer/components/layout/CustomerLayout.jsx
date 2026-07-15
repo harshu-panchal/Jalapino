@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import Header from './Header';
 import Footer from './Footer';
+import FooterBannerCarousel from './FooterBannerCarousel';
 import BottomNav from './BottomNav';
 import MiniCart from '../shared/MiniCart';
 import ProductDetailSheet from '../shared/ProductDetailSheet';
@@ -156,8 +157,13 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn') ? "pb-0" : "pb-16")}>
-                {children}
+            <main className={cn("flex-1 md:pb-0 flex flex-col", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn') ? "pb-0" : "pb-16")}>
+                <div className="flex-1">
+                    {children}
+                </div>
+                <div id="footer-banner-carousel" className={cn("w-full mt-auto", isProductDetailOpen ? "hidden" : "block")}>
+                    <FooterBannerCarousel />
+                </div>
             </main>
 
             {showCart && <MiniCart />}

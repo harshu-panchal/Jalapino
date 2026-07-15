@@ -171,3 +171,27 @@ export async function rejectSellerApplicationById({
 
   return formatSellerApplication(seller);
 }
+
+export async function bounceBackSellerApplicationById({
+  sellerId,
+  reviewedBy,
+}) {
+  const seller = await Seller.findByIdAndUpdate(
+    sellerId,
+    {
+      $set: {
+        isVerified: false,
+        applicationStatus: "bounced_back",
+        reviewedAt: new Date(),
+        reviewedBy,
+      },
+    },
+    { new: true },
+  );
+
+  if (!seller) {
+    return null;
+  }
+
+  return formatSellerApplication(seller);
+}

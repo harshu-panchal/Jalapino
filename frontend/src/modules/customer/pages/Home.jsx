@@ -551,7 +551,7 @@ const Home = () => {
   return (
     <div className={`min-h-screen pt-[240px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
-        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={false} isAbsolute={true} />
+        <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={false} isAbsolute={false} />
       </div>
 
       {products.length === 0 && !isLoading ? (
@@ -563,46 +563,16 @@ const Home = () => {
         </div>
       ) : (
         <>
-          {/* Search Bar - fixed top-0, shows only when scrolled */}
-          <div
-            className={cn(
-              "fixed top-0 left-0 right-0 z-[100] w-full max-w-2xl mx-auto px-4 py-3 flex items-center gap-3 bg-[#FAF8F6] transition-all duration-200",
-              isScrolled ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none -translate-y-2"
-            )}
-            style={{
-              boxShadow: '0 8px 20px -12px rgba(0,0,0,0.15)',
-            }}
-          >
-            <SearchInput placeholder={searchPlaceholder} />
-
-            <motion.div
-              onClick={() => navigate("/spin")}
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="w-11 h-11 md:w-12 md:h-12 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 md:p-1 border-2 border-amber-300 relative overflow-hidden"
-              title="Spin & Win"
-            >
-              <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
-                <DotLottieReact
-                  src={spinWheelLottie}
-                  loop
-                  autoplay
-                  style={{ width: '100%', height: '100%' }}
-                />
-              </div>
-            </motion.div>
-
-          </div>
-
           {heroConfig.banners?.items?.length > 0 && (
-            <motion.div ref={heroRef} className="block w-full">
+            <motion.div ref={heroRef} className="sticky top-[240px] md:top-[170px] z-0 block w-full pointer-events-auto">
               <div className="relative w-full overflow-hidden">
                 <ExperienceBannerCarousel section={{ title: "" }} items={heroConfig.banners.items} fullWidth edgeToEdge />
               </div>
             </motion.div>
           )}
 
-          <div ref={categoriesRef}>
+          <div className="relative z-10 bg-[#FAF8F6] min-h-[100vh] pb-10 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+            <div ref={categoriesRef}>
             <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} isScrolled={isScrolled && !categoriesVisible} />
           </div>
 
@@ -671,6 +641,7 @@ const Home = () => {
               <SectionRenderer sections={sectionsForRenderer} productsById={productsById} categoriesById={categoryMap} subcategoriesById={subcategoryMap} />
             </div>
           )}
+          </div>
         </>
       )}
 

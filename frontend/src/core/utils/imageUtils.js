@@ -49,3 +49,11 @@ export function buildCloudinarySrcSet(
     })
     .join(", ");
 }
+
+export function resolveImageUrl(path) {
+  if (!path) return "";
+  if (path.startsWith("http") || path.startsWith("blob:")) return path;
+  const baseUrl = import.meta.env.VITE_API_URL || "";
+  return `${baseUrl.replace(/\/$/, "")}/${path.replace(/^\//, "")}`;
+}
+
