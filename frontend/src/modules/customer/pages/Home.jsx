@@ -549,7 +549,7 @@ const Home = () => {
   };
 
   return (
-    <div className={`min-h-screen pt-[240px] md:pt-[170px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
+    <div className={`min-h-screen pt-[228px] md:pt-[166px] ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}>
       <div className={cn("contents", isProductDetailOpen && "hidden md:contents")}>
         <MainLocationHeader categories={categories} activeCategory={activeCategory} onCategorySelect={setActiveCategory} hideSearchBar={false} isAbsolute={false} />
       </div>
@@ -564,7 +564,7 @@ const Home = () => {
       ) : (
         <>
           {heroConfig.banners?.items?.length > 0 && (
-            <motion.div ref={heroRef} className="sticky top-[240px] md:top-[170px] z-0 block w-full pointer-events-auto">
+            <motion.div ref={heroRef} className="md:sticky md:top-[166px] z-0 block w-full pointer-events-auto">
               <div className="relative w-full overflow-hidden">
                 <ExperienceBannerCarousel section={{ title: "" }} items={heroConfig.banners.items} fullWidth edgeToEdge />
               </div>
@@ -606,7 +606,7 @@ const Home = () => {
                         setZoomVideoUrl(vid.videoUrl);
                         setZoomVideoScale(1);
                       }}
-                      className="absolute top-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-20 cursor-pointer active:scale-95 transition-transform"
+                      className="absolute bottom-3 right-2 md:bottom-4 md:right-3 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-20 cursor-pointer active:scale-95 transition-transform"
                     >
                       🔍 Tap to Zoom
                     </button>

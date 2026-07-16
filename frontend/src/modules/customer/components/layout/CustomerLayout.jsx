@@ -141,8 +141,10 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     const finalShowBottomNavMobile = showBottomNav && !isProductDetailOpen;
     const finalShowFooterMessageMobile = showFooterMessage && !isProductDetailOpen;
 
+    const isCategoryPage = path.startsWith('/category');
+
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden">
+        <div className={cn("min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden", isCategoryPage && "h-screen overflow-hidden")}>
             {/* Header logic: Always show on desktop if showHeader is true. On mobile, hide if product detail is open. */}
             {showHeader && (
                 <>
@@ -157,22 +159,26 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0 flex flex-col", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn') ? "pb-0" : "pb-16")}>
-                <div className="flex-1">
+            <main className={cn("flex-1 md:pb-0 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage) ? "pb-0" : "pb-16")}>
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {children}
                 </div>
-                <div id="footer-banner-carousel" className={cn("w-full mt-auto", isProductDetailOpen ? "hidden" : "block")}>
-                    <FooterBannerCarousel />
-                </div>
+                {!isCategoryPage && (
+                    <div id="footer-banner-carousel" className={cn("w-full mt-auto", isProductDetailOpen ? "hidden" : "block")}>
+                        <FooterBannerCarousel />
+                    </div>
+                )}
             </main>
 
             {showCart && <MiniCart />}
             <ProductDetailSheet />
             <SearchOverlay isOpen={isSearchOpen} onClose={closeSearch} />
 
-            <div className="hidden md:block">
-                <Footer />
-            </div>
+            {!isCategoryPage && (
+                <div className="hidden md:block">
+                    <Footer />
+                </div>
+            )}
 
             {/* Mobile Footer Message logic */}
             <div className="md:hidden">

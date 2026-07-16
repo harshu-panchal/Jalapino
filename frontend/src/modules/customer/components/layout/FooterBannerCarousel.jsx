@@ -55,7 +55,7 @@ const FooterBannerCarousel = () => {
 
   return (
     <div className="w-full relative">
-      <div className="w-full aspect-[1448/650] transition-opacity duration-300 relative overflow-hidden bg-slate-100 group">
+      <div className="w-full aspect-[1448/450] transition-opacity duration-300 relative overflow-hidden bg-slate-100 group">
         {currentBanner.link ? (
           <a href={currentBanner.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
             <img

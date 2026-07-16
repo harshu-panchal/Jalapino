@@ -12,6 +12,7 @@ import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
 import { customerApi } from '../../services/customerApi';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
+import FullScreenImageViewer from './FullScreenImageViewer';
 
 const ProductDetailSheet = () => {
     const { selectedProduct, isOpen, closeProduct } = useProductDetail();
@@ -26,6 +27,7 @@ const ProductDetailSheet = () => {
     const [isExpanded, setIsExpanded] = useState(false);
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
 
     const [reviews, setReviews] = useState([]);
     const [reviewLoading, setReviewLoading] = useState(true);
@@ -375,7 +377,8 @@ const ProductDetailSheet = () => {
                                                     transition={{ duration: 0.15 }}
                                                     src={applyCloudinaryTransform(allImages[activeImageIndex], "f_auto,q_auto:best,w_1200,dpr_auto")}
                                                     alt={`${selectedProduct.name} ${activeImageIndex + 1}`}
-                                                    className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl hover:scale-[1.03] transition-transform duration-500 absolute inset-0 m-auto p-12"
+                                                    className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl hover:scale-[1.03] transition-transform duration-500 absolute inset-0 m-auto p-12 cursor-pointer"
+                                                    onClick={() => setIsImageViewerOpen(true)}
                                                 />
                                             </AnimatePresence>
                                         </div>
@@ -399,7 +402,7 @@ const ProductDetailSheet = () => {
                                 </div>
 
                                 {/* Right: Product Info (scrollable naturally) */}
-                                <div className="flex-1 flex flex-col bg-white">
+                                <div className="flex-1 flex flex-col bg-white overflow-y-auto overscroll-contain">
                                     <div className="flex-1 px-7 py-6 lg:px-8 lg:py-7 space-y-3">
 
                                         {/* Top badges row */}
@@ -724,10 +727,6 @@ const ProductDetailSheet = () => {
                     {/* MOBILE LAYOUT: Bottom sheet (hidden on desktop md+) */}
                     {/* ============================================================ */}
                     <motion.div
-                        drag="y"
-                        dragConstraints={{ top: 0, bottom: 0 }}
-                        dragElastic={0.3}
-                        onDragEnd={handleDragEnd}
                         initial={{
                             opacity: 0,
                             y: "100vh",
@@ -777,7 +776,7 @@ const ProductDetailSheet = () => {
                         {/* Scrollable Content */}
                         <div
                             className={cn(
-                                "flex-1 overflow-x-hidden no-scrollbar pb-24 bg-white overflow-y-auto"
+                                "flex-1 overflow-x-hidden no-scrollbar pb-24 bg-white overflow-y-auto overscroll-contain"
                             )}
                             onScroll={handleScroll}
                             onWheel={handleWheel}
@@ -793,7 +792,7 @@ const ProductDetailSheet = () => {
                                     }}
                                 >
                                     {allImages.map((img, i) => (
-                                        <div key={i} className="flex-shrink-0 w-full h-full snap-center flex items-center justify-center px-0 sm:px-4">
+                                        <div key={i} className="flex-shrink-0 w-full h-full snap-center flex items-center justify-center px-0 sm:px-4 cursor-pointer" onClick={() => setIsImageViewerOpen(true)}>
                                             <motion.img
                                                 initial={{ scale: 0.8, opacity: 0 }}
                                                 animate={{ scale: 1, opacity: 1 }}
@@ -1065,6 +1064,13 @@ const ProductDetailSheet = () => {
                             </div>
                         </div>
                     </motion.div>
+
+                    <FullScreenImageViewer
+                        isOpen={isImageViewerOpen}
+                        images={allImages}
+                        initialIndex={activeImageIndex}
+                        onClose={() => setIsImageViewerOpen(false)}
+                    />
                 </>
             )}
         </AnimatePresence>

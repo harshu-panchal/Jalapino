@@ -13,7 +13,7 @@ const OfferSections = ({ sections, noServiceData }) => {
   if (!sections || sections.length === 0) return null;
 
   return (
-    <div className="w-full px-0 pt-0 pb-2 md:pb-4">
+    <div className="w-full px-0 pt-0 pb-0 md:pb-1">
       {[...sections]
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map((section) => {

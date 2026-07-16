@@ -16,6 +16,7 @@ import { useLocation as useAppLocation } from '../context/LocationContext';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
 import { useSettings } from '@core/context/SettingsContext';
 import Lottie from 'lottie-react';
+import FullScreenImageViewer from '../components/shared/FullScreenImageViewer';
 
 const ProductDetailPage = () => {
     const { id } = useParams();
@@ -33,6 +34,7 @@ const ProductDetailPage = () => {
     
     const [selectedVariant, setSelectedVariant] = useState(null);
     const [activeImageIndex, setActiveImageIndex] = useState(0);
+    const [isImageViewerOpen, setIsImageViewerOpen] = useState(false);
     const [expandedSections, setExpandedSections] = useState(['description']);
 
     const [reviews, setReviews] = useState([]);
@@ -396,7 +398,8 @@ const ProductDetailPage = () => {
                                     transition={{ duration: 0.15 }}
                                     src={applyCloudinaryTransform(allImages[activeImageIndex], "f_auto,q_auto:best,w_1200,dpr_auto")}
                                     alt={`${product.name} ${activeImageIndex + 1}`}
-                                    className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl hover:scale-[1.03] transition-transform duration-500 absolute inset-0 m-auto p-12"
+                                    className="w-full h-full object-contain mix-blend-multiply drop-shadow-2xl hover:scale-[1.03] transition-transform duration-500 absolute inset-0 m-auto p-12 cursor-pointer"
+                                    onClick={() => setIsImageViewerOpen(true)}
                                 />
                             </AnimatePresence>
                         </div>
@@ -723,7 +726,7 @@ const ProductDetailPage = () => {
                             }}
                         >
                             {allImages.map((img, i) => (
-                                <div key={i} className="flex-shrink-0 w-full h-full snap-center flex items-center justify-center px-0 sm:px-4">
+                                <div key={i} className="flex-shrink-0 w-full h-full snap-center flex items-center justify-center px-0 sm:px-4 cursor-pointer" onClick={() => setIsImageViewerOpen(true)}>
                                     <motion.img
                                         initial={{ scale: 0.8, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
@@ -985,6 +988,12 @@ const ProductDetailPage = () => {
                 </div>
             </div>
 
+            <FullScreenImageViewer
+                isOpen={isImageViewerOpen}
+                images={allImages}
+                initialIndex={activeImageIndex}
+                onClose={() => setIsImageViewerOpen(false)}
+            />
         </div>
     );
 };

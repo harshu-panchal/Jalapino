@@ -14,8 +14,10 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
     const handleScroll = () => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      const stickyThreshold = window.innerWidth >= 768 ? 170 : 240;
-      setIsStuck(rect.bottom <= stickyThreshold + 20);
+      const stickyThreshold = window.innerWidth >= 768 ? 166 : 228;
+      // Trigger sticky state when the bottom of the category block hits the header
+      // This ensures the original circles have fully scrolled under the header
+      setIsStuck(rect.bottom <= stickyThreshold);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
@@ -27,10 +29,10 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
     };
   }, []);
 
-  const scroll = (direction) => {
+  const scrollCards = (direction) => {
     if (scrollRef.current) {
       const scrollAmount = direction === "left" ? -300 : 300;
-      scrollRef.current.scrollBy({ left: scrollAmount, behavior: "smooth" });
+      scrollRef.current.scrollLeft += scrollAmount;
     }
   };
 
@@ -40,7 +42,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
     <div ref={containerRef} className="relative w-full z-20">
       {/* 1. Original Circles View (Slides under header naturally) */}
       <div 
-        className="relative bg-[#FAF8F6] pt-0 pb-5 md:pb-6 mt-8 md:mt-12 w-full font-['Inter'] transition-all duration-300"
+        className="relative bg-[#FAF8F6] pt-0 pb-5 md:pb-6 w-full font-['Inter'] transition-all duration-300"
       >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px] relative">
           <div className="flex justify-between items-center mb-6 md:mb-8 px-1">
@@ -52,15 +54,6 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
               className="flex items-center gap-0.5 text-xs font-bold text-primary hover:opacity-80 transition-opacity cursor-pointer leading-none">
               View All
               <ChevronRight size={12} strokeWidth={3} className="ml-0.5" />
-            </button>
-          </div>
-
-          {/* Left Scroll Button */}
-          <div className="absolute left-1 top-[60%] -translate-y-1/2 z-20 hidden md:flex">
-            <button
-              onClick={() => scroll("left")}
-              className="h-8 w-8 bg-white/90 backdrop-blur-md shadow-md rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
-              <ChevronLeft size={18} strokeWidth={3} />
             </button>
           </div>
 
@@ -93,10 +86,19 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
             ))}
           </div>
 
-          {/* Right Scroll Button */}
-          <div className="absolute right-1 top-[60%] -translate-y-1/2 z-20 hidden md:flex">
+          {/* Left Scroll Button */}
+          <div className="absolute left-1 top-[60%] -translate-y-1/2 z-50 hidden md:flex pointer-events-auto">
             <button
-              onClick={() => scroll("right")}
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); scrollCards("left"); }}
+              className="h-8 w-8 bg-white/90 backdrop-blur-md shadow-md rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
+              <ChevronLeft size={18} strokeWidth={3} />
+            </button>
+          </div>
+
+          {/* Right Scroll Button */}
+          <div className="absolute right-1 top-[60%] -translate-y-1/2 z-50 hidden md:flex pointer-events-auto">
+            <button
+              onClick={(e) => { e.preventDefault(); e.stopPropagation(); scrollCards("right"); }}
               className="h-8 w-8 bg-white/90 backdrop-blur-md shadow-md rounded-full flex items-center justify-center border border-gray-100 cursor-pointer hover:bg-white text-primary transition-all active:scale-90">
               <ChevronRight size={18} strokeWidth={3} />
             </button>
@@ -107,8 +109,8 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
       {/* 2. Sticky Collapsed View (Text only, visible only on scroll, like Flipkart) */}
       <div 
         className={cn(
-          "fixed top-[240px] md:top-[170px] left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200 transition-all duration-300",
-          isStuck ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4 pointer-events-none"
+          "fixed top-[228px] md:top-[166px] left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200 transition-all duration-300",
+          isStuck ? "opacity-100 translate-y-0" : "opacity-0 translate-y-0 pointer-events-none"
         )}
       >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px]">

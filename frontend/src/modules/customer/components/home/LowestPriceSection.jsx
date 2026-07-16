@@ -6,8 +6,8 @@ const LowestPriceSection = ({ products, onSeeAll }) => {
   if (!products || products.length === 0) return null;
 
   return (
-    <div className="mt-0 mb-4 md:mt-0 md:mb-8">
-      <div className="pt-5 pb-2 md:pt-6 md:pb-4">
+    <div className="mt-0 mb-1 md:mt-0 md:mb-1">
+      <div className="pt-5 pb-1 md:pt-6 md:pb-1">
 
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px] relative z-10">
           <div className="flex justify-between items-center mb-6 md:mb-8 px-1">

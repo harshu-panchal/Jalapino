@@ -248,6 +248,14 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    allowedRetailCategories: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category'
+    }],
+    allowedWholesaleCategories: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category'
+    }],
     // Admin Review Remark (shown to seller after review)
     adminRemark: {
       type: String,

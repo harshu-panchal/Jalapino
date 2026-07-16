@@ -57,38 +57,8 @@ const CategoriesPage = () => {
 
     return (
         <div className="min-h-screen bg-[#FAF8F6]">
-            <MainLocationHeader hideSearchBar={false} isAbsolute={true} />
+            <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
             <div className="max-w-3xl mx-auto px-4 pt-[240px] md:pt-[220px] pb-24">
-                {/* Search Box - Fixed top-0, shows only when scrolled */}
-                <div 
-                    className={`fixed top-0 left-0 right-0 z-[100] bg-[#FAF8F6] py-3 px-4 max-w-3xl mx-auto transition-all duration-200 ${
-                        isScrolled ? "opacity-100 translate-y-0" : "opacity-0 pointer-events-none -translate-y-2"
-                    }`}
-                    style={{
-                        boxShadow: isScrolled ? '0 8px 20px -12px rgba(0,0,0,0.15)' : 'none',
-                    }}
-                >
-                    <div className="w-full flex items-center gap-3 bg-white rounded-2xl px-4 h-12 shadow-sm border border-slate-200 hover:shadow-md transition-all">
-                        <Search className="text-slate-400 w-5 h-5 shrink-0" />
-                        <input
-                            type="text"
-                            placeholder="Search categories..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && searchQuery.trim()) {
-                                    navigate(`/search`, { state: { query: searchQuery.trim() } });
-                                }
-                            }}
-                            className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm"
-                        />
-                        {searchQuery && (
-                            <button onClick={() => setSearchQuery('')} className="text-slate-400 hover:text-slate-600">
-                                <X className="w-4 h-4" />
-                            </button>
-                        )}
-                    </div>
-                </div>
 
                 {isLoading ? (
                     <div className="flex justify-center py-20">

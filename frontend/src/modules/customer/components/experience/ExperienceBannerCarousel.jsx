@@ -109,8 +109,8 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
             className={cn(
               "relative shrink-0 flex items-center justify-center box-border",
               fullWidth
-                ? "aspect-[1448/650] w-full rounded-none px-0 overflow-hidden"
-                : "aspect-[1448/650] w-[92vw] max-w-[1400px] px-2 md:px-4",
+                ? "aspect-[1448/450] w-full rounded-none px-0 overflow-hidden"
+                : "aspect-[1448/450] w-[92vw] max-w-[1400px] px-2 md:px-4",
               "cursor-pointer hover:brightness-95 transition-all"
             )}
             style={{ width: `${100 / totalItems}%` }}
@@ -127,17 +127,18 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   srcSet={
                     isCloudinaryUrl(banner.imageUrl)
                       ? buildCloudinarySrcSet(banner.imageUrl, [
-                          { w: 412, h: 185 },
-                          { w: 824, h: 370 },
-                          { w: 1248, h: 560 },
-                        ], "f_auto,q_auto,c_fill,g_north")
+                          { w: 412 },
+                          { w: 824 },
+                          { w: 1248 },
+                          { w: 1448 }
+                        ], "f_auto,q_auto,c_limit")
                       : undefined
                   }
                   sizes="100vw"
                   alt={banner.title || section?.title || "Banner"}
                   className="w-full h-full object-cover object-top pointer-events-none origin-center"
                   width={1448}
-                  height={650}
+                  height={450}
                   loading={idx === 0 ? "eager" : "lazy"}
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
@@ -165,7 +166,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                 </button>
               </>
             ) : (
-              <div className="w-full aspect-[1448/650] rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05),_0_2px_8px_rgba(0,0,0,0.03)] bg-white relative overflow-hidden">
+              <div className="w-full aspect-[1448/450] rounded-3xl shadow-[0_8px_24px_rgba(0,0,0,0.05),_0_2px_8px_rgba(0,0,0,0.03)] bg-white relative overflow-hidden">
                 <motion.img
                   animate={{ scale: idx === activeIndex ? 1.06 : 1 }}
                   transition={{ duration: 3.5, ease: "easeOut" }}
@@ -175,16 +176,17 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   srcSet={
                     isCloudinaryUrl(banner.imageUrl)
                       ? buildCloudinarySrcSet(banner.imageUrl, [
-                          { w: 560, h: 251 },
-                          { w: 1120, h: 503 },
-                        ], "f_auto,q_auto,c_fill,g_north")
+                          { w: 560 },
+                          { w: 1120 },
+                          { w: 1448 }
+                        ], "f_auto,q_auto,c_limit")
                       : undefined
                   }
                   sizes="(max-width: 768px) 100vw, 1448px"
                   alt={banner.title || section?.title || "Banner"}
                   className="w-full h-full object-cover object-top pointer-events-none rounded-3xl origin-center"
                   width={1448}
-                  height={650}
+                  height={450}
                   loading={idx === 0 ? "eager" : "lazy"}
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"

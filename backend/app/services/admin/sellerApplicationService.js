@@ -130,6 +130,12 @@ export async function approveSellerApplicationById({ sellerId, reviewedBy, permi
     if (typeof permissions.wholesaleEnabled === 'boolean') {
       updateData.wholesaleEnabled = permissions.wholesaleEnabled;
     }
+    if (permissions.allowedRetailCategories) {
+      updateData.allowedRetailCategories = permissions.allowedRetailCategories;
+    }
+    if (permissions.allowedWholesaleCategories) {
+      updateData.allowedWholesaleCategories = permissions.allowedWholesaleCategories;
+    }
   }
 
   const seller = await Seller.findByIdAndUpdate(

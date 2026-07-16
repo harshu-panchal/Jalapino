@@ -138,10 +138,10 @@ const CategoryProductsPage = () => {
     }, [safeProducts]);
 
     return (
-        <div className="flex flex-col min-h-screen bg-white max-w-md mx-auto relative font-sans">
+        <div className="flex flex-col h-full overflow-hidden bg-white md:max-w-none mx-auto relative font-sans max-w-md w-full">
             {/* Header */}
             <header className={cn(
-                "sticky top-0 z-50 bg-white border-b border-gray-50 px-4 py-3 flex flex-col gap-2",
+                "z-50 bg-white border-b border-slate-150 px-4 md:px-8 py-3 md:py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-2 md:gap-6 shrink-0",
                 isProductDetailOpen && "hidden md:flex"
             )}>
                 <div className="flex items-center gap-3">
@@ -151,12 +151,12 @@ const CategoryProductsPage = () => {
                     >
                         <ChevronLeft size={24} className="text-gray-900" />
                     </button>
-                    <h1 className="text-[18px] font-bold text-gray-800 tracking-tight">
+                    <h1 className="text-[18px] md:text-xl font-black text-gray-800 tracking-tight">
                         {category?.name || catId}
                     </h1>
                 </div>
                 {/* Search Box */}
-                <div className="flex items-center gap-3 bg-[#F4F6F8] rounded-2xl px-4 h-11">
+                <div className="flex items-center gap-3 bg-[#F4F6F8] rounded-2xl px-4 h-11 md:h-12 shrink-0 w-full md:max-w-md">
                     <Search size={18} className="text-slate-400 shrink-0" />
                     <input
                         type="text"
@@ -166,7 +166,7 @@ const CategoryProductsPage = () => {
                         className="flex-1 bg-transparent border-none outline-none text-slate-800 font-medium placeholder:text-slate-400 text-sm"
                     />
                     {searchQuery && (
-                        <button onClick={() => setSearchQuery('')} className="text-slate-400">
+                        <button onClick={() => setSearchQuery('')} className="text-slate-400 shrink-0">
                             <X size={16} />
                         </button>
                     )}
@@ -174,9 +174,9 @@ const CategoryProductsPage = () => {
             </header>
 
 
-            <div className="flex flex-1 relative items-start">
+            <div className="flex flex-1 overflow-hidden relative items-stretch">
                 {(safeProducts.length === 0 && !isLoading) ? (
-                    <div className="w-full flex-1 py-20 px-8 flex flex-col items-center justify-center text-center">
+                    <div className="w-full h-full overflow-y-auto py-20 px-8 flex flex-col items-center justify-center text-center">
                         <div className="w-64 h-64 mb-6">
                             {noServiceData ? (
                                 <Lottie animationData={noServiceData} loop={true} />
@@ -200,27 +200,27 @@ const CategoryProductsPage = () => {
                 ) : (
                     <>
                         {/* Sidebar */}
-                        <aside className="w-[70px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar sticky top-[60px] h-[calc(100vh-60px)] pb-32 flex-shrink-0">
+                        <aside className="w-[70px] md:w-[240px] border-r border-gray-50 flex flex-col bg-white overflow-y-auto hide-scrollbar h-full pb-32 flex-shrink-0 overscroll-contain">
                             {subCategories.map((cat) => (
                                 <button
                                     key={cat.id}
                                     onClick={() => setSelectedSubCategory(cat.id)}
                                     className={cn(
-                                        "flex flex-col items-center py-4 px-1 gap-2 transition-all relative border-l-4",
+                                        "flex flex-col md:flex-row items-center md:items-center py-4 px-1 md:py-3.5 md:px-4 gap-2 md:gap-3 transition-all relative border-l-4 shrink-0",
                                         selectedSubCategory === cat.id
                                             ? "bg-[#F7FCF5] border-primary"
                                             : "border-transparent hover:bg-gray-50"
                                     )}
                                 >
                                     <div className={cn(
-                                        "w-14 h-14 rounded-2xl flex items-center justify-center p-1.5 transition-all duration-300",
+                                        "w-14 h-14 md:w-10 md:h-10 rounded-2xl flex items-center justify-center p-1.5 md:p-1 transition-all duration-300",
                                         selectedSubCategory === cat.id ? "scale-110" : "opacity-100"
                                     )}>
                                         <img src={applyCloudinaryTransform(cat.icon)} alt={cat.name} loading="lazy" className="w-full h-full object-contain" />
                                     </div>
                                     <span className={cn(
-                                        "text-[10px] text-center font-bold font-sans leading-tight px-1",
-                                        selectedSubCategory === cat.id ? "text-primary" : "text-gray-600"
+                                        "text-[10px] md:text-sm text-center md:text-left font-bold font-sans leading-tight px-1",
+                                        selectedSubCategory === cat.id ? "text-primary font-black" : "text-gray-600"
                                     )}>
                                         {cat.name}
                                     </span>
@@ -229,8 +229,8 @@ const CategoryProductsPage = () => {
                         </aside>
 
                         {/* Content */}
-                        <main className="flex-1 p-2 pb-24 bg-white space-y-4 overflow-x-hidden">
-                            <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+                        <main className="flex-1 p-2 md:p-6 pb-24 bg-white space-y-4 overflow-y-auto overflow-x-hidden h-full overscroll-contain">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-2 md:gap-x-4 gap-y-3 md:gap-y-5">
                                 {filteredProducts.map((product) => (
                                     <ProductCard key={product.id} product={product} compact={true} />
                                 ))}

@@ -316,6 +316,29 @@ const MainLocationHeader = ({
     };
   }, [baseHeaderColor]);
 
+  // Scroll visibility logic for Mode Switcher Cards
+  const [isSwitcherVisible, setIsSwitcherVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      if (currentScrollY < 50) {
+        setIsSwitcherVisible(true);
+      } else if (currentScrollY > lastScrollY) {
+        setIsSwitcherVisible(false);
+      } else {
+        setIsSwitcherVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   return (
     <>
       <div
@@ -342,7 +365,10 @@ const MainLocationHeader = ({
           <div className="absolute inset-0 bg-white/8 pointer-events-none" />
 
           {/* Mode Switcher Cards */}
-          <div className="flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto mb-3.5 relative z-30">
+          <div className={cn(
+            "flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto relative z-30 h-14 mb-3.5",
+            isSwitcherVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+          )}>
             {/* Retail Card */}
             {availableModules?.retailEnabled && settings?.platformControl?.retailEnabled !== false && (
               <button
@@ -430,17 +456,23 @@ const MainLocationHeader = ({
           {/* Corner Lottie */}
           <motion.button
             initial={{ opacity: 0, scale: 0.9, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.15, ease: "easeOut" }}
+            animate={{ 
+              opacity: isSwitcherVisible ? 1 : 0, 
+              scale: isSwitcherVisible ? 1 : 0.5, 
+              y: 0 
+            }}
+            transition={{ duration: 0 }}
             style={{
-              opacity: cartOpacity,
-              scale: cartScale,
               display: displayCart,
             }}
             type="button"
             aria-label="Open cart"
             onClick={() => navigate("/checkout")}
-            className="absolute top-[72px] right-5 sm:top-[76px] sm:right-6 md:top-5 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer">
+            className={cn(
+              "absolute right-5 sm:right-6 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer",
+              "top-[72px] sm:top-[76px] md:top-5",
+              !isSwitcherVisible && "pointer-events-none"
+            )}>
             {cartAnimData ? (
               <Lottie
                 animationData={cartAnimData}

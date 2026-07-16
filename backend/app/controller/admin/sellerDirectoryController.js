@@ -176,7 +176,9 @@ export const updateSellerDetails = async (req, res) => {
       ordersEnabled,
       walletEnabled,
       analyticsEnabled,
-      wholesaleEnabled
+      wholesaleEnabled,
+      allowedRetailCategories,
+      allowedWholesaleCategories
     } = req.body;
     const adminRemark = req.body.adminRemark;
     const adminTerms = req.body.adminTerms;
@@ -200,6 +202,8 @@ export const updateSellerDetails = async (req, res) => {
     if (walletEnabled !== undefined) updateData.walletEnabled = walletEnabled;
     if (analyticsEnabled !== undefined) updateData.analyticsEnabled = analyticsEnabled;
     if (wholesaleEnabled !== undefined) updateData.wholesaleEnabled = wholesaleEnabled;
+    if (allowedRetailCategories !== undefined) updateData.allowedRetailCategories = allowedRetailCategories;
+    if (allowedWholesaleCategories !== undefined) updateData.allowedWholesaleCategories = allowedWholesaleCategories;
     if (adminRemark !== undefined) updateData.adminRemark = adminRemark;
     if (adminTerms !== undefined) updateData.adminTerms = adminTerms;
 

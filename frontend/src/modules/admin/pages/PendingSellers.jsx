@@ -62,8 +62,11 @@ const PendingSellers = () => {
         ordersEnabled: true,
         walletEnabled: true,
         analyticsEnabled: true,
-        wholesaleEnabled: false
+        wholesaleEnabled: false,
+        allowedRetailCategories: [],
+        allowedWholesaleCategories: []
     });
+    const [allCategories, setAllCategories] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [adminRemark, setAdminRemark] = useState('');
     const [adminTerms, setAdminTerms] = useState('');
@@ -97,7 +100,9 @@ const PendingSellers = () => {
                         ordersEnabled: s.ordersEnabled ?? true,
                         walletEnabled: s.walletEnabled ?? true,
                         analyticsEnabled: s.analyticsEnabled ?? true,
-                        wholesaleEnabled: s.wholesaleEnabled ?? false
+                        wholesaleEnabled: s.wholesaleEnabled ?? false,
+                        allowedRetailCategories: s.allowedRetailCategories || [],
+                        allowedWholesaleCategories: s.allowedWholesaleCategories || []
                     });
                     setAdminRemark(s.adminRemark || '');
                     setAdminTerms(s.adminTerms || '');
@@ -116,6 +121,26 @@ const PendingSellers = () => {
 
     useEffect(() => {
         fetchPendingSellers();
+        const loadCategories = async () => {
+            try {
+                const res = await adminApi.getCategories();
+                if (res.data?.success || res.data) {
+                    const payload = res.data?.result;
+                    const results = res.data?.results;
+                    const allCats = Array.isArray(results)
+                        ? results
+                        : Array.isArray(payload)
+                            ? payload
+                            : Array.isArray(payload?.items)
+                                ? payload.items
+                                : [];
+                    setAllCategories(allCats);
+                }
+            } catch (err) {
+                console.error("Failed to load categories:", err);
+            }
+        };
+        loadCategories();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
@@ -299,7 +324,9 @@ const PendingSellers = () => {
                                                     ordersEnabled: s.ordersEnabled ?? true,
                                                     walletEnabled: s.walletEnabled ?? true,
                                                     analyticsEnabled: s.analyticsEnabled ?? true,
-                                                    wholesaleEnabled: s.wholesaleEnabled ?? false
+                                                    wholesaleEnabled: s.wholesaleEnabled ?? false,
+                                                    allowedRetailCategories: s.allowedRetailCategories || [],
+                                                    allowedWholesaleCategories: s.allowedWholesaleCategories || []
                                                 });
                                                 setSearchParams({ review: s.id });
                                                 setIsReviewModalOpen(true);
@@ -342,7 +369,9 @@ const PendingSellers = () => {
                                                         ordersEnabled: s.ordersEnabled ?? true,
                                                         walletEnabled: s.walletEnabled ?? true,
                                                         analyticsEnabled: s.analyticsEnabled ?? true,
-                                                        wholesaleEnabled: s.wholesaleEnabled ?? false
+                                                        wholesaleEnabled: s.wholesaleEnabled ?? false,
+                                                        allowedRetailCategories: s.allowedRetailCategories || [],
+                                                        allowedWholesaleCategories: s.allowedWholesaleCategories || []
                                                     });
                                                     setAdminRemark(s.adminRemark || '');
                                                     setAdminTerms(s.adminTerms || '');
@@ -606,7 +635,88 @@ const PendingSellers = () => {
                                                              }
                                                          }}
                                                      />
-                                                 </div>
+                                                  </div>
+
+                                                  {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale are enabled */}
+                                                  {(permissions.retailEnabled || permissions.wholesaleEnabled) && (
+                                                      <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
+                                                          {permissions.retailEnabled && (
+                                                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
+                                                                  <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Retail Categories</h6>
+                                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                      {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
+                                                                          const isChecked = (permissions.allowedRetailCategories || []).includes(cat._id);
+                                                                          return (
+                                                                              <label key={cat._id} className={cn(
+                                                                                  "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                  isChecked 
+                                                                                      ? "border-primary/20 bg-brand-50/30 text-slate-900" 
+                                                                                      : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                              )}>
+                                                                                  <input
+                                                                                      type="checkbox"
+                                                                                      checked={isChecked}
+                                                                                      onChange={async (e) => {
+                                                                                          const checked = e.target.checked;
+                                                                                          const current = permissions.allowedRetailCategories || [];
+                                                                                          const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                          setPermissions(prev => ({ ...prev, allowedRetailCategories: next }));
+                                                                                          try {
+                                                                                              await adminApi.updateSeller(viewingSeller.id, { allowedRetailCategories: next });
+                                                                                              toast.success(`${cat.name} updated in Retail Categories`);
+                                                                                          } catch (err) {
+                                                                                              toast.error('Failed to update categories');
+                                                                                          }
+                                                                                      }}
+                                                                                      className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5"
+                                                                                  />
+                                                                                  <span>{cat.name}</span>
+                                                                              </label>
+                                                                          );
+                                                                      })}
+                                                                  </div>
+                                                              </div>
+                                                          )}
+
+                                                          {permissions.wholesaleEnabled && (
+                                                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
+                                                                  <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Wholesale Categories</h6>
+                                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                      {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
+                                                                          const isChecked = (permissions.allowedWholesaleCategories || []).includes(cat._id);
+                                                                          return (
+                                                                              <label key={cat._id} className={cn(
+                                                                                  "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                  isChecked 
+                                                                                      ? "border-amber-600/20 bg-amber-50/30 text-slate-900" 
+                                                                                      : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                              )}>
+                                                                                  <input
+                                                                                      type="checkbox"
+                                                                                      checked={isChecked}
+                                                                                      onChange={async (e) => {
+                                                                                          const checked = e.target.checked;
+                                                                                          const current = permissions.allowedWholesaleCategories || [];
+                                                                                          const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                          setPermissions(prev => ({ ...prev, allowedWholesaleCategories: next }));
+                                                                                          try {
+                                                                                              await adminApi.updateSeller(viewingSeller.id, { allowedWholesaleCategories: next });
+                                                                                              toast.success(`${cat.name} updated in Wholesale Categories`);
+                                                                                          } catch (err) {
+                                                                                              toast.error('Failed to update categories');
+                                                                                          }
+                                                                                      }}
+                                                                                      className="rounded text-amber-600 focus:ring-amber-600/20 h-4.5 w-4.5"
+                                                                                  />
+                                                                                  <span>{cat.name}</span>
+                                                                              </label>
+                                                                          );
+                                                                      })}
+                                                                  </div>
+                                                              </div>
+                                                          )}
+                                                      </div>
+                                                  )}
 
                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 

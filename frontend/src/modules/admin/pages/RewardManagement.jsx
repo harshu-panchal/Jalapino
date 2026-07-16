@@ -21,7 +21,7 @@ const RewardManagement = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [editingReward, setEditingReward] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
-    
+
     const [rewards, setRewards] = useState([]);
     const [stats, setStats] = useState({
         totalSpins: 0,
@@ -126,7 +126,7 @@ const RewardManagement = () => {
                 await adminApi.createWheelReward(payload);
                 showToast('New wheel reward added!', 'success');
             }
-            
+
             setIsModalOpen(false);
             setEditingReward(null);
             fetchRewardsAndStats();
@@ -235,7 +235,7 @@ const RewardManagement = () => {
                                 </tr>
                             )}
                             {!isLoading && rewards.map((r) => {
-                                const probabilityPercent = totalWeights > 0 
+                                const probabilityPercent = totalWeights > 0
                                     ? ((r.probability / totalWeights) * 100).toFixed(1)
                                     : '0.0';
 
@@ -243,7 +243,7 @@ const RewardManagement = () => {
                                     <tr key={r._id} className="group hover:bg-slate-50/30 transition-colors">
                                         <td className="px-4 py-6">
                                             <div className="flex items-center gap-3">
-                                                <div 
+                                                <div
                                                     className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center font-bold text-xs"
                                                     style={{ backgroundColor: r.bgColor, color: r.textColor }}
                                                 >
@@ -262,10 +262,10 @@ const RewardManagement = () => {
                                             </div>
                                         </td>
                                         <td className="px-4 py-6">
-                                            <Badge 
+                                            <Badge
                                                 variant={
                                                     r.rewardType === 'coupon' ? 'primary' :
-                                                    r.rewardType === 'cashback' ? 'success' : 'secondary'
+                                                        r.rewardType === 'cashback' ? 'success' : 'secondary'
                                                 }
                                                 className="text-[9px] font-black uppercase tracking-wider"
                                             >
@@ -274,9 +274,9 @@ const RewardManagement = () => {
                                         </td>
                                         <td className="px-4 py-6 text-center">
                                             <div className="flex items-center justify-center gap-2">
-                                                <span 
-                                                    className="inline-block w-4 h-4 rounded-full border border-slate-300" 
-                                                    style={{ backgroundColor: r.bgColor }} 
+                                                <span
+                                                    className="inline-block w-4 h-4 rounded-full border border-slate-300"
+                                                    style={{ backgroundColor: r.bgColor }}
                                                     title={`BG: ${r.bgColor}`}
                                                 />
                                                 <span className="text-[10px] font-mono text-slate-500 uppercase">{r.bgColor}</span>
@@ -293,8 +293,8 @@ const RewardManagement = () => {
                                                 onClick={() => handleToggleActive(r)}
                                                 className="focus:outline-none"
                                             >
-                                                <Badge 
-                                                    variant={r.isActive ? 'success' : 'secondary'} 
+                                                <Badge
+                                                    variant={r.isActive ? 'success' : 'secondary'}
                                                     className="text-[9px] font-black uppercase cursor-pointer hover:opacity-80 transition-opacity"
                                                 >
                                                     {r.isActive ? 'active' : 'inactive'}
@@ -346,7 +346,7 @@ const RewardManagement = () => {
                         <Trash2 className="w-6 h-6" />
                     </div>
                     <p className="text-slate-500 text-sm mb-6">
-                        Are you sure you want to delete <span className="font-semibold text-slate-900">"{deleteTarget?.label}"</span>? 
+                        Are you sure you want to delete <span className="font-semibold text-slate-900">"{deleteTarget?.label}"</span>?
                         This slice configuration will be permanently removed from the lucky wheel.
                     </p>
                     <div className="flex gap-4">

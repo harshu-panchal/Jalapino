@@ -52,7 +52,7 @@
   --customer-mini-cart-color: #CC2020;
 
   /* Header Background Gradient: defaults to the brand maroon */
-  --customer-header-gradient: linear-gradient(135deg, rgba(204, 32, 32, 0.95) 0%, rgba(204, 32, 32, 0.95) 100%);
+  --customer-header-gradient: linear-gradient(135deg, rgba(204, 32, 32, 1) 0%, rgba(204, 32, 32, 1) 100%);
 
   /* Header Base Color: defaults to brand maroon */
   --customer-header-base-color: #CC2020;
