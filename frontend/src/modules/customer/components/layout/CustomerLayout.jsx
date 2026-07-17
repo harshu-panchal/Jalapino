@@ -163,9 +163,11 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {children}
                 </div>
-                {!isCategoryPage && (
-                    <div id="footer-banner-carousel" className={cn("w-full mt-auto", isProductDetailOpen ? "hidden" : "block")}>
-                        <FooterBannerCarousel />
+                {path === '/' && (
+                    <div id="footer-banner-carousel" className={cn("w-full mt-auto container mx-auto px-4 md:px-8 lg:px-[50px] mb-6", isProductDetailOpen ? "hidden" : "block")}>
+                        <div className="relative w-full overflow-hidden rounded-[24px] shadow-sm">
+                            <FooterBannerCarousel />
+                        </div>
                     </div>
                 )}
             </main>

@@ -72,18 +72,16 @@ const FooterBannerCarousel = () => {
           />
         )}
         
-        {/* Become Seller button for the second banner (idx === 1) */}
-        {activeIndex === 1 && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              navigate('/seller/auth?mode=signup');
-            }}
-            className="absolute bottom-4 left-4 md:bottom-6 md:left-6 bg-[#D92B2B] hover:bg-[#B72424] text-white text-[12px] md:text-lg font-black px-4 md:px-6 py-2 md:py-3 rounded-xl uppercase tracking-wider shadow-lg z-20 border border-white/20 transition-all hover:scale-105 active:scale-95"
-          >
-            Become Seller
-          </button>
-        )}
+        {/* Become Seller button for all banners */}
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate('/seller/auth?mode=signup');
+          }}
+          className="absolute bottom-3 left-3 md:bottom-5 md:left-5 bg-[#D92B2B] hover:bg-[#B72424] text-white text-[9px] sm:text-[10px] md:text-[11px] lg:text-[12px] font-black px-2.5 md:px-3 py-1 md:py-1.5 rounded-md md:rounded-lg uppercase tracking-wider shadow-sm z-0 border border-white/20 transition-all hover:scale-105 active:scale-95"
+        >
+          Become Seller
+        </button>
         
         <button
           onClick={(e) => {
@@ -91,7 +89,7 @@ const FooterBannerCarousel = () => {
             setZoomImageUrl(currentBanner.imageUrl);
             setZoomScale(1);
           }}
-          className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
+          className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-10 cursor-pointer active:scale-95 transition-transform"
         >
           🔍 Tap to Zoom
         </button>

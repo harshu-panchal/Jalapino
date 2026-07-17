@@ -339,6 +339,16 @@ const MainLocationHeader = ({
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
+  // Update dynamic CSS variable for the banner sticky top and padding offset
+  useEffect(() => {
+    document.documentElement.style.setProperty('--dynamic-sticky-top', isSwitcherVisible ? '182px' : '112px');
+    document.documentElement.style.setProperty('--header-shrink-offset', isSwitcherVisible ? '0px' : '70px');
+    return () => {
+      document.documentElement.style.removeProperty('--dynamic-sticky-top');
+      document.documentElement.style.removeProperty('--header-shrink-offset');
+    };
+  }, [isSwitcherVisible]);
+
   return (
     <>
       <div
@@ -366,8 +376,8 @@ const MainLocationHeader = ({
 
           {/* Mode Switcher Cards */}
           <div className={cn(
-            "flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto relative z-30 h-14 mb-3.5",
-            isSwitcherVisible ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
+            "flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto relative z-30 overflow-hidden",
+            isSwitcherVisible ? "opacity-100 scale-100 h-14 mb-3.5" : "opacity-0 scale-95 pointer-events-none h-0 mb-0"
           )}>
             {/* Retail Card */}
             {availableModules?.retailEnabled && settings?.platformControl?.retailEnabled !== false && (

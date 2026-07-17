@@ -91,7 +91,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
   }, [navigate]);
 
   return (
-    <div className={cn("overflow-hidden touch-pan-y relative", fullWidth && "w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw]")}>
+    <div className={cn("overflow-hidden touch-pan-y relative", fullWidth && "w-full")}>
       <motion.div
         ref={containerRef}
         drag="x"
@@ -143,13 +143,13 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                {idx === 1 && (
+                {true && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/seller/auth?mode=signup');
                     }}
-                    className="absolute bottom-4 left-4 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg z-10 border border-white/20 active:scale-95 transition-transform"
+                    className="absolute bottom-3 left-3 md:bottom-5 md:left-5 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[9px] sm:text-[10px] md:text-[11px] lg:text-[12px] font-black px-2.5 md:px-3 py-1 md:py-1.5 rounded-md md:rounded-lg uppercase tracking-wider shadow-sm z-10 border border-white/20 transition-all hover:scale-105 active:scale-95"
                   >
                     Become Seller
                   </button>
@@ -160,7 +160,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                     setZoomImageUrl(banner.imageUrl);
                     setZoomScale(1);
                   }}
-                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
+                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-10 cursor-pointer active:scale-95 transition-transform"
                 >
                   🔍 Tap to Zoom
                 </button>
@@ -191,13 +191,13 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                {idx === 1 && (
+                {true && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       navigate('/seller/auth?mode=signup');
                     }}
-                    className="absolute bottom-4 left-4 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[12px] md:text-lg font-black px-4 py-2 rounded-xl uppercase tracking-wider shadow-lg z-10 border border-white/20 active:scale-95 transition-transform"
+                    className="absolute bottom-3 left-3 md:bottom-5 md:left-5 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[9px] sm:text-[10px] md:text-[11px] lg:text-[12px] font-black px-2.5 md:px-3 py-1 md:py-1.5 rounded-md md:rounded-lg uppercase tracking-wider shadow-sm z-10 border border-white/20 transition-all hover:scale-105 active:scale-95"
                   >
                     Become Seller
                   </button>
@@ -208,7 +208,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                     setZoomImageUrl(banner.imageUrl);
                     setZoomScale(1);
                   }}
-                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-25 cursor-pointer active:scale-95 transition-transform"
+                  className="absolute bottom-4 right-4 bg-black/60 hover:bg-black/80 backdrop-blur-md text-white/95 text-[10px] font-bold px-2.5 py-1.5 rounded-full flex items-center gap-1 shadow-md z-10 cursor-pointer active:scale-95 transition-transform"
                 >
                   🔍 Tap to Zoom
                 </button>
