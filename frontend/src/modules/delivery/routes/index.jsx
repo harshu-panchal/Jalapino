@@ -1,7 +1,16 @@
 import React, { useEffect } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, Outlet } from "react-router-dom";
 import DeliveryLayout from "../layout/DeliveryLayout";
+import DashboardLayout from "@shared/layout/DashboardLayout";
 import { setActiveRole, ROLES } from "@core/auth/activeRoleStore";
+import { useIsAppLayout } from "@shared/hooks/useIsAppLayout";
+import {
+  HiOutlineSquares2X2,
+  HiOutlineCurrencyDollar,
+  HiOutlineClipboardDocumentList,
+  HiOutlineUser
+} from "react-icons/hi2";
+
 import Splash from "../pages/Splash";
 import DeliveryAuth from "../pages/DeliveryAuth";
 import Dashboard from "../pages/Dashboard";
@@ -22,16 +31,30 @@ import HelpSupport from "../pages/profile/HelpSupport";
 import Withdrawals from "../pages/profile/Withdrawals";
 import Notifications from "../pages/Notifications";
 
+const deliveryNavItems = [
+  { label: "Dashboard", path: "/delivery/dashboard", icon: HiOutlineSquares2X2 },
+  { label: "Earnings", path: "/delivery/earnings", icon: HiOutlineCurrencyDollar },
+  { label: "History", path: "/delivery/history", icon: HiOutlineClipboardDocumentList },
+  { label: "Profile", path: "/delivery/profile", icon: HiOutlineUser },
+];
+
+const DeliveryWebWrapper = () => (
+  <DashboardLayout navItems={deliveryNavItems} title="Delivery Panel">
+    <Outlet />
+  </DashboardLayout>
+);
+
 const DeliveryRoutes = () => {
+  const isAppLayout = useIsAppLayout();
+
   useEffect(() => {
     setActiveRole(ROLES.DELIVERY);
   }, []);
 
   return (
     <Routes>
-      <Route element={<DeliveryLayout />}>
+      <Route element={isAppLayout ? <DeliveryLayout /> : <DeliveryWebWrapper />}>
         <Route path="splash" element={<Splash />} />
-
         <Route path="auth" element={<DeliveryAuth />} />
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="order-details/:orderId" element={<OrderDetails />} />

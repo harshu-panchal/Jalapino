@@ -9,23 +9,48 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
   const containerRef = useRef(null);
   const navigate = useNavigate();
   const [isStuck, setIsStuck] = useState(false);
+  const [headerHeight, setHeaderHeight] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
+      
+      const headerEl = document.getElementById("main-location-header");
+      const currentHeaderHeight = headerEl ? headerEl.offsetHeight : (window.innerWidth >= 768 ? 166 : 228);
+      
       const rect = containerRef.current.getBoundingClientRect();
-      const stickyThreshold = window.innerWidth >= 768 ? 166 : 228;
       // Trigger sticky state when the bottom of the category block hits the header
       // This ensures the original circles have fully scrolled under the header
-      setIsStuck(rect.bottom <= stickyThreshold);
+      setIsStuck(rect.bottom <= currentHeaderHeight);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
     document.addEventListener("scroll", handleScroll, { passive: true, capture: true });
     handleScroll(); // Initial check
+
+    const headerEl = document.getElementById("main-location-header");
+    let resizeObserver = null;
+    
+    if (headerEl && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver((entries) => {
+        for (let entry of entries) {
+          if (entry.target) {
+            setHeaderHeight(entry.target.offsetHeight);
+          }
+        }
+        handleScroll();
+      });
+      resizeObserver.observe(headerEl);
+    } else if (headerEl) {
+      setHeaderHeight(headerEl.offsetHeight);
+    }
+
     return () => {
       window.removeEventListener("scroll", handleScroll, { capture: true });
       document.removeEventListener("scroll", handleScroll, { capture: true });
+      if (resizeObserver && headerEl) {
+        resizeObserver.unobserve(headerEl);
+      }
     };
   }, []);
 
@@ -109,9 +134,10 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
       {/* 2. Sticky Collapsed View (Text only, visible only on scroll, like Flipkart) */}
       <div 
         className={cn(
-          "fixed top-[228px] md:top-[166px] left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200 transition-all duration-300",
+          "fixed left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200 transition-all duration-300",
           isStuck ? "opacity-100 translate-y-0" : "opacity-0 translate-y-0 pointer-events-none"
         )}
+        style={{ top: headerHeight > 0 ? `${headerHeight}px` : (window.innerWidth >= 768 ? '166px' : '228px') }}
       >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px]">
           <div className="flex items-center gap-4 md:gap-8 overflow-x-auto no-scrollbar">

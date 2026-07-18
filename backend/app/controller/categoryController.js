@@ -36,11 +36,11 @@ async function validateParentForType(type, parentId) {
   try {
     const parent = await Category.findById(parentId).select("type").lean();
     if (!parent) return false;
-    
+
     // Strict hierarchy check
     if (type === "category" && parent.type !== "header") return false;
     if (type === "subcategory" && parent.type !== "category") return false;
-    
+
     return true;
   } catch (err) {
     return false;
@@ -100,7 +100,7 @@ export const getCategories = async (req, res) => {
           { slug: safe },
         ];
       }
-      
+
       if (parentId && parentId !== "all") {
         query.parentId = parentId;
       }
@@ -146,19 +146,19 @@ export const createCategory = async (req, res) => {
   try {
     const categoryData = {};
     const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "icon", "iconId", "headerColor", "headerFontColor", "headerIconColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue", "hsnId"];
-    
+
     // Strict Whitelisting and Sanitization
     for (const key of allowedKeys) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
         const val = req.body[key];
         // Stripping objects {} that could cause cast errors in Mongoose
         if (val !== null && typeof val === "object" && !Array.isArray(val) && !(val instanceof mongoose.Types.ObjectId)) {
-           continue;
+          continue;
         }
         categoryData[key] = val;
       }
     }
-    
+
     // Handle Images & Icons
     const imageFile = req.files?.["image"]?.[0];
     const iconFile = req.files?.["icon"]?.[0];
@@ -176,7 +176,7 @@ export const createCategory = async (req, res) => {
     } else if (typeof req.body.image === 'string' && req.body.image.startsWith('http')) {
       categoryData.image = req.body.image;
     } else {
-       delete categoryData.image; 
+      delete categoryData.image;
     }
 
     if (iconFile) {
@@ -192,7 +192,7 @@ export const createCategory = async (req, res) => {
     } else if (typeof req.body.icon === 'string' && req.body.icon.startsWith('http')) {
       categoryData.icon = req.body.icon;
     } else {
-       delete categoryData.icon;
+      delete categoryData.icon;
     }
 
     // Explicitly validate Parent ID hierarchy
@@ -216,11 +216,11 @@ export const createCategory = async (req, res) => {
     // Final sanity check for unique slug to prevent catch block late failure
     const existing = await Category.findOne({ slug: categoryData.slug }).lean();
     if (existing) {
-        return handleResponse(res, 400, "The URL Slug already exists; please use a unique name");
+      return handleResponse(res, 400, "The URL Slug already exists; please use a unique name");
     }
 
     const category = await Category.create(categoryData);
-    
+
     invalidate("cache:catalog:categories:*").catch(err => {
       console.warn("[Category] Cache invalidation failed:", err.message);
     });
@@ -245,12 +245,12 @@ export const updateCategory = async (req, res) => {
 
     const categoryData = {};
     const allowedKeys = ["name", "slug", "description", "type", "parentId", "status", "icon", "iconId", "headerColor", "headerFontColor", "headerIconColor", "adminCommission", "adminCommissionType", "adminCommissionValue", "handlingFees", "handlingFeeType", "handlingFeeValue", "hsnId"];
-    
+
     for (const key of allowedKeys) {
       if (Object.prototype.hasOwnProperty.call(req.body, key)) {
         const val = req.body[key];
         if (val !== null && typeof val === "object" && !Array.isArray(val) && !(val instanceof mongoose.Types.ObjectId)) {
-           continue;
+          continue;
         }
         categoryData[key] = val;
       }
@@ -273,9 +273,9 @@ export const updateCategory = async (req, res) => {
     } else if (typeof req.body.image === 'string' && req.body.image.startsWith('http')) {
       categoryData.image = req.body.image;
     } else if (req.body.image === "") {
-        categoryData.image = "";
+      categoryData.image = "";
     } else {
-        if (req.body.image && typeof req.body.image === 'object') delete categoryData.image;
+      if (req.body.image && typeof req.body.image === 'object') delete categoryData.image;
     }
 
     if (iconFile) {
@@ -292,9 +292,9 @@ export const updateCategory = async (req, res) => {
     } else if (typeof req.body.icon === 'string' && req.body.icon.startsWith('http')) {
       categoryData.icon = req.body.icon;
     } else if (req.body.icon === "") {
-        categoryData.icon = "";
+      categoryData.icon = "";
     } else {
-        if (req.body.icon && typeof req.body.icon === 'object') delete categoryData.icon;
+      if (req.body.icon && typeof req.body.icon === 'object') delete categoryData.icon;
     }
 
     const existing = await Category.findById(id).select("type parentId").lean();
@@ -309,7 +309,7 @@ export const updateCategory = async (req, res) => {
 
     const type = String(categoryData.type || existing.type || "").trim();
     const parentToValidate = hasParentId ? categoryData.parentId : existing.parentId;
-    
+
     const parentOk = await validateParentForType(type, parentToValidate);
     if (!parentOk) {
       if (type === "category") return handleResponse(res, 400, "Level 2 Category must be linked to a Level 1 Header category");
@@ -355,7 +355,7 @@ export const deleteCategory = async (req, res) => {
     };
 
     await deleteWithChildren(id);
-    
+
     invalidate("cache:catalog:categories:*").catch(err => {
       console.warn("[Category] Cache invalidation failed:", err.message);
     });

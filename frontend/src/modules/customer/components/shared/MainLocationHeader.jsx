@@ -352,6 +352,7 @@ const MainLocationHeader = ({
   return (
     <>
       <div
+        id="main-location-header"
         style={{ fontFamily: "'Inter', sans-serif" }}
         className={cn(
           isAbsolute ? "absolute top-0 left-0 right-0 z-[200]" : "fixed top-0 left-0 right-0 z-[200]",
