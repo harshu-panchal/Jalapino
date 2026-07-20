@@ -31,6 +31,7 @@ const Analytics = React.lazy(() => import("../pages/Analytics"));
 const Transactions = React.lazy(() => import("../pages/Transactions"));
 const DeliveryTracking = React.lazy(() => import("../pages/DeliveryTracking"));
 const Profile = React.lazy(() => import("../pages/Profile"));
+const PrivacyPolicy = React.lazy(() => import("../pages/PrivacyPolicy"));
 const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
 const LiveStream = React.lazy(() => import("../pages/LiveStream"));
 
@@ -125,6 +126,7 @@ const SellerRoutes = () => {
             <Route path="/calendar" element={<EventCalendar />} />
             <Route path="/live" element={<LiveStream />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         ) : (
@@ -142,6 +144,7 @@ const SellerRoutes = () => {
             <Route path="/withdrawals" element={<Withdrawals />} />
             <Route path="/live" element={<LiveStream />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </>
         )}

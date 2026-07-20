@@ -26,6 +26,7 @@ import VehicleInfo from "../pages/profile/VehicleInfo";
 import BankAccount from "../pages/profile/BankAccount";
 import Documents from "../pages/profile/Documents";
 import SafetyPrivacy from "../pages/profile/SafetyPrivacy";
+import PrivacyPolicy from "../pages/profile/PrivacyPolicy";
 import Settings from "../pages/profile/Settings";
 import HelpSupport from "../pages/profile/HelpSupport";
 import Withdrawals from "../pages/profile/Withdrawals";
@@ -69,6 +70,7 @@ const DeliveryRoutes = () => {
         <Route path="profile/bank-account" element={<BankAccount />} />
         <Route path="profile/documents" element={<Documents />} />
         <Route path="profile/safety-privacy" element={<SafetyPrivacy />} />
+        <Route path="profile/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="profile/settings" element={<Settings />} />
         <Route path="profile/help-support" element={<HelpSupport />} />
         <Route path="profile/withdrawals" element={<Withdrawals />} />

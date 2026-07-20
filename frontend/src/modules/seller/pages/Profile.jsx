@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   User,
@@ -13,6 +14,7 @@ import {
   Globe,
   MapPin,
   CheckCircle,
+  ChevronRight,
 } from "lucide-react";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
@@ -21,6 +23,7 @@ import Button from "@shared/components/ui/Button";
 import MapPicker from "../../../shared/components/MapPicker";
 
 const SellerProfile = () => {
+  const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -492,6 +495,25 @@ const SellerProfile = () => {
               </p>
             </Card>
           )}
+
+          {/* Privacy Policy Link Card */}
+          <Card 
+            onClick={() => navigate('/seller/privacy-policy')}
+            className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-white border border-gray-100 hover:border-brand-300 hover:shadow-lg transition-all cursor-pointer group flex items-center justify-between"
+          >
+            <div className="flex items-center gap-4">
+              <div className="h-12 w-12 rounded-xl bg-gray-50 group-hover:bg-brand-50 flex items-center justify-center text-gray-400 group-hover:text-brand-500 transition-colors">
+                <Shield size={24} />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-900 group-hover:text-brand-600 transition-colors">Privacy Policy</h4>
+                <p className="text-xs text-slate-500 font-medium">Read our terms and data policy</p>
+              </div>
+            </div>
+            <div className="w-8 h-8 rounded-full bg-gray-50 group-hover:bg-brand-50 flex items-center justify-center text-gray-400 group-hover:text-brand-500 transition-colors">
+              <ChevronRight size={18} />
+            </div>
+          </Card>
         </div>
       </div>
 

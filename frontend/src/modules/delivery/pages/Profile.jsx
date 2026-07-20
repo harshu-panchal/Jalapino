@@ -87,6 +87,13 @@ const Profile = () => {
       path: "/delivery/profile/safety-privacy",
     },
     {
+      icon: Shield,
+      label: "Privacy Policy",
+      sub: "Platform terms and privacy",
+      color: "text-blue-600 bg-blue-50",
+      path: "/delivery/profile/privacy-policy",
+    },
+    {
       icon: Settings,
       label: "Settings",
       sub: "Notifications, Language, Theme",
