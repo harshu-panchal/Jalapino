@@ -82,6 +82,7 @@ const HeaderCategories = () => {
     headerColor: "#FF1E1E",
     headerFontColor: "#111111",
     headerIconColor: "#111111",
+    applicableModules: ["retail", "wholesale", "plan_my_event"],
   });
 
   const [imageFile, setImageFile] = useState(null);
@@ -193,6 +194,12 @@ const HeaderCategories = () => {
       data.append("type", "header");
       Object.keys(formData).forEach((key) => {
         if (key === "type") return;
+        if (key === "applicableModules") {
+          if (Array.isArray(formData[key])) {
+            formData[key].forEach(val => data.append(key, val));
+          }
+          return;
+        }
         if (key === "adminCommission" || key === "handlingFees") {
           data.append(key, formData[key] === "" ? "0" : String(formData[key]));
           return;
@@ -254,6 +261,7 @@ const HeaderCategories = () => {
       headerColor: "#FF1E1E",
       headerFontColor: "#111111",
       headerIconColor: "#111111",
+      applicableModules: ["retail", "wholesale", "plan_my_event"],
     });
     setImageFile(null);
     setPreviewUrl(null);
@@ -276,6 +284,7 @@ const HeaderCategories = () => {
       headerColor: item.headerColor || "#FF1E1E",
       headerFontColor: item.headerFontColor || "#FFFFFF",
       headerIconColor: item.headerIconColor || "#111111",
+      applicableModules: item.applicableModules || ["retail", "wholesale", "plan_my_event"],
     });
     setPreviewUrl(item.image || null);
     setIsAddModalOpen(true);
@@ -344,6 +353,9 @@ const HeaderCategories = () => {
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Slug
+                </th>
+                <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Modules
                 </th>
                 <th className="text-left py-3 px-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Comm (%)
@@ -416,6 +428,15 @@ const HeaderCategories = () => {
                       {cat.name}
                     </td>
                     <td className="py-3 px-4 text-gray-500">{cat.slug}</td>
+                    <td className="py-3 px-4">
+                      <div className="flex flex-wrap gap-1">
+                        {(cat.applicableModules || ["retail"]).map(m => (
+                          <span key={m} className="px-2 py-0.5 text-[10px] uppercase font-bold rounded-full bg-blue-50 text-blue-600 border border-blue-200">
+                            {m.replace(/_/g, ' ')}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
                     <td className="py-3 px-4 text-gray-500 font-medium">
                       {cat.adminCommission ?? 0}%
                     </td>
@@ -711,6 +732,38 @@ const HeaderCategories = () => {
                     <option value="active">Active</option>
                     <option value="inactive">Inactive</option>
                   </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">
+                    Applicable Modules
+                  </label>
+                  <div className="flex gap-4">
+                    {[
+                      { id: "retail", label: "Retail" },
+                      { id: "wholesale", label: "Wholesale" },
+                      { id: "plan_my_event", label: "Plan My Event" },
+                    ].map((mod) => (
+                      <label key={mod.id} className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          checked={formData.applicableModules?.includes(mod.id) || false}
+                          onChange={(e) => {
+                            const newModules = e.target.checked
+                              ? [...(formData.applicableModules || []), mod.id]
+                              : (formData.applicableModules || []).filter((m) => m !== mod.id);
+                            if (newModules.length > 0) {
+                              setFormData({ ...formData, applicableModules: newModules });
+                            } else {
+                              toast.error("At least one module must be selected");
+                            }
+                          }}
+                        />
+                        <span className="text-sm text-gray-700">{mod.label}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="space-y-2">

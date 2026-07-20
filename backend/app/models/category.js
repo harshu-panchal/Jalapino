@@ -98,6 +98,11 @@ const categorySchema = new mongoose.Schema(
       ref: "HSN",
       default: null,
     },
+    applicableModules: {
+      type: [String],
+      enum: ["retail", "wholesale", "plan_my_event"],
+      default: ["retail", "wholesale", "plan_my_event"],
+    },
   },
   {
     timestamps: true,

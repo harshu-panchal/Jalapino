@@ -349,9 +349,30 @@ const MainLocationHeader = ({
     };
   }, [isSwitcherVisible]);
 
+  const headerRef = useRef(null);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+
+    const handleResize = () => {
+      document.documentElement.style.setProperty('--header-height', `${el.offsetHeight}px`);
+    };
+
+    const ro = new ResizeObserver(handleResize);
+    ro.observe(el);
+    handleResize();
+
+    return () => {
+      ro.disconnect();
+      document.documentElement.style.removeProperty('--header-height');
+    };
+  }, []);
+
   return (
     <>
       <div
+        ref={headerRef}
         id="main-location-header"
         style={{ fontFamily: "'Inter', sans-serif" }}
         className={cn(

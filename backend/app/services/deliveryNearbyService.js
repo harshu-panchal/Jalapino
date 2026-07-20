@@ -102,7 +102,7 @@ export async function getDeliveryPartnerIdsWithinSellerRadius(sellerId) {
  */
 export async function getDeliveryPartnerIdsWithinRadius(lat, lng, radiusKm = 5) {
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return [];
-  
+
   const maxDistanceM = radiusKm * 1000;
   const base = buildDeliveryFilter();
 

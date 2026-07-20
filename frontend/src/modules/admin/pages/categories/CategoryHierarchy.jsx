@@ -152,6 +152,13 @@ const CategoryHierarchy = () => {
             <span className="text-[10px] uppercase tracking-wider opacity-60 truncate">
               {item.slug}
             </span>
+            <div className="flex flex-wrap gap-1 mt-1">
+              {(item.applicableModules || ["retail"]).map(m => (
+                <span key={m} className="px-1.5 py-0.5 text-[8px] uppercase font-bold rounded-sm bg-blue-50 text-blue-600 border border-blue-200 leading-none">
+                  {m.replace(/_/g, ' ')}
+                </span>
+              ))}
+            </div>
           </div>
         </div>
 

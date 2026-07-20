@@ -159,7 +159,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 md:pb-0 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage) ? "pb-0" : "pb-16")}>
+            <main className={cn("flex-1 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage) ? "pb-0" : "pb-16")}>
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {children}
                 </div>

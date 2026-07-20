@@ -551,7 +551,7 @@ const Home = () => {
   return (
     <div 
       className={`min-h-screen ${products.length === 0 && !isLoading ? "bg-white" : "bg-[#FAF8F6]"}`}
-      style={{ paddingTop: 'calc(var(--base-pt, 228px) - var(--header-shrink-offset, 0px))' }}
+      style={{ paddingTop: 'var(--base-pt, 228px)' }}
     >
       <style>{`
         :root { --base-pt: 228px; }

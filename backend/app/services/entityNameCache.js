@@ -7,6 +7,7 @@ import { buildKey, getOrSet, getTTL, invalidate } from "./cacheService.js";
  * @param {string|ObjectId} id
  * @returns {Promise<string|null>}
  */
+
 export async function resolveCategoryName(id) {
   if (!id) return null;
   const key = buildKey("catalog", "categoryName", String(id));

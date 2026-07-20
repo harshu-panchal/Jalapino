@@ -56,21 +56,11 @@ const FooterBannerCarousel = () => {
   return (
     <div className="w-full relative">
       <div className="w-full aspect-[1448/450] transition-opacity duration-300 relative overflow-hidden bg-slate-100 group">
-        {currentBanner.link ? (
-          <a href={currentBanner.link} target="_blank" rel="noopener noreferrer" className="block w-full h-full">
-            <img
-              src={resolveImageUrl(currentBanner.imageUrl)}
-              alt={currentBanner.title || "Footer Banner"}
-              className="w-full h-full object-cover object-top"
-            />
-          </a>
-        ) : (
-          <img
-            src={resolveImageUrl(currentBanner.imageUrl)}
-            alt={currentBanner.title || "Footer Banner"}
-            className="w-full h-full object-cover object-top"
-          />
-        )}
+        <img
+          src={resolveImageUrl(currentBanner.imageUrl)}
+          alt={currentBanner.title || "Footer Banner"}
+          className="w-full h-full object-cover object-top pointer-events-none"
+        />
         
         {/* Become Seller button for all banners */}
         <button

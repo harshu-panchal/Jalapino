@@ -15,13 +15,10 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
     const handleScroll = () => {
       if (!containerRef.current) return;
       
-      const headerEl = document.getElementById("main-location-header");
-      const currentHeaderHeight = headerEl ? headerEl.offsetHeight : (window.innerWidth >= 768 ? 166 : 228);
-      
+      const stableHeaderHeight = window.innerWidth >= 768 ? 166 : 158;
       const rect = containerRef.current.getBoundingClientRect();
-      // Trigger sticky state when the bottom of the category block hits the header
-      // This ensures the original circles have fully scrolled under the header
-      setIsStuck(rect.bottom <= currentHeaderHeight);
+      // Use stable header height to prevent feedback loop and blinking on header resize
+      setIsStuck(rect.bottom <= stableHeaderHeight);
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true, capture: true });
@@ -134,10 +131,10 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
       {/* 2. Sticky Collapsed View (Text only, visible only on scroll, like Flipkart) */}
       <div 
         className={cn(
-          "fixed left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200 transition-all duration-300",
+          "fixed left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200",
           isStuck ? "opacity-100 translate-y-0" : "opacity-0 translate-y-0 pointer-events-none"
         )}
-        style={{ top: headerHeight > 0 ? `${headerHeight}px` : (window.innerWidth >= 768 ? '166px' : '228px') }}
+        style={{ top: 'var(--header-height, 160px)' }}
       >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px]">
           <div className="flex items-center gap-4 md:gap-8 overflow-x-auto no-scrollbar">

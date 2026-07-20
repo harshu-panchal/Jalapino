@@ -80,23 +80,23 @@ export async function get(key) {
   if (!CACHE_ENABLED) {
     return null;
   }
-  
+
   try {
     const redis = getRedisClient();
     if (!redis) return null;
-    
+
     const data = await redis.get(key);
-    
+
     if (!data) {
       logger.debug(`[Cache] Miss: ${key}`);
       incrementCounter("cache_miss_total", labelsFromKey(key));
       return null;
     }
-    
+
     logger.debug(`[Cache] Hit: ${key}`);
     incrementCounter("cache_hit_total", labelsFromKey(key));
     return JSON.parse(data);
-    
+
   } catch (error) {
     logger.error(`[Cache] Error getting key ${key}:`, error);
     incrementCounter("cache_error_total", { operation: "get", ...labelsFromKey(key) });
@@ -116,11 +116,11 @@ export async function set(key, value, ttlSeconds) {
   if (!CACHE_ENABLED) {
     return;
   }
-  
+
   try {
     const redis = getRedisClient();
     if (!redis) return;
-    
+
     if (ttlSeconds <= 0) {
       await redis.del(key);
       logger.debug(`[Cache] Deleted: ${key}`);
@@ -128,11 +128,11 @@ export async function set(key, value, ttlSeconds) {
     }
 
     const serialized = JSON.stringify(value);
-    
+
     await redis.setex(key, ttlSeconds, serialized);
     logger.debug(`[Cache] Set: ${key}, TTL: ${ttlSeconds}s`);
     incrementCounter("cache_set_total", labelsFromKey(key));
-    
+
   } catch (error) {
     logger.error(`[Cache] Error setting key ${key}:`, error);
     incrementCounter("cache_error_total", { operation: "set", ...labelsFromKey(key) });
@@ -149,15 +149,15 @@ export async function del(key) {
   if (!CACHE_ENABLED) {
     return;
   }
-  
+
   try {
     const redis = getRedisClient();
     if (!redis) return;
-    
+
     await redis.del(key);
     logger.debug(`[Cache] Deleted: ${key}`);
     incrementCounter("cache_delete_total", labelsFromKey(key));
-    
+
   } catch (error) {
     logger.error(`[Cache] Error deleting key ${key}:`, error);
     incrementCounter("cache_error_total", { operation: "del", ...labelsFromKey(key) });
@@ -175,14 +175,14 @@ export async function delPattern(pattern) {
   if (!CACHE_ENABLED) {
     return 0;
   }
-  
+
   try {
     const redis = getRedisClient();
     if (!redis) return 0;
-    
+
     let cursor = "0";
     let deletedCount = 0;
-    
+
     do {
       // Use SCAN instead of KEYS for production safety
       const [nextCursor, keys] = await redis.scan(
@@ -192,19 +192,19 @@ export async function delPattern(pattern) {
         "COUNT",
         100
       );
-      
+
       cursor = nextCursor;
-      
+
       if (keys.length > 0) {
         await redis.del(...keys);
         deletedCount += keys.length;
       }
-      
+
     } while (cursor !== "0");
-    
+
     logger.info(`[Cache] Deleted ${deletedCount} keys matching pattern: ${pattern}`);
     return deletedCount;
-    
+
   } catch (error) {
     logger.error(`[Cache] Error deleting pattern ${pattern}:`, error);
     return 0;
@@ -221,20 +221,20 @@ export async function delPattern(pattern) {
 export async function getOrSet(key, fetchFn, ttlSeconds) {
   // Try to get from cache
   const cached = await get(key);
-  
+
   if (cached !== null) {
     return cached;
   }
-  
+
   // Cache miss: fetch from source
   try {
     const value = await fetchFn();
-    
+
     // Store in cache for next time
     await set(key, value, ttlSeconds);
-    
+
     return value;
-    
+
   } catch (error) {
     logger.error(`[Cache] Error in getOrSet for key ${key}:`, error);
     throw error;
@@ -250,11 +250,11 @@ export async function invalidate(key) {
   if (!CACHE_ENABLED) {
     return;
   }
-  
+
   try {
     const redis = getRedisClient();
     if (!redis) return;
-    
+
     const patterns = [key];
     if (
       CACHE_KEY_VERSION &&
@@ -263,7 +263,7 @@ export async function invalidate(key) {
     ) {
       patterns.push(String(key).replace(/^cache:/, `cache:${CACHE_KEY_VERSION}:`));
     }
-    
+
     // Delete the key(s)
     for (const candidate of patterns) {
       if (candidate.includes("*")) {
@@ -272,17 +272,17 @@ export async function invalidate(key) {
         await del(candidate);
       }
     }
-    
+
     // Publish invalidation event to all instances
     const message = JSON.stringify({
       key: patterns[0],
       patterns,
       timestamp: Date.now(),
     });
-    
+
     await redis.publish(CACHE_INVALIDATION_CHANNEL, message);
     logger.info(`[Cache] Invalidation published for key: ${key}`);
-    
+
   } catch (error) {
     logger.error(`[Cache] Error invalidating key ${key}:`, error);
     // Graceful fallback: don't throw, just log
@@ -299,34 +299,34 @@ export async function subscribeToInvalidations(callback) {
   if (!CACHE_ENABLED) {
     return;
   }
-  
+
   try {
     const redis = getRedisClient();
     if (!redis) return;
-    
+
     // Create a separate Redis client for pub/sub
     const subscriber = redis.duplicate();
-    
+
     await subscriber.subscribe(CACHE_INVALIDATION_CHANNEL);
-    
+
     subscriber.on("message", (channel, message) => {
       if (channel === CACHE_INVALIDATION_CHANNEL) {
         try {
           const data = JSON.parse(message);
           logger.debug(`[Cache] Invalidation received for key: ${data.key}`);
-          
+
           if (callback) {
             callback(data);
           }
-          
+
         } catch (error) {
           logger.error("[Cache] Error processing invalidation message:", error);
         }
       }
     });
-    
+
     logger.info(`[Cache] Subscribed to invalidation channel: ${CACHE_INVALIDATION_CHANNEL}`);
-    
+
   } catch (error) {
     logger.error("[Cache] Error subscribing to invalidations:", error);
     // Don't throw - cache invalidation is not critical for app startup

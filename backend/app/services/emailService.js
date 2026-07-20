@@ -70,11 +70,11 @@ function getTransportConfig() {
     secure,
     ...(user && pass
       ? {
-          auth: {
-            user,
-            pass,
-          },
-        }
+        auth: {
+          user,
+          pass,
+        },
+      }
       : {}),
   };
 }
