@@ -294,8 +294,8 @@ const MainLocationHeader = ({
   const headerFontColor = activeCategory?.headerFontColor || "#111827";
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
 
-  const headerOpacityGradient = baseHeaderColor && baseHeaderColor.startsWith("#") 
-    ? buildHeaderOpacityGradient(baseHeaderColor, 1) 
+  const headerOpacityGradient = baseHeaderColor && baseHeaderColor.startsWith("#")
+    ? buildHeaderOpacityGradient(baseHeaderColor, 1)
     : "var(--customer-header-gradient)";
   const headerGradient = buildHeaderGradient(baseHeaderColor);
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
@@ -323,7 +323,7 @@ const MainLocationHeader = ({
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
-      
+
       if (currentScrollY < 50) {
         setIsSwitcherVisible(true);
       } else if (currentScrollY > lastScrollY) {
@@ -331,7 +331,7 @@ const MainLocationHeader = ({
       } else {
         setIsSwitcherVisible(true);
       }
-      
+
       setLastScrollY(currentScrollY);
     };
 
@@ -417,8 +417,8 @@ const MainLocationHeader = ({
                   borderColor: 'transparent'
                 }}
               >
-                <img 
-                  src={retailerIcon} 
+                <img
+                  src={retailerIcon}
                   alt="Retail"
                   className={cn(
                     "h-7 w-7 object-contain transition-all duration-300",
@@ -445,8 +445,8 @@ const MainLocationHeader = ({
                   borderColor: 'transparent'
                 }}
               >
-                <img 
-                  src={wholesalerIcon} 
+                <img
+                  src={wholesalerIcon}
                   alt="Wholesale"
                   className={cn(
                     "h-7 w-7 object-contain transition-all duration-300",
@@ -480,7 +480,7 @@ const MainLocationHeader = ({
                 <div className="flex items-center justify-center w-7 h-7 bg-purple-100 rounded-full">
                   <CelebrationIcon sx={{ fontSize: 18, color: '#9333ea' }} />
                 </div>
-                <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br/>Event</span>
+                <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br />Event</span>
               </button>
             )}
           </div>
@@ -488,10 +488,10 @@ const MainLocationHeader = ({
           {/* Corner Lottie */}
           <motion.button
             initial={{ opacity: 0, scale: 0.9, y: -8 }}
-            animate={{ 
-              opacity: isSwitcherVisible ? 1 : 0, 
-              scale: isSwitcherVisible ? 1 : 0.5, 
-              y: 0 
+            animate={{
+              opacity: isSwitcherVisible ? 1 : 0,
+              scale: isSwitcherVisible ? 1 : 0.5,
+              y: 0
             }}
             transition={{ duration: 0 }}
             style={{

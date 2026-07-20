@@ -37,9 +37,11 @@ async function validateParentForType(type, parentId) {
     const parent = await Category.findById(parentId).select("type").lean();
     if (!parent) return false;
 
+
     // Strict hierarchy check
     if (type === "category" && parent.type !== "header") return false;
     if (type === "subcategory" && parent.type !== "category") return false;
+
 
     return true;
   } catch (err) {
@@ -101,6 +103,7 @@ export const getCategories = async (req, res) => {
         ];
       }
 
+
       if (parentId && parentId !== "all") {
         query.parentId = parentId;
       }
@@ -158,6 +161,7 @@ export const createCategory = async (req, res) => {
         categoryData[key] = val;
       }
     }
+
 
     // Handle Images & Icons
     const imageFile = req.files?.["image"]?.[0];
@@ -220,6 +224,7 @@ export const createCategory = async (req, res) => {
     }
 
     const category = await Category.create(categoryData);
+
 
     invalidate("cache:catalog:categories:*").catch(err => {
       console.warn("[Category] Cache invalidation failed:", err.message);
@@ -310,6 +315,7 @@ export const updateCategory = async (req, res) => {
     const type = String(categoryData.type || existing.type || "").trim();
     const parentToValidate = hasParentId ? categoryData.parentId : existing.parentId;
 
+
     const parentOk = await validateParentForType(type, parentToValidate);
     if (!parentOk) {
       if (type === "category") return handleResponse(res, 400, "Level 2 Category must be linked to a Level 1 Header category");
@@ -355,6 +361,7 @@ export const deleteCategory = async (req, res) => {
     };
 
     await deleteWithChildren(id);
+
 
     invalidate("cache:catalog:categories:*").catch(err => {
       console.warn("[Category] Cache invalidation failed:", err.message);

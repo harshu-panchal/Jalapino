@@ -14,7 +14,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
   useEffect(() => {
     const handleScroll = () => {
       if (!containerRef.current) return;
-      
+
       const stableHeaderHeight = window.innerWidth >= 768 ? 166 : 158;
       const rect = containerRef.current.getBoundingClientRect();
       // Use stable header height to prevent feedback loop and blinking on header resize
@@ -27,7 +27,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
 
     const headerEl = document.getElementById("main-location-header");
     let resizeObserver = null;
-    
+
     if (headerEl && typeof ResizeObserver !== "undefined") {
       resizeObserver = new ResizeObserver((entries) => {
         for (let entry of entries) {
@@ -63,7 +63,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
   return (
     <div ref={containerRef} className="relative w-full z-20">
       {/* 1. Original Circles View (Slides under header naturally) */}
-      <div 
+      <div
         className="relative bg-[#FAF8F6] pt-0 pb-5 md:pb-6 w-full font-['Inter'] transition-all duration-300"
       >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px] relative">
@@ -129,7 +129,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
       </div>
 
       {/* 2. Sticky Collapsed View (Text only, visible only on scroll, like Flipkart) */}
-      <div 
+      <div
         className={cn(
           "fixed left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200",
           isStuck ? "opacity-100 translate-y-0" : "opacity-0 translate-y-0 pointer-events-none"
