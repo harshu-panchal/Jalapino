@@ -86,12 +86,18 @@ export function formatSellerApplication(seller) {
     description: seller.description || "No application note provided.",
     retailEnabled: seller.retailEnabled ?? true,
     planMyEventEnabled: seller.planMyEventEnabled ?? false,
+    categoriesEnabled: seller.categoriesEnabled ?? true,
+    bookingSlotsEnabled: seller.bookingSlotsEnabled ?? false,
     productsEnabled: seller.productsEnabled ?? true,
     stockEnabled: seller.stockEnabled ?? true,
     ordersEnabled: seller.ordersEnabled ?? true,
     walletEnabled: seller.walletEnabled ?? true,
     analyticsEnabled: seller.analyticsEnabled ?? true,
     wholesaleEnabled: seller.wholesaleEnabled ?? false,
+    allowedRetailCategories: seller.allowedRetailCategories || [],
+    allowedWholesaleCategories: seller.allowedWholesaleCategories || [],
+    allowedEventCategories: seller.allowedEventCategories || [],
+    serviceCategories: seller.serviceCategories || [],
     adminRemark: seller.adminRemark || '',
     verificationScore: docs.length
       ? Math.min(100, 55 + docs.length * 12 + (seller.address ? 10 : 0))

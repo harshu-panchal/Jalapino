@@ -12,8 +12,8 @@ export const getCities = async (req, res) => {
 
 export const createCity = async (req, res) => {
     try {
-        const { state, cityName, pinCodes, isActive, readinessStatus, retailEnabled, planMyEventEnabled } = req.body;
-        const city = await City.create({ state, cityName, pinCodes, isActive, readinessStatus, retailEnabled, planMyEventEnabled });
+        const { state, cityName, pinCodes, isActive, readinessStatus, retailEnabled, planMyEventEnabled, wholesaleEnabled } = req.body;
+        const city = await City.create({ state, cityName, pinCodes, isActive, readinessStatus, retailEnabled, planMyEventEnabled, wholesaleEnabled });
         return handleResponse(res, 201, 'City created', city);
     } catch (error) {
         return handleResponse(res, 500, 'Failed to create city');

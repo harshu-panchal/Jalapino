@@ -143,17 +143,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                {true && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/seller/auth?mode=signup');
-                    }}
-                    className="absolute bottom-3 left-3 md:bottom-5 md:left-5 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[9px] sm:text-[10px] md:text-[11px] lg:text-[12px] font-black px-2.5 md:px-3 py-1 md:py-1.5 rounded-md md:rounded-lg uppercase tracking-wider shadow-sm z-10 border border-white/20 transition-all hover:scale-105 active:scale-95"
-                  >
-                    Become Seller
-                  </button>
-                )}
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -191,17 +181,7 @@ const ExperienceBannerCarousel = ({ section, items, fullWidth = false, slideGap 
                   fetchPriority={idx === 0 ? "high" : "low"}
                   decoding="async"
                 />
-                {true && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigate('/seller/auth?mode=signup');
-                    }}
-                    className="absolute bottom-3 left-3 md:bottom-5 md:left-5 bg-[#D92B2B] hover:bg-[#B91C1C] text-white text-[9px] sm:text-[10px] md:text-[11px] lg:text-[12px] font-black px-2.5 md:px-3 py-1 md:py-1.5 rounded-md md:rounded-lg uppercase tracking-wider shadow-sm z-10 border border-white/20 transition-all hover:scale-105 active:scale-95"
-                  >
-                    Become Seller
-                  </button>
-                )}
+
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

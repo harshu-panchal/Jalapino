@@ -55,6 +55,58 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
                         weight: p.weight || '1 unit',
                         deliveryTime: '8-15 mins'
                     }));
+
+                    // Sort by brand match first, followed by others (Flipkart-style)
+                    const queryLower = query.toLowerCase().trim();
+                    const words = queryLower.split(/\s+/).filter(Boolean);
+                    if (words.length > 0) {
+                        const brand = words[0];
+                        const restWords = words.slice(1);
+
+                        formattedProds.sort((a, b) => {
+                            const nameA = (a.name || '').toLowerCase();
+                            const nameB = (b.name || '').toLowerCase();
+
+                            const getScore = (name) => {
+                                let score = 0;
+                                if (words.length > 1) {
+                                    const hasBrand = name.includes(brand);
+                                    const matchesRest = restWords.every(w => name.includes(w));
+
+                                    if (hasBrand && matchesRest) {
+                                        score = 1000;
+                                        if (name.startsWith(brand)) {
+                                            score += 100;
+                                        }
+                                    } else if (!hasBrand && matchesRest) {
+                                        score = 500;
+                                    } else if (hasBrand && !matchesRest) {
+                                        score = 100;
+                                    } else {
+                                        const matchedCount = words.filter(w => name.includes(w)).length;
+                                        score = matchedCount;
+                                    }
+                                } else {
+                                    const word = words[0];
+                                    if (name.startsWith(word)) {
+                                        score = 1000;
+                                    } else if (name.includes(word)) {
+                                        score = 500;
+                                    }
+                                }
+                                return score;
+                            };
+
+                            const scoreA = getScore(nameA);
+                            const scoreB = getScore(nameB);
+
+                            if (scoreA !== scoreB) {
+                                return scoreB - scoreA;
+                            }
+                            return nameA.localeCompare(nameB);
+                        });
+                    }
+
                     setSearchResults(formattedProds);
                 }
             } catch (error) {
@@ -104,6 +156,12 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
                     }}
                     onFocus={() => {
                         setIsFocused(true);
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === 'Enter' && query.trim()) {
+                            navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+                            setIsFocused(false);
+                        }
                     }}
                     placeholder={placeholder}
                     className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-bold placeholder:text-slate-400 placeholder:font-medium text-[15px]"

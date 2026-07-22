@@ -96,43 +96,68 @@ export class MongoSearchBackend extends SearchBackend {
     
     try {
       const page = query.page || 1;
-      const limit = query.limit || 20;
+      const limit = parseInt(query.limit) || 20;
       const skip = (page - 1) * limit;
       
       const mongoQuery = this.buildQuery(query);
       
-      // Build projection
-      const projection = {
-        _id: 1,
-        name: 1,
-        price: 1,
-        salePrice: 1,
-        mainImage: 1,
-        sellerId: 1,
-        stock: 1,
-        status: 1,
-      };
-      
-      // Add text score if text search is used
+      const pipeline = [
+        { $match: mongoQuery }
+      ];
+
+      // Add text score and sorting
       if (mongoQuery.$text) {
-        projection.score = { $meta: "textScore" };
-      }
-      
-      // Build sort
-      const sort = {};
-      if (mongoQuery.$text) {
-        sort.score = { $meta: "textScore" };
+        const normalized = this.normalizeQuery(query.keyword);
+        const firstWord = normalized.split(' ')[0];
+        
+        // Escape special characters for regex
+        const escapedWord = firstWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        pipeline.push({
+          $addFields: {
+            score: { $meta: "textScore" },
+            // Prioritize items where the name starts with the first search word (like a brand)
+            exactBrandMatch: {
+              $cond: {
+                if: { $regexMatch: { input: "$name", regex: new RegExp(`^${escapedWord}`, 'i') } },
+                then: 1,
+                else: 0
+              }
+            }
+          }
+        });
+        
+        pipeline.push({
+          $sort: { exactBrandMatch: -1, score: -1 }
+        });
       } else {
-        sort.createdAt = -1; // Default sort by newest
+        pipeline.push({
+          $sort: { createdAt: -1 }
+        });
       }
+
+      // Add projection
+      pipeline.push({
+        $project: {
+          _id: 1,
+          name: 1,
+          price: 1,
+          salePrice: 1,
+          mainImage: 1,
+          sellerId: 1,
+          stock: 1,
+          status: 1,
+          score: 1 // only exists if added in $addFields, otherwise ignored safely
+        }
+      });
+
+      // Pagination
+      pipeline.push({ $skip: skip });
+      pipeline.push({ $limit: limit });
       
       // Execute query
       const [items, total] = await Promise.all([
-        Product.find(mongoQuery, projection)
-          .sort(sort)
-          .skip(skip)
-          .limit(limit)
-          .lean(),
+        Product.aggregate(pipeline),
         Product.countDocuments(mongoQuery),
       ]);
       

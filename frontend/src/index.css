@@ -466,3 +466,9 @@ body {
     background: linear-gradient(to bottom, color-mix(in srgb, var(--primary), white 25%) 0%, color-mix(in srgb, var(--primary), white 8%) 50%, color-mix(in srgb, var(--primary), black 5%) 100%) !important;
   }
 }
+
+/* Google Maps Autocomplete Suggestion Dropdown styling fixes */
+.pac-container {
+  z-index: 9999 !important;
+  pointer-events: auto !important;
+}

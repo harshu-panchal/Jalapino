@@ -38,7 +38,14 @@ const SellerProfile = () => {
     lng: null,
     radius: 5,
     address: "",
+    serviceCoverage: ["hyperlocal"],
+    customZones: [],
   });
+
+  const [newZoneName, setNewZoneName] = useState("");
+  const [newZoneCity, setNewZoneCity] = useState("");
+  const [newAreaInput, setNewAreaInput] = useState("");
+  const [editingZoneIndex, setEditingZoneIndex] = useState(null);
 
   useEffect(() => {
     fetchProfile();
@@ -58,6 +65,8 @@ const SellerProfile = () => {
         lng: data.location?.coordinates[0] || null,
         radius: data.serviceRadius || 5,
         address: data.address || "",
+        serviceCoverage: data.serviceCoverage || ["hyperlocal"],
+        customZones: data.customZones || [],
       });
     } catch (error) {
       toast.error("Failed to fetch profile");
@@ -94,6 +103,101 @@ const SellerProfile = () => {
     }
   };
 
+  const getCleanCoverage = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'string') return [parsed];
+      } catch (e) {
+        if (val.includes(",")) return val.split(",").map(s => s.trim().replace(/['"\[\]]/g, ''));
+        if (val) return [val.replace(/['"\[\]]/g, '')];
+      }
+    }
+    return [];
+  };
+
+  const handleCoverageToggle = (coverageType) => {
+    setFormData((prev) => {
+      let updatedCoverage = getCleanCoverage(prev.serviceCoverage);
+      
+      if (coverageType === "all") {
+        if (updatedCoverage.includes("all")) {
+          updatedCoverage = [];
+        } else {
+          updatedCoverage = ["hyperlocal", "pan_india", "zone_wise", "all"];
+        }
+      } else {
+        if (updatedCoverage.includes(coverageType)) {
+          updatedCoverage = updatedCoverage.filter((t) => t !== coverageType && t !== "all");
+        } else {
+          updatedCoverage = [...updatedCoverage.filter(t => t !== "all"), coverageType];
+        }
+      }
+      
+      return {
+        ...prev,
+        serviceCoverage: updatedCoverage,
+      };
+    });
+  };
+
+  const handleAddZone = () => {
+    if (!newZoneName.trim() || !newZoneCity.trim()) {
+      toast.error("Zone Name and City are required.");
+      return;
+    }
+    setFormData((prev) => {
+      const updatedZones = [...(prev.customZones || [])];
+      updatedZones.push({
+        name: newZoneName.trim(),
+        city: newZoneCity.trim(),
+        areas: [],
+      });
+      return { ...prev, customZones: updatedZones };
+    });
+    setNewZoneName("");
+    setNewZoneCity("");
+  };
+
+  const handleRemoveZone = (index) => {
+    setFormData((prev) => {
+      const updatedZones = (prev.customZones || []).filter((_, i) => i !== index);
+      return { ...prev, customZones: updatedZones };
+    });
+    if (editingZoneIndex === index) {
+      setEditingZoneIndex(null);
+    }
+  };
+
+  const handleAddAreaToZone = (zoneIndex) => {
+    if (!newAreaInput.trim()) return;
+    setFormData((prev) => {
+      const updatedZones = [...(prev.customZones || [])];
+      if (updatedZones[zoneIndex]) {
+        const areaList = [...(updatedZones[zoneIndex].areas || [])];
+        if (!areaList.includes(newAreaInput.trim())) {
+          areaList.push(newAreaInput.trim());
+        }
+        updatedZones[zoneIndex] = { ...updatedZones[zoneIndex], areas: areaList };
+      }
+      return { ...prev, customZones: updatedZones };
+    });
+    setNewAreaInput("");
+  };
+
+  const handleRemoveAreaFromZone = (zoneIndex, areaIndex) => {
+    setFormData((prev) => {
+      const updatedZones = [...(prev.customZones || [])];
+      if (updatedZones[zoneIndex]) {
+        const areaList = (updatedZones[zoneIndex].areas || []).filter((_, i) => i !== areaIndex);
+        updatedZones[zoneIndex] = { ...updatedZones[zoneIndex], areas: areaList };
+      }
+      return { ...prev, customZones: updatedZones };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Basic phone validation: must be exactly 10 digits
@@ -113,6 +217,7 @@ const SellerProfile = () => {
         lat: formData.lat,
         lng: formData.lng,
         radius: formData.radius,
+        serviceCoverage: formData.serviceCoverage?.filter(c => c !== "all"),
       };
       await sellerApi.updateProfile(payload);
       toast.success("Profile updated successfully");
@@ -333,6 +438,190 @@ const SellerProfile = () => {
             </div>
 
             <div className="space-y-6">
+              {/* Service Coverage & Zones Settings */}
+              <div className="space-y-4 pt-2">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                  Service Coverage Type
+                </label>
+                
+                {isEditing ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      {[
+                        { id: "hyperlocal", label: "Hyperlocal (Near Shop)" },
+                        { id: "pan_india", label: "Pan India" },
+                        { id: "zone_wise", label: "Zone-wise" },
+                        { id: "all", label: "All Coverage Options" },
+                      ].map((option) => {
+                          const isSelected = getCleanCoverage(formData.serviceCoverage).includes(option.id);
+
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            onClick={() => handleCoverageToggle(option.id)}
+                            className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${
+                              isSelected
+                                ? "border-brand-500 bg-brand-50/50 text-brand-900 shadow-sm"
+                                : "border-slate-100 bg-slate-50 hover:border-slate-200 text-slate-600"
+                            }`}
+                          >
+                            <div
+                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
+                                isSelected
+                                  ? "bg-brand-600 border-brand-600 text-white"
+                                  : "border-slate-300 bg-white"
+                              }`}
+                            >
+                              {isSelected && (
+                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                </svg>
+                              )}
+                            </div>
+                            <span className="text-xs font-bold leading-tight">{option.label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {/* Custom Zones Builder Section */}
+                    {formData.serviceCoverage?.includes("zone_wise") && (
+                      <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-4 mb-4 shadow-sm animate-in fade-in duration-200">
+                        <p className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                          Manage Dynamic Zones
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          <input
+                            type="text"
+                            placeholder="Zone Name (e.g. East Delhi)"
+                            value={newZoneName}
+                            onChange={(e) => setNewZoneName(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-300 transition-all"
+                          />
+                          <input
+                            type="text"
+                            placeholder="City"
+                            value={newZoneCity}
+                            onChange={(e) => setNewZoneCity(e.target.value)}
+                            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-300 transition-all"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleAddZone}
+                          className="w-full py-2 bg-slate-900 text-white hover:bg-black rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
+                        >
+                          Add New Zone
+                        </button>
+
+                        {/* Render Added Zones */}
+                        {formData.customZones?.length > 0 ? (
+                          <div className="space-y-3 pt-2">
+                            {formData.customZones.map((zone, zIdx) => (
+                              <div key={zIdx} className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-2 relative">
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveZone(zIdx)}
+                                  className="absolute right-2 top-2 text-slate-400 hover:text-red-500 transition-colors"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                                <div>
+                                  <p className="text-xs font-bold text-slate-800">{zone.name}</p>
+                                  <p className="text-[10px] font-medium text-slate-500">{zone.city}</p>
+                                </div>
+
+                                {/* Areas tag list */}
+                                <div className="flex flex-wrap gap-1">
+                                  {(zone.areas || []).map((area, aIdx) => (
+                                    <span key={aIdx} className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                      {area}
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveAreaFromZone(zIdx, aIdx)}
+                                        className="text-slate-400 hover:text-red-500"
+                                      >
+                                        &times;
+                                      </button>
+                                    </span>
+                                  ))}
+                                </div>
+
+                                {/* Add Area/Pincode to Zone */}
+                                <div className="flex gap-1.5 mt-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Add area or pincode..."
+                                    value={editingZoneIndex === zIdx ? newAreaInput : ""}
+                                    onChange={(e) => {
+                                      setEditingZoneIndex(zIdx);
+                                      setNewAreaInput(e.target.value);
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        handleAddAreaToZone(zIdx);
+                                      }
+                                    }}
+                                    className="flex-1 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-[11px] font-bold text-slate-700 outline-none"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => handleAddAreaToZone(zIdx)}
+                                    className="px-3 py-1 bg-slate-800 text-white rounded-md text-[10px] font-bold hover:bg-black transition-colors"
+                                  >
+                                    Add
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 text-center py-2 font-medium">
+                            No custom zones added yet. Add one above.
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div className="flex flex-wrap gap-2">
+                      {(formData.serviceCoverage || []).length > 0 ? (
+                        (formData.serviceCoverage || []).map((cov) => (
+                          <span key={cov} className="bg-slate-200/60 text-slate-800 text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border border-slate-300/40">
+                            {cov === "hyperlocal" ? "Hyperlocal" : cov === "pan_india" ? "Pan India" : "Zone-wise"}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-xs text-slate-500 font-bold">No coverage selected</span>
+                      )}
+                    </div>
+
+                    {formData.serviceCoverage?.includes("zone_wise") && (
+                      <div className="pt-2 border-t border-slate-200/40 space-y-2">
+                        <p className="text-[11px] font-black text-slate-600 uppercase tracking-wider">Active Zones</p>
+                        {formData.customZones?.length > 0 ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {formData.customZones.map((zone, zIdx) => (
+                              <div key={zIdx} className="bg-white border border-slate-200/60 rounded-lg p-2.5 text-xs">
+                                <p className="font-bold text-slate-800">{zone.name} ({zone.city})</p>
+                                <p className="text-[10px] text-slate-500 font-semibold mt-1">
+                                  Areas: {(zone.areas || []).join(", ") || "None"}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-slate-400 font-medium">No zones configured.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <div className="bg-slate-50 p-6 rounded-2xl border-2 border-slate-100/50 space-y-6">
                 <div className="flex items-center justify-between gap-6">
                   <div className="flex items-center gap-4">

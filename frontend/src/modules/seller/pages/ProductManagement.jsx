@@ -29,9 +29,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
 import Pagination from "@shared/components/ui/Pagination";
+import { useAuth } from "@core/context/AuthContext";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const qFromUrl = searchParams.get("q") || "";
 
@@ -213,6 +215,8 @@ const ProductManagement = () => {
     mainImage: null,
     galleryImages: [],
     videoUrl: "",
+    colors: [],
+    deliveryCoverage: user?.serviceCoverage || ["hyperlocal"],
     variants: [
       { id: Date.now(), name: "", price: "", salePrice: "", stock: "", sku: "" },
     ],
@@ -354,6 +358,9 @@ const ProductManagement = () => {
         formData.galleryFiles.forEach((file) => data.append("galleryImages", file));
       }
 
+      data.append("deliveryCoverage", JSON.stringify(formData.deliveryCoverage));
+      data.append("colors", JSON.stringify(formData.colors));
+
       if (editingItem) {
         const response = await sellerApi.updateProduct(editingItem._id || editingItem.id, data);
         const approvalStatus = response?.data?.result?.approvalStatus;
@@ -446,6 +453,8 @@ const ProductManagement = () => {
         shelfLife: item.shelfLife || "",
         countryOfOrigin: item.countryOfOrigin || "",
         fssaiLicense: item.fssaiLicense || "",
+        colors: item.colors || [],
+        deliveryCoverage: item.deliveryCoverage || user?.serviceCoverage || ["hyperlocal"],
         variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
           {
             id: Date.now(),
@@ -1071,6 +1080,146 @@ const ProductManagement = () => {
                           placeholder="Describe the item here..."
                         />
                       </div>
+
+                      {/* Delivery Availability */}
+                      <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
+                          Delivery Availability
+                        </label>
+                        <p className="text-xs text-slate-500 font-medium mb-2">
+                          Select where you can deliver this specific product. Options are based on your shop's settings.
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                          {[
+                            { id: "hyperlocal", label: "Hyperlocal (Near Shop)" },
+                            { id: "pan_india", label: "Pan India" },
+                            { id: "zone_wise", label: "Zone-wise" },
+                          ].map((option) => {
+                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || (option.id === "hyperlocal");
+                            
+                            if (!isAllowedBySeller) return null;
+
+                            const isSelected = formData.deliveryCoverage.includes(option.id);
+
+                            return (
+                              <label
+                                key={option.id}
+                                className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors"
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setFormData((prev) => {
+                                      const current = prev.deliveryCoverage;
+                                      const next = current.includes(option.id)
+                                        ? current.filter((c) => c !== option.id)
+                                        : [...current, option.id];
+                                      return { ...prev, deliveryCoverage: next };
+                                    });
+                                  }}
+                                  className="w-4 h-4 accent-brand-500 cursor-pointer"
+                                />
+                                <span className="text-sm font-semibold text-slate-700">{option.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                        {formData.deliveryCoverage.length === 0 && (
+                          <p className="text-xs text-red-500 font-semibold mt-1">Please select at least one delivery option.</p>
+                        )}
+                      </div>
+
+                      {/* Colors Section */}
+                      <div className="space-y-1.5 flex flex-col">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          Product Colors (Optional)
+                        </label>
+                        <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
+                          <div className="flex flex-wrap gap-2">
+                            {["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].map((color) => {
+                              const isSelected = formData.colors.includes(color);
+                              return (
+                                <button
+                                  key={color}
+                                  type="button"
+                                  onClick={() => {
+                                    setFormData((prev) => {
+                                      const nextColors = isSelected 
+                                        ? prev.colors.filter(c => c !== color)
+                                        : [...prev.colors, color];
+                                      return { ...prev, colors: nextColors };
+                                    });
+                                  }}
+                                  className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                                    isSelected 
+                                      ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm" 
+                                      : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                                  }`}
+                                >
+                                  {color}
+                                </button>
+                              );
+                            })}
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <input 
+                              type="color" 
+                              id="editVisualColorPicker"
+                              className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
+                              defaultValue="#000000"
+                            />
+                            <input 
+                              type="text" 
+                              id="editCustomColorInput"
+                              placeholder="Type custom color or select hex..."
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = e.target.value.trim() || document.getElementById("editVisualColorPicker").value;
+                                  if (val && !formData.colors.includes(val)) {
+                                    setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
+                                  }
+                                  e.target.value = '';
+                                }
+                              }}
+                              className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                            />
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                const input = document.getElementById("editCustomColorInput");
+                                const picker = document.getElementById("editVisualColorPicker");
+                                const val = input.value.trim() || picker.value;
+                                if (val && !formData.colors.includes(val)) {
+                                  setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
+                                }
+                                input.value = '';
+                              }}
+                              className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
+                            >
+                              ADD
+                            </button>
+                          </div>
+                          {formData.colors.length > 0 && (
+                            <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
+                              {formData.colors.filter(c => !["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].includes(c)).map(color => {
+                                const isHex = /^#[0-9A-F]{6}$/i.test(color);
+                                return (
+                                  <div key={color} className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-2 py-1.5 rounded-md text-[10px] font-bold shadow-sm">
+                                    {isHex && <span className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: color }}></span>}
+                                    <span>{color}</span>
+                                    <button type="button" className="ml-1 text-slate-400 hover:text-rose-500" onClick={() => setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }))}>
+                                      <HiOutlineXMark className="h-3.5 w-3.5" />
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5 flex flex-col">
                           <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">

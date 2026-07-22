@@ -17,7 +17,8 @@ const CityManagementPage = () => {
         readinessStatus: 'Ready',
         isActive: true,
         retailEnabled: true,
-        planMyEventEnabled: false
+        planMyEventEnabled: false,
+        wholesaleEnabled: false
     });
     const [editingId, setEditingId] = useState(null);
 
@@ -49,7 +50,7 @@ const CityManagementPage = () => {
                 alert('City added successfully');
                 fetchCities();
                 setEditingId(null);
-                setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false });
+                setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false });
             }
         } catch (error) {
             alert('Failed to save city');
@@ -64,7 +65,8 @@ const CityManagementPage = () => {
             readinessStatus: city.readinessStatus,
             isActive: city.isActive,
             retailEnabled: city.retailEnabled ?? true,
-            planMyEventEnabled: city.planMyEventEnabled ?? false
+            planMyEventEnabled: city.planMyEventEnabled ?? false,
+            wholesaleEnabled: city.wholesaleEnabled ?? false
         });
     };
 
@@ -98,7 +100,7 @@ const CityManagementPage = () => {
                         <h2 className="text-lg font-bold text-slate-800">{editingId ? 'Edit City' : 'Add New City'}</h2>
                         {editingId && (
                             <button 
-                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false }); }}
+                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false }); }}
                                 className="text-xs text-blue-600 hover:underline"
                             >
                                 Cancel Edit
@@ -163,6 +165,17 @@ const CityManagementPage = () => {
                                     <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
                                 </div>
                             </label>
+
+                            <label className="flex items-center justify-between cursor-pointer mt-3">
+                                <div>
+                                    <span className="text-sm font-semibold text-slate-800">Wholesale Module</span>
+                                    <p className="text-[10px] text-slate-500">Enable Wholesale Marketplace</p>
+                                </div>
+                                <div className="relative">
+                                    <input type="checkbox" className="sr-only peer" checked={newCity.wholesaleEnabled} onChange={(e) => setNewCity({...newCity, wholesaleEnabled: e.target.checked})} />
+                                    <div className="w-9 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                </div>
+                            </label>
                         </div>
 
                         <button type="submit" className="w-full bg-purple-600 text-white rounded-xl p-3 font-bold hover:bg-purple-700">
@@ -181,6 +194,9 @@ const CityManagementPage = () => {
                                 <div className="flex flex-wrap items-center gap-2 mt-2">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${city.retailEnabled ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
                                         RETAIL {city.retailEnabled ? 'ON' : 'OFF'}
+                                    </span>
+                                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${city.wholesaleEnabled ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-slate-400'}`}>
+                                        WHOLESALE {city.wholesaleEnabled ? 'ON' : 'OFF'}
                                     </span>
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${city.planMyEventEnabled ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-400'}`}>
                                         EVENT {city.planMyEventEnabled ? 'ON' : 'OFF'}

@@ -156,12 +156,24 @@ const Auth = () => {
     phone: createInitialVerificationState(),
   });
 
+  const getCleanCoverage = (val) => {
+    if (Array.isArray(val)) return val;
+    if (typeof val === 'string') {
+      try {
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+        if (typeof parsed === 'string') return [parsed];
+      } catch (e) {
+        if (val.includes(",")) return val.split(",").map(s => s.trim().replace(/['"\[\]]/g, ''));
+        if (val) return [val.replace(/['"\[\]]/g, '')];
+      }
+    }
+    return [];
+  };
+
   const [formData, setFormData] = useState(() => {
     const saved = sessionStorage.getItem('sellerAuthFormData');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { }
-    }
-    return {
+    const defaultData = {
       email: "",
       password: "",
       name: "",
@@ -180,12 +192,35 @@ const Auth = () => {
       radius: 5,
       address: "",
       isPickupPointEligible: false,
+      customZones: [],
     };
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return { ...defaultData, ...parsed };
+      } catch (e) { }
+    }
+    return defaultData;
+  });
+
+  const [serviceCoverage, setServiceCoverage] = useState(() => {
+    const saved = sessionStorage.getItem('sellerServiceCoverage');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      } catch (e) { }
+    }
+    return ["hyperlocal"];
   });
 
   React.useEffect(() => {
     sessionStorage.setItem('sellerAuthFormData', JSON.stringify(formData));
   }, [formData]);
+
+  React.useEffect(() => {
+    sessionStorage.setItem('sellerServiceCoverage', JSON.stringify(serviceCoverage));
+  }, [serviceCoverage]);
 
   const handleLocationSelect = (location) => {
     setFormData((prev) => ({
@@ -205,6 +240,11 @@ const Auth = () => {
   const [categoriesList, setCategoriesList] = useState([]);
   const [activeDocAction, setActiveDocAction] = useState(null); // stores the doc id currently waiting for camera/gallery action
   const fileInputRefs = React.useRef({});
+
+  const [newZoneName, setNewZoneName] = useState("");
+  const [newZoneCity, setNewZoneCity] = useState("");
+  const [newAreaInput, setNewAreaInput] = useState("");
+  const [editingZoneIndex, setEditingZoneIndex] = useState(null);
 
   const handleCameraCapture = async (docId) => {
     setActiveDocAction(null); // close action sheet
@@ -314,6 +354,74 @@ const Auth = () => {
     } else {
       setFormData({ ...formData, [name]: value });
     }
+  };
+
+  const handleCoverageToggle = (coverageType) => {
+    setServiceCoverage((current) => {
+      if (coverageType === "all") {
+        return current.includes("all") ? [] : ["hyperlocal", "pan_india", "zone_wise", "all"];
+      }
+
+      if (current.includes(coverageType)) {
+        return current.filter((t) => t !== coverageType && t !== "all");
+      }
+      return [...current.filter((t) => t !== "all"), coverageType];
+    });
+  };
+
+  const handleAddZone = () => {
+    if (!newZoneName.trim() || !newZoneCity.trim()) {
+      toast.error("Zone Name and City are required.");
+      return;
+    }
+    setFormData((prev) => {
+      const updatedZones = [...(prev.customZones || [])];
+      updatedZones.push({
+        name: newZoneName.trim(),
+        city: newZoneCity.trim(),
+        areas: [],
+      });
+      return { ...prev, customZones: updatedZones };
+    });
+    setNewZoneName("");
+    setNewZoneCity("");
+  };
+
+  const handleRemoveZone = (index) => {
+    setFormData((prev) => {
+      const updatedZones = (prev.customZones || []).filter((_, i) => i !== index);
+      return { ...prev, customZones: updatedZones };
+    });
+    if (editingZoneIndex === index) {
+      setEditingZoneIndex(null);
+    }
+  };
+
+  const handleAddAreaToZone = (zoneIndex) => {
+    if (!newAreaInput.trim()) return;
+    setFormData((prev) => {
+      const updatedZones = [...(prev.customZones || [])];
+      if (updatedZones[zoneIndex]) {
+        const areaList = [...(updatedZones[zoneIndex].areas || [])];
+        if (!areaList.includes(newAreaInput.trim())) {
+          areaList.push(newAreaInput.trim());
+        }
+        updatedZones[zoneIndex] = { ...updatedZones[zoneIndex], areas: areaList };
+      }
+      return { ...prev, customZones: updatedZones };
+    });
+    setNewAreaInput("");
+  };
+
+  const handleRemoveAreaFromZone = (zoneIndex, areaIndex) => {
+    setFormData((prev) => {
+      const updatedZones = [...(prev.customZones || [])];
+      if (updatedZones[zoneIndex]) {
+        const areaList = (updatedZones[zoneIndex].areas || []).filter((_, i) => i !== areaIndex);
+        updatedZones[zoneIndex] = { ...updatedZones[zoneIndex], areas: areaList };
+      }
+      return { ...prev, customZones: updatedZones };
+    });
   };
 
   const handleDocumentChange = (e, docId) => {
@@ -487,11 +595,16 @@ const Auth = () => {
             lat: formData.lat,
             lng: formData.lng,
             radius: formData.radius,
+            serviceCoverage: serviceCoverage.filter(c => c !== "all"),
             emailVerificationToken: verifications.email.token,
             phoneVerificationToken: verifications.phone.token,
           }).forEach(([key, value]) => {
             if (value !== null && value !== undefined && value !== "") {
-              signupPayload.append(key, value);
+              if (key === "serviceCoverage" || key === "customZones") {
+                signupPayload.append(key, JSON.stringify(value));
+              } else {
+                signupPayload.append(key, value);
+              }
             }
           });
 
@@ -566,7 +679,7 @@ const Auth = () => {
   };
 
   return (
-    <div className="w-full min-h-screen bg-[#fcfaff] p-4 sm:p-6 font-sans relative flex flex-col items-center justify-start md:justify-center">
+    <div className="w-full h-[100dvh] overflow-hidden bg-[#fcfaff] p-4 sm:p-6 font-sans relative flex flex-col items-center justify-center">
       {/* Elegant Ambient Background */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
         <div className="absolute top-[-10%] left-[-5%] w-[60%] h-[60%] bg-slate-100/50 rounded-full blur-[120px]" />
@@ -576,7 +689,7 @@ const Auth = () => {
       <motion.div
         initial={{ opacity: 0, scale: 0.98 }}
         animate={{ opacity: 1, scale: 1 }}
-        className="relative z-10 w-full max-w-[1000px] min-h-0 md:min-h-[600px] max-h-none md:max-h-[90vh] bg-white rounded-2xl md:rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row md:overflow-hidden">
+        className="relative z-10 w-full max-w-[1000px] h-full md:h-auto md:min-h-[600px] max-h-full md:max-h-[90vh] bg-white rounded-2xl md:rounded-lg shadow-[0_50px_120px_rgba(0,0,0,0.04)] border border-white flex flex-col md:flex-row overflow-hidden">
         {/* Visual Side Panel - 5 Banner Slideshow */}
         <div className="hidden md:block w-[45%] relative overflow-hidden bg-slate-950">
           <AnimatePresence mode="wait">
@@ -599,7 +712,7 @@ const Auth = () => {
           </AnimatePresence>
           {/* Burgundy / Dark Gradient Overlay for premium look */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent pointer-events-none" />
-          
+
           {/* Back Button on Left Panel */}
           <button
             type="button"
@@ -608,7 +721,7 @@ const Auth = () => {
           >
             <ChevronLeft size={24} />
           </button>
-          
+
           {/* Logo & Slogan overlay on left panel */}
           <div className="absolute bottom-10 left-8 right-8 z-10 text-left">
             <h2 className="text-2xl font-black text-white tracking-tight uppercase leading-none drop-shadow-[0_2px_8px_rgba(0,0,0,0.8)]">
@@ -623,7 +736,7 @@ const Auth = () => {
         {/* Form Content Side */}
         <div
           ref={panelRef}
-          className="w-full md:w-[55%] min-h-0 p-5 pt-14 md:p-12 md:pt-16 flex flex-col justify-center bg-white md:overflow-y-auto md:overscroll-contain custom-scrollbar relative"
+          className="w-full md:w-[55%] h-full min-h-0 p-5 pt-14 md:px-12 md:py-8 flex flex-col justify-start bg-white overflow-y-auto overscroll-contain custom-scrollbar relative"
           style={{ WebkitOverflowScrolling: "touch" }}>
 
           <div className="w-full flex items-center justify-between mb-2 md:hidden">
@@ -642,61 +755,61 @@ const Auth = () => {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
-              className="space-y-8 py-4 md:py-6">
+              className="space-y-8 py-2 md:py-0">
               <div className="space-y-4">
-                 {/* Mobile Brand Header (visible on mobile view only) */}
-                 <div className="flex md:hidden items-center gap-4 mb-6">
-                   <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
-                     {logoUrl ? (
-                       <img
-                         src={logoUrl}
-                         alt={`${appName} logo`}
-                         className="w-8 h-8 object-contain"
-                       />
-                     ) : (
-                       <Store size={20} className="text-slate-700" />
-                     )}
-                   </div>
-                   <div className="text-left">
-                     <h2 className="text-sm font-black text-slate-800 tracking-tight uppercase leading-none">
-                       {appName} <span className="text-slate-500">Partner</span>
-                     </h2>
-                     <p className="text-[10px] text-slate-500 font-semibold tracking-wider mt-1 uppercase">
-                       Empowering Business
-                     </p>
-                   </div>
-                 </div>
-
-                  {/* Mobile Banner Slideshow */}
-                  <div className="block md:hidden w-full aspect-video rounded-2xl relative overflow-hidden mb-6 bg-slate-900 shadow-sm border border-slate-200">
-                    <AnimatePresence mode="wait">
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <motion.img
-                          key={bannerIndex}
-                          src={banners[bannerIndex]?.url}
-                          initial={{ opacity: 0, scale: 1.02 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0 }}
-                          transition={{ duration: 0.5, ease: "easeInOut" }}
-                          style={{
-                            width: banners[bannerIndex]?.width || '100%',
-                            height: banners[bannerIndex]?.height || '100%',
-                            objectFit: 'fill'
-                          }}
-                          alt="Seller Banner"
-                        />
-                      </div>
-                    </AnimatePresence>
-                    {/* Overlay gradient */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                    
-                    {/* Overlay Text */}
-                    <div className="absolute bottom-3 left-4 right-4 z-10 text-left">
-                      <h3 className="text-xs font-black text-white uppercase tracking-widest leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
-                        Seller Partner
-                      </h3>
-                    </div>
+                {/* Mobile Brand Header (visible on mobile view only) */}
+                <div className="flex md:hidden items-center gap-4 mb-6">
+                  <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
+                    {logoUrl ? (
+                      <img
+                        src={logoUrl}
+                        alt={`${appName} logo`}
+                        className="w-8 h-8 object-contain"
+                      />
+                    ) : (
+                      <Store size={20} className="text-slate-700" />
+                    )}
                   </div>
+                  <div className="text-left">
+                    <h2 className="text-sm font-black text-slate-800 tracking-tight uppercase leading-none">
+                      {appName} <span className="text-slate-500">Partner</span>
+                    </h2>
+                    <p className="text-[10px] text-slate-500 font-semibold tracking-wider mt-1 uppercase">
+                      Empowering Business
+                    </p>
+                  </div>
+                </div>
+
+                {/* Mobile Banner Slideshow */}
+                <div className="block md:hidden w-full aspect-video rounded-2xl relative overflow-hidden mb-6 bg-slate-900 shadow-sm border border-slate-200">
+                  <AnimatePresence mode="wait">
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <motion.img
+                        key={bannerIndex}
+                        src={banners[bannerIndex]?.url}
+                        initial={{ opacity: 0, scale: 1.02 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.5, ease: "easeInOut" }}
+                        style={{
+                          width: banners[bannerIndex]?.width || '100%',
+                          height: banners[bannerIndex]?.height || '100%',
+                          objectFit: 'fill'
+                        }}
+                        alt="Seller Banner"
+                      />
+                    </div>
+                  </AnimatePresence>
+                  {/* Overlay gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
+
+                  {/* Overlay Text */}
+                  <div className="absolute bottom-3 left-4 right-4 z-10 text-left">
+                    <h3 className="text-xs font-black text-white uppercase tracking-widest leading-none drop-shadow-[0_1px_4px_rgba(0,0,0,0.8)]">
+                      Seller Partner
+                    </h3>
+                  </div>
+                </div>
 
                 <div className="hidden md:flex w-full items-center justify-between mb-4">
                   <div className="flex items-center gap-4">
@@ -713,7 +826,7 @@ const Auth = () => {
                         : `New Partnership - Step ${signupStep} of 3`}
                     </span>
                   </div>
-                  
+
                   <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 shadow-sm flex items-center justify-center overflow-hidden shrink-0">
                     {logoUrl ? (
                       <img
@@ -1027,6 +1140,154 @@ const Auth = () => {
                           </span>
                         )}
                       </button>
+                    </div>
+
+                    <div className="pt-2">
+                      <p className="text-sm font-black text-slate-600 uppercase tracking-widest mb-3">
+                        Service Coverage Type
+                      </p>
+                      <div className="grid grid-cols-2 gap-y-3 gap-x-6 mb-4">
+                        {[
+                          { id: "hyperlocal", label: "Hyperlocal (Near Shop)" },
+                          { id: "pan_india", label: "Pan India" },
+                          { id: "zone_wise", label: "Zone-wise" },
+                          { id: "all", label: "All Coverage Options" },
+                        ].map((option) => {
+                          const isSelected = getCleanCoverage(serviceCoverage).includes(option.id);
+
+                          return (
+                            <label
+                              key={option.id}
+                              className="flex items-center gap-2 cursor-pointer select-none"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleCoverageToggle(option.id)}
+                                className="w-4 h-4 accent-orange-500 cursor-pointer"
+                              />
+                              <span className="text-sm font-semibold text-slate-700">{option.label}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+
+                      {/* Custom Zones Builder Section */}
+                      {serviceCoverage.includes("zone_wise") && (
+                        <div className="border border-slate-200 rounded-xl p-4 bg-white space-y-4 mb-4 shadow-sm animate-in fade-in duration-200">
+                          <p className="text-xs font-black text-slate-700 uppercase tracking-wider">
+                            Manage Dynamic Zones
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              placeholder="Zone Name (e.g. East Delhi)"
+                              value={newZoneName}
+                              onChange={(e) => setNewZoneName(e.target.value)}
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-300 transition-all"
+                            />
+                            <input
+                              type="text"
+                              placeholder="City"
+                              value={newZoneCity}
+                              onChange={(e) => setNewZoneCity(e.target.value)}
+                              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-300 transition-all"
+                            />
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleAddZone();
+                            }}
+                            className="w-full py-2 bg-slate-900 text-white hover:bg-black rounded-lg text-xs font-black uppercase tracking-wider transition-colors"
+                          >
+                            Add New Zone
+                          </button>
+
+                          {/* Render Added Zones */}
+                          {formData.customZones?.length > 0 ? (
+                            <div className="space-y-3 pt-2">
+                              {formData.customZones.map((zone, zIdx) => (
+                                <div key={zIdx} className="border border-slate-100 rounded-lg p-3 bg-slate-50/50 space-y-2 relative">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleRemoveZone(zIdx);
+                                    }}
+                                    className="absolute right-2 top-2 text-slate-400 hover:text-red-500 transition-colors"
+                                  >
+                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                  </button>
+                                  <div>
+                                    <p className="text-xs font-bold text-slate-800">{zone.name}</p>
+                                    <p className="text-[10px] font-medium text-slate-500">{zone.city}</p>
+                                  </div>
+
+                                  {/* Areas tag list */}
+                                  <div className="flex flex-wrap gap-1">
+                                    {(zone.areas || []).map((area, aIdx) => (
+                                      <span key={aIdx} className="inline-flex items-center gap-1 bg-white border border-slate-200 text-slate-700 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                                        {area}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleRemoveAreaFromZone(zIdx, aIdx);
+                                          }}
+                                          className="text-slate-400 hover:text-red-500"
+                                        >
+                                          &times;
+                                        </button>
+                                      </span>
+                                    ))}
+                                  </div>
+
+                                  {/* Add Area/Pincode to Zone */}
+                                  <div className="flex gap-1.5 mt-2">
+                                    <input
+                                      type="text"
+                                      placeholder="Add area or pincode..."
+                                      value={editingZoneIndex === zIdx ? newAreaInput : ""}
+                                      onChange={(e) => {
+                                        setEditingZoneIndex(zIdx);
+                                        setNewAreaInput(e.target.value);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          handleAddAreaToZone(zIdx);
+                                        }
+                                      }}
+                                      className="flex-1 px-2.5 py-1 bg-white border border-slate-200 rounded-md text-[11px] font-bold text-slate-700 outline-none"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleAddAreaToZone(zIdx);
+                                      }}
+                                      className="px-3 py-1 bg-slate-800 text-white rounded-md text-[10px] font-bold hover:bg-black transition-colors"
+                                    >
+                                      Add
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-[11px] text-slate-400 text-center py-2 font-medium">
+                              No custom zones added yet. Add one above.
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

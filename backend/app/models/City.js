@@ -31,6 +31,10 @@ const citySchema = new mongoose.Schema({
     planMyEventEnabled: {
         type: Boolean,
         default: false
+    },
+    wholesaleEnabled: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingCart, Heart, User, Menu, MapPin, ShoppingBag, Store } from 'lucide-react';
+import { Search, ShoppingCart, Heart, User, Menu, MapPin, ShoppingBag, Store, Clapperboard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useWishlist } from '../../context/WishlistContext';
@@ -217,6 +217,10 @@ const Header = () => {
                                     {wishlistCount}
                                 </span>
                             )}
+                        </Link>
+
+                        <Link to="/reels" className="relative flex items-center justify-center p-2 hover:bg-slate-50 rounded-full transition-colors group">
+                            <Clapperboard className="h-6 w-6 text-slate-600 group-hover:text-[var(--primary)] transition-colors" />
                         </Link>
 
                         <Link to="/checkout" id="header-cart-icon" className="relative flex items-center justify-center p-2 hover:bg-slate-50 rounded-full transition-colors group">

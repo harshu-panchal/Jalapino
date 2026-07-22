@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
-import { Search, Mic, ArrowLeft, X, TrendingUp, ChevronRight, History } from 'lucide-react';
+import { useNavigate, useLocation as useRouterLocation, Link } from 'react-router-dom';
+import { Search, Mic, ArrowLeft, X, TrendingUp, ChevronRight, History, ShoppingBag, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { customerApi } from '../services/customerApi';
 import ProductCard from '../components/shared/ProductCard';
@@ -10,6 +10,7 @@ import { cn } from '@/lib/utils';
 import { useLocation as useAppLocation } from '../context/LocationContext';
 import { getJSON, setJSON, STORAGE_KEYS } from '@core/utils/storage';
 import Lottie from 'lottie-react';
+import { useCart } from '../context/CartContext';
 
 const SearchPage = () => {
     const navigate = useNavigate();
@@ -18,6 +19,8 @@ const SearchPage = () => {
     const { settings } = useSettings();
     const { currentLocation } = useAppLocation();
     const appName = settings?.appName || 'App';
+    const { cart } = useCart();
+    const cartCount = cart.reduce((total, item) => total + (item.quantity || 0), 0);
 
     // Get initial query from URL state or params
     const initialQuery = location.state?.query || new URLSearchParams(location.search).get('q') || '';
@@ -119,6 +122,7 @@ const SearchPage = () => {
             setIsLoading(true);
             try {
                 const response = await customerApi.getProducts({
+                    search: debouncedQuery.trim() || undefined,
                     limit: 100,
                     lat: currentLocation.latitude,
                     lng: currentLocation.longitude,
@@ -153,7 +157,7 @@ const SearchPage = () => {
             }
         };
         fetchProducts();
-    }, [currentLocation?.latitude, currentLocation?.longitude]);
+    }, [currentLocation?.latitude, currentLocation?.longitude, debouncedQuery]);
 
     // Save search term to history
     const saveSearch = (term) => {
@@ -181,10 +185,64 @@ const SearchPage = () => {
     // Real-time filtering logic
     const filteredResults = useMemo(() => {
         if (!debouncedQuery.trim()) return [];
-        return allProducts.filter(p =>
-            p.name.toLowerCase().includes(debouncedQuery.toLowerCase()) ||
-            p.categoryId?.name?.toLowerCase().includes(debouncedQuery.toLowerCase())
+
+        const queryLower = debouncedQuery.toLowerCase().trim();
+        const words = queryLower.split(/\s+/).filter(Boolean);
+        if (words.length === 0) return [];
+
+        const brand = words[0];
+        const restWords = words.slice(1);
+
+        // Filter products matching query
+        const matched = allProducts.filter(p =>
+            p.name.toLowerCase().includes(queryLower) ||
+            p.categoryId?.name?.toLowerCase().includes(queryLower) ||
+            words.every(w => p.name.toLowerCase().includes(w) || (p.categoryId?.name?.toLowerCase() || '').includes(w))
         );
+
+        // Sort by brand match first, followed by others (Flipkart-style)
+        return [...matched].sort((a, b) => {
+            const nameA = (a.name || '').toLowerCase();
+            const nameB = (b.name || '').toLowerCase();
+
+            const getScore = (name) => {
+                let score = 0;
+                if (words.length > 1) {
+                    const hasBrand = name.includes(brand);
+                    const matchesRest = restWords.every(w => name.includes(w));
+
+                    if (hasBrand && matchesRest) {
+                        score = 1000;
+                        if (name.startsWith(brand)) {
+                            score += 100;
+                        }
+                    } else if (!hasBrand && matchesRest) {
+                        score = 500;
+                    } else if (hasBrand && !matchesRest) {
+                        score = 100;
+                    } else {
+                        const matchedCount = words.filter(w => name.includes(w)).length;
+                        score = matchedCount;
+                    }
+                } else {
+                    const word = words[0];
+                    if (name.startsWith(word)) {
+                        score = 1000;
+                    } else if (name.includes(word)) {
+                        score = 500;
+                    }
+                }
+                return score;
+            };
+
+            const scoreA = getScore(nameA);
+            const scoreB = getScore(nameB);
+
+            if (scoreA !== scoreB) {
+                return scoreB - scoreA;
+            }
+            return nameA.localeCompare(nameB);
+        });
     }, [debouncedQuery, allProducts]);
 
     useEffect(() => {
@@ -281,10 +339,17 @@ const SearchPage = () => {
                             <h2 className="text-xl font-black text-slate-800 tracking-tight">
                                 Search Results
                             </h2>
-                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{results.length} found</span>
+                            <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                                {isLoading ? "Searching..." : `${results.length} found`}
+                            </span>
                         </div>
 
-                        {results.length > 0 ? (
+                        {isLoading ? (
+                            <div className="py-20 flex flex-col items-center justify-center">
+                                <Loader2 className="w-12 h-12 text-primary animate-spin" strokeWidth={3} />
+                                <p className="text-slate-400 text-xs font-black uppercase tracking-widest mt-4">Searching Products...</p>
+                            </div>
+                        ) : results.length > 0 ? (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-x-3 md:gap-x-4 gap-y-6 md:gap-y-10">
                                 {results.map((product) => (
                                     <div key={product.id} onClick={() => saveSearch(query)} className="flex justify-center">
@@ -352,6 +417,30 @@ const SearchPage = () => {
                     </>
                 )}
             </div>
+
+            {/* Sticky View Cart Banner at the bottom of Search Page */}
+            {cartCount > 0 && (
+                <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4">
+                    <Link
+                        to="/checkout"
+                        className="w-full max-w-md bg-gradient-to-r from-primary to-[var(--brand-500)] text-white h-14 rounded-2xl flex items-center justify-between px-6 shadow-xl shadow-brand-200/40 hover:shadow-2xl transition-all active:scale-[0.98] animate-in slide-in-from-bottom duration-300"
+                    >
+                        <div className="flex items-center gap-3">
+                            <ShoppingBag size={18} strokeWidth={2.5} />
+                            <span className="text-sm font-black uppercase tracking-wider">View Cart ({cartCount} {cartCount === 1 ? 'item' : 'items'})</span>
+                        </div>
+                        <div className="flex items-center justify-center gap-2 bg-white/20 px-3.5 py-1.5 rounded-xl">
+                            <span className="text-sm font-black tracking-tight">₹{cart.reduce((total, item) => {
+                                const mrp = Number(item.price || 0);
+                                const sale = Number(item.salePrice || 0);
+                                const unit = sale > 0 && sale < mrp ? sale : mrp;
+                                return total + (unit * Number(item.quantity || 0));
+                            }, 0)}</span>
+                            <ChevronRight size={16} strokeWidth={3} />
+                        </div>
+                    </Link>
+                </div>
+            )}
         </div>
     );
 };

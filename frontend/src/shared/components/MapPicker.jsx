@@ -80,6 +80,7 @@ const MapPicker = ({
   const [isGeocoding, setIsGeocoding] = useState(false);
   const mapRef = useRef(null);
   const autocompleteRef = useRef(null);
+  const inputRef = useRef(null);
   const circleRef = useRef(null);
 
   const clearCircleOverlay = useCallback(() => {
@@ -107,23 +108,29 @@ const MapPicker = ({
   }, [initialLocation]);
 
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !isLoaded) return;
 
     setRadius(initialRadius);
-
-    if (preferCurrentLocationOnOpen) {
-      getCurrentLocation({ silent: true, fallbackToInitial: true });
-      return;
-    }
 
     if (initialLocation) {
       setCenter(initialLocation);
       setMarker(initialLocation);
+      
+      if (isLoaded && window.google?.maps?.Geocoder && !address) {
+        const geocoder = new window.google.maps.Geocoder();
+        geocoder.geocode({ location: initialLocation }, (results, status) => {
+          if (status === "OK" && results[0]) {
+            setAddress(results[0].formatted_address);
+          }
+        });
+      }
+    } else if (preferCurrentLocationOnOpen) {
+      getCurrentLocation({ silent: true, fallbackToInitial: true, isAutomatic: true });
     } else {
       setCenter(defaultCenter);
       setMarker(null);
     }
-  }, [isOpen, initialLocation, initialRadius, preferCurrentLocationOnOpen]);
+  }, [isOpen, isLoaded]);
 
   const onMapClick = useCallback((e) => {
     clearCircleOverlay();
@@ -143,29 +150,47 @@ const MapPicker = ({
     setMarker(newPos);
   }, [clearCircleOverlay]);
 
-  const handlePlaceChanged = () => {
-    if (autocompleteRef.current) {
-      const place = autocompleteRef.current.getPlace();
-      if (place.geometry) {
-        clearCircleOverlay();
-        const newPos = {
-          lat: place.geometry.location.lat(),
-          lng: place.geometry.location.lng(),
-        };
-        setCenter(newPos);
-        setMarker(newPos);
-        setAddress(place.formatted_address || "");
-      }
+  // Initialize Google Autocomplete manually on load
+  useEffect(() => {
+    if (isLoaded && window.google?.maps?.places && inputRef.current) {
+      const autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
+        componentRestrictions: { country: "IN" },
+        fields: ["geometry", "formatted_address"],
+      });
+      
+      autocompleteRef.current = autocomplete;
+
+      autocomplete.addListener("place_changed", () => {
+        const place = autocomplete.getPlace();
+        if (place && place.geometry && place.geometry.location) {
+          clearCircleOverlay();
+          const newPos = {
+            lat: place.geometry.location.lat(),
+            lng: place.geometry.location.lng(),
+          };
+          setCenter(newPos);
+          setMarker(newPos);
+          setAddress(place.formatted_address || "");
+          if (mapRef.current) {
+            mapRef.current.panTo(newPos);
+            mapRef.current.setZoom(15);
+          }
+        }
+      });
     }
-  };
+  }, [isLoaded, isOpen]);
 
   const getCurrentLocation = ({
     silent = false,
     fallbackToInitial = false,
+    isAutomatic = false,
   } = {}) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
+          if (isAutomatic && (inputRef.current?.value || marker)) {
+            return;
+          }
           clearCircleOverlay();
           const newPos = {
             lat: position.coords.latitude,
@@ -173,8 +198,12 @@ const MapPicker = ({
           };
           setCenter(newPos);
           setMarker(newPos);
+          if (mapRef.current) {
+            mapRef.current.panTo(newPos);
+            mapRef.current.setZoom(15);
+          }
           
-          if (window.google?.maps) {
+          if (window.google?.maps?.Geocoder) {
             const geocoder = new window.google.maps.Geocoder();
             geocoder.geocode({ location: newPos }, (results, status) => {
               if (status === "OK" && results[0]) {
@@ -324,21 +353,15 @@ const MapPicker = ({
         <div className="flex gap-2">
           <div className="relative flex-1">
             {isLoaded && (
-              <Autocomplete
-                onLoad={(ref) => (autocompleteRef.current = ref)}
-                onPlaceChanged={handlePlaceChanged}
-                options={{
-                  componentRestrictions: { country: "IN" },
-                  fields: ["geometry", "formatted_address"],
-                }}>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <Input
-                    placeholder="Search for your shop area..."
-                    className="pl-10"
-                  />
-                </div>
-              </Autocomplete>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  ref={inputRef}
+                  type="text"
+                  placeholder="Search for your shop area..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all text-sm font-semibold text-slate-800 bg-white"
+                />
+              </div>
             )}
           </div>
           <Button

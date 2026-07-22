@@ -406,6 +406,59 @@ export const getProducts = async (req, res) => {
           : null,
       }));
 
+      // If a search query is present and sorting is default/newest, sort by brand relevance (Flipkart style)
+      if (search && (!sort || sort === "newest")) {
+        const queryLower = String(search).toLowerCase().trim();
+        const words = queryLower.split(/\s+/).filter(Boolean);
+        if (words.length > 0) {
+          const brand = words[0];
+          const restWords = words.slice(1);
+
+          products.sort((a, b) => {
+            const nameA = (a.name || "").toLowerCase();
+            const nameB = (b.name || "").toLowerCase();
+
+            const getScore = (name) => {
+              let score = 0;
+              if (words.length > 1) {
+                const hasBrand = name.includes(brand);
+                const matchesRest = restWords.every((w) => name.includes(w));
+
+                if (hasBrand && matchesRest) {
+                  score = 1000;
+                  if (name.startsWith(brand)) {
+                    score += 100;
+                  }
+                } else if (!hasBrand && matchesRest) {
+                  score = 500;
+                } else if (hasBrand && !matchesRest) {
+                  score = 100;
+                } else {
+                  const matchedCount = words.filter((w) => name.includes(w)).length;
+                  score = matchedCount;
+                }
+              } else {
+                const word = words[0];
+                if (name.startsWith(word)) {
+                  score = 1000;
+                } else if (name.includes(word)) {
+                  score = 500;
+                }
+              }
+              return score;
+            };
+
+            const scoreA = getScore(nameA);
+            const scoreB = getScore(nameB);
+
+            if (scoreA !== scoreB) {
+              return scoreB - scoreA;
+            }
+            return nameA.localeCompare(nameB);
+          });
+        }
+      }
+
       return {
         items: normalizeProductListModeration(products),
         page,
@@ -676,6 +729,24 @@ export const createProduct = async (req, res) => {
       productData.tags = productData.tags.split(",").map((tag) => tag.trim());
     }
 
+    // Handle deliveryCoverage if string (multipart/form-data sends as string)
+    if (typeof productData.deliveryCoverage === "string") {
+      try {
+        productData.deliveryCoverage = JSON.parse(productData.deliveryCoverage);
+      } catch (e) {
+        productData.deliveryCoverage = ["hyperlocal"];
+      }
+    }
+
+    // Handle colors if string
+    if (typeof productData.colors === "string") {
+      try {
+        productData.colors = JSON.parse(productData.colors);
+      } catch (e) {
+        productData.colors = [];
+      }
+    }
+
     // Handle variants if string (multipart/form-data sends as string)
     if (typeof productData.variants === "string") {
       try {
@@ -805,6 +876,24 @@ export const updateProduct = async (req, res) => {
         productData.tags = JSON.parse(productData.tags);
       } catch (e) {
         // Not JSON, keep as is
+      }
+    }
+
+    // Handle deliveryCoverage if string (multipart/form-data sends as string)
+    if (typeof productData.deliveryCoverage === "string") {
+      try {
+        productData.deliveryCoverage = JSON.parse(productData.deliveryCoverage);
+      } catch (e) {
+        productData.deliveryCoverage = ["hyperlocal"];
+      }
+    }
+
+    // Handle colors if string
+    if (typeof productData.colors === "string") {
+      try {
+        productData.colors = JSON.parse(productData.colors);
+      } catch (e) {
+        productData.colors = [];
       }
     }
 

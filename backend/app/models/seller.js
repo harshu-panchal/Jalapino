@@ -146,6 +146,18 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 5, // Default 5km
     },
+    serviceCoverage: {
+      type: [String],
+      enum: ["hyperlocal", "pan_india", "zone_wise"],
+      default: ["hyperlocal"],
+    },
+    customZones: [
+      {
+        name: { type: String, trim: true },
+        city: { type: String, trim: true },
+        areas: [{ type: String, trim: true }],
+      },
+    ],
     // Event Seller Specific Fields
     isEventSeller: {
       type: Boolean,
@@ -224,6 +236,14 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    categoriesEnabled: {
+      type: Boolean,
+      default: true
+    },
+    bookingSlotsEnabled: {
+      type: Boolean,
+      default: false
+    },
     productsEnabled: {
       type: Boolean,
       default: true
@@ -253,6 +273,10 @@ const sellerSchema = new mongoose.Schema(
       ref: 'Category'
     }],
     allowedWholesaleCategories: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category'
+    }],
+    allowedEventCategories: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category'
     }],

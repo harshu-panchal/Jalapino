@@ -23,6 +23,7 @@ import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { adminApi } from '../services/adminApi';
+import { adminEventConfigApi } from '../services/adminEventConfigApi';
 import { PermissionToggle } from '../components/PermissionToggle';
 import { resolveSocketBaseUrl } from '@core/api/resolveApiBaseUrl';
 
@@ -57,6 +58,8 @@ const PendingSellers = () => {
     const [permissions, setPermissions] = useState({
         retailEnabled: true,
         planMyEventEnabled: false,
+        categoriesEnabled: true,
+        bookingSlotsEnabled: false,
         productsEnabled: true,
         stockEnabled: true,
         ordersEnabled: true,
@@ -64,9 +67,12 @@ const PendingSellers = () => {
         analyticsEnabled: true,
         wholesaleEnabled: false,
         allowedRetailCategories: [],
-        allowedWholesaleCategories: []
+        allowedWholesaleCategories: [],
+        allowedEventCategories: [],
+        serviceCategories: []
     });
     const [allCategories, setAllCategories] = useState([]);
+    const [eventCategories, setEventCategories] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [adminRemark, setAdminRemark] = useState('');
     const [adminTerms, setAdminTerms] = useState('');
@@ -95,6 +101,8 @@ const PendingSellers = () => {
                     setPermissions({
                         retailEnabled: s.retailEnabled ?? true,
                         planMyEventEnabled: s.planMyEventEnabled ?? false,
+                        categoriesEnabled: s.categoriesEnabled ?? true,
+                        bookingSlotsEnabled: s.bookingSlotsEnabled ?? false,
                         productsEnabled: s.productsEnabled ?? true,
                         stockEnabled: s.stockEnabled ?? true,
                         ordersEnabled: s.ordersEnabled ?? true,
@@ -102,7 +110,9 @@ const PendingSellers = () => {
                         analyticsEnabled: s.analyticsEnabled ?? true,
                         wholesaleEnabled: s.wholesaleEnabled ?? false,
                         allowedRetailCategories: s.allowedRetailCategories || [],
-                        allowedWholesaleCategories: s.allowedWholesaleCategories || []
+                        allowedWholesaleCategories: s.allowedWholesaleCategories || [],
+                        allowedEventCategories: s.allowedEventCategories || [],
+                        serviceCategories: s.serviceCategories || []
                     });
                     setAdminRemark(s.adminRemark || '');
                     setAdminTerms(s.adminTerms || '');
@@ -135,6 +145,10 @@ const PendingSellers = () => {
                                 ? payload.items
                                 : [];
                     setAllCategories(allCats);
+                }
+                const evCats = await adminEventConfigApi.getEventCategories();
+                if (Array.isArray(evCats)) {
+                    setEventCategories(evCats);
                 }
             } catch (err) {
                 console.error("Failed to load categories:", err);
@@ -637,8 +651,8 @@ const PendingSellers = () => {
                                                      />
                                                   </div>
 
-                                                  {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale are enabled */}
-                                                  {(permissions.retailEnabled || permissions.wholesaleEnabled) && (
+                                                  {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale/Events are enabled */}
+                                                  {(permissions.retailEnabled || permissions.wholesaleEnabled || permissions.planMyEventEnabled) && (
                                                       <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
                                                           {permissions.retailEnabled && (
                                                               <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
@@ -715,10 +729,122 @@ const PendingSellers = () => {
                                                                   </div>
                                                               </div>
                                                           )}
+
+                                                          {permissions.planMyEventEnabled && (
+                                                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                                                                  <div>
+                                                                      <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Plan My Event Categories (Standard)</h6>
+                                                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                          {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (cat.applicableModules || []).includes('plan_my_event')).map(cat => {
+                                                                              const isChecked = (permissions.allowedEventCategories || []).includes(cat._id);
+                                                                              return (
+                                                                                  <label key={cat._id} className={cn(
+                                                                                      "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                      isChecked 
+                                                                                          ? "border-purple-600/20 bg-purple-50/30 text-slate-900" 
+                                                                                          : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                                  )}>
+                                                                                      <input
+                                                                                          type="checkbox"
+                                                                                          checked={isChecked}
+                                                                                          onChange={async (e) => {
+                                                                                              const checked = e.target.checked;
+                                                                                              const current = permissions.allowedEventCategories || [];
+                                                                                              const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                              setPermissions(prev => ({ ...prev, allowedEventCategories: next }));
+                                                                                              try {
+                                                                                                  await adminApi.updateSeller(viewingSeller.id, { allowedEventCategories: next });
+                                                                                                  toast.success(`${cat.name} updated in Event Categories`);
+                                                                                              } catch (err) {
+                                                                                                  toast.error('Failed to update categories');
+                                                                                              }
+                                                                                          }}
+                                                                                          className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
+                                                                                      />
+                                                                                      <span>{cat.name}</span>
+                                                                                  </label>
+                                                                              );
+                                                                          })}
+                                                                      </div>
+                                                                  </div>
+
+                                                                  <div>
+                                                                      <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Event Service Categories (Event Commerce)</h6>
+                                                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                          {eventCategories.map(cat => {
+                                                                              const isChecked = (permissions.serviceCategories || []).includes(cat._id);
+                                                                              return (
+                                                                                  <label key={cat._id} className={cn(
+                                                                                      "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                      isChecked 
+                                                                                          ? "border-purple-600/20 bg-purple-50/30 text-slate-900" 
+                                                                                          : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                                  )}>
+                                                                                      <input
+                                                                                          type="checkbox"
+                                                                                          checked={isChecked}
+                                                                                          onChange={async (e) => {
+                                                                                              const checked = e.target.checked;
+                                                                                              const current = permissions.serviceCategories || [];
+                                                                                              const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                              setPermissions(prev => ({ ...prev, serviceCategories: next }));
+                                                                                              try {
+                                                                                                  await adminApi.updateSeller(viewingSeller.id, { serviceCategories: next });
+                                                                                                  toast.success(`${cat.name} updated in Event Service Categories`);
+                                                                                              } catch (err) {
+                                                                                                  toast.error('Failed to update service categories');
+                                                                                              }
+                                                                                          }}
+                                                                                          className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
+                                                                                      />
+                                                                                      <span>{cat.name}</span>
+                                                                                  </label>
+                                                                              );
+                                                                          })}
+                                                                      </div>
+                                                                  </div>
+                                                              </div>
+                                                          )}
                                                       </div>
                                                   )}
 
-                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+                                                      <PermissionToggle
+                                                          label="Categories Management"
+                                                          description="Allow managing shop categories"
+                                                          checked={permissions.categoriesEnabled}
+                                                          onChange={async (e) => {
+                                                              const checked = e.target.checked;
+                                                              setPermissions(prev => ({ ...prev, categoriesEnabled: checked }));
+                                                              try {
+                                                                  await adminApi.updateSeller(viewingSeller.id, { categoriesEnabled: checked });
+                                                                  toast.success('Categories permission updated');
+                                                                  setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, categoriesEnabled: checked } : seller));
+                                                              } catch (err) {
+                                                                  toast.error('Failed to update categories permission');
+                                                                  setPermissions(prev => ({ ...prev, categoriesEnabled: !checked }));
+                                                              }
+                                                          }}
+                                                      />
+
+                                                      <PermissionToggle
+                                                          label="Booking & Slots Management"
+                                                          description="Allow managing booking slots for products/services"
+                                                          checked={permissions.bookingSlotsEnabled}
+                                                          onChange={async (e) => {
+                                                              const checked = e.target.checked;
+                                                              setPermissions(prev => ({ ...prev, bookingSlotsEnabled: checked }));
+                                                              try {
+                                                                  await adminApi.updateSeller(viewingSeller.id, { bookingSlotsEnabled: checked });
+                                                                  toast.success('Booking Slots permission updated');
+                                                                  setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, bookingSlotsEnabled: checked } : seller));
+                                                              } catch (err) {
+                                                                  toast.error('Failed to update booking slots permission');
+                                                                  setPermissions(prev => ({ ...prev, bookingSlotsEnabled: !checked }));
+                                                              }
+                                                          }}
+                                                      />
 
                                                      <PermissionToggle
                                                          label="Products & Catalog"

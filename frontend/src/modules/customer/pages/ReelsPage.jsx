@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Heart, ShoppingCart, Share2, ArrowLeft, Volume2, VolumeX, Eye, ArrowRight, Star } from 'lucide-react';
+import { Heart, ShoppingCart, Share2, ArrowLeft, Volume2, VolumeX, Eye, ArrowRight, Star, Search, X } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useProductDetail } from '../context/ProductDetailContext';
@@ -18,12 +18,11 @@ const getYouTubeId = (url) => {
     return (match && match[2].length === 11) ? match[2] : null;
 };
 
-const ReelItem = ({ product, isActive, activeIndex, index }) => {
+const ReelItem = ({ product, isActive, activeIndex, index, isMuted, setIsMuted }) => {
     const { toggleWishlist: toggleWishlistGlobal, isInWishlist } = useWishlist();
     const { cart, addToCart, updateQuantity } = useCart();
     const { openProduct } = useProductDetail();
     const { showToast } = useToast();
-    const [isMuted, setIsMuted] = useState(true);
     const [ratingData, setRatingData] = useState({ average: null, count: 0 });
 
     useEffect(() => {
@@ -109,7 +108,7 @@ const ReelItem = ({ product, isActive, activeIndex, index }) => {
     };
 
     return (
-        <div className="reel-slide w-full h-[calc(100vh-70px)] md:h-screen snap-start bg-black relative flex items-center justify-center overflow-hidden">
+        <div className="reel-slide w-full h-[calc(100vh-70px)] md:h-screen snap-start bg-black relative flex items-center justify-center overflow-hidden pt-16">
             {/* Main Video Embed */}
             {isActive && videoId ? (
                 <div className="absolute inset-0 w-full h-full">
@@ -140,16 +139,6 @@ const ReelItem = ({ product, isActive, activeIndex, index }) => {
                     />
                     <div className="absolute w-14 h-14 border-4 border-primary border-t-transparent rounded-full animate-spin z-25" />
                 </div>
-            )}
-
-            {/* Mute/Audio toggle float */}
-            {isActive && (
-                <button
-                    onClick={() => setIsMuted(!isMuted)}
-                    className="absolute top-5 right-5 z-40 p-3 bg-black/40 backdrop-blur-md border border-white/10 rounded-full text-white hover:bg-black/60 active:scale-95 transition-all"
-                >
-                    {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                </button>
             )}
 
             {/* Bottom Overlay Info (Product Description, Title, Brand) */}
@@ -284,6 +273,9 @@ const ReelsPage = () => {
     const [products, setProducts] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeIndex, setActiveIndex] = useState(0);
+    const [searchQuery, setSearchQuery] = useState('');
+    const [queryInput, setQueryInput] = useState('');
+    const [isMuted, setIsMuted] = useState(true);
     const feedRef = useRef(null);
 
     const initialProductId = useMemo(() => {
@@ -299,6 +291,9 @@ const ReelsPage = () => {
                     hasVideo: "true",
                     limit: 20
                 };
+                if (searchQuery.trim()) {
+                    params.search = searchQuery.trim();
+                }
                 if (currentLocation?.latitude && currentLocation?.longitude) {
                     params.lat = currentLocation.latitude;
                     params.lng = currentLocation.longitude;
@@ -326,15 +321,24 @@ const ReelsPage = () => {
                         brand: stream.sellerId?.shopName || "Kitchen",
                         price: 0
                     }));
-                    combinedFeed = combinedFeed.concat(mappedStreams);
+                    
+                    const queryLower = searchQuery.toLowerCase().trim();
+                    const filteredStreams = queryLower
+                        ? mappedStreams.filter(s => s.name.toLowerCase().includes(queryLower) || s.brand.toLowerCase().includes(queryLower))
+                        : mappedStreams;
+                        
+                    combinedFeed = combinedFeed.concat(filteredStreams);
                 }
 
-                // Shuffle combined feed for better UX
-                combinedFeed.sort(() => Math.random() - 0.5);
+                // Shuffle combined feed for better UX only if no search query is present
+                if (!searchQuery.trim()) {
+                    combinedFeed.sort(() => Math.random() - 0.5);
+                }
 
                 setProducts(combinedFeed);
+                setActiveIndex(0); // Reset active index when search changes
 
-                if (initialProductId) {
+                if (initialProductId && !searchQuery.trim()) {
                     const idx = combinedFeed.findIndex(item => String(item._id || item.id) === String(initialProductId));
                     if (idx !== -1) {
                         setActiveIndex(idx);
@@ -348,7 +352,7 @@ const ReelsPage = () => {
         };
 
         fetchReelProducts();
-    }, [currentLocation?.latitude, currentLocation?.longitude, initialProductId]);
+    }, [currentLocation?.latitude, currentLocation?.longitude, initialProductId, searchQuery]);
 
     // Scroll snap container to active index when products and activeIndex are set
     useEffect(() => {
@@ -379,47 +383,105 @@ const ReelsPage = () => {
         );
     }
 
-    if (products.length === 0) {
-        return (
-            <div className="w-full h-[calc(100vh-70px)] md:h-screen bg-black flex flex-col items-center justify-center text-white px-8 text-center">
-                <div className="inline-flex p-4 bg-zinc-900 border border-zinc-800 rounded-full mb-6">
-                    <VolumeX size={36} className="text-zinc-600" />
-                </div>
-                <h3 className="text-xl font-black uppercase tracking-tight mb-2">No Product Videos Yet</h3>
-                <p className="text-sm text-zinc-500 max-w-xs font-medium leading-relaxed mb-8">
-                    Videos are currently unavailable in your neighborhood. Check back later!
-                </p>
-                <button 
-                    onClick={() => navigate('/')} 
-                    className="px-6 py-3 bg-white text-black font-black uppercase tracking-wider text-xs rounded-xl hover:bg-zinc-200 active:scale-95 transition-all"
-                >
-                    Back to Shopping
-                </button>
-            </div>
-        );
-    }
-
     return (
         <div className="relative w-full h-[calc(100vh-70px)] md:h-screen bg-black select-none">
-
-
-            {/* Vertical Scroll Feed Container */}
-            <div
-                ref={feedRef}
-                onScroll={handleScroll}
-                className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-                {products.map((product, idx) => (
-                    <ReelItem
-                        key={product._id || product.id}
-                        product={product}
-                        isActive={idx === activeIndex}
-                        activeIndex={activeIndex}
-                        index={idx}
+            {/* Header Overlay: Back Button + Search Bar + Mute Button */}
+            <div className="absolute top-0 left-0 right-0 h-16 bg-zinc-950/90 backdrop-blur-md border-b border-white/5 z-50 flex items-center justify-between px-4 gap-2.5">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 transition-all rounded-full text-white shadow-sm flex-shrink-0 animate-in fade-in zoom-in duration-300"
+                    title="Go Back"
+                >
+                    <ArrowLeft size={18} strokeWidth={2.5} />
+                </button>
+                
+                <div className="flex-1 max-w-[280px] sm:max-w-[360px] relative animate-in fade-in zoom-in duration-300">
+                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                        <Search size={14} />
+                    </div>
+                    <input
+                        type="text"
+                        value={queryInput}
+                        onChange={(e) => setQueryInput(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                                setSearchQuery(queryInput);
+                            }
+                        }}
+                        placeholder="Search videos..."
+                        className="w-full h-10 bg-white/10 border border-white/10 rounded-full pl-9 pr-9 text-xs text-white font-bold placeholder:text-zinc-500 placeholder:font-medium outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/30 transition-all shadow-sm"
                     />
-                ))}
+                    {queryInput && (
+                        <button
+                            onClick={() => {
+                                setQueryInput('');
+                                setSearchQuery('');
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-white/10 rounded-full transition-colors text-zinc-400 hover:text-white"
+                        >
+                            <X size={12} />
+                        </button>
+                    )}
+                </div>
+
+                <button
+                    onClick={() => setIsMuted(!isMuted)}
+                    className="p-2.5 bg-white/10 hover:bg-white/20 active:scale-95 transition-all rounded-full text-white shadow-sm flex-shrink-0 animate-in fade-in zoom-in duration-300"
+                    title={isMuted ? "Unmute" : "Mute"}
+                >
+                    {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
             </div>
+
+            {products.length === 0 ? (
+                <div className="w-full h-full flex flex-col items-center justify-center text-white px-8 text-center pt-16">
+                    <div className="inline-flex p-4 bg-zinc-900 border border-zinc-800 rounded-full mb-6 animate-in zoom-in duration-300">
+                        <VolumeX size={36} className="text-zinc-600" />
+                    </div>
+                    <h3 className="text-xl font-black uppercase tracking-tight mb-2 animate-in fade-in duration-300">No Product Videos Yet</h3>
+                    <p className="text-sm text-zinc-500 max-w-xs font-medium leading-relaxed mb-8 animate-in fade-in duration-300">
+                        {searchQuery ? `No videos match "${searchQuery}". Try a different search!` : "Videos are currently unavailable in your neighborhood. Check back later!"}
+                    </p>
+                    {searchQuery ? (
+                        <button 
+                            onClick={() => {
+                                setQueryInput('');
+                                setSearchQuery('');
+                            }} 
+                            className="px-6 py-3 bg-white text-black font-black uppercase tracking-wider text-xs rounded-xl hover:bg-zinc-200 active:scale-95 transition-all animate-in fade-in duration-300"
+                        >
+                            Clear Search
+                        </button>
+                    ) : (
+                        <button 
+                            onClick={() => navigate('/')} 
+                            className="px-6 py-3 bg-white text-black font-black uppercase tracking-wider text-xs rounded-xl hover:bg-zinc-200 active:scale-95 transition-all animate-in fade-in duration-300"
+                        >
+                            Back to Shopping
+                        </button>
+                    )}
+                </div>
+            ) : (
+                /* Vertical Scroll Feed Container */
+                <div
+                    ref={feedRef}
+                    onScroll={handleScroll}
+                    className="w-full h-full overflow-y-scroll snap-y snap-mandatory scroll-smooth no-scrollbar"
+                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+                >
+                    {products.map((product, idx) => (
+                        <ReelItem
+                            key={product._id || product.id}
+                            product={product}
+                            isActive={idx === activeIndex}
+                            activeIndex={activeIndex}
+                            index={idx}
+                            isMuted={isMuted}
+                            setIsMuted={setIsMuted}
+                        />
+                    ))}
+                </div>
+            )}
         </div>
     );
 };

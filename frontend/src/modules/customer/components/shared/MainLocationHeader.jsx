@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Lottie from "lottie-react";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
+import { Clapperboard } from 'lucide-react';
 import LocationDrawer from "./LocationDrawer";
 import { useLocation } from "../../context/LocationContext";
 import { useProductDetail } from "../../context/ProductDetailContext";
@@ -589,16 +590,25 @@ const MainLocationHeader = ({
                 whileHover={{ scale: 1.15, rotate: 5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/wishlist")}
-                className="transition-all text-white hover:text-[var(--customer-header-base-color)]"
+                className="transition-all text-white hover:opacity-80"
               >
                 <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
+              </motion.button>
+
+              <motion.button
+                whileHover={{ scale: 1.15, rotate: 5 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => navigate("/reels")}
+                className="transition-all text-white hover:opacity-80"
+              >
+                <Clapperboard size={24} />
               </motion.button>
 
               <motion.button
                 whileHover={{ scale: 1.15, rotate: -5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => navigate("/checkout")}
-                className="transition-all text-white hover:text-[var(--customer-header-base-color)] relative group"
+                className="transition-all text-white hover:opacity-80 relative group"
               >
                 <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
                 <span className="absolute -top-1.5 -right-1.5 bg-[var(--customer-header-base-color)] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm transition-transform group-hover:-translate-y-0.5">

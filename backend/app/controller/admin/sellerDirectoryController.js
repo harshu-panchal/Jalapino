@@ -171,6 +171,8 @@ export const updateSellerDetails = async (req, res) => {
       hasProductAccess,
       retailEnabled,
       planMyEventEnabled,
+      categoriesEnabled,
+      bookingSlotsEnabled,
       productsEnabled,
       stockEnabled,
       ordersEnabled,
@@ -178,7 +180,9 @@ export const updateSellerDetails = async (req, res) => {
       analyticsEnabled,
       wholesaleEnabled,
       allowedRetailCategories,
-      allowedWholesaleCategories
+      allowedWholesaleCategories,
+      allowedEventCategories,
+      serviceCategories
     } = req.body;
     const adminRemark = req.body.adminRemark;
     const adminTerms = req.body.adminTerms;
@@ -196,6 +200,8 @@ export const updateSellerDetails = async (req, res) => {
     if (hasProductAccess !== undefined) updateData.hasProductAccess = hasProductAccess;
     if (retailEnabled !== undefined) updateData.retailEnabled = retailEnabled;
     if (planMyEventEnabled !== undefined) updateData.planMyEventEnabled = planMyEventEnabled;
+    if (categoriesEnabled !== undefined) updateData.categoriesEnabled = categoriesEnabled;
+    if (bookingSlotsEnabled !== undefined) updateData.bookingSlotsEnabled = bookingSlotsEnabled;
     if (productsEnabled !== undefined) updateData.productsEnabled = productsEnabled;
     if (stockEnabled !== undefined) updateData.stockEnabled = stockEnabled;
     if (ordersEnabled !== undefined) updateData.ordersEnabled = ordersEnabled;
@@ -204,6 +210,8 @@ export const updateSellerDetails = async (req, res) => {
     if (wholesaleEnabled !== undefined) updateData.wholesaleEnabled = wholesaleEnabled;
     if (allowedRetailCategories !== undefined) updateData.allowedRetailCategories = allowedRetailCategories;
     if (allowedWholesaleCategories !== undefined) updateData.allowedWholesaleCategories = allowedWholesaleCategories;
+    if (allowedEventCategories !== undefined) updateData.allowedEventCategories = allowedEventCategories;
+    if (serviceCategories !== undefined) updateData.serviceCategories = serviceCategories;
     if (adminRemark !== undefined) updateData.adminRemark = adminRemark;
     if (adminTerms !== undefined) updateData.adminTerms = adminTerms;
 

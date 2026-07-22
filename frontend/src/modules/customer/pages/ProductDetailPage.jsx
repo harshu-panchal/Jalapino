@@ -321,7 +321,18 @@ const ProductDetailPage = () => {
             {/* ============================================================ */}
             {/* DESKTOP LAYOUT (hidden on mobile) */}
             {/* ============================================================ */}
-            <div className="hidden md:flex w-full max-w-6xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-h-[600px] mt-24 mb-16 animate-in fade-in duration-500">
+            {/* Desktop Back button bar */}
+            <div className="hidden md:flex items-center max-w-6xl mx-auto mt-28 mb-1">
+                <button
+                    onClick={() => navigate(-1)}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl font-black text-xs uppercase tracking-wider transition-all active:scale-95 border border-slate-200/50 shadow-sm"
+                >
+                    <ArrowLeft size={14} strokeWidth={3} />
+                    <span>Back</span>
+                </button>
+            </div>
+            
+            <div className="hidden md:flex w-full max-w-6xl mx-auto bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden min-h-[600px] mt-4 mb-16 animate-in fade-in duration-500">
                 {/* Left: Image Gallery */}
                 <div className="relative w-[42%] lg:w-[44%] flex-shrink-0 flex flex-col min-h-full sticky top-0" style={{ background: 'linear-gradient(145deg, #f9fafb 0%, #f1f8f2 50%, #fafbfc 100%)' }}>
                     {/* Top bar with back + wishlist */}

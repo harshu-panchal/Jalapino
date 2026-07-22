@@ -21,9 +21,24 @@ export function escapeRegex(input) {
  * substring behavior.
  */
 export function buildSearchRegex(term, { anchored = true, caseInsensitive = true } = {}) {
-  const escaped = escapeRegex(term);
-  return {
-    $regex: anchored ? `^${escaped}` : escaped,
-    ...(caseInsensitive ? { $options: "i" } : {}),
-  };
+  if (anchored) {
+    const escaped = escapeRegex(term);
+    return {
+      $regex: `^${escaped}`,
+      ...(caseInsensitive ? { $options: "i" } : {}),
+    };
+  } else {
+    const words = String(term).split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      return {
+        $regex: "",
+        ...(caseInsensitive ? { $options: "i" } : {}),
+      };
+    }
+    const regexPattern = words.map(word => `(?=.*${escapeRegex(word)})`).join('');
+    return {
+      $regex: regexPattern,
+      ...(caseInsensitive ? { $options: "i" } : {}),
+    };
+  }
 }

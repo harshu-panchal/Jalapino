@@ -107,8 +107,38 @@ export const signupSeller = async (req, res) => {
             lat,
             lng,
             radius,
-            isPickupPointEligible
+            isPickupPointEligible,
+            serviceCoverage,
+            customZones
         } = req.body || {};
+
+        let parsedServiceCoverage = ["hyperlocal"];
+        if (serviceCoverage) {
+            try {
+                if (typeof serviceCoverage === "string") {
+                    parsedServiceCoverage = JSON.parse(serviceCoverage);
+                } else if (Array.isArray(serviceCoverage)) {
+                    parsedServiceCoverage = serviceCoverage;
+                }
+            } catch (err) {
+                if (typeof serviceCoverage === "string") {
+                    parsedServiceCoverage = serviceCoverage.split(",").map(s => s.trim());
+                }
+            }
+        }
+
+        let parsedCustomZones = [];
+        if (customZones) {
+            try {
+                if (typeof customZones === "string") {
+                    parsedCustomZones = JSON.parse(customZones);
+                } else if (Array.isArray(customZones)) {
+                    parsedCustomZones = customZones;
+                }
+            } catch (err) {
+                console.error("Failed to parse customZones", err);
+            }
+        }
 
         // 1. Handle file uploads if they exist in req.files (multipart form)
         const documentFiles = req.files || [];
@@ -230,6 +260,8 @@ export const signupSeller = async (req, res) => {
             phoneVerified: true,
             isActive: false,
             isPickupPointEligible: isPickupPointEligible === true || isPickupPointEligible === 'true',
+            serviceCoverage: parsedServiceCoverage,
+            customZones: parsedCustomZones,
         };
 
         if (parsedLat !== undefined && parsedLng !== undefined) {

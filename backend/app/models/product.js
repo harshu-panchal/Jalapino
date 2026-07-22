@@ -141,6 +141,15 @@ const productSchema = new mongoose.Schema(
             trim: true,
             default: "",
         },
+        colors: [{
+            type: String,
+            trim: true,
+        }],
+        deliveryCoverage: [{
+            type: String,
+            enum: ["hyperlocal", "pan_india", "zone_wise"],
+            default: "hyperlocal",
+        }],
         countryOfOrigin: {
             type: String,
             trim: true,

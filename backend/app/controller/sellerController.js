@@ -161,7 +161,7 @@ export const getSellerProfile = async (req, res) => {
 ================================ */
 export const updateSellerProfile = async (req, res) => {
   try {
-    const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius } = req.body;
+    const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius, serviceCoverage, customZones } = req.body;
 
     // Find seller
     const seller = await Seller.findById(req.user.id);
@@ -178,6 +178,30 @@ export const updateSellerProfile = async (req, res) => {
     if (pincode !== undefined) seller.pincode = pincode;
     if (city !== undefined) seller.city = city;
     if (state !== undefined) seller.state = state;
+
+    if (serviceCoverage !== undefined) {
+      if (typeof serviceCoverage === "string") {
+        try {
+          seller.serviceCoverage = JSON.parse(serviceCoverage);
+        } catch (e) {
+          seller.serviceCoverage = serviceCoverage.split(",").map(s => s.trim());
+        }
+      } else {
+        seller.serviceCoverage = serviceCoverage;
+      }
+    }
+
+    if (customZones !== undefined) {
+      if (typeof customZones === "string") {
+        try {
+          seller.customZones = JSON.parse(customZones);
+        } catch (e) {
+          console.error("Failed to parse customZones", e);
+        }
+      } else {
+        seller.customZones = customZones;
+      }
+    }
 
     // Validate and update geo data
     if (lat !== undefined && lng !== undefined) {

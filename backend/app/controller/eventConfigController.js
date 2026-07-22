@@ -7,7 +7,7 @@ import handleResponse from '../utils/helper.js';
 
 export const getCities = async (req, res) => {
     try {
-        const cities = await City.find({ isActive: true }).select('state cityName readinessStatus retailEnabled planMyEventEnabled').sort({ state: 1, cityName: 1 });
+        const cities = await City.find({ isActive: true }).select('state cityName readinessStatus retailEnabled planMyEventEnabled wholesaleEnabled').sort({ state: 1, cityName: 1 });
         return handleResponse(res, 200, 'Cities fetched successfully', cities);
     } catch (error) {
         return handleResponse(res, 500, 'Failed to fetch cities');
