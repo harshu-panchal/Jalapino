@@ -154,7 +154,7 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
             <div className="flex justify-between items-center">
               <div className="flex flex-col">
                 <span className="font-[1000] text-slate-800 text-lg tracking-tight">
-                  {finalAmountToPay === 0 ? "Fully Covered" : "Total Payable"}
+                  {finalAmountToPay === 0 ? "Fully Covered" : (pricingPreview?.advanceAmountRequired > 0 ? "Advance Payable Now" : "Total Payable")}
                 </span>
                 <span className="text-[10px] text-slate-400 font-bold tracking-[0.2em]">
                   {finalAmountToPay === 0 ? "Paid via Wallet" : "Safe & Secure Payment"}
@@ -164,6 +164,12 @@ const CheckoutPricingBreakdown = React.memo(function CheckoutPricingBreakdown({
                 {isPreviewLoading ? "Calculating..." : `₹${finalAmountToPay}`}
               </span>
             </div>
+            {pricingPreview?.advanceAmountRequired > 0 && finalAmountToPay > 0 && (
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-slate-100">
+                <span className="text-slate-500 font-bold text-xs">To Pay on Delivery</span>
+                <span className="font-bold text-slate-800 text-sm">₹{pricingPreview.remainingAmountCOD}</span>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>

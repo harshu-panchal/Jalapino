@@ -251,6 +251,9 @@ const orderSchema = new mongoose.Schema(
       walletAmount: { type: Number, default: 0 },
       distanceKmActual: { type: Number, default: 0 },
       distanceKmRounded: { type: Number, default: 0 },
+      advanceAmountRequired: { type: Number, default: 0 },
+      remainingAmountCOD: { type: Number, default: 0 },
+      isAdvancePaid: { type: Boolean, default: false },
       snapshots: {
         deliverySettings: { type: Object, default: {} },
         categoryCommissionSettings: { type: Array, default: [] },

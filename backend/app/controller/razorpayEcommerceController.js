@@ -38,6 +38,14 @@ export const verifyRazorpayEcommerceOrder = async (req, res) => {
             .digest('hex');
 
         if (expectedSignature === razorpay_signature) {
+            // Fetch Razorpay order to get the actual amount paid
+            const razorpay = new Razorpay({
+                key_id: process.env.RAZORPAY_KEY_ID,
+                key_secret: process.env.RAZORPAY_KEY_SECRET,
+            });
+            const rzpOrder = await razorpay.orders.fetch(razorpay_order_id);
+            const amountPaidInRupees = rzpOrder.amount / 100;
+
             // Mark order as paid
             const orders = await Order.find({
                 $or: [
@@ -48,8 +56,21 @@ export const verifyRazorpayEcommerceOrder = async (req, res) => {
 
             if (orders && orders.length > 0) {
                 for (let o of orders) {
-                    o.paymentStatus = 'PAID';
-                    o.paymentMode = 'ONLINE';
+                    const advanceRequired = o.paymentBreakdown?.advanceAmountRequired || 0;
+                    const grandTotal = o.paymentBreakdown?.payableAmount || o.paymentBreakdown?.grandTotal || 0;
+
+                    // If amount paid is less than grand total but >= advance required, it's an advance payment
+                    if (advanceRequired > 0 && amountPaidInRupees < grandTotal) {
+                        if (o.paymentBreakdown) {
+                            o.paymentBreakdown.isAdvancePaid = true;
+                        }
+                        o.paymentStatus = 'PENDING_CASH_COLLECTION';
+                        o.paymentMode = 'COD';
+                    } else {
+                        // Full payment
+                        o.paymentStatus = 'PAID';
+                        o.paymentMode = 'ONLINE';
+                    }
                     await o.save();
                 }
             }

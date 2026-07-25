@@ -25,7 +25,8 @@ import { useAuth } from "@core/context/AuthContext";
 
 const AddProduct = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
+  console.log("Seller Profile in AddProduct:", user);
   const [modalTab, setModalTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -65,6 +66,7 @@ const AddProduct = () => {
     fssaiLicense: "",
     hsnId: "",
     colors: [],
+    ingredients: "",
     deliveryCoverage: user?.serviceCoverage || ["hyperlocal"],
     variants: [
       {
@@ -109,6 +111,9 @@ const AddProduct = () => {
   }, [formData.name]);
 
   React.useEffect(() => {
+    if (refreshUser) {
+      refreshUser();
+    }
     const fetchCats = async () => {
       try {
         const [catRes, hsnRes] = await Promise.all([
@@ -317,12 +322,13 @@ const AddProduct = () => {
         <div className="flex-1 p-8 overflow-y-auto">
           {modalTab === "general" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
-              <div className="space-y-1.5 flex flex-col">
+              <div className="space-y-1.5 flex flex-col relative">
                 <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
                   Product Title
                 </label>
                 <input
                   value={formData.name}
+                  disabled={!user?.allowCustomProductEntry}
                   onChange={(e) => {
                     const nextName = e.target.value;
                     setFormData((prev) => ({
@@ -343,8 +349,12 @@ const AddProduct = () => {
                       }),
                     }));
                   }}
-                  className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                  placeholder="e.g. Premium Basmati Rice"
+                  className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${
+                    !user?.allowCustomProductEntry
+                      ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                      : "bg-slate-100"
+                  }`}
+                  placeholder={!user?.allowCustomProductEntry ? "Contact Admin to allow custom entry" : "e.g. Premium Basmati Rice"}
                 />
               </div>
               <div className="space-y-1.5 flex flex-col">
@@ -418,11 +428,16 @@ const AddProduct = () => {
                   </label>
                   <input
                     value={formData.brand}
+                    disabled={!user?.allowCustomProductEntry}
                     onChange={(e) =>
                       setFormData({ ...formData, brand: e.target.value })
                     }
-                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                    placeholder="e.g. Amul"
+                    className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${
+                      !user?.allowCustomProductEntry
+                        ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                        : "bg-slate-100"
+                    }`}
+                    placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
                   />
                 </div>
                 <div className="space-y-1.5 flex flex-col">
@@ -438,6 +453,27 @@ const AddProduct = () => {
                     placeholder="AUTO-GENERATED"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-1.5 flex flex-col">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                  Ingredients
+                </label>
+                <textarea
+                  value={formData.ingredients}
+                  disabled={!user?.allowCustomProductEntry}
+                  onChange={(e) =>
+                    setFormData({ ...formData, ingredients: e.target.value })
+                  }
+                  onWheel={(e) => e.stopPropagation()}
+                  onTouchMove={(e) => e.stopPropagation()}
+                  className={`w-full px-4 py-3 border-none rounded-2xl text-sm font-semibold min-h-[100px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none ${
+                    !user?.allowCustomProductEntry
+                      ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                      : "bg-slate-100"
+                  }`}
+                  placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
+                />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

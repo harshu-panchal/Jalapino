@@ -64,7 +64,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
     setError(null);
 
     // Auto-focus next field if digit entered
-    if (value && index < 3) {
+    if (value && index < 5) {
       inputRefs[index + 1].current?.focus();
     }
   };
@@ -87,12 +87,12 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
     const pastedData = e.clipboardData.getData("text").trim();
 
     // Only accept 4-digit numeric paste
-    if (/^\d{4}$/.test(pastedData)) {
+    if (/^\d{6}$/.test(pastedData)) {
       const newOtp = pastedData.split("");
       setOtp(newOtp);
       setError(null);
       // Focus last input
-      inputRefs[3].current?.focus();
+      inputRefs[5].current?.focus();
     }
   };
 
@@ -101,7 +101,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
    * Requirement 6.5: Clear input fields after failed validation
    */
   const clearInputs = () => {
-    setOtp(["", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]);
     setError(null);
     inputRefs[0].current?.focus();
   };
@@ -139,8 +139,8 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
     const otpString = otp.join("");
 
     // Validate OTP format before submission
-    if (otpString.length !== 4) {
-      setError("Please enter all 4 digits");
+    if (otpString.length !== 6) {
+      setError("Please enter all 6 digits");
       return;
     }
 
@@ -248,7 +248,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
       </div>
 
       {/* OTP Input Fields */}
-      <div className="flex justify-center gap-3">
+      <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3 px-1">
         {otp.map((digit, index) => (
           <input
             key={index}
@@ -262,7 +262,7 @@ const OtpInput = ({ orderId, isReturn = false, isReturnDrop = false, onSuccess, 
             onKeyDown={(e) => handleKeyDown(index, e)}
             onPaste={index === 0 ? handlePaste : undefined}
             disabled={isLoading}
-            className={`w-14 h-16 text-center text-2xl font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${error
+            className={`min-w-0 flex-1 max-w-[3rem] sm:max-w-[3.5rem] h-12 sm:h-14 md:h-16 text-center text-xl md:text-2xl font-bold font-mono border-2 rounded-xl transition-all duration-200 outline-none focus:outline-none focus:ring-2 focus:ring-offset-0 ${error
                 ? "border-red-300 bg-red-50 text-red-900 focus:border-red-500 focus:ring-red-500"
                 : digit
                   ? "border-primary bg-primary/10 text-slate-900 focus:border-primary focus:ring-primary"

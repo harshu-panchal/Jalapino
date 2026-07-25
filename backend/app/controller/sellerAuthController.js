@@ -215,10 +215,18 @@ export const signupSeller = async (req, res) => {
             return handleResponse(res, 400, "Radius must be between 1 and 100 km");
         }
 
-        let seller = await Seller.findOne({ $or: [{ email }, { phone }] });
+        const emailQuery = email ? new RegExp(`^${email}$`, "i") : undefined;
+        const phoneQuery = phone;
+        let seller = await Seller.findOne({ $or: [{ email: emailQuery }, { phone: phoneQuery }].filter(Boolean) });
 
         if (seller) {
-            return handleResponse(res, 400, "Seller with this email or phone already exists");
+            if (seller.applicationStatus === "rejected") {
+                // Delete the rejected seller document so they can sign up again
+                await Seller.deleteOne({ _id: seller._id });
+                seller = null;
+            } else {
+                return handleResponse(res, 400, "Seller with this email or phone already exists");
+            }
         }
 
         const parsedDocuments = parseDocumentsPayload(documents);
@@ -344,7 +352,8 @@ export const loginSeller = async (req, res) => {
         }
 
         // Include password for comparison
-        const seller = await Seller.findOne({ email }).select("+password");
+        const emailQuery = email ? new RegExp(`^${email}$`, "i") : undefined;
+        const seller = await Seller.findOne({ email: emailQuery }).select("+password");
 
         if (!seller) {
             return handleResponse(res, 404, "Seller not found");

@@ -70,7 +70,7 @@ const DeliveryAuth = () => {
   const [dlFile, setDlFile] = useState(null);
 
   // OTP state
-  const [otp, setOtp] = useState(["", "", "", ""]);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [agreed, setAgreed] = useState(false);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
@@ -224,7 +224,7 @@ const DeliveryAuth = () => {
         const res = await deliveryApi.sendSignupOtp(formData);
         toast.success(res.data?.message || "OTP sent!");
       }
-      setOtp(["", "", "", ""]);
+      setOtp(["", "", "", "", "", ""]);
       setTimer(30);
       setStep("otp");
     } catch (error) {
@@ -261,7 +261,7 @@ const DeliveryAuth = () => {
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
-    if (value && index < 3) {
+    if (value && index < 5) {
       document.getElementById(`otp-${index + 1}`)?.focus();
     }
   };
@@ -275,7 +275,7 @@ const DeliveryAuth = () => {
   const switchMode = (newMode) => {
     setMode(newMode);
     setStep("form");
-    setOtp(["", "", "", ""]);
+    setOtp(["", "", "", "", "", ""]);
     setLoginPhone("");
     setSignupStep(1);
     setSignupName("");
@@ -964,7 +964,7 @@ const DeliveryAuth = () => {
                     <label className="text-xs font-black text-gray-400 uppercase tracking-widest">
                       Enter Security Code
                     </label>
-                    <div className="flex justify-center gap-3 pt-1">
+                    <div className="flex justify-center gap-1.5 sm:gap-2 md:gap-3 pt-1 px-1">
                       {otp.map((digit, index) => (
                         <input
                           key={index}
@@ -974,7 +974,7 @@ const DeliveryAuth = () => {
                           value={digit}
                           onChange={(e) => handleOtpChange(index, e.target.value)}
                           onKeyDown={(e) => handleKeyDown(index, e)}
-                          className="w-14 h-14 text-center text-2xl font-black border-2 border-gray-100 rounded-2xl focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all bg-gray-50 text-gray-900"
+                          className="min-w-0 flex-1 max-w-[3rem] sm:max-w-[3.5rem] h-12 sm:h-14 md:h-14 text-center text-xl md:text-2xl font-black border-2 border-gray-100 rounded-xl focus:border-brand-500 focus:ring-4 focus:ring-brand-100 outline-none transition-all bg-gray-50 text-gray-900"
                         />
                       ))}
                     </div>
@@ -1027,7 +1027,7 @@ const DeliveryAuth = () => {
 
                   {/* Back */}
                   <button
-                    onClick={() => { setStep("form"); setOtp(["", "", "", ""]); }}
+                    onClick={() => { setStep("form"); setOtp(["", "", "", "", "", ""]); }}
                     className="w-full flex items-center justify-center gap-1.5 text-gray-400 hover:text-gray-600 text-sm font-bold transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" /> Edit Phone Number

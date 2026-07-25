@@ -77,7 +77,19 @@ const SellerDetail = () => {
         },
         isEventSeller: false,
         eventCategory: '',
-        maxCapacity: 500
+        maxCapacity: 500,
+        allowCustomProductEntry: false,
+        liveKitchenEnabled: false,
+        customizationEngineEnabled: false,
+        quoteReferencePhotoUpload: false,
+        quoteThemeSelection: false,
+        quoteColorCombination: false,
+        quoteBudgetSelection: false,
+        quoteCustomerNotes: false,
+        quoteSellerQuotation: false,
+        quoteQuoteRevision: false,
+        quoteCustomerApproval: false,
+        quoteFinalPayment: false,
     });
     
     const [eventCategories, setEventCategories] = useState([]);
@@ -117,7 +129,19 @@ const SellerDetail = () => {
                 stockEnabled: data.stockEnabled ?? true,
                 ordersEnabled: data.ordersEnabled ?? true,
                 walletEnabled: data.walletEnabled ?? true,
-                analyticsEnabled: data.analyticsEnabled ?? true
+                analyticsEnabled: data.analyticsEnabled ?? true,
+                allowCustomProductEntry: data.allowCustomProductEntry ?? false,
+                liveKitchenEnabled: data.liveKitchenEnabled ?? false,
+                customizationEngineEnabled: data.customizationEngineEnabled ?? false,
+                quoteReferencePhotoUpload: data.quoteReferencePhotoUpload ?? false,
+                quoteThemeSelection: data.quoteThemeSelection ?? false,
+                quoteColorCombination: data.quoteColorCombination ?? false,
+                quoteBudgetSelection: data.quoteBudgetSelection ?? false,
+                quoteCustomerNotes: data.quoteCustomerNotes ?? false,
+                quoteSellerQuotation: data.quoteSellerQuotation ?? false,
+                quoteQuoteRevision: data.quoteQuoteRevision ?? false,
+                quoteCustomerApproval: data.quoteCustomerApproval ?? false,
+                quoteFinalPayment: data.quoteFinalPayment ?? false
             }));
         } catch (error) {
             console.error(error);
@@ -623,8 +647,215 @@ const SellerDetail = () => {
                                                     }}
                                                 />
 
+                                                <PermissionToggle
+                                                    label="Custom Product Entry"
+                                                    description="Allow manual entry of product name, brand, and ingredients"
+                                                    checked={seller.allowCustomProductEntry}
+                                                    activeColor="bg-emerald-500" hoverColor="group-hover:text-emerald-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, allowCustomProductEntry: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { allowCustomProductEntry: checked });
+                                                            showToast('Custom product entry permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, allowCustomProductEntry: !checked }));
+                                                            showToast('Failed to update custom product entry permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Live Kitchen"
+                                                    description="Allow live streaming/camera updates from seller kitchen"
+                                                    checked={seller.liveKitchenEnabled}
+                                                    activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, liveKitchenEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { liveKitchenEnabled: checked });
+                                                            showToast('Live kitchen permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, liveKitchenEnabled: !checked }));
+                                                            showToast('Failed to update live kitchen permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Customization & Quotation Engine"
+                                                    description="Master toggle to allow customizations and direct quotations"
+                                                    checked={seller.customizationEngineEnabled}
+                                                    activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, customizationEngineEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { customizationEngineEnabled: checked });
+                                                            showToast('Customization engine permission updated', 'success');
+                                                        } catch(err) {
+                                                            setSeller(prev => ({ ...prev, customizationEngineEnabled: !checked }));
+                                                            showToast('Failed to update customization engine permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
                                             </div>
                                         </div>
+
+                                        {/* Customization & Quotation Engine Sub-Permissions */}
+                                        {seller.customizationEngineEnabled && (
+                                            <div className="mb-8">
+                                                <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Customization & Quotation Settings</h5>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                                    <PermissionToggle
+                                                        label="Reference Photo Upload"
+                                                        description="Allow upload of reference photos"
+                                                        checked={seller.quoteReferencePhotoUpload}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteReferencePhotoUpload: checked });
+                                                                showToast('Reference photo upload permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
+                                                                showToast('Failed to update reference photo upload permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Theme Selection"
+                                                        description="Allow selecting themes"
+                                                        checked={seller.quoteThemeSelection}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteThemeSelection: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteThemeSelection: checked });
+                                                                showToast('Theme selection permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteThemeSelection: !checked }));
+                                                                showToast('Failed to update theme selection permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Color Combination"
+                                                        description="Allow selecting color combinations"
+                                                        checked={seller.quoteColorCombination}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteColorCombination: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteColorCombination: checked });
+                                                                showToast('Color combination permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteColorCombination: !checked }));
+                                                                showToast('Failed to update color combination permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Budget Selection"
+                                                        description="Allow selecting budget options"
+                                                        checked={seller.quoteBudgetSelection}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteBudgetSelection: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteBudgetSelection: checked });
+                                                                showToast('Budget selection permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteBudgetSelection: !checked }));
+                                                                showToast('Failed to update budget selection permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Customer Notes"
+                                                        description="Allow customer notes/instructions"
+                                                        checked={seller.quoteCustomerNotes}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteCustomerNotes: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteCustomerNotes: checked });
+                                                                showToast('Customer notes permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteCustomerNotes: !checked }));
+                                                                showToast('Failed to update customer notes permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Seller Quotation"
+                                                        description="Allow seller to send quotations"
+                                                        checked={seller.quoteSellerQuotation}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteSellerQuotation: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteSellerQuotation: checked });
+                                                                showToast('Seller quotation permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteSellerQuotation: !checked }));
+                                                                showToast('Failed to update seller quotation permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Quote Revision"
+                                                        description="Allow revisions to quotation"
+                                                        checked={seller.quoteQuoteRevision}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteQuoteRevision: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteQuoteRevision: checked });
+                                                                showToast('Quote revision permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteQuoteRevision: !checked }));
+                                                                showToast('Failed to update quote revision permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Customer Approval"
+                                                        description="Allow customer approval step"
+                                                        checked={seller.quoteCustomerApproval}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteCustomerApproval: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteCustomerApproval: checked });
+                                                                showToast('Customer approval permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteCustomerApproval: !checked }));
+                                                                showToast('Failed to update customer approval permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
+                                                        label="Final Payment"
+                                                        description="Allow final payment step"
+                                                        checked={seller.quoteFinalPayment}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteFinalPayment: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteFinalPayment: checked });
+                                                                showToast('Final payment permission updated', 'success');
+                                                            } catch(err) {
+                                                                setSeller(prev => ({ ...prev, quoteFinalPayment: !checked }));
+                                                                showToast('Failed to update final payment permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div>
                                             <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 mt-8">Operational Status</h5>

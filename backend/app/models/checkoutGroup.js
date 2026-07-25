@@ -105,6 +105,18 @@ const checkoutGroupSchema = new mongoose.Schema(
         type: Number,
         default: 0,
       },
+      advanceAmountRequired: {
+        type: Number,
+        default: 0,
+      },
+      remainingAmountCOD: {
+        type: Number,
+        default: 0,
+      },
+      isAdvancePaid: {
+        type: Boolean,
+        default: false,
+      },
       walletAmount: {
         type: Number,
         default: 0,

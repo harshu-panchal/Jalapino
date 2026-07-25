@@ -186,18 +186,21 @@ const CheckoutPage = () => {
     }
   }, [cart.length === 0]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const advanceAmountRequired = pricingPreview?.advanceAmountRequired || 0;
+  const isAdvanceRequired = advanceAmountRequired > 0;
+
   const paymentMethods = [
     ...(settings?.onlineEnabled === false
       ? []
       : [
         {
           id: "online",
-          label: "Pay Online",
+          label: isAdvanceRequired ? `Pay Advance Online (₹${advanceAmountRequired})` : "Pay Online",
           icon: CreditCard,
-          sublabel: "UPI / Cards / NetBanking",
+          sublabel: isAdvanceRequired ? "Pay advance online, rest on delivery" : "UPI / Cards / NetBanking",
         },
       ]),
-    ...(settings?.codEnabled === false
+    ...(settings?.codEnabled === false || isAdvanceRequired
       ? []
       : [
         {
@@ -233,14 +236,16 @@ const CheckoutPage = () => {
   useEffect(() => {
     if (useWallet && user?.walletBalance && pricingPreview?.grandTotal) {
       const maxAvailable = Number(user.walletBalance || 0);
-      const totalToPay = Number(pricingPreview.grandTotal || 0);
+      const totalToPay = isAdvanceRequired ? advanceAmountRequired : Number(pricingPreview.grandTotal || 0);
       setWalletAmountToUse(Math.min(maxAvailable, totalToPay));
     } else {
       setWalletAmountToUse(0);
     }
-  }, [useWallet, user?.walletBalance, pricingPreview?.grandTotal]);
+  }, [useWallet, user?.walletBalance, pricingPreview?.grandTotal, isAdvanceRequired, advanceAmountRequired]);
 
-  const finalAmountToPay = Math.max(0, (pricingPreview?.grandTotal || 0) - walletAmountToUse);
+  const finalAmountToPay = isAdvanceRequired 
+    ? Math.max(0, advanceAmountRequired - walletAmountToUse)
+    : Math.max(0, (pricingPreview?.grandTotal || 0) - walletAmountToUse);
 
   const buildAddressForOrder = () => {
     if (savedRecipient) {

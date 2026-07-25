@@ -186,6 +186,19 @@ export const updateSellerDetails = async (req, res) => {
     } = req.body;
     const adminRemark = req.body.adminRemark;
     const adminTerms = req.body.adminTerms;
+    const advancePaymentPercentage = req.body.advancePaymentPercentage;
+    const allowCustomProductEntry = req.body.allowCustomProductEntry;
+    const liveKitchenEnabled = req.body.liveKitchenEnabled;
+    const customizationEngineEnabled = req.body.customizationEngineEnabled;
+    const quoteReferencePhotoUpload = req.body.quoteReferencePhotoUpload;
+    const quoteThemeSelection = req.body.quoteThemeSelection;
+    const quoteColorCombination = req.body.quoteColorCombination;
+    const quoteBudgetSelection = req.body.quoteBudgetSelection;
+    const quoteCustomerNotes = req.body.quoteCustomerNotes;
+    const quoteSellerQuotation = req.body.quoteSellerQuotation;
+    const quoteQuoteRevision = req.body.quoteQuoteRevision;
+    const quoteCustomerApproval = req.body.quoteCustomerApproval;
+    const quoteFinalPayment = req.body.quoteFinalPayment;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -214,6 +227,19 @@ export const updateSellerDetails = async (req, res) => {
     if (serviceCategories !== undefined) updateData.serviceCategories = serviceCategories;
     if (adminRemark !== undefined) updateData.adminRemark = adminRemark;
     if (adminTerms !== undefined) updateData.adminTerms = adminTerms;
+    if (advancePaymentPercentage !== undefined) updateData.advancePaymentPercentage = Number(advancePaymentPercentage);
+    if (allowCustomProductEntry !== undefined) updateData.allowCustomProductEntry = allowCustomProductEntry;
+    if (liveKitchenEnabled !== undefined) updateData.liveKitchenEnabled = liveKitchenEnabled;
+    if (customizationEngineEnabled !== undefined) updateData.customizationEngineEnabled = customizationEngineEnabled;
+    if (quoteReferencePhotoUpload !== undefined) updateData.quoteReferencePhotoUpload = quoteReferencePhotoUpload;
+    if (quoteThemeSelection !== undefined) updateData.quoteThemeSelection = quoteThemeSelection;
+    if (quoteColorCombination !== undefined) updateData.quoteColorCombination = quoteColorCombination;
+    if (quoteBudgetSelection !== undefined) updateData.quoteBudgetSelection = quoteBudgetSelection;
+    if (quoteCustomerNotes !== undefined) updateData.quoteCustomerNotes = quoteCustomerNotes;
+    if (quoteSellerQuotation !== undefined) updateData.quoteSellerQuotation = quoteSellerQuotation;
+    if (quoteQuoteRevision !== undefined) updateData.quoteQuoteRevision = quoteQuoteRevision;
+    if (quoteCustomerApproval !== undefined) updateData.quoteCustomerApproval = quoteCustomerApproval;
+    if (quoteFinalPayment !== undefined) updateData.quoteFinalPayment = quoteFinalPayment;
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(

@@ -52,14 +52,24 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const availableModules = useMemo(() => {
-    const currentCityName = currentLocation?.city?.trim()?.toLowerCase();
-    const cityConfig = citiesConfig.find(c => c.cityName?.trim()?.toLowerCase() === currentCityName);
+    const currentCityName = currentLocation?.city?.trim()?.toLowerCase() || "";
+    const cityConfig = citiesConfig.find(c => {
+        let dbCity = c.cityName?.trim()?.toLowerCase() || "";
+        let locCity = currentCityName;
+        
+        if (dbCity === locCity) return true;
+        // strip " ji" to match user's custom naming in DB vs Google Maps
+        if (dbCity.endsWith(" ji")) dbCity = dbCity.replace(/ ji$/, "");
+        if (locCity.endsWith(" ji")) locCity = locCity.replace(/ ji$/, "");
+        
+        return dbCity === locCity;
+    });
     
     // Default to true if not configured or fallback logic
     return {
       retailEnabled: cityConfig ? (cityConfig.retailEnabled ?? true) : true,
       planMyEventEnabled: cityConfig ? (cityConfig.planMyEventEnabled ?? false) : false,
-      wholesaleEnabled: false // We can pull from settings if needed, but defaulting to false or settings logic
+      wholesaleEnabled: cityConfig ? (cityConfig.wholesaleEnabled ?? false) : false
     };
   }, [currentLocation?.city, citiesConfig]);
 
