@@ -769,7 +769,7 @@ const SellerProfile = () => {
 
           {/* Admin Terms Card - only if terms exist */}
           {profile?.adminTerms && (
-            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-indigo-50 border border-indigo-100">
+            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-indigo-50 border border-indigo-100 mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-8 w-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 text-base">
                   📝
@@ -781,6 +781,24 @@ const SellerProfile = () => {
               </div>
               <p className="text-xs font-medium text-indigo-900 leading-relaxed whitespace-pre-wrap">
                 {profile.adminTerms}
+              </p>
+            </Card>
+          )}
+
+          {/* Advance Payment Card */}
+          {profile?.advancePaymentPercentage > 0 && (
+            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-emerald-50 border border-emerald-100 mb-4">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="h-8 w-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 text-base">
+                  💰
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[3px] text-emerald-700">Advance Payment</p>
+                  <p className="text-[10px] text-emerald-600 font-medium">Order Requirement</p>
+                </div>
+              </div>
+              <p className="text-xs font-medium text-emerald-900 leading-relaxed whitespace-pre-wrap">
+                You are required to collect a {profile.advancePaymentPercentage}% advance payment on your orders.
               </p>
             </Card>
           )}

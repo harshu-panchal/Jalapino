@@ -37,7 +37,7 @@ export const signupDelivery = async (req, res) => {
 
         let otp = generateOTP();
         if (phone === "6268423925" || phone === "+916268423925" || phone === "9111966732" || phone === "+919111966732") {
-            otp = "1234";
+            otp = "123456";
         }
 
         let aadharUrl = delivery?.documents?.aadhar || "";
@@ -129,7 +129,7 @@ export const loginDelivery = async (req, res) => {
 
         let otp = generateOTP();
         if (phone === "6268423925" || phone === "+916268423925" || phone === "9111966732" || phone === "+919111966732") {
-            otp = "1234";
+            otp = "123456";
         }
 
         delivery.otp = otp;

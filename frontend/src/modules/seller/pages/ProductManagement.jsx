@@ -33,7 +33,7 @@ import { useAuth } from "@core/context/AuthContext";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const qFromUrl = searchParams.get("q") || "";
 
@@ -109,6 +109,9 @@ const ProductManagement = () => {
   };
 
   React.useEffect(() => {
+    if (refreshUser) {
+      refreshUser();
+    }
     fetchCategories();
   }, []);
 
@@ -195,7 +198,7 @@ const ProductManagement = () => {
     fetchProducts(1);
   }, [searchTerm, filterCategory, filterStatus, filterApproval, sortBy, pageSize]);
 
-  const [formData, setFormData] = useState({
+  const initialFormState = {
     name: "",
     slug: "",
     sku: "",
@@ -205,9 +208,8 @@ const ProductManagement = () => {
     stock: "",
     lowStockAlert: 5,
     category: "",
-    header: "",
     subcategory: "",
-    hsnId: "",
+    header: "",
     status: "active",
     tags: "",
     weight: "",
@@ -215,12 +217,19 @@ const ProductManagement = () => {
     mainImage: null,
     galleryImages: [],
     videoUrl: "",
+    shelfLife: "",
+    countryOfOrigin: "",
+    fssaiLicense: "",
+    hsnId: "",
     colors: [],
+    ingredients: "",
     deliveryCoverage: user?.serviceCoverage || ["hyperlocal"],
     variants: [
       { id: Date.now(), name: "", price: "", salePrice: "", stock: "", sku: "" },
     ],
-  });
+  };
+
+  const [formData, setFormData] = useState(initialFormState);
 
   const safeProducts = useMemo(
     () => (Array.isArray(products) ? products : []),
@@ -1016,6 +1025,7 @@ const ProductManagement = () => {
                           </label>
                           <input
                             value={formData.name}
+                            disabled={!user?.allowCustomProductEntry}
                             onChange={(e) => {
                               const nextName = e.target.value;
                               setFormData((prev) => ({
@@ -1036,8 +1046,12 @@ const ProductManagement = () => {
                                 }),
                               }));
                             }}
-                            className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
-                            placeholder="e.g. Premium Basmati Rice"
+                            className={`w-full px-4 py-2.5 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2 ${
+                              !user?.allowCustomProductEntry
+                                ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                                : "bg-slate-100"
+                            }`}
+                            placeholder={!user?.allowCustomProductEntry ? "Contact Admin to allow custom entry" : "e.g. Premium Basmati Rice"}
                           />
                         </div>
                         <div className="space-y-1.5 flex flex-col">
@@ -1227,14 +1241,19 @@ const ProductManagement = () => {
                           </label>
                           <input
                             value={formData.brand}
+                            disabled={!user?.allowCustomProductEntry}
                             onChange={(e) =>
                               setFormData({
                                 ...formData,
                                 brand: e.target.value,
                               })
                             }
-                            className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
-                            placeholder="e.g. Amul"
+                            className={`w-full px-4 py-2.5 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2 ${
+                              !user?.allowCustomProductEntry
+                                ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                                : "bg-slate-100"
+                            }`}
+                            placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
                           />
                         </div>
                         <div className="space-y-1.5 flex flex-col">
@@ -1250,6 +1269,30 @@ const ProductManagement = () => {
                             placeholder="AUTO-GENERATED"
                           />
                         </div>
+                      </div>
+
+                      <div className="space-y-1.5 flex flex-col">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          Ingredients
+                        </label>
+                        <textarea
+                          value={formData.ingredients}
+                          disabled={!user?.allowCustomProductEntry}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              ingredients: e.target.value,
+                            })
+                          }
+                          onWheel={(e) => e.stopPropagation()}
+                          onTouchMove={(e) => e.stopPropagation()}
+                          className={`w-full px-4 py-3 border-none rounded-2xl text-sm font-semibold min-h-[100px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none ${
+                            !user?.allowCustomProductEntry
+                              ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                              : "bg-slate-100"
+                          }`}
+                          placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
+                        />
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

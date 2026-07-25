@@ -46,6 +46,10 @@ const productSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
+        ingredients: {
+            type: String,
+            trim: true,
+        },
         weight: {
             type: String,
             trim: true,

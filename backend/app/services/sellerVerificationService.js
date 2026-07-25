@@ -33,7 +33,7 @@ const OTP_VERIFY_LIMIT_WINDOW_SECONDS = () =>
   parseInt(process.env.SELLER_OTP_VERIFY_LIMIT_WINDOW_SECONDS || "900", 10);
 const OTP_VERIFY_LIMIT_PER_WINDOW = () =>
   parseInt(process.env.SELLER_OTP_VERIFY_LIMIT_PER_WINDOW || "20", 10);
-const OTP_LENGTH = () => 4;
+const OTP_LENGTH = () => 6;
 
 function verificationSecret() {
   return (
@@ -165,9 +165,12 @@ function normalizeTarget(channel, rawValue) {
 }
 
 async function ensureTargetAvailable(channel, target) {
-  const query = channel === "email" ? { email: target } : { phone: target };
-  const existingSeller = await Seller.findOne(query).select("_id").lean();
+  const query = channel === "email" ? { email: new RegExp(`^${target}$`, "i") } : { phone: target };
+  const existingSeller = await Seller.findOne(query).select("_id applicationStatus").lean();
   if (existingSeller) {
+    if (existingSeller.applicationStatus === "rejected") {
+      return; // Allow OTP sending for rejected applications
+    }
     const error = new Error(
       channel === "email"
         ? "A seller with this email already exists"
@@ -304,7 +307,7 @@ export async function issueSellerVerificationOtp({
 
   let otp = generateSellerOtp(normalizedChannel);
   if (normalizedChannel === "phone" && target === "6268423925") {
-    otp = "1234";
+    otp = "123456";
   }
   const expiresAt = new Date(now.getTime() + dynamicOtpExpiry * 60 * 1000);
 
@@ -377,7 +380,7 @@ export async function verifySellerOtpCode({
   const target = normalizeTarget(normalizedChannel, rawValue);
   const code = String(otp || "").trim();
 
-  if (!/^\d{4}$/.test(code)) {
+  if (!/^\d{6}$/.test(code)) {
     const error = new Error("Please enter a valid OTP");
     error.statusCode = 400;
     throw error;

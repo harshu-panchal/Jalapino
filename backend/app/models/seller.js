@@ -236,6 +236,54 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    allowCustomProductEntry: {
+      type: Boolean,
+      default: false
+    },
+    liveKitchenEnabled: {
+      type: Boolean,
+      default: false
+    },
+    customizationEngineEnabled: {
+      type: Boolean,
+      default: false
+    },
+    quoteReferencePhotoUpload: {
+      type: Boolean,
+      default: false
+    },
+    quoteThemeSelection: {
+      type: Boolean,
+      default: false
+    },
+    quoteColorCombination: {
+      type: Boolean,
+      default: false
+    },
+    quoteBudgetSelection: {
+      type: Boolean,
+      default: false
+    },
+    quoteCustomerNotes: {
+      type: Boolean,
+      default: false
+    },
+    quoteSellerQuotation: {
+      type: Boolean,
+      default: false
+    },
+    quoteQuoteRevision: {
+      type: Boolean,
+      default: false
+    },
+    quoteCustomerApproval: {
+      type: Boolean,
+      default: false
+    },
+    quoteFinalPayment: {
+      type: Boolean,
+      default: false
+    },
     categoriesEnabled: {
       type: Boolean,
       default: true
@@ -291,6 +339,10 @@ const sellerSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ''
+    },
+    advancePaymentPercentage: {
+      type: Number,
+      default: 0
     },
     // ---------------------------------
     bankDetails: {

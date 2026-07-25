@@ -557,7 +557,7 @@ export async function generateOrderPaymentBreakdown({
     handlingCategoryUsed: handling.handlingCategoryUsed,
   };
 
-  return {
+  const breakdownResult = {
     sellerId: sellerIds[0],
     lineItems,
     currency: "INR",
@@ -567,16 +567,6 @@ export async function generateOrderPaymentBreakdown({
     tipTotal: normalizedTip,
     discountTotal: normalizedDiscount,
     taxTotal: normalizedTax,
-    // Audit Phase 4 (C-1):
-    //   - `grossTotal`: pre-wallet customer-payable amount. New field —
-    //     legacy callers ignore it.
-    //   - `grandTotal`: post-wallet amount when the flag is on (the actual
-    //     amount PhonePe charges / rider collects); equals `grossTotal`
-    //     when the flag is off (legacy behaviour preserved).
-    //   - `walletAmount`: per-seller proportionate wallet redemption.
-    //   - `payableAmount`: alias of `grandTotal` for the post-C-1 world,
-    //     surfaced separately so the frontend can stop subtracting
-    //     `walletAmount` from `grandTotal` once the flag is on.
     grossTotal,
     grandTotal,
     walletAmount: walletAllocation,
@@ -595,6 +585,21 @@ export async function generateOrderPaymentBreakdown({
     codPendingAmount: 0,
     distanceKmActual: delivery.distanceKmActual,
     distanceKmRounded: delivery.distanceKmRounded,
+    advanceAmountRequired: 0,
+    remainingAmountCOD: 0,
+    isAdvancePaid: false,
     snapshots,
   };
+  
+  if (sellerIds.length > 0) {
+    const SellerModel = (await import("../../models/seller.js")).default;
+    const sellerInfo = await SellerModel.findById(sellerIds[0]).select("advancePaymentPercentage").lean();
+    if (sellerInfo && sellerInfo.advancePaymentPercentage > 0) {
+      const advanceRequired = roundCurrency(grandTotal * (sellerInfo.advancePaymentPercentage / 100));
+      breakdownResult.advanceAmountRequired = advanceRequired;
+      breakdownResult.remainingAmountCOD = roundCurrency(grandTotal - advanceRequired);
+    }
+  }
+  
+  return breakdownResult;
 }

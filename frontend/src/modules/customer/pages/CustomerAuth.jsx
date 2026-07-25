@@ -141,7 +141,7 @@ const CustomerAuth = () => {
 
     const handleVerifyOtp = async (e) => {
         e.preventDefault();
-        if (formData.otp.length !== 4) {
+        if (formData.otp.length !== 6) {
             toast.error('Enter 4-digit code');
             return;
         }
@@ -452,13 +452,13 @@ const CustomerAuth = () => {
                                     </div>
 
                                     <form onSubmit={handleVerifyOtp} className="space-y-10">
-                                        <div className="flex justify-between gap-3 px-1">
-                                            {[...Array(4)].map((_, i) => (
+                                        <div className="flex justify-between gap-1 sm:gap-2 md:gap-3 px-1">
+                                            {[...Array(6)].map((_, i) => (
                                                 <input
                                                     key={i}
                                                     type="tel"
                                                     maxLength={1}
-                                                    className="w-14 h-16 bg-white border-2 border-gray-200 rounded-3xl text-center text-2xl font-black outline-none shadow-[0_18px_45px_rgba(15,23,42,0.35)] focus:bg-white focus:border-[var(--theme-color)] focus:shadow-[0_24px_65px_rgba(15,23,42,0.55)] transition-all"
+                                                    className="min-w-0 flex-1 max-w-[3rem] sm:max-w-[3.5rem] h-12 sm:h-14 md:h-16 bg-white border-2 border-gray-200 rounded-xl sm:rounded-2xl md:rounded-3xl text-center text-lg sm:text-xl md:text-2xl font-black outline-none shadow-[0_10px_20px_rgba(15,23,42,0.2)] md:shadow-[0_18px_45px_rgba(15,23,42,0.35)] focus:bg-white focus:border-[var(--theme-color)] focus:shadow-[0_15px_30px_rgba(15,23,42,0.3)] md:focus:shadow-[0_24px_65px_rgba(15,23,42,0.55)] transition-all"
                                                     style={{ color: activeCategory.theme }}
                                                     onKeyDown={(e) => {
                                                         if (e.key === 'Backspace' && !e.target.value && i > 0) {
@@ -467,7 +467,7 @@ const CustomerAuth = () => {
                                                     }}
                                                     onChange={(e) => {
                                                         const val = e.target.value;
-                                                        if (val && i < 3) (e.target.nextElementSibling).focus();
+                                                        if (val && i < 5) (e.target.nextElementSibling).focus();
                                                         const otpArr = formData.otp.split('');
                                                         otpArr[i] = val;
                                                         setFormData({ ...formData, otp: otpArr.join('') });

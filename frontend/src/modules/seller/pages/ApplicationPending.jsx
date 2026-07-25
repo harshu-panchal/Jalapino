@@ -103,6 +103,16 @@ const ApplicationPending = () => {
             </div>
           ) : null}
 
+          {/* Advance Payment Percentage */}
+          {user?.advancePaymentPercentage > 0 ? (
+            <div className="mt-4 rounded-2xl border border-emerald-400/25 bg-emerald-400/10 px-4 py-3 text-sm text-emerald-100">
+              <span className="font-black uppercase tracking-widest text-[11px] text-emerald-300">💰 Advance Payment Requirement</span>
+              <p className="mt-1 font-medium whitespace-pre-wrap">
+                You are required to collect a {user.advancePaymentPercentage}% advance payment on orders.
+              </p>
+            </div>
+          ) : null}
+
           {!isNeedsAction ? (
             <div className="mt-6 rounded-2xl border border-brand-400/30 bg-brand-500/10 px-4 py-3 text-sm text-brand-200 flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 mt-0.5 shrink-0 text-brand-400" />

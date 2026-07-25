@@ -115,6 +115,9 @@ function buildAggregateBreakdown(sellerBreakdowns = []) {
     codPendingAmount: sumField(sellerBreakdowns, "codPendingAmount"),
     distanceKmActual: sumField(sellerBreakdowns, "distanceKmActual"),
     distanceKmRounded: sumField(sellerBreakdowns, "distanceKmRounded"),
+    advanceAmountRequired: sumField(sellerBreakdowns, "advanceAmountRequired"),
+    remainingAmountCOD: sumField(sellerBreakdowns, "remainingAmountCOD"),
+    isAdvancePaid: false,
     snapshots: {
       perSeller: sellerBreakdowns.map((row, index) => ({
         index,

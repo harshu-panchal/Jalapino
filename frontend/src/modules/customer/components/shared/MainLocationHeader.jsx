@@ -431,7 +431,7 @@ const MainLocationHeader = ({
             )}
 
             {/* Wholesale Card */}
-            {settings?.platformControl?.wholesaleEnabled !== false && (
+            {availableModules?.wholesaleEnabled && settings?.platformControl?.wholesaleEnabled !== false && (
               <button
                 type="button"
                 onClick={() => toggleMode('whole')}

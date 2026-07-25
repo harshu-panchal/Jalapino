@@ -69,13 +69,26 @@ const PendingSellers = () => {
         allowedRetailCategories: [],
         allowedWholesaleCategories: [],
         allowedEventCategories: [],
-        serviceCategories: []
+        serviceCategories: [],
+        allowCustomProductEntry: false,
+        liveKitchenEnabled: false,
+        customizationEngineEnabled: false,
+        quoteReferencePhotoUpload: false,
+        quoteThemeSelection: false,
+        quoteColorCombination: false,
+        quoteBudgetSelection: false,
+        quoteCustomerNotes: false,
+        quoteSellerQuotation: false,
+        quoteQuoteRevision: false,
+        quoteCustomerApproval: false,
+        quoteFinalPayment: false,
     });
     const [allCategories, setAllCategories] = useState([]);
     const [eventCategories, setEventCategories] = useState([]);
     const [isProcessing, setIsProcessing] = useState(false);
     const [adminRemark, setAdminRemark] = useState('');
     const [adminTerms, setAdminTerms] = useState('');
+    const [advancePaymentPercentage, setAdvancePaymentPercentage] = useState(0);
     const [isSavingRemark, setIsSavingRemark] = useState(false);
 
     const fetchPendingSellers = async () => {
@@ -112,10 +125,23 @@ const PendingSellers = () => {
                         allowedRetailCategories: s.allowedRetailCategories || [],
                         allowedWholesaleCategories: s.allowedWholesaleCategories || [],
                         allowedEventCategories: s.allowedEventCategories || [],
-                        serviceCategories: s.serviceCategories || []
+                        serviceCategories: s.serviceCategories || [],
+                        allowCustomProductEntry: s.allowCustomProductEntry ?? false,
+                        liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                        customizationEngineEnabled: s.customizationEngineEnabled ?? false,
+                        quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
+                        quoteThemeSelection: s.quoteThemeSelection ?? false,
+                        quoteColorCombination: s.quoteColorCombination ?? false,
+                        quoteBudgetSelection: s.quoteBudgetSelection ?? false,
+                        quoteCustomerNotes: s.quoteCustomerNotes ?? false,
+                        quoteSellerQuotation: s.quoteSellerQuotation ?? false,
+                        quoteQuoteRevision: s.quoteQuoteRevision ?? false,
+                        quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                        quoteFinalPayment: s.quoteFinalPayment ?? false,
                     });
                     setAdminRemark(s.adminRemark || '');
                     setAdminTerms(s.adminTerms || '');
+                    setAdvancePaymentPercentage(s.advancePaymentPercentage || 0);
                     setIsReviewModalOpen(true);
                 } else {
                     setSearchParams({});
@@ -340,7 +366,21 @@ const PendingSellers = () => {
                                                     analyticsEnabled: s.analyticsEnabled ?? true,
                                                     wholesaleEnabled: s.wholesaleEnabled ?? false,
                                                     allowedRetailCategories: s.allowedRetailCategories || [],
-                                                    allowedWholesaleCategories: s.allowedWholesaleCategories || []
+                                                    allowedWholesaleCategories: s.allowedWholesaleCategories || [],
+                                                    allowedEventCategories: s.allowedEventCategories || [],
+                                                    serviceCategories: s.serviceCategories || [],
+                                                    allowCustomProductEntry: s.allowCustomProductEntry ?? false,
+                                                    liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                                                    customizationEngineEnabled: s.customizationEngineEnabled ?? false,
+                                                    quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
+                                                    quoteThemeSelection: s.quoteThemeSelection ?? false,
+                                                    quoteColorCombination: s.quoteColorCombination ?? false,
+                                                    quoteBudgetSelection: s.quoteBudgetSelection ?? false,
+                                                    quoteCustomerNotes: s.quoteCustomerNotes ?? false,
+                                                    quoteSellerQuotation: s.quoteSellerQuotation ?? false,
+                                                    quoteQuoteRevision: s.quoteQuoteRevision ?? false,
+                                                    quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                                                    quoteFinalPayment: s.quoteFinalPayment ?? false,
                                                 });
                                                 setSearchParams({ review: s.id });
                                                 setIsReviewModalOpen(true);
@@ -375,22 +415,37 @@ const PendingSellers = () => {
                                             <button
                                                 onClick={() => {
                                                      setViewingSeller(s);
-                                                    setPermissions({
-                                                        retailEnabled: s.retailEnabled ?? true,
-                                                        planMyEventEnabled: s.planMyEventEnabled ?? false,
-                                                        productsEnabled: s.productsEnabled ?? true,
-                                                        stockEnabled: s.stockEnabled ?? true,
-                                                        ordersEnabled: s.ordersEnabled ?? true,
-                                                        walletEnabled: s.walletEnabled ?? true,
-                                                        analyticsEnabled: s.analyticsEnabled ?? true,
-                                                        wholesaleEnabled: s.wholesaleEnabled ?? false,
-                                                        allowedRetailCategories: s.allowedRetailCategories || [],
-                                                        allowedWholesaleCategories: s.allowedWholesaleCategories || []
-                                                    });
-                                                    setAdminRemark(s.adminRemark || '');
-                                                    setAdminTerms(s.adminTerms || '');
-                                                    setSearchParams({ review: s.id });
-                                                    setIsReviewModalOpen(true);
+                                                     setPermissions({
+                                                         retailEnabled: s.retailEnabled ?? true,
+                                                         planMyEventEnabled: s.planMyEventEnabled ?? false,
+                                                         productsEnabled: s.productsEnabled ?? true,
+                                                         stockEnabled: s.stockEnabled ?? true,
+                                                         ordersEnabled: s.ordersEnabled ?? true,
+                                                         walletEnabled: s.walletEnabled ?? true,
+                                                         analyticsEnabled: s.analyticsEnabled ?? true,
+                                                         wholesaleEnabled: s.wholesaleEnabled ?? false,
+                                                         allowedRetailCategories: s.allowedRetailCategories || [],
+                                                         allowedWholesaleCategories: s.allowedWholesaleCategories || [],
+                                                         allowedEventCategories: s.allowedEventCategories || [],
+                                                         serviceCategories: s.serviceCategories || [],
+                                                         allowCustomProductEntry: s.allowCustomProductEntry ?? false,
+                                                         liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                                                         customizationEngineEnabled: s.customizationEngineEnabled ?? false,
+                                                         quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
+                                                         quoteThemeSelection: s.quoteThemeSelection ?? false,
+                                                         quoteColorCombination: s.quoteColorCombination ?? false,
+                                                         quoteBudgetSelection: s.quoteBudgetSelection ?? false,
+                                                         quoteCustomerNotes: s.quoteCustomerNotes ?? false,
+                                                         quoteSellerQuotation: s.quoteSellerQuotation ?? false,
+                                                         quoteQuoteRevision: s.quoteQuoteRevision ?? false,
+                                                         quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                                                         quoteFinalPayment: s.quoteFinalPayment ?? false,
+                                                     });
+                                                     setAdminRemark(s.adminRemark || '');
+                                                     setAdminTerms(s.adminTerms || '');
+                                                     setAdvancePaymentPercentage(s.advancePaymentPercentage || 0);
+                                                     setSearchParams({ review: s.id });
+                                                     setIsReviewModalOpen(true);
                                                 }}
                                                 className="h-9 px-4 bg-black  text-primary-foreground rounded-xl text-[10px] font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-100 hover:-translate-y-0.5 flex items-center gap-2"
                                             >
@@ -649,7 +704,226 @@ const PendingSellers = () => {
                                                              }
                                                          }}
                                                      />
+
+                                                     <PermissionToggle
+                                                         label="Custom Product Entry"
+                                                         description="Allow manual entry of product name, brand, and ingredients"
+                                                         checked={permissions.allowCustomProductEntry}
+                                                         activeColor="bg-emerald-500" hoverColor="group-hover:text-emerald-600"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, allowCustomProductEntry: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { allowCustomProductEntry: checked });
+                                                                 toast.success('Custom product entry permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, allowCustomProductEntry: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update custom product entry permission');
+                                                                 setPermissions(prev => ({ ...prev, allowCustomProductEntry: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Live Kitchen"
+                                                         description="Allow live streaming/camera updates from seller kitchen"
+                                                         checked={permissions.liveKitchenEnabled}
+                                                         activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, liveKitchenEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { liveKitchenEnabled: checked });
+                                                                 toast.success('Live kitchen permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, liveKitchenEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update live kitchen permission');
+                                                                 setPermissions(prev => ({ ...prev, liveKitchenEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Customization & Quotation Engine"
+                                                         description="Master toggle to allow customizations and direct quotations"
+                                                         checked={permissions.customizationEngineEnabled}
+                                                         activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, customizationEngineEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { customizationEngineEnabled: checked });
+                                                                 toast.success('Customization engine permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, customizationEngineEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update customization engine permission');
+                                                                 setPermissions(prev => ({ ...prev, customizationEngineEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
                                                   </div>
+
+                                                  {/* Customization & Quotation Engine Sub-Permissions */}
+                                                  {permissions.customizationEngineEnabled && (
+                                                      <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                          <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Engine Settings</h6>
+                                                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                              <PermissionToggle
+                                                                  label="Reference Photo Upload"
+                                                                  description="Allow upload of reference photos"
+                                                                  checked={permissions.quoteReferencePhotoUpload}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteReferencePhotoUpload: checked });
+                                                                          toast.success('Reference photo upload permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteReferencePhotoUpload: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Theme Selection"
+                                                                  description="Allow selecting themes"
+                                                                  checked={permissions.quoteThemeSelection}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteThemeSelection: checked });
+                                                                          toast.success('Theme selection permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteThemeSelection: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteThemeSelection: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Color Combination"
+                                                                  description="Allow selecting color combinations"
+                                                                  checked={permissions.quoteColorCombination}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteColorCombination: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteColorCombination: checked });
+                                                                          toast.success('Color combination permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteColorCombination: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteColorCombination: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Budget Selection"
+                                                                  description="Allow selecting budget options"
+                                                                  checked={permissions.quoteBudgetSelection}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteBudgetSelection: checked });
+                                                                          toast.success('Budget selection permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteBudgetSelection: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteBudgetSelection: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Customer Notes"
+                                                                  description="Allow customer notes/instructions"
+                                                                  checked={permissions.quoteCustomerNotes}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteCustomerNotes: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteCustomerNotes: checked });
+                                                                          toast.success('Customer notes permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerNotes: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteCustomerNotes: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Seller Quotation"
+                                                                  description="Allow seller to send quotations"
+                                                                  checked={permissions.quoteSellerQuotation}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteSellerQuotation: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteSellerQuotation: checked });
+                                                                          toast.success('Seller quotation permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteSellerQuotation: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteSellerQuotation: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Quote Revision"
+                                                                  description="Allow revisions to quotation"
+                                                                  checked={permissions.quoteQuoteRevision}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteQuoteRevision: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteQuoteRevision: checked });
+                                                                          toast.success('Quote revision permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteQuoteRevision: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteQuoteRevision: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Customer Approval"
+                                                                  description="Allow customer approval step"
+                                                                  checked={permissions.quoteCustomerApproval}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteCustomerApproval: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteCustomerApproval: checked });
+                                                                          toast.success('Customer approval permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerApproval: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteCustomerApproval: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                              <PermissionToggle
+                                                                  label="Final Payment"
+                                                                  description="Allow final payment step"
+                                                                  checked={permissions.quoteFinalPayment}
+                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  onChange={async (e) => {
+                                                                      const checked = e.target.checked;
+                                                                      setPermissions(prev => ({ ...prev, quoteFinalPayment: checked }));
+                                                                      try {
+                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteFinalPayment: checked });
+                                                                          toast.success('Final payment permission updated');
+                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteFinalPayment: checked } : seller));
+                                                                      } catch (err) {
+                                                                          setPermissions(prev => ({ ...prev, quoteFinalPayment: !checked }));
+                                                                      }
+                                                                  }}
+                                                              />
+                                                          </div>
+                                                      </div>
+                                                  )}
 
                                                   {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale/Events are enabled */}
                                                   {(permissions.retailEnabled || permissions.wholesaleEnabled || permissions.planMyEventEnabled) && (
@@ -810,23 +1084,7 @@ const PendingSellers = () => {
 
                                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-                                                      <PermissionToggle
-                                                          label="Categories Management"
-                                                          description="Allow managing shop categories"
-                                                          checked={permissions.categoriesEnabled}
-                                                          onChange={async (e) => {
-                                                              const checked = e.target.checked;
-                                                              setPermissions(prev => ({ ...prev, categoriesEnabled: checked }));
-                                                              try {
-                                                                  await adminApi.updateSeller(viewingSeller.id, { categoriesEnabled: checked });
-                                                                  toast.success('Categories permission updated');
-                                                                  setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, categoriesEnabled: checked } : seller));
-                                                              } catch (err) {
-                                                                  toast.error('Failed to update categories permission');
-                                                                  setPermissions(prev => ({ ...prev, categoriesEnabled: !checked }));
-                                                              }
-                                                          }}
-                                                      />
+
 
                                                       <PermissionToggle
                                                           label="Booking & Slots Management"
@@ -954,10 +1212,10 @@ const PendingSellers = () => {
                                                         onClick={async () => {
                                                             setIsSavingRemark(true);
                                                             try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark, adminTerms });
-                                                                toast.success('Remarks & Terms saved successfully');
+                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark, adminTerms, advancePaymentPercentage });
+                                                                toast.success('Remarks, Terms & Advance Payment saved successfully');
                                                                 setPendingSellers(prev => prev.map(seller =>
-                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark, adminTerms } : seller
+                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark, adminTerms, advancePaymentPercentage } : seller
                                                                 ));
                                                             } catch (err) {
                                                                 toast.error('Failed to save remarks & terms');
@@ -989,6 +1247,18 @@ const PendingSellers = () => {
                                                             placeholder="Write any terms and conditions (e.g. 'Please ensure GST documents are updated within 7 days of approval.')..."
                                                             rows={3}
                                                             className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Advance Payment (%)</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            value={advancePaymentPercentage}
+                                                            onChange={e => setAdvancePaymentPercentage(e.target.value)}
+                                                            placeholder="e.g. 20"
+                                                            className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-amber-400/70"
                                                         />
                                                     </div>
                                                 </div>

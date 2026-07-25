@@ -5,6 +5,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '@core/api/axios';
+import { State, City } from 'country-state-city';
 
 const CityManagementPage = () => {
     const navigate = useNavigate();
@@ -21,6 +22,7 @@ const CityManagementPage = () => {
         wholesaleEnabled: false
     });
     const [editingId, setEditingId] = useState(null);
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         fetchCities();
@@ -39,6 +41,39 @@ const CityManagementPage = () => {
 
     const handleCreateCity = async (e) => {
         e.preventDefault();
+        
+        let validationErrors = {};
+        
+        // validate state
+        const allStates = State.getStatesOfCountry('IN');
+        const stateMatch = allStates.find(s => s.name.toLowerCase() === newCity.state.toLowerCase().trim());
+        
+        if (!stateMatch) {
+            validationErrors.state = "Please enter a valid Indian state name";
+        } else {
+            // validate city
+            const allCities = City.getCitiesOfState('IN', stateMatch.isoCode);
+            
+            // We do a strict match to avoid allowing fake names like "gayaa".
+            // If user typed "gaya ji", we can check if it matches after removing " ji" (special case for respect suffixes if needed)
+            let typedCity = newCity.cityName.toLowerCase().trim();
+            if (typedCity.endsWith(" ji")) {
+                typedCity = typedCity.replace(/ ji$/, "").trim();
+            }
+
+            const cityMatch = allCities.find(c => c.name.toLowerCase() === typedCity);
+            
+            if (!cityMatch) {
+                validationErrors.cityName = "Please enter a valid city name for the given state";
+            }
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+        setErrors({});
+
         try {
             if (editingId) {
                 await axiosInstance.put(`/admin/event-config/cities/${editingId}`, newCity);
@@ -58,6 +93,7 @@ const CityManagementPage = () => {
     };
 
     const handleEditClick = (city) => {
+        setErrors({});
         setEditingId(city._id);
         setNewCity({
             state: city.state,
@@ -100,7 +136,7 @@ const CityManagementPage = () => {
                         <h2 className="text-lg font-bold text-slate-800">{editingId ? 'Edit City' : 'Add New City'}</h2>
                         {editingId && (
                             <button 
-                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false }); }}
+                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false }); setErrors({}); }}
                                 className="text-xs text-blue-600 hover:underline"
                             >
                                 Cancel Edit
@@ -113,20 +149,28 @@ const CityManagementPage = () => {
                             <input 
                                 required
                                 type="text"
-                                className="w-full border rounded-xl p-2"
+                                className={`w-full border rounded-xl p-2 ${errors.state ? 'border-red-500' : ''}`}
                                 value={newCity.state}
-                                onChange={(e) => setNewCity({...newCity, state: e.target.value})}
+                                onChange={(e) => {
+                                    setNewCity({...newCity, state: e.target.value});
+                                    if(errors.state) setErrors({...errors, state: null});
+                                }}
                             />
+                            {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1">City Name</label>
                             <input 
                                 required
                                 type="text"
-                                className="w-full border rounded-xl p-2"
+                                className={`w-full border rounded-xl p-2 ${errors.cityName ? 'border-red-500' : ''}`}
                                 value={newCity.cityName}
-                                onChange={(e) => setNewCity({...newCity, cityName: e.target.value})}
+                                onChange={(e) => {
+                                    setNewCity({...newCity, cityName: e.target.value});
+                                    if(errors.cityName) setErrors({...errors, cityName: null});
+                                }}
                             />
+                            {errors.cityName && <p className="text-red-500 text-xs mt-1">{errors.cityName}</p>}
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1">Readiness Status</label>
