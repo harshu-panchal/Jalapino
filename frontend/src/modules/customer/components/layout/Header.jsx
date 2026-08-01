@@ -156,6 +156,25 @@ const Header = () => {
                             </div>
                         </div>
                     </button>
+
+                    {/* Mobile Right Icons */}
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsCustomOrderOpen(true)}
+                            title="Custom Request"
+                            className="h-10 w-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-sm active:scale-95 transition-transform"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                        </button>
+                        <Link to="/checkout" className="h-10 w-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-sm relative active:scale-95 transition-transform">
+                            <ShoppingCart size={20} className="text-white" />
+                            {cartCount > 0 && (
+                                <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-white text-[10px] font-bold text-primary flex items-center justify-center shadow-sm">
+                                    {cartCount}
+                                </span>
+                            )}
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Main Header Capsule */}
