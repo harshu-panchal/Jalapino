@@ -248,6 +248,14 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    advanceBookingEnabled: {
+      type: Boolean,
+      default: false
+    },
+    customerImageReviewEnabled: {
+      type: Boolean,
+      default: false
+    },
     quoteReferencePhotoUpload: {
       type: Boolean,
       default: false
@@ -327,6 +335,20 @@ const sellerSchema = new mongoose.Schema(
     allowedEventCategories: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category'
+    }],
+    reviewCategoriesEnabled: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category'
+    }],
+    cancellationPolicies: [{
+      categoryId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Category'
+      },
+      rules: [{
+        hoursBefore: { type: Number, required: true },
+        refundPercentage: { type: Number, required: true }
+      }]
     }],
     // Admin Review Remark (shown to seller after review)
     adminRemark: {

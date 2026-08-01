@@ -104,6 +104,7 @@ export function formatSellerApplication(seller) {
     allowCustomProductEntry: seller.allowCustomProductEntry || false,
     liveKitchenEnabled: seller.liveKitchenEnabled || false,
     customizationEngineEnabled: seller.customizationEngineEnabled || false,
+    advanceBookingEnabled: seller.advanceBookingEnabled || false,
     quoteReferencePhotoUpload: seller.quoteReferencePhotoUpload || false,
     quoteThemeSelection: seller.quoteThemeSelection || false,
     quoteColorCombination: seller.quoteColorCombination || false,
@@ -113,6 +114,8 @@ export function formatSellerApplication(seller) {
     quoteQuoteRevision: seller.quoteQuoteRevision || false,
     quoteCustomerApproval: seller.quoteCustomerApproval || false,
     quoteFinalPayment: seller.quoteFinalPayment || false,
+    customerImageReviewEnabled: seller.customerImageReviewEnabled || false,
+    reviewCategoriesEnabled: seller.reviewCategoriesEnabled || [],
     verificationScore: docs.length
       ? Math.min(100, 55 + docs.length * 12 + (seller.address ? 10 : 0))
       : 40,

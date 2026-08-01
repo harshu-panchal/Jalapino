@@ -14,6 +14,23 @@ export const submitReview = async (req, res) => {
             return handleResponse(res, 400, "You have already reviewed this product");
         }
 
+        const Product = await import("../models/product.js").then((m) => m.default);
+        const Seller = await import("../models/seller.js").then((m) => m.default);
+
+        const product = await Product.findById(productId);
+        if (!product) {
+            return handleResponse(res, 404, "Product not found");
+        }
+
+        const seller = await Seller.findById(product.sellerId);
+        if (seller) {
+            const catId = product.categoryId;
+            const reviewCategoriesEnabled = seller.reviewCategoriesEnabled || [];
+            if (catId && !reviewCategoriesEnabled.map(String).includes(String(catId))) {
+                return handleResponse(res, 400, "Reviews are disabled for this product's category by the admin.");
+            }
+        }
+
         const newReview = new Review({
             userId,
             productId,

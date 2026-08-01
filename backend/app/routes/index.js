@@ -46,6 +46,9 @@ import supportTicketRoute from "./supportTicketRoutes.js";
 import homeVideoRoute from "./homeVideoRoutes.js";
 import sellerSignupBannerRoute from "./sellerSignupBannerRoutes.js";
 import footerBannerRoute from "./footerBannerRoutes.js";
+import customerImageRoute from "./customerImageRoutes.js";
+import sellerBookingRoute from "./sellerBookingRoutes.js";
+import bookingManagementRoute from "./bookingManagementRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -61,6 +64,7 @@ const setupRoutes = (app) => {
     router.use("/support-tickets", supportTicketRoute);
 
     router.use("/customer", customerRoute);
+    router.use("/customer-images", customerImageRoute);
     router.use("/delivery", deliveryRoute);
     // categoryRoute is mounted twice on purpose:
     //   /admin/categories → admin category management (auth enforced inside the router)
@@ -70,6 +74,8 @@ const setupRoutes = (app) => {
     router.use("/admin/event-config", adminEventConfigRoute);
     router.use("/admin", adminRoute);
     router.use("/seller", sellerRoute);
+    router.use("/seller", sellerBookingRoute);
+    router.use("/seller", bookingManagementRoute);
     router.use("/settings", settingsRoute);
     router.use("/categories", categoryRoute);
     router.use("/products", productRoute);

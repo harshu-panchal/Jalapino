@@ -472,3 +472,22 @@ body {
   z-index: 9999 !important;
   pointer-events: auto !important;
 }
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .non-printable, .non-printable * {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

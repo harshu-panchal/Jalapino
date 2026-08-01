@@ -17,6 +17,7 @@ import TermsPage from '../pages/TermsPage';
 import PrivacyPage from '../pages/PrivacyPage';
 import AboutPage from '../pages/AboutPage';
 import EditProfilePage from '../pages/EditProfilePage';
+import MyBookingsPage from '../pages/MyBookingsPage';
 import OrderDetailPage from '../pages/OrderDetailPage';
 import ProductDetailPage from '../pages/ProductDetailPage';
 import CheckoutPage from '../pages/CheckoutPage';
@@ -63,6 +64,7 @@ const CustomerRoutes = () => {
                             <Route path="payment-status" element={<ProtectedRoute><PaymentStatusPage /></ProtectedRoute>} />
                             <Route path="profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
                             <Route path="profile/edit" element={<ProtectedRoute><EditProfilePage /></ProtectedRoute>} />
+                            <Route path="my-bookings" element={<ProtectedRoute><MyBookingsPage /></ProtectedRoute>} />
                         </Routes>
                     </CartAnimationProvider>
                 </CartProvider>

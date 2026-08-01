@@ -6,6 +6,24 @@ export const sellerApi = {
     getSignupBanners: () => axiosInstance.get('/seller-signup-banners'),
     sendVerificationOtp: (data) => axiosInstance.post('/seller/verification/send-otp', data),
     verifyVerificationOtp: (data) => axiosInstance.post('/seller/verification/verify-otp', data),
+    // Advance Bookings
+    getAdvanceBookings: (params) => axiosInstance.get('/seller/advance-bookings', { params }),
+    acceptAdvanceBooking: (id) => axiosInstance.patch(`/seller/advance-bookings/${id}/accept`),
+    completeDecoration: (id) => axiosInstance.patch(`/seller/advance-bookings/${id}/decoration-complete`),
+    
+    // Booking Management (Online/Offline)
+    getBookings: (params) => axiosInstance.get('/seller/bookings', { params }),
+    createBooking: (data) => axiosInstance.post('/seller/bookings', data),
+    updateBookingDetails: (id, data) => axiosInstance.patch(`/seller/bookings/${id}`, data),
+    deleteBookingDetails: (id) => axiosInstance.delete(`/seller/bookings/${id}`),
+    requestPhysicalVisit: (id) => axiosInstance.patch(`/seller/bookings/${id}/request-visit`),
+    confirmPhysicalVisit: (id) => axiosInstance.patch(`/seller/bookings/${id}/confirm-visit`),
+    completePhysicalVisit: (id) => axiosInstance.patch(`/seller/bookings/${id}/complete-visit`),
+    submitCustomerReview: (id, data) => axiosInstance.post(`/seller/bookings/${id}/submit-seller-review`, data),
+    getCancellationPolicies: () => axiosInstance.get('/seller/cancellation-policies'),
+    updateCancellationPolicies: (data) => axiosInstance.put('/seller/cancellation-policies', data),
+    cancelBooking: (id) => axiosInstance.post(`/seller/bookings/${id}/cancel`),
+    
     // Products
     getProducts: (params) => axiosInstance.get('/products/seller/me', { params }),
     getProductById: (id) => axiosInstance.get(`/products/${id}`),
@@ -52,4 +70,9 @@ export const sellerApi = {
 
     // Live Kitchen
     updateLiveStreamUrl: (orderId, streamUrl) => axiosInstance.post('/kitchen/stream', { orderId, streamUrl }),
+
+    // Customer Images
+    getCustomerImagesQueue: () => axiosInstance.get('/customer-images/queue'),
+    approveCustomerImage: (id) => axiosInstance.put(`/customer-images/${id}/approve`),
+    rejectCustomerImage: (id) => axiosInstance.put(`/customer-images/${id}/reject`),
 };

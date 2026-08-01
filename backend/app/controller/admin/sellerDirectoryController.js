@@ -199,6 +199,9 @@ export const updateSellerDetails = async (req, res) => {
     const quoteQuoteRevision = req.body.quoteQuoteRevision;
     const quoteCustomerApproval = req.body.quoteCustomerApproval;
     const quoteFinalPayment = req.body.quoteFinalPayment;
+    const customerImageReviewEnabled = req.body.customerImageReviewEnabled;
+    const advanceBookingEnabled = req.body.advanceBookingEnabled;
+    const reviewCategoriesEnabled = req.body.reviewCategoriesEnabled;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -240,6 +243,9 @@ export const updateSellerDetails = async (req, res) => {
     if (quoteQuoteRevision !== undefined) updateData.quoteQuoteRevision = quoteQuoteRevision;
     if (quoteCustomerApproval !== undefined) updateData.quoteCustomerApproval = quoteCustomerApproval;
     if (quoteFinalPayment !== undefined) updateData.quoteFinalPayment = quoteFinalPayment;
+    if (customerImageReviewEnabled !== undefined) updateData.customerImageReviewEnabled = customerImageReviewEnabled;
+    if (advanceBookingEnabled !== undefined) updateData.advanceBookingEnabled = advanceBookingEnabled;
+    if (reviewCategoriesEnabled !== undefined) updateData.reviewCategoriesEnabled = reviewCategoriesEnabled;
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(

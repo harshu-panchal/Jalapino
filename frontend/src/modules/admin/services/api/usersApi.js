@@ -27,6 +27,7 @@ export const adminUsersApi = {
         axiosInstance.delete(`/admin/sellers/reject/${id}`, { data }),
     bounceBackSeller: (id, data) =>
         axiosInstance.put(`/admin/sellers/bounce-back/${id}`, data),
+    getSellerBookings: (id) => axiosInstance.get(`/admin/sellers/${id}/bookings`),
 };
 
 export default adminUsersApi;

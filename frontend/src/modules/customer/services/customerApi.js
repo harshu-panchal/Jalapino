@@ -21,6 +21,9 @@ export const customerApi = {
   // Sellers & Location
   getNearbySellers: (params) => getWithDedupe("/seller/nearby", params),
 
+  // Custom Image Requests
+  uploadCustomerImage: (data) => axiosInstance.post("/customer-images/upload", data),
+
   // Cart
   getCart: () => getWithDedupe("/cart", {}, { ttl: 2000 }), // Very short cache for cart
   addToCart: (data) => {
@@ -173,4 +176,9 @@ export const customerApi = {
 
   // Refer & Earn
   getReferralDetails: () => axiosInstance.get("/referral/details"),
+
+  // Booking Management (Customer Side)
+  getMyBookings: () => axiosInstance.get("/seller/bookings/mine"),
+  cancelMyBooking: (id) => axiosInstance.post(`/seller/bookings/${id}/cancel`),
+  submitSellerReview: (id, data) => axiosInstance.post(`/seller/bookings/${id}/submit-customer-review`, data),
 };

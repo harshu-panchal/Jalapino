@@ -82,6 +82,9 @@ const PendingSellers = () => {
         quoteQuoteRevision: false,
         quoteCustomerApproval: false,
         quoteFinalPayment: false,
+        customerImageReviewEnabled: false,
+        advanceBookingEnabled: false,
+        reviewCategoriesEnabled: [],
     });
     const [allCategories, setAllCategories] = useState([]);
     const [eventCategories, setEventCategories] = useState([]);
@@ -138,6 +141,9 @@ const PendingSellers = () => {
                         quoteQuoteRevision: s.quoteQuoteRevision ?? false,
                         quoteCustomerApproval: s.quoteCustomerApproval ?? false,
                         quoteFinalPayment: s.quoteFinalPayment ?? false,
+                        customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
+                        advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                        reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                     });
                     setAdminRemark(s.adminRemark || '');
                     setAdminTerms(s.adminTerms || '');
@@ -381,6 +387,9 @@ const PendingSellers = () => {
                                                     quoteQuoteRevision: s.quoteQuoteRevision ?? false,
                                                     quoteCustomerApproval: s.quoteCustomerApproval ?? false,
                                                     quoteFinalPayment: s.quoteFinalPayment ?? false,
+                                                    customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
+                                                    advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                                                    reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                 });
                                                 setSearchParams({ review: s.id });
                                                 setIsReviewModalOpen(true);
@@ -440,6 +449,9 @@ const PendingSellers = () => {
                                                          quoteQuoteRevision: s.quoteQuoteRevision ?? false,
                                                          quoteCustomerApproval: s.quoteCustomerApproval ?? false,
                                                          quoteFinalPayment: s.quoteFinalPayment ?? false,
+                                                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
+                                                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                                                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                      });
                                                      setAdminRemark(s.adminRemark || '');
                                                      setAdminTerms(s.adminTerms || '');
@@ -761,6 +773,44 @@ const PendingSellers = () => {
                                                              }
                                                          }}
                                                      />
+
+                                                     <PermissionToggle
+                                                         label="Customer Image Review"
+                                                         description="Allow seller to review categorized customer uploads"
+                                                         checked={permissions.customerImageReviewEnabled}
+                                                         activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, customerImageReviewEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { customerImageReviewEnabled: checked });
+                                                                 toast.success('Customer image review permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, customerImageReviewEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update customer image review permission');
+                                                                 setPermissions(prev => ({ ...prev, customerImageReviewEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
+
+                                                     <PermissionToggle
+                                                         label="Advance Booking System"
+                                                         description="Allow seller to manage advance bookings and status"
+                                                         checked={permissions.advanceBookingEnabled}
+                                                         activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"
+                                                         onChange={async (e) => {
+                                                             const checked = e.target.checked;
+                                                             setPermissions(prev => ({ ...prev, advanceBookingEnabled: checked }));
+                                                             try {
+                                                                 await adminApi.updateSeller(viewingSeller.id, { advanceBookingEnabled: checked });
+                                                                 toast.success('Advance booking permission updated');
+                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingEnabled: checked } : seller));
+                                                             } catch (err) {
+                                                                 toast.error('Failed to update advance booking permission');
+                                                                 setPermissions(prev => ({ ...prev, advanceBookingEnabled: !checked }));
+                                                             }
+                                                         }}
+                                                     />
                                                   </div>
 
                                                   {/* Customization & Quotation Engine Sub-Permissions */}
@@ -772,7 +822,7 @@ const PendingSellers = () => {
                                                                   label="Reference Photo Upload"
                                                                   description="Allow upload of reference photos"
                                                                   checked={permissions.quoteReferencePhotoUpload}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
@@ -789,7 +839,7 @@ const PendingSellers = () => {
                                                                   label="Theme Selection"
                                                                   description="Allow selecting themes"
                                                                   checked={permissions.quoteThemeSelection}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
@@ -806,7 +856,7 @@ const PendingSellers = () => {
                                                                   label="Color Combination"
                                                                   description="Allow selecting color combinations"
                                                                   checked={permissions.quoteColorCombination}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteColorCombination: checked }));
@@ -823,7 +873,7 @@ const PendingSellers = () => {
                                                                   label="Budget Selection"
                                                                   description="Allow selecting budget options"
                                                                   checked={permissions.quoteBudgetSelection}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
@@ -840,7 +890,8 @@ const PendingSellers = () => {
                                                                   label="Customer Notes"
                                                                   description="Allow customer notes/instructions"
                                                                   checked={permissions.quoteCustomerNotes}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteCustomerNotes: checked }));
@@ -857,7 +908,7 @@ const PendingSellers = () => {
                                                                   label="Seller Quotation"
                                                                   description="Allow seller to send quotations"
                                                                   checked={permissions.quoteSellerQuotation}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteSellerQuotation: checked }));
@@ -874,7 +925,7 @@ const PendingSellers = () => {
                                                                   label="Quote Revision"
                                                                   description="Allow revisions to quotation"
                                                                   checked={permissions.quoteQuoteRevision}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteQuoteRevision: checked }));
@@ -891,7 +942,7 @@ const PendingSellers = () => {
                                                                   label="Customer Approval"
                                                                   description="Allow customer approval step"
                                                                   checked={permissions.quoteCustomerApproval}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteCustomerApproval: checked }));
@@ -908,7 +959,7 @@ const PendingSellers = () => {
                                                                   label="Final Payment"
                                                                   description="Allow final payment step"
                                                                   checked={permissions.quoteFinalPayment}
-                                                                  activeColor="bg-brand-500" hoverColor="group-hover:text-brand-600"
+                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                   onChange={async (e) => {
                                                                       const checked = e.target.checked;
                                                                       setPermissions(prev => ({ ...prev, quoteFinalPayment: checked }));
@@ -1198,6 +1249,49 @@ const PendingSellers = () => {
                                                      />
 
                                                  </div>
+                                            </div>
+
+                                            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                                <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                    <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Seller Review Settings (Category-wise ON/OFF)</h5>
+                                                    <p className="text-[10px] text-slate-500 font-medium">Select categories for which customer reviews are enabled for this seller.</p>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                    {allCategories.map(cat => {
+                                                        const isChecked = (permissions.reviewCategoriesEnabled || []).includes(cat._id);
+                                                        return (
+                                                            <label key={cat._id} className={cn(
+                                                                "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                isChecked 
+                                                                    ? "border-emerald-600/20 bg-emerald-50/30 text-slate-900" 
+                                                                    : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                            )}>
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={isChecked}
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        const current = permissions.reviewCategoriesEnabled || [];
+                                                                        const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                        setPermissions(prev => ({ ...prev, reviewCategoriesEnabled: next }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { reviewCategoriesEnabled: next });
+                                                                            toast.success(`Reviews for ${cat.name} updated successfully`);
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, reviewCategoriesEnabled: next } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update review categories');
+                                                                            setPermissions(prev => ({ ...prev, reviewCategoriesEnabled: current }));
+                                                                        }
+                                                                    }}
+                                                                    className="rounded text-emerald-600 focus:ring-emerald-600/20 h-4.5 w-4.5"
+                                                                />
+                                                                <span>{cat.name}</span>
+                                                                {isChecked && <span className="ml-auto text-[9px] font-bold text-emerald-600 uppercase bg-emerald-100 px-1.5 py-0.5 rounded">ON</span>}
+                                                                {!isChecked && <span className="ml-auto text-[9px] font-bold text-slate-400 uppercase bg-slate-100 px-1.5 py-0.5 rounded">OFF</span>}
+                                                            </label>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
 
                                             {/* Admin Remarks Section */}

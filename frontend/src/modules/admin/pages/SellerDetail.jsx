@@ -91,8 +91,9 @@ const SellerDetail = () => {
         quoteCustomerApproval: false,
         quoteFinalPayment: false,
     });
-    
+
     const [eventCategories, setEventCategories] = useState([]);
+    const [bookings, setBookings] = useState([]);
 
     const fetchSellerData = async () => {
         try {
@@ -157,10 +158,20 @@ const SellerDetail = () => {
         }
     };
 
+    const fetchBookings = async () => {
+        try {
+            const res = await adminUsersApi.getSellerBookings(id);
+            setBookings(res.data.result || []);
+        } catch (error) {
+            console.error("Failed to load seller bookings", error);
+        }
+    };
+
     useEffect(() => {
         fetchSellerData();
         fetchCategories();
-    }, [id]);
+        fetchBookings();
+    }, [id, activeTab]);
 
     const handleUpdateEventSettings = async () => {
         try {
@@ -252,7 +263,7 @@ const SellerDetail = () => {
                         <RotateCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
                         SYNC DATA
                     </button>
-                    <button 
+                    <button
                         onClick={handleEditShopClick}
                         className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                     >
@@ -292,9 +303,10 @@ const SellerDetail = () => {
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-8">
                     {/* Tabs Navigation */}
-                    <div className="flex items-center gap-2 p-1 bg-slate-100/50 backdrop-blur-sm rounded-2xl w-fit">
+                    <div className="flex items-center gap-2 p-1 bg-slate-100/50 backdrop-blur-sm rounded-2xl w-full overflow-x-auto whitespace-nowrap scrollbar-none">
                         {[
                             { id: 'orders', label: 'Order History', icon: History },
+                            { id: 'bookings', label: 'Bookings', icon: Calendar },
                             { id: 'transactions', label: 'Transactions', icon: Banknote },
                             { id: 'delivery', label: 'Delivery', icon: MapPin },
                             { id: 'payouts', label: 'Withdrawals', icon: Wallet },
@@ -318,6 +330,60 @@ const SellerDetail = () => {
 
                     {/* Tab Content */}
                     <Card className="border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl overflow-hidden min-h-[500px]">
+                        {activeTab === 'bookings' && (
+                            <div className="animate-in fade-in slide-in-from-right-2 duration-300">
+                                <div className="p-4 pb-4 flex items-center justify-between border-b border-slate-50">
+                                    <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">Bookings Tracking</h4>
+                                </div>
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-left">
+                                        <thead>
+                                            <tr className="bg-slate-50/50 border-b border-slate-50">
+                                                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Customer</th>
+                                                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Date & Slot</th>
+                                                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Payment</th>
+                                                <th className="px-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Type</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {bookings.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" className="px-4 py-8 text-center text-slate-400 text-xs font-semibold">No bookings found for this seller.</td>
+                                                </tr>
+                                            ) : bookings.map((b, i) => (
+                                                <tr key={i} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-4 py-5">
+                                                        <span className="text-xs font-black text-slate-900">{b.customerName}</span>
+                                                        <p className="text-[10px] font-bold text-slate-400">{b.mobileNumber}</p>
+                                                    </td>
+                                                    <td className="px-4 py-5">
+                                                        <span className="text-xs font-bold text-slate-700">{new Date(b.bookingDate).toLocaleDateString('en-GB')}</span>
+                                                        <p className="text-[10px] font-bold text-slate-400">{b.timeSlot}</p>
+                                                    </td>
+                                                    <td className="px-4 py-5 text-center">
+                                                        <Badge
+                                                            variant={b.bookingStatus === 'Booked' ? 'success' : b.bookingStatus === 'Marked' ? 'warning' : 'secondary'}
+                                                            className="text-[9px] font-black"
+                                                        >
+                                                            {b.bookingStatus.toUpperCase()}
+                                                        </Badge>
+                                                    </td>
+                                                    <td className="px-4 py-5 font-bold text-xs text-slate-700">
+                                                        <div>Paid: ₹{b.totalPaidAmount}</div>
+                                                        <div className="text-rose-600">Due: ₹{b.paymentDueAmount}</div>
+                                                    </td>
+                                                    <td className="px-4 py-5 text-right text-xs font-black text-slate-500 uppercase">
+                                                        {b.type}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === 'orders' && (
                             <div className="animate-in fade-in slide-in-from-right-2 duration-300">
                                 <div className="p-4 pb-4 flex items-center justify-between border-b border-slate-50">
@@ -523,7 +589,7 @@ const SellerDetail = () => {
                                         <div className="mb-8">
                                             <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Module Access Permissions</h5>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                                                
+
                                                 <PermissionToggle
                                                     label="Retail Store (Master)"
                                                     description="Main toggle for retail store access"
@@ -534,7 +600,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { retailEnabled: checked });
                                                             showToast('Retail master permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, retailEnabled: !checked }));
                                                             showToast('Failed to update retail master permission', 'error');
                                                         }
@@ -551,7 +617,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { productsEnabled: checked });
                                                             showToast('Products permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, productsEnabled: !checked }));
                                                             showToast('Failed to update products permission', 'error');
                                                         }
@@ -568,7 +634,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { stockEnabled: checked });
                                                             showToast('Stock permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, stockEnabled: !checked }));
                                                             showToast('Failed to update stock permission', 'error');
                                                         }
@@ -586,7 +652,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { ordersEnabled: checked });
                                                             showToast('Orders permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, ordersEnabled: !checked }));
                                                             showToast('Failed to update orders permission', 'error');
                                                         }
@@ -604,7 +670,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { walletEnabled: checked });
                                                             showToast('Wallet permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, walletEnabled: !checked }));
                                                             showToast('Failed to update wallet permission', 'error');
                                                         }
@@ -622,7 +688,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { analyticsEnabled: checked });
                                                             showToast('Analytics permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, analyticsEnabled: !checked }));
                                                             showToast('Failed to update analytics permission', 'error');
                                                         }
@@ -640,7 +706,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { planMyEventEnabled: checked });
                                                             showToast('Plan my event permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, planMyEventEnabled: !checked }));
                                                             showToast('Failed to update plan my event permission', 'error');
                                                         }
@@ -658,7 +724,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { allowCustomProductEntry: checked });
                                                             showToast('Custom product entry permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, allowCustomProductEntry: !checked }));
                                                             showToast('Failed to update custom product entry permission', 'error');
                                                         }
@@ -676,7 +742,7 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { liveKitchenEnabled: checked });
                                                             showToast('Live kitchen permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, liveKitchenEnabled: !checked }));
                                                             showToast('Failed to update live kitchen permission', 'error');
                                                         }
@@ -694,9 +760,45 @@ const SellerDetail = () => {
                                                         try {
                                                             await adminUsersApi.updateSeller(seller.id, { customizationEngineEnabled: checked });
                                                             showToast('Customization engine permission updated', 'success');
-                                                        } catch(err) {
+                                                        } catch (err) {
                                                             setSeller(prev => ({ ...prev, customizationEngineEnabled: !checked }));
                                                             showToast('Failed to update customization engine permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+                                                
+                                                <PermissionToggle
+                                                    label="Customer Image Review"
+                                                    description="Allow seller to review categorized customer uploads"
+                                                    checked={seller.customerImageReviewEnabled}
+                                                    activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, customerImageReviewEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { customerImageReviewEnabled: checked });
+                                                            showToast('Customer image review permission updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, customerImageReviewEnabled: !checked }));
+                                                            showToast('Failed to update customer image review permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
+                                                    label="Advance Booking System"
+                                                    description="Allow seller to manage advance bookings and status"
+                                                    checked={seller.advanceBookingEnabled}
+                                                    activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, advanceBookingEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { advanceBookingEnabled: checked });
+                                                            showToast('Advance booking permission updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, advanceBookingEnabled: !checked }));
+                                                            showToast('Failed to update advance booking permission', 'error');
                                                         }
                                                     }}
                                                 />
@@ -719,7 +821,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteReferencePhotoUpload: checked });
                                                                 showToast('Reference photo upload permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
                                                                 showToast('Failed to update reference photo upload permission', 'error');
                                                             }
@@ -735,7 +837,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteThemeSelection: checked });
                                                                 showToast('Theme selection permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteThemeSelection: !checked }));
                                                                 showToast('Failed to update theme selection permission', 'error');
                                                             }
@@ -751,7 +853,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteColorCombination: checked });
                                                                 showToast('Color combination permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteColorCombination: !checked }));
                                                                 showToast('Failed to update color combination permission', 'error');
                                                             }
@@ -767,7 +869,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteBudgetSelection: checked });
                                                                 showToast('Budget selection permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteBudgetSelection: !checked }));
                                                                 showToast('Failed to update budget selection permission', 'error');
                                                             }
@@ -783,7 +885,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteCustomerNotes: checked });
                                                                 showToast('Customer notes permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteCustomerNotes: !checked }));
                                                                 showToast('Failed to update customer notes permission', 'error');
                                                             }
@@ -799,7 +901,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteSellerQuotation: checked });
                                                                 showToast('Seller quotation permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteSellerQuotation: !checked }));
                                                                 showToast('Failed to update seller quotation permission', 'error');
                                                             }
@@ -815,7 +917,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteQuoteRevision: checked });
                                                                 showToast('Quote revision permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteQuoteRevision: !checked }));
                                                                 showToast('Failed to update quote revision permission', 'error');
                                                             }
@@ -831,7 +933,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteCustomerApproval: checked });
                                                                 showToast('Customer approval permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteCustomerApproval: !checked }));
                                                                 showToast('Failed to update customer approval permission', 'error');
                                                             }
@@ -847,7 +949,7 @@ const SellerDetail = () => {
                                                             try {
                                                                 await adminUsersApi.updateSeller(seller.id, { quoteFinalPayment: checked });
                                                                 showToast('Final payment permission updated', 'success');
-                                                            } catch(err) {
+                                                            } catch (err) {
                                                                 setSeller(prev => ({ ...prev, quoteFinalPayment: !checked }));
                                                                 showToast('Failed to update final payment permission', 'error');
                                                             }
@@ -955,9 +1057,9 @@ const SellerDetail = () => {
             </div>
 
             {/* Edit Shop Modal */}
-            <Modal 
-                isOpen={isEditingShop} 
-                onClose={() => !isSavingEdit && setIsEditingShop(false)} 
+            <Modal
+                isOpen={isEditingShop}
+                onClose={() => !isSavingEdit && setIsEditingShop(false)}
                 title="Edit Shop Details"
                 className="max-w-2xl"
             >
@@ -965,39 +1067,39 @@ const SellerDetail = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label className="text-xs font-bold text-slate-600">Shop Name</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 required
                                 value={editFormData.shopName || ''}
-                                onChange={e => setEditFormData({...editFormData, shopName: e.target.value})}
+                                onChange={e => setEditFormData({ ...editFormData, shopName: e.target.value })}
                                 className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-600">Owner Name</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 required
                                 value={editFormData.name || ''}
-                                onChange={e => setEditFormData({...editFormData, name: e.target.value})}
+                                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
                                 className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-600">Phone</label>
-                            <input 
-                                type="text" 
+                            <input
+                                type="text"
                                 required
                                 value={editFormData.phone || ''}
-                                onChange={e => setEditFormData({...editFormData, phone: e.target.value})}
+                                onChange={e => setEditFormData({ ...editFormData, phone: e.target.value })}
                                 className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
                         <div>
                             <label className="text-xs font-bold text-slate-600">Status</label>
-                            <select 
+                            <select
                                 value={editFormData.sellerStatus || 'active'}
-                                onChange={e => setEditFormData({...editFormData, sellerStatus: e.target.value})}
+                                onChange={e => setEditFormData({ ...editFormData, sellerStatus: e.target.value })}
                                 className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                             >
                                 <option value="active">Active</option>
@@ -1007,9 +1109,9 @@ const SellerDetail = () => {
                         </div>
                         <div className="md:col-span-2">
                             <label className="text-xs font-bold text-slate-600">Address</label>
-                            <textarea 
+                            <textarea
                                 value={editFormData.address || ''}
-                                onChange={e => setEditFormData({...editFormData, address: e.target.value})}
+                                onChange={e => setEditFormData({ ...editFormData, address: e.target.value })}
                                 className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                             />
                         </div>
@@ -1020,38 +1122,38 @@ const SellerDetail = () => {
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
                                 <label className="text-xs font-bold text-slate-600">Commission Rate (%)</label>
-                                <input 
-                                    type="number" 
+                                <input
+                                    type="number"
                                     min="0" max="100"
                                     value={editFormData.commissionRate || ''}
-                                    onChange={e => setEditFormData({...editFormData, commissionRate: e.target.value})}
+                                    onChange={e => setEditFormData({ ...editFormData, commissionRate: e.target.value })}
                                     className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-600">Bank Name</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={editFormData.bankDetails?.bankName || ''}
-                                    onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, bankName: e.target.value}})}
+                                    onChange={e => setEditFormData({ ...editFormData, bankDetails: { ...editFormData.bankDetails, bankName: e.target.value } })}
                                     className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-600">Account Number</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={editFormData.bankDetails?.accountNo || ''}
-                                    onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, accountNo: e.target.value}})}
+                                    onChange={e => setEditFormData({ ...editFormData, bankDetails: { ...editFormData.bankDetails, accountNo: e.target.value } })}
                                     className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-600">IFSC Code</label>
-                                <input 
-                                    type="text" 
+                                <input
+                                    type="text"
                                     value={editFormData.bankDetails?.ifscCode || ''}
-                                    onChange={e => setEditFormData({...editFormData, bankDetails: {...editFormData.bankDetails, ifscCode: e.target.value}})}
+                                    onChange={e => setEditFormData({ ...editFormData, bankDetails: { ...editFormData.bankDetails, ifscCode: e.target.value } })}
                                     className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                                 />
                             </div>
@@ -1067,11 +1169,11 @@ const SellerDetail = () => {
                                     <p className="text-[10px] text-slate-500">Enable Quick Commerce Retail</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer" 
-                                        checked={editFormData.retailEnabled ?? true} 
-                                        onChange={(e) => setEditFormData({...editFormData, retailEnabled: e.target.checked})} 
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={editFormData.retailEnabled ?? true}
+                                        onChange={(e) => setEditFormData({ ...editFormData, retailEnabled: e.target.checked })}
                                     />
                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                                 </label>
@@ -1082,11 +1184,11 @@ const SellerDetail = () => {
                                     <p className="text-[10px] text-slate-500">Enable Event Commerce</p>
                                 </div>
                                 <label className="relative inline-flex items-center cursor-pointer">
-                                    <input 
-                                        type="checkbox" 
-                                        className="sr-only peer" 
-                                        checked={editFormData.planMyEventEnabled ?? false} 
-                                        onChange={(e) => setEditFormData({...editFormData, planMyEventEnabled: e.target.checked})} 
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={editFormData.planMyEventEnabled ?? false}
+                                        onChange={(e) => setEditFormData({ ...editFormData, planMyEventEnabled: e.target.checked })}
                                     />
                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
                                 </label>
@@ -1095,16 +1197,16 @@ const SellerDetail = () => {
                     </div>
 
                     <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
-                        <button 
-                            type="button" 
+                        <button
+                            type="button"
                             onClick={() => setIsEditingShop(false)}
                             className="px-5 py-2.5 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl"
                             disabled={isSavingEdit}
                         >
                             Cancel
                         </button>
-                        <button 
-                            type="submit" 
+                        <button
+                            type="submit"
                             className="px-5 py-2.5 text-xs font-black uppercase bg-slate-900 text-white hover:bg-slate-800 rounded-xl disabled:opacity-50 flex items-center gap-2"
                             disabled={isSavingEdit}
                         >

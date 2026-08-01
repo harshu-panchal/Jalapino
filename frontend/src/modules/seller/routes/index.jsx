@@ -34,6 +34,9 @@ const Profile = React.lazy(() => import("../pages/Profile"));
 const PrivacyPolicy = React.lazy(() => import("../pages/PrivacyPolicy"));
 const Withdrawals = React.lazy(() => import("../pages/Withdrawals"));
 const LiveStream = React.lazy(() => import("../pages/LiveStream"));
+const CustomerImageReview = React.lazy(() => import("../pages/CustomerImageReview"));
+const AdvanceBookings = React.lazy(() => import("../pages/AdvanceBookings"));
+const BookingManagement = React.lazy(() => import("../pages/BookingManagement"));
 
 // Event Seller Pages
 const EventDashboard = React.lazy(() => import("../pages/event/EventDashboard"));
@@ -48,6 +51,9 @@ const navItems = [
   { label: "Go Live", path: "/seller/live", icon: HiOutlineVideoCamera },
   { label: "Products", path: "/seller/products", icon: HiOutlineCube },
   { label: "Stock", path: "/seller/inventory", icon: HiOutlineArchiveBox },
+  { label: "Customer Images", path: "/seller/customer-images", icon: HiOutlineClipboardDocumentList },
+  { label: "Advance Bookings", path: "/seller/advance-bookings", icon: HiOutlineCalendar },
+  { label: "Bookings", path: "/seller/booking-management", icon: HiOutlineClipboardDocumentList },
   { label: "Orders", path: "/seller/orders", icon: HiOutlineTruck },
   { label: "Returns", path: "/seller/returns", icon: HiOutlineArchiveBox },
   { label: "Track Orders", path: "/seller/tracking", icon: HiOutlineMapPin },
@@ -78,6 +84,9 @@ const eventNavItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
   { label: "Go Live", path: "/seller/live", icon: HiOutlineVideoCamera },
   { label: "Event Requests", path: "/seller/event-requests", icon: HiOutlineClipboardDocumentList },
+  { label: "Customer Images", path: "/seller/customer-images", icon: HiOutlineClipboardDocumentList },
+  { label: "Advance Bookings", path: "/seller/advance-bookings", icon: HiOutlineCalendar },
+  { label: "Bookings", path: "/seller/booking-management", icon: HiOutlineClipboardDocumentList },
   { label: "Packages", path: "/seller/packages", icon: HiOutlineCube },
   { label: "Reservations", path: "/seller/reservations", icon: HiOutlineClipboardDocumentList },
   { label: "Calendar", path: "/seller/calendar", icon: HiOutlineCalendar },
@@ -86,7 +95,7 @@ const eventNavItems = [
 
 const SellerRoutes = () => {
   const { user } = useAuth();
-  
+
   useEffect(() => {
     setActiveRole(ROLES.SELLER);
   }, []);
@@ -95,7 +104,15 @@ const SellerRoutes = () => {
   const hasProductAccess = user?.hasProductAccess !== false && user?.retailEnabled !== false;
 
   let activeNavItems = isEventSeller ? eventNavItems : navItems;
-  
+
+  if (user?.customerImageReviewEnabled !== true) {
+    activeNavItems = activeNavItems.filter(item => !['Customer Images'].includes(item.label));
+  }
+
+  if (user?.advanceBookingEnabled !== true) {
+    activeNavItems = activeNavItems.filter(item => !['Advance Bookings', 'Bookings'].includes(item.label));
+  }
+
   if (!isEventSeller) {
     if (user?.productsEnabled === false) {
       activeNavItems = activeNavItems.filter(item => !['Products'].includes(item.label));
@@ -121,9 +138,11 @@ const SellerRoutes = () => {
           <>
             <Route path="/" element={<EventDashboard />} />
             <Route path="/event-requests" element={<EventRequests />} />
+            <Route path="/customer-images" element={<CustomerImageReview />} />
             <Route path="/packages" element={<EventPackages />} />
             <Route path="/reservations" element={<EventReservations />} />
             <Route path="/calendar" element={<EventCalendar />} />
+            <Route path="/booking-management" element={<BookingManagement />} />
             <Route path="/live" element={<LiveStream />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -135,6 +154,9 @@ const SellerRoutes = () => {
             <Route path="/products" element={<ProductManagement />} />
             <Route path="/products/add" element={<AddProduct />} />
             <Route path="/inventory" element={<StockManagement />} />
+            <Route path="/customer-images" element={<CustomerImageReview />} />
+            <Route path="/advance-bookings" element={<AdvanceBookings />} />
+            <Route path="/booking-management" element={<BookingManagement />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/returns" element={<Returns />} />
             <Route path="/tracking" element={<DeliveryTracking />} />
