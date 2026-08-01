@@ -142,7 +142,7 @@ const SellerDetail = () => {
                 quoteSellerQuotation: data.quoteSellerQuotation ?? false,
                 quoteQuoteRevision: data.quoteQuoteRevision ?? false,
                 quoteCustomerApproval: data.quoteCustomerApproval ?? false,
-                quoteFinalPayment: data.quoteFinalPayment ?? false
+                quoteFinalPayment: data.quoteFinalPayment ?? false,
             }));
         } catch (error) {
             console.error(error);
@@ -766,7 +766,7 @@ const SellerDetail = () => {
                                                         }
                                                     }}
                                                 />
-                                                
+
                                                 <PermissionToggle
                                                     label="Customer Image Review"
                                                     description="Allow seller to review categorized customer uploads"

@@ -423,41 +423,41 @@ const PendingSellers = () => {
                                         <div className="flex items-center justify-end gap-3 h-full">
                                             <button
                                                 onClick={() => {
-                                                     setViewingSeller(s);
-                                                     setPermissions({
-                                                         retailEnabled: s.retailEnabled ?? true,
-                                                         planMyEventEnabled: s.planMyEventEnabled ?? false,
-                                                         productsEnabled: s.productsEnabled ?? true,
-                                                         stockEnabled: s.stockEnabled ?? true,
-                                                         ordersEnabled: s.ordersEnabled ?? true,
-                                                         walletEnabled: s.walletEnabled ?? true,
-                                                         analyticsEnabled: s.analyticsEnabled ?? true,
-                                                         wholesaleEnabled: s.wholesaleEnabled ?? false,
-                                                         allowedRetailCategories: s.allowedRetailCategories || [],
-                                                         allowedWholesaleCategories: s.allowedWholesaleCategories || [],
-                                                         allowedEventCategories: s.allowedEventCategories || [],
-                                                         serviceCategories: s.serviceCategories || [],
-                                                         allowCustomProductEntry: s.allowCustomProductEntry ?? false,
-                                                         liveKitchenEnabled: s.liveKitchenEnabled ?? false,
-                                                         customizationEngineEnabled: s.customizationEngineEnabled ?? false,
-                                                         quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
-                                                         quoteThemeSelection: s.quoteThemeSelection ?? false,
-                                                         quoteColorCombination: s.quoteColorCombination ?? false,
-                                                         quoteBudgetSelection: s.quoteBudgetSelection ?? false,
-                                                         quoteCustomerNotes: s.quoteCustomerNotes ?? false,
-                                                         quoteSellerQuotation: s.quoteSellerQuotation ?? false,
-                                                         quoteQuoteRevision: s.quoteQuoteRevision ?? false,
-                                                         quoteCustomerApproval: s.quoteCustomerApproval ?? false,
-                                                         quoteFinalPayment: s.quoteFinalPayment ?? false,
-                                                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
-                                                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
-                                                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
-                                                     });
-                                                     setAdminRemark(s.adminRemark || '');
-                                                     setAdminTerms(s.adminTerms || '');
-                                                     setAdvancePaymentPercentage(s.advancePaymentPercentage || 0);
-                                                     setSearchParams({ review: s.id });
-                                                     setIsReviewModalOpen(true);
+                                                    setViewingSeller(s);
+                                                    setPermissions({
+                                                        retailEnabled: s.retailEnabled ?? true,
+                                                        planMyEventEnabled: s.planMyEventEnabled ?? false,
+                                                        productsEnabled: s.productsEnabled ?? true,
+                                                        stockEnabled: s.stockEnabled ?? true,
+                                                        ordersEnabled: s.ordersEnabled ?? true,
+                                                        walletEnabled: s.walletEnabled ?? true,
+                                                        analyticsEnabled: s.analyticsEnabled ?? true,
+                                                        wholesaleEnabled: s.wholesaleEnabled ?? false,
+                                                        allowedRetailCategories: s.allowedRetailCategories || [],
+                                                        allowedWholesaleCategories: s.allowedWholesaleCategories || [],
+                                                        allowedEventCategories: s.allowedEventCategories || [],
+                                                        serviceCategories: s.serviceCategories || [],
+                                                        allowCustomProductEntry: s.allowCustomProductEntry ?? false,
+                                                        liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                                                        customizationEngineEnabled: s.customizationEngineEnabled ?? false,
+                                                        quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
+                                                        quoteThemeSelection: s.quoteThemeSelection ?? false,
+                                                        quoteColorCombination: s.quoteColorCombination ?? false,
+                                                        quoteBudgetSelection: s.quoteBudgetSelection ?? false,
+                                                        quoteCustomerNotes: s.quoteCustomerNotes ?? false,
+                                                        quoteSellerQuotation: s.quoteSellerQuotation ?? false,
+                                                        quoteQuoteRevision: s.quoteQuoteRevision ?? false,
+                                                        quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                                                        quoteFinalPayment: s.quoteFinalPayment ?? false,
+                                                        customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
+                                                        advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                                                        reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
+                                                    });
+                                                    setAdminRemark(s.adminRemark || '');
+                                                    setAdminTerms(s.adminTerms || '');
+                                                    setAdvancePaymentPercentage(s.advancePaymentPercentage || 0);
+                                                    setSearchParams({ review: s.id });
+                                                    setIsReviewModalOpen(true);
                                                 }}
                                                 className="h-9 px-4 bg-black  text-primary-foreground rounded-xl text-[10px] font-bold hover:bg-brand-700 transition-all shadow-md shadow-brand-100 hover:-translate-y-0.5 flex items-center gap-2"
                                             >
@@ -659,596 +659,597 @@ const PendingSellers = () => {
                                                     <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Module Access Permissions</h5>
                                                     <p className="text-[10px] text-slate-500 font-medium">Enable or disable specific features for this seller before approval.</p>
                                                 </div>
-                                                 {/* Row 1: 2-column Layout (Retail Store, Plan My Event, Wholesale) */}
-                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
-                                                     <PermissionToggle
-                                                         label="Retail Store (Master)"
-                                                         description="Main toggle for retail store access"
-                                                         checked={permissions.retailEnabled}
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, retailEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { retailEnabled: checked });
-                                                                 toast.success('Retail master permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, retailEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update retail master permission');
-                                                                 setPermissions(prev => ({ ...prev, retailEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                {/* Row 1: 2-column Layout (Retail Store, Plan My Event, Wholesale) */}
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
+                                                    <PermissionToggle
+                                                        label="Retail Store (Master)"
+                                                        description="Main toggle for retail store access"
+                                                        checked={permissions.retailEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, retailEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { retailEnabled: checked });
+                                                                toast.success('Retail master permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, retailEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update retail master permission');
+                                                                setPermissions(prev => ({ ...prev, retailEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Plan My Event"
-                                                         description="Allow event service bookings"
-                                                         checked={permissions.planMyEventEnabled}
-                                                         activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
-                                                                 toast.success('Plan my event permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update plan my event permission');
-                                                                 setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Plan My Event"
+                                                        description="Allow event service bookings"
+                                                        checked={permissions.planMyEventEnabled}
+                                                        activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
+                                                                toast.success('Plan my event permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update plan my event permission');
+                                                                setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Wholesale Marketplace"
-                                                         description="Allow selling in wholesale marketplace"
-                                                         checked={permissions.wholesaleEnabled}
-                                                         activeColor="bg-amber-600" hoverColor="group-hover:text-amber-700"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, wholesaleEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { wholesaleEnabled: checked });
-                                                                 toast.success('Wholesale marketplace permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, wholesaleEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update wholesale permission');
-                                                                 setPermissions(prev => ({ ...prev, wholesaleEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Wholesale Marketplace"
+                                                        description="Allow selling in wholesale marketplace"
+                                                        checked={permissions.wholesaleEnabled}
+                                                        activeColor="bg-amber-600" hoverColor="group-hover:text-amber-700"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, wholesaleEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { wholesaleEnabled: checked });
+                                                                toast.success('Wholesale marketplace permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, wholesaleEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update wholesale permission');
+                                                                setPermissions(prev => ({ ...prev, wholesaleEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Custom Product Entry"
-                                                         description="Allow manual entry of product name, brand, and ingredients"
-                                                         checked={permissions.allowCustomProductEntry}
-                                                         activeColor="bg-emerald-500" hoverColor="group-hover:text-emerald-600"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, allowCustomProductEntry: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { allowCustomProductEntry: checked });
-                                                                 toast.success('Custom product entry permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, allowCustomProductEntry: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update custom product entry permission');
-                                                                 setPermissions(prev => ({ ...prev, allowCustomProductEntry: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Custom Product Entry"
+                                                        description="Allow manual entry of product name, brand, and ingredients"
+                                                        checked={permissions.allowCustomProductEntry}
+                                                        activeColor="bg-emerald-500" hoverColor="group-hover:text-emerald-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, allowCustomProductEntry: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { allowCustomProductEntry: checked });
+                                                                toast.success('Custom product entry permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, allowCustomProductEntry: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update custom product entry permission');
+                                                                setPermissions(prev => ({ ...prev, allowCustomProductEntry: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Live Kitchen"
-                                                         description="Allow live streaming/camera updates from seller kitchen"
-                                                         checked={permissions.liveKitchenEnabled}
-                                                         activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, liveKitchenEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { liveKitchenEnabled: checked });
-                                                                 toast.success('Live kitchen permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, liveKitchenEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update live kitchen permission');
-                                                                 setPermissions(prev => ({ ...prev, liveKitchenEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Live Kitchen"
+                                                        description="Allow live streaming/camera updates from seller kitchen"
+                                                        checked={permissions.liveKitchenEnabled}
+                                                        activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, liveKitchenEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { liveKitchenEnabled: checked });
+                                                                toast.success('Live kitchen permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, liveKitchenEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update live kitchen permission');
+                                                                setPermissions(prev => ({ ...prev, liveKitchenEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Customization & Quotation Engine"
-                                                         description="Master toggle to allow customizations and direct quotations"
-                                                         checked={permissions.customizationEngineEnabled}
-                                                         activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, customizationEngineEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { customizationEngineEnabled: checked });
-                                                                 toast.success('Customization engine permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, customizationEngineEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update customization engine permission');
-                                                                 setPermissions(prev => ({ ...prev, customizationEngineEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Customization & Quotation Engine"
+                                                        description="Master toggle to allow customizations and direct quotations"
+                                                        checked={permissions.customizationEngineEnabled}
+                                                        activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, customizationEngineEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { customizationEngineEnabled: checked });
+                                                                toast.success('Customization engine permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, customizationEngineEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update customization engine permission');
+                                                                setPermissions(prev => ({ ...prev, customizationEngineEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Customer Image Review"
-                                                         description="Allow seller to review categorized customer uploads"
-                                                         checked={permissions.customerImageReviewEnabled}
-                                                         activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, customerImageReviewEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { customerImageReviewEnabled: checked });
-                                                                 toast.success('Customer image review permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, customerImageReviewEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update customer image review permission');
-                                                                 setPermissions(prev => ({ ...prev, customerImageReviewEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Customer Image Review"
+                                                        description="Allow seller to review categorized customer uploads"
+                                                        checked={permissions.customerImageReviewEnabled}
+                                                        activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, customerImageReviewEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { customerImageReviewEnabled: checked });
+                                                                toast.success('Customer image review permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, customerImageReviewEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update customer image review permission');
+                                                                setPermissions(prev => ({ ...prev, customerImageReviewEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Advance Booking System"
-                                                         description="Allow seller to manage advance bookings and status"
-                                                         checked={permissions.advanceBookingEnabled}
-                                                         activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, advanceBookingEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { advanceBookingEnabled: checked });
-                                                                 toast.success('Advance booking permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update advance booking permission');
-                                                                 setPermissions(prev => ({ ...prev, advanceBookingEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
-                                                  </div>
+                                                    <PermissionToggle
+                                                        label="Advance Booking System"
+                                                        description="Allow seller to manage advance bookings and status"
+                                                        checked={permissions.advanceBookingEnabled}
+                                                        activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, advanceBookingEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { advanceBookingEnabled: checked });
+                                                                toast.success('Advance booking permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update advance booking permission');
+                                                                setPermissions(prev => ({ ...prev, advanceBookingEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
 
-                                                  {/* Customization & Quotation Engine Sub-Permissions */}
-                                                  {permissions.customizationEngineEnabled && (
-                                                      <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                                          <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Engine Settings</h6>
-                                                          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                                              <PermissionToggle
-                                                                  label="Reference Photo Upload"
-                                                                  description="Allow upload of reference photos"
-                                                                  checked={permissions.quoteReferencePhotoUpload}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteReferencePhotoUpload: checked });
-                                                                          toast.success('Reference photo upload permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteReferencePhotoUpload: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Theme Selection"
-                                                                  description="Allow selecting themes"
-                                                                  checked={permissions.quoteThemeSelection}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteThemeSelection: checked });
-                                                                          toast.success('Theme selection permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteThemeSelection: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteThemeSelection: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Color Combination"
-                                                                  description="Allow selecting color combinations"
-                                                                  checked={permissions.quoteColorCombination}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteColorCombination: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteColorCombination: checked });
-                                                                          toast.success('Color combination permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteColorCombination: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteColorCombination: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Budget Selection"
-                                                                  description="Allow selecting budget options"
-                                                                  checked={permissions.quoteBudgetSelection}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteBudgetSelection: checked });
-                                                                          toast.success('Budget selection permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteBudgetSelection: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteBudgetSelection: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Customer Notes"
-                                                                  description="Allow customer notes/instructions"
-                                                                  checked={permissions.quoteCustomerNotes}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                {/* Customization & Quotation Engine Sub-Permissions */}
+                                                {permissions.customizationEngineEnabled && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Engine Settings</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                            <PermissionToggle
+                                                                label="Reference Photo Upload"
+                                                                description="Allow upload of reference photos"
+                                                                checked={permissions.quoteReferencePhotoUpload}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteReferencePhotoUpload: checked });
+                                                                        toast.success('Reference photo upload permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteReferencePhotoUpload: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Theme Selection"
+                                                                description="Allow selecting themes"
+                                                                checked={permissions.quoteThemeSelection}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteThemeSelection: checked });
+                                                                        toast.success('Theme selection permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteThemeSelection: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteThemeSelection: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Color Combination"
+                                                                description="Allow selecting color combinations"
+                                                                checked={permissions.quoteColorCombination}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteColorCombination: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteColorCombination: checked });
+                                                                        toast.success('Color combination permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteColorCombination: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteColorCombination: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Budget Selection"
+                                                                description="Allow selecting budget options"
+                                                                checked={permissions.quoteBudgetSelection}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteBudgetSelection: checked });
+                                                                        toast.success('Budget selection permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteBudgetSelection: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteBudgetSelection: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Customer Notes"
+                                                                description="Allow customer notes/instructions"
+                                                                checked={permissions.quoteCustomerNotes}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
 
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteCustomerNotes: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteCustomerNotes: checked });
-                                                                          toast.success('Customer notes permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerNotes: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteCustomerNotes: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Seller Quotation"
-                                                                  description="Allow seller to send quotations"
-                                                                  checked={permissions.quoteSellerQuotation}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteSellerQuotation: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteSellerQuotation: checked });
-                                                                          toast.success('Seller quotation permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteSellerQuotation: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteSellerQuotation: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Quote Revision"
-                                                                  description="Allow revisions to quotation"
-                                                                  checked={permissions.quoteQuoteRevision}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteQuoteRevision: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteQuoteRevision: checked });
-                                                                          toast.success('Quote revision permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteQuoteRevision: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteQuoteRevision: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Customer Approval"
-                                                                  description="Allow customer approval step"
-                                                                  checked={permissions.quoteCustomerApproval}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteCustomerApproval: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteCustomerApproval: checked });
-                                                                          toast.success('Customer approval permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerApproval: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteCustomerApproval: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                              <PermissionToggle
-                                                                  label="Final Payment"
-                                                                  description="Allow final payment step"
-                                                                  checked={permissions.quoteFinalPayment}
-                                                                  activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                  onChange={async (e) => {
-                                                                      const checked = e.target.checked;
-                                                                      setPermissions(prev => ({ ...prev, quoteFinalPayment: checked }));
-                                                                      try {
-                                                                          await adminApi.updateSeller(viewingSeller.id, { quoteFinalPayment: checked });
-                                                                          toast.success('Final payment permission updated');
-                                                                          setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteFinalPayment: checked } : seller));
-                                                                      } catch (err) {
-                                                                          setPermissions(prev => ({ ...prev, quoteFinalPayment: !checked }));
-                                                                      }
-                                                                  }}
-                                                              />
-                                                          </div>
-                                                      </div>
-                                                  )}
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteCustomerNotes: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteCustomerNotes: checked });
+                                                                        toast.success('Customer notes permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerNotes: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteCustomerNotes: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Seller Quotation"
+                                                                description="Allow seller to send quotations"
+                                                                checked={permissions.quoteSellerQuotation}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteSellerQuotation: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteSellerQuotation: checked });
+                                                                        toast.success('Seller quotation permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteSellerQuotation: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteSellerQuotation: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Quote Revision"
+                                                                description="Allow revisions to quotation"
+                                                                checked={permissions.quoteQuoteRevision}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteQuoteRevision: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteQuoteRevision: checked });
+                                                                        toast.success('Quote revision permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteQuoteRevision: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteQuoteRevision: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Customer Approval"
+                                                                description="Allow customer approval step"
+                                                                checked={permissions.quoteCustomerApproval}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteCustomerApproval: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteCustomerApproval: checked });
+                                                                        toast.success('Customer approval permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerApproval: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteCustomerApproval: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Final Payment"
+                                                                description="Allow final payment step"
+                                                                checked={permissions.quoteFinalPayment}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteFinalPayment: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteFinalPayment: checked });
+                                                                        toast.success('Final payment permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteFinalPayment: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteFinalPayment: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
-                                                  {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale/Events are enabled */}
-                                                  {(permissions.retailEnabled || permissions.wholesaleEnabled || permissions.planMyEventEnabled) && (
-                                                      <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
-                                                          {permissions.retailEnabled && (
-                                                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
-                                                                  <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Retail Categories</h6>
-                                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                      {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
-                                                                          const isChecked = (permissions.allowedRetailCategories || []).includes(cat._id);
-                                                                          return (
-                                                                              <label key={cat._id} className={cn(
-                                                                                  "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
-                                                                                  isChecked 
-                                                                                      ? "border-primary/20 bg-brand-50/30 text-slate-900" 
-                                                                                      : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
-                                                                              )}>
-                                                                                  <input
-                                                                                      type="checkbox"
-                                                                                      checked={isChecked}
-                                                                                      onChange={async (e) => {
-                                                                                          const checked = e.target.checked;
-                                                                                          const current = permissions.allowedRetailCategories || [];
-                                                                                          const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
-                                                                                          setPermissions(prev => ({ ...prev, allowedRetailCategories: next }));
-                                                                                          try {
-                                                                                              await adminApi.updateSeller(viewingSeller.id, { allowedRetailCategories: next });
-                                                                                              toast.success(`${cat.name} updated in Retail Categories`);
-                                                                                          } catch (err) {
-                                                                                              toast.error('Failed to update categories');
-                                                                                          }
-                                                                                      }}
-                                                                                      className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5"
-                                                                                  />
-                                                                                  <span>{cat.name}</span>
-                                                                              </label>
-                                                                          );
-                                                                      })}
-                                                                  </div>
-                                                              </div>
-                                                          )}
+                                                {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale/Events are enabled */}
+                                                {(permissions.retailEnabled || permissions.wholesaleEnabled || permissions.planMyEventEnabled) && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
+                                                        {permissions.retailEnabled && (
+                                                            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
+                                                                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Retail Categories</h6>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                    {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
+                                                                        const isChecked = (permissions.allowedRetailCategories || []).includes(cat._id);
+                                                                        return (
+                                                                            <label key={cat._id} className={cn(
+                                                                                "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                isChecked
+                                                                                    ? "border-primary/20 bg-brand-50/30 text-slate-900"
+                                                                                    : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                            )}>
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={isChecked}
+                                                                                    onChange={async (e) => {
+                                                                                        const checked = e.target.checked;
+                                                                                        const current = permissions.allowedRetailCategories || [];
+                                                                                        const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                        setPermissions(prev => ({ ...prev, allowedRetailCategories: next }));
+                                                                                        try {
+                                                                                            await adminApi.updateSeller(viewingSeller.id, { allowedRetailCategories: next });
+                                                                                            toast.success(`${cat.name} updated in Retail Categories`);
+                                                                                        } catch (err) {
+                                                                                            toast.error('Failed to update categories');
+                                                                                        }
+                                                                                    }}
+                                                                                    className="rounded text-primary focus:ring-primary/20 h-4.5 w-4.5"
+                                                                                />
+                                                                                <span>{cat.name}</span>
+                                                                            </label>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
 
-                                                          {permissions.wholesaleEnabled && (
-                                                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
-                                                                  <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Wholesale Categories</h6>
-                                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                      {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
-                                                                          const isChecked = (permissions.allowedWholesaleCategories || []).includes(cat._id);
-                                                                          return (
-                                                                              <label key={cat._id} className={cn(
-                                                                                  "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
-                                                                                  isChecked 
-                                                                                      ? "border-amber-600/20 bg-amber-50/30 text-slate-900" 
-                                                                                      : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
-                                                                              )}>
-                                                                                  <input
-                                                                                      type="checkbox"
-                                                                                      checked={isChecked}
-                                                                                      onChange={async (e) => {
-                                                                                          const checked = e.target.checked;
-                                                                                          const current = permissions.allowedWholesaleCategories || [];
-                                                                                          const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
-                                                                                          setPermissions(prev => ({ ...prev, allowedWholesaleCategories: next }));
-                                                                                          try {
-                                                                                              await adminApi.updateSeller(viewingSeller.id, { allowedWholesaleCategories: next });
-                                                                                              toast.success(`${cat.name} updated in Wholesale Categories`);
-                                                                                          } catch (err) {
-                                                                                              toast.error('Failed to update categories');
-                                                                                          }
-                                                                                      }}
-                                                                                      className="rounded text-amber-600 focus:ring-amber-600/20 h-4.5 w-4.5"
-                                                                                  />
-                                                                                  <span>{cat.name}</span>
-                                                                              </label>
-                                                                          );
-                                                                      })}
-                                                                  </div>
-                                                              </div>
-                                                          )}
+                                                        {permissions.wholesaleEnabled && (
+                                                            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
+                                                                <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Wholesale Categories</h6>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                    {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
+                                                                        const isChecked = (permissions.allowedWholesaleCategories || []).includes(cat._id);
+                                                                        return (
+                                                                            <label key={cat._id} className={cn(
+                                                                                "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                isChecked
+                                                                                    ? "border-amber-600/20 bg-amber-50/30 text-slate-900"
+                                                                                    : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                            )}>
+                                                                                <input
+                                                                                    type="checkbox"
+                                                                                    checked={isChecked}
+                                                                                    onChange={async (e) => {
+                                                                                        const checked = e.target.checked;
+                                                                                        const current = permissions.allowedWholesaleCategories || [];
+                                                                                        const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                        setPermissions(prev => ({ ...prev, allowedWholesaleCategories: next }));
+                                                                                        try {
+                                                                                            await adminApi.updateSeller(viewingSeller.id, { allowedWholesaleCategories: next });
+                                                                                            toast.success(`${cat.name} updated in Wholesale Categories`);
+                                                                                        } catch (err) {
+                                                                                            toast.error('Failed to update categories');
+                                                                                        }
+                                                                                    }}
+                                                                                    className="rounded text-amber-600 focus:ring-amber-600/20 h-4.5 w-4.5"
+                                                                                />
+                                                                                <span>{cat.name}</span>
+                                                                            </label>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
 
-                                                          {permissions.planMyEventEnabled && (
-                                                              <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
-                                                                  <div>
-                                                                      <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Plan My Event Categories (Standard)</h6>
-                                                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                          {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (cat.applicableModules || []).includes('plan_my_event')).map(cat => {
-                                                                              const isChecked = (permissions.allowedEventCategories || []).includes(cat._id);
-                                                                              return (
-                                                                                  <label key={cat._id} className={cn(
-                                                                                      "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
-                                                                                      isChecked 
-                                                                                          ? "border-purple-600/20 bg-purple-50/30 text-slate-900" 
-                                                                                          : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
-                                                                                  )}>
-                                                                                      <input
-                                                                                          type="checkbox"
-                                                                                          checked={isChecked}
-                                                                                          onChange={async (e) => {
-                                                                                              const checked = e.target.checked;
-                                                                                              const current = permissions.allowedEventCategories || [];
-                                                                                              const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
-                                                                                              setPermissions(prev => ({ ...prev, allowedEventCategories: next }));
-                                                                                              try {
-                                                                                                  await adminApi.updateSeller(viewingSeller.id, { allowedEventCategories: next });
-                                                                                                  toast.success(`${cat.name} updated in Event Categories`);
-                                                                                              } catch (err) {
-                                                                                                  toast.error('Failed to update categories');
-                                                                                              }
-                                                                                          }}
-                                                                                          className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
-                                                                                      />
-                                                                                      <span>{cat.name}</span>
-                                                                                  </label>
-                                                                              );
-                                                                          })}
-                                                                      </div>
-                                                                  </div>
+                                                        {permissions.planMyEventEnabled && (
+                                                            <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                                                                <div>
+                                                                    <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Plan My Event Categories (Standard)</h6>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                        {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (cat.applicableModules || []).includes('plan_my_event')).map(cat => {
+                                                                            const isChecked = (permissions.allowedEventCategories || []).includes(cat._id);
+                                                                            return (
+                                                                                <label key={cat._id} className={cn(
+                                                                                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                    isChecked
+                                                                                        ? "border-purple-600/20 bg-purple-50/30 text-slate-900"
+                                                                                        : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                                )}>
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={isChecked}
+                                                                                        onChange={async (e) => {
+                                                                                            const checked = e.target.checked;
+                                                                                            const current = permissions.allowedEventCategories || [];
+                                                                                            const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                            setPermissions(prev => ({ ...prev, allowedEventCategories: next }));
+                                                                                            try {
+                                                                                                await adminApi.updateSeller(viewingSeller.id, { allowedEventCategories: next });
+                                                                                                toast.success(`${cat.name} updated in Event Categories`);
+                                                                                            } catch (err) {
+                                                                                                toast.error('Failed to update categories');
+                                                                                            }
+                                                                                        }}
+                                                                                        className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
+                                                                                    />
+                                                                                    <span>{cat.name}</span>
+                                                                                </label>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
 
-                                                                  <div>
-                                                                      <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Event Service Categories (Event Commerce)</h6>
-                                                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                          {eventCategories.map(cat => {
-                                                                              const isChecked = (permissions.serviceCategories || []).includes(cat._id);
-                                                                              return (
-                                                                                  <label key={cat._id} className={cn(
-                                                                                      "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
-                                                                                      isChecked 
-                                                                                          ? "border-purple-600/20 bg-purple-50/30 text-slate-900" 
-                                                                                          : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
-                                                                                  )}>
-                                                                                      <input
-                                                                                          type="checkbox"
-                                                                                          checked={isChecked}
-                                                                                          onChange={async (e) => {
-                                                                                              const checked = e.target.checked;
-                                                                                              const current = permissions.serviceCategories || [];
-                                                                                              const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
-                                                                                              setPermissions(prev => ({ ...prev, serviceCategories: next }));
-                                                                                              try {
-                                                                                                  await adminApi.updateSeller(viewingSeller.id, { serviceCategories: next });
-                                                                                                  toast.success(`${cat.name} updated in Event Service Categories`);
-                                                                                              } catch (err) {
-                                                                                                  toast.error('Failed to update service categories');
-                                                                                              }
-                                                                                          }}
-                                                                                          className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
-                                                                                      />
-                                                                                      <span>{cat.name}</span>
-                                                                                  </label>
-                                                                              );
-                                                                          })}
-                                                                      </div>
-                                                                  </div>
-                                                              </div>
-                                                          )}
-                                                      </div>
-                                                  )}
+                                                                <div>
+                                                                    <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Event Service Categories (Event Commerce)</h6>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                        {eventCategories.map(cat => {
+                                                                            const isChecked = (permissions.serviceCategories || []).includes(cat._id);
+                                                                            return (
+                                                                                <label key={cat._id} className={cn(
+                                                                                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                    isChecked
+                                                                                        ? "border-purple-600/20 bg-purple-50/30 text-slate-900"
+                                                                                        : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                                )}>
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={isChecked}
+                                                                                        onChange={async (e) => {
+                                                                                            const checked = e.target.checked;
+                                                                                            const current = permissions.serviceCategories || [];
+                                                                                            const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                            setPermissions(prev => ({ ...prev, serviceCategories: next }));
+                                                                                            try {
+                                                                                                await adminApi.updateSeller(viewingSeller.id, { serviceCategories: next });
+                                                                                                toast.success(`${cat.name} updated in Event Service Categories`);
+                                                                                            } catch (err) {
+                                                                                                toast.error('Failed to update service categories');
+                                                                                            }
+                                                                                        }}
+                                                                                        className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
+                                                                                    />
+                                                                                    <span>{cat.name}</span>
+                                                                                </label>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
 
-                                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
 
 
-                                                      <PermissionToggle
-                                                          label="Booking & Slots Management"
-                                                          description="Allow managing booking slots for products/services"
-                                                          checked={permissions.bookingSlotsEnabled}
-                                                          onChange={async (e) => {
-                                                              const checked = e.target.checked;
-                                                              setPermissions(prev => ({ ...prev, bookingSlotsEnabled: checked }));
-                                                              try {
-                                                                  await adminApi.updateSeller(viewingSeller.id, { bookingSlotsEnabled: checked });
-                                                                  toast.success('Booking Slots permission updated');
-                                                                  setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, bookingSlotsEnabled: checked } : seller));
-                                                              } catch (err) {
-                                                                  toast.error('Failed to update booking slots permission');
-                                                                  setPermissions(prev => ({ ...prev, bookingSlotsEnabled: !checked }));
-                                                              }
-                                                          }}
-                                                      />
 
-                                                     <PermissionToggle
-                                                         label="Products & Catalog"
-                                                         description="Allow adding and managing products"
-                                                         checked={permissions.productsEnabled}
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, productsEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { productsEnabled: checked });
-                                                                 toast.success('Products permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, productsEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update products permission');
-                                                                 setPermissions(prev => ({ ...prev, productsEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Booking & Slots Management"
+                                                        description="Allow managing booking slots for products/services"
+                                                        checked={permissions.bookingSlotsEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, bookingSlotsEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { bookingSlotsEnabled: checked });
+                                                                toast.success('Booking Slots permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, bookingSlotsEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update booking slots permission');
+                                                                setPermissions(prev => ({ ...prev, bookingSlotsEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Stock & Inventory"
-                                                         description="Allow managing product inventory"
-                                                         checked={permissions.stockEnabled}
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, stockEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { stockEnabled: checked });
-                                                                 toast.success('Stock permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, stockEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update stock permission');
-                                                                 setPermissions(prev => ({ ...prev, stockEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Products & Catalog"
+                                                        description="Allow adding and managing products"
+                                                        checked={permissions.productsEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, productsEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { productsEnabled: checked });
+                                                                toast.success('Products permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, productsEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update products permission');
+                                                                setPermissions(prev => ({ ...prev, productsEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Orders & Returns"
-                                                         description="Allow viewing and managing orders"
-                                                         checked={permissions.ordersEnabled}
-                                                         activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, ordersEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { ordersEnabled: checked });
-                                                                 toast.success('Orders permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ordersEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update orders permission');
-                                                                 setPermissions(prev => ({ ...prev, ordersEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Stock & Inventory"
+                                                        description="Allow managing product inventory"
+                                                        checked={permissions.stockEnabled}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, stockEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { stockEnabled: checked });
+                                                                toast.success('Stock permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, stockEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update stock permission');
+                                                                setPermissions(prev => ({ ...prev, stockEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Wallet & Earnings"
-                                                         description="Allow access to payouts and earnings"
-                                                         checked={permissions.walletEnabled}
-                                                         activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, walletEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { walletEnabled: checked });
-                                                                 toast.success('Wallet permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, walletEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update wallet permission');
-                                                                 setPermissions(prev => ({ ...prev, walletEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Orders & Returns"
+                                                        description="Allow viewing and managing orders"
+                                                        checked={permissions.ordersEnabled}
+                                                        activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, ordersEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { ordersEnabled: checked });
+                                                                toast.success('Orders permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ordersEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update orders permission');
+                                                                setPermissions(prev => ({ ...prev, ordersEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                     <PermissionToggle
-                                                         label="Analytics & Reports"
-                                                         description="Allow viewing sales analytics"
-                                                         checked={permissions.analyticsEnabled}
-                                                         activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                         onChange={async (e) => {
-                                                             const checked = e.target.checked;
-                                                             setPermissions(prev => ({ ...prev, analyticsEnabled: checked }));
-                                                             try {
-                                                                 await adminApi.updateSeller(viewingSeller.id, { analyticsEnabled: checked });
-                                                                 toast.success('Analytics permission updated');
-                                                                 setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, analyticsEnabled: checked } : seller));
-                                                             } catch (err) {
-                                                                 toast.error('Failed to update analytics permission');
-                                                                 setPermissions(prev => ({ ...prev, analyticsEnabled: !checked }));
-                                                             }
-                                                         }}
-                                                     />
+                                                    <PermissionToggle
+                                                        label="Wallet & Earnings"
+                                                        description="Allow access to payouts and earnings"
+                                                        checked={permissions.walletEnabled}
+                                                        activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, walletEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { walletEnabled: checked });
+                                                                toast.success('Wallet permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, walletEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update wallet permission');
+                                                                setPermissions(prev => ({ ...prev, walletEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
 
-                                                 </div>
+                                                    <PermissionToggle
+                                                        label="Analytics & Reports"
+                                                        description="Allow viewing sales analytics"
+                                                        checked={permissions.analyticsEnabled}
+                                                        activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, analyticsEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { analyticsEnabled: checked });
+                                                                toast.success('Analytics permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, analyticsEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update analytics permission');
+                                                                setPermissions(prev => ({ ...prev, analyticsEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                </div>
                                             </div>
 
                                             <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
@@ -1262,8 +1263,8 @@ const PendingSellers = () => {
                                                         return (
                                                             <label key={cat._id} className={cn(
                                                                 "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
-                                                                isChecked 
-                                                                    ? "border-emerald-600/20 bg-emerald-50/30 text-slate-900" 
+                                                                isChecked
+                                                                    ? "border-emerald-600/20 bg-emerald-50/30 text-slate-900"
                                                                     : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
                                                             )}>
                                                                 <input
@@ -1341,6 +1342,18 @@ const PendingSellers = () => {
                                                             placeholder="Write any terms and conditions (e.g. 'Please ensure GST documents are updated within 7 days of approval.')..."
                                                             rows={3}
                                                             className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
+                                                        />
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Advance Payment (%)</label>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            value={advancePaymentPercentage}
+                                                            onChange={e => setAdvancePaymentPercentage(e.target.value)}
+                                                            placeholder="e.g. 20"
+                                                            className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-amber-400/70"
                                                         />
                                                     </div>
                                                     <div>
