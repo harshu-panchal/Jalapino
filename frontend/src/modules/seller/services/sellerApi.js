@@ -72,7 +72,12 @@ export const sellerApi = {
     updateLiveStreamUrl: (orderId, streamUrl) => axiosInstance.post('/kitchen/stream', { orderId, streamUrl }),
 
     // Customer Images
-    getCustomerImagesQueue: () => axiosInstance.get('/customer-images/queue'),
     approveCustomerImage: (id) => axiosInstance.put(`/customer-images/${id}/approve`),
     rejectCustomerImage: (id) => axiosInstance.put(`/customer-images/${id}/reject`),
+
+    // Venue Physical Visits
+    getVisitRequests: () => axiosInstance.get('/seller/venues/visit-requests'),
+    updateVisitRequestStatus: (id, data) => axiosInstance.patch(`/venues/visit-requests/${id}/status`, data),
+    getVenueAvailability: (params) => axiosInstance.get('/venues/availability', { params }),
+    setVenueAvailability: (data) => axiosInstance.post('/venues/availability', data),
 };

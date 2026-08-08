@@ -11,10 +11,14 @@ import {
     getPackageTemplates,
     createPackageTemplate,
     updatePackageTemplate,
-    deletePackageTemplate
+    deletePackageTemplate,
+    getFacilities,
+    createFacility,
+    updateFacility,
+    deleteFacility
 } from '../controller/adminEventConfigController.js';
 import { getCities, createCity, updateCity, deleteCity } from '../controller/adminCityController.js';
-import { getAllEventBookings, deleteAdminEventBooking } from '../controller/adminEventBookingController.js';
+import { getAllEventBookings, deleteAdminEventBooking, getAllVenueBookings, deleteAdminVenueBooking } from '../controller/adminEventBookingController.js';
 
 const router = express.Router();
 
@@ -38,6 +42,12 @@ router.post('/package-templates', createPackageTemplate);
 router.put('/package-templates/:id', updatePackageTemplate);
 router.delete('/package-templates/:id', deletePackageTemplate);
 
+// Venue Facilities
+router.get('/facilities', getFacilities);
+router.post('/facilities', createFacility);
+router.put('/facilities/:id', updateFacility);
+router.delete('/facilities/:id', deleteFacility);
+
 // City Management
 router.get('/cities', getCities);
 router.post('/cities', createCity);
@@ -47,5 +57,9 @@ router.delete('/cities/:id', deleteCity);
 // Event Bookings
 router.get('/bookings', getAllEventBookings);
 router.delete('/bookings/:id', deleteAdminEventBooking);
+
+// Venue / Ticket Bookings
+router.get('/venue-bookings', getAllVenueBookings);
+router.delete('/venue-bookings/:id', deleteAdminVenueBooking);
 
 export default router;

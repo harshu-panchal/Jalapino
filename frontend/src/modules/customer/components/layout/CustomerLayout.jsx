@@ -121,9 +121,9 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     // Route-based visibility logic
     const path = location.pathname.replace(/\/$/, '') || '/';
 
-    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout'];
-    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout'];
-    const hideCartRoutes = ['/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout'];
+    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
+    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
+    const hideCartRoutes = ['/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
 
 
     // If props are passed, use them. Otherwise, use route-based logic.

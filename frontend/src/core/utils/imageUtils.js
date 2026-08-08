@@ -6,19 +6,7 @@ const CLOUDINARY_UPLOAD_SEGMENT_REGEX = /\/upload\/([^/]+)\//i;
  * Safe to call on any URL — non-Cloudinary URLs are returned unchanged.
  */
 export function applyCloudinaryTransform(url, params = "f_auto,q_auto,w_400,dpr_auto") {
-  if (!url || !CLOUDINARY_REGEX.test(url)) return url;
-  const match = url.match(CLOUDINARY_UPLOAD_SEGMENT_REGEX);
-  if (!match) return url;
-
-  const segmentAfterUpload = match[1] || "";
-  const alreadyHasTransforms =
-    segmentAfterUpload.includes(",") ||
-    /^[a-z]{1,4}_[^/]+$/i.test(segmentAfterUpload);
-
-  if (alreadyHasTransforms) return url;
-
-  // Insert transform before the segment after `/upload/` (often `v123...`).
-  return url.replace(CLOUDINARY_UPLOAD_SEGMENT_REGEX, `/upload/${params}/$1/`);
+  return url;
 }
 
 export function isCloudinaryUrl(url) {

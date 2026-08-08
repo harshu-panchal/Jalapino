@@ -55,6 +55,24 @@ export const adminEventConfigApi = {
         return response.data;
     },
 
+    // ---- Venue Facilities ----
+    getFacilities: async () => {
+        const response = await axiosInstance.get('/admin/event-config/facilities');
+        return response.data?.results || response.data?.data || response.data || [];
+    },
+    createFacility: async (data) => {
+        const response = await axiosInstance.post('/admin/event-config/facilities', data);
+        return response.data;
+    },
+    updateFacility: async (id, data) => {
+        const response = await axiosInstance.put(`/admin/event-config/facilities/${id}`, data);
+        return response.data;
+    },
+    deleteFacility: async (id) => {
+        const response = await axiosInstance.delete(`/admin/event-config/facilities/${id}`);
+        return response.data;
+    },
+
     // ---- Media ----
     uploadIcon: async (file) => {
         const formData = new FormData();

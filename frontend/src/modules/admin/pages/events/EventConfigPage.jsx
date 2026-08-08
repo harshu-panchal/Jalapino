@@ -70,6 +70,12 @@ const EventConfigPage = () => {
     const [catForm, setCatForm] = useState({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules } });
     const [uploadingIcon, setUploadingIcon] = useState(false);
 
+    // States for Venue Facilities
+    const [facilities, setFacilities] = useState([]);
+    const [facModalOpen, setFacModalOpen] = useState(false);
+    const [editingFac, setEditingFac] = useState(null);
+    const [facForm, setFacForm] = useState({ name: '', isActive: true });
+
     useEffect(() => {
         fetchData();
     }, []);
@@ -77,17 +83,56 @@ const EventConfigPage = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [types, cats] = await Promise.all([
+            const [types, cats, facs] = await Promise.all([
                 adminEventConfigApi.getEventTypes(),
-                adminEventConfigApi.getEventCategories()
+                adminEventConfigApi.getEventCategories(),
+                adminEventConfigApi.getFacilities().catch(() => [])
             ]);
             setEventTypes(types);
             setCategories(cats);
+            setFacilities(facs);
         } catch (error) {
             console.error("Failed to fetch event configs", error);
             alert("Error loading data");
         } finally {
             setLoading(false);
+        }
+    };
+
+    // ---- Venue Facility Handlers ----
+    const handleOpenFacModal = (fac = null) => {
+        if (fac) {
+            setEditingFac(fac);
+            setFacForm({ name: fac.name, isActive: fac.isActive });
+        } else {
+            setEditingFac(null);
+            setFacForm({ name: '', isActive: true });
+        }
+        setFacModalOpen(true);
+    };
+
+    const handleSaveFac = async () => {
+        try {
+            if (editingFac) {
+                await adminEventConfigApi.updateFacility(editingFac._id, facForm);
+            } else {
+                await adminEventConfigApi.createFacility(facForm);
+            }
+            setFacModalOpen(false);
+            fetchData();
+        } catch (error) {
+            alert("Failed to save facility");
+        }
+    };
+
+    const handleDeleteFac = async (id) => {
+        if (window.confirm("Are you sure you want to delete this facility?")) {
+            try {
+                await adminEventConfigApi.deleteFacility(id);
+                fetchData();
+            } catch (error) {
+                alert("Failed to delete facility");
+            }
         }
     };
 
@@ -240,6 +285,7 @@ const EventConfigPage = () => {
                     <Tab label="Service Categories & Forms" />
                     <Tab label="Package Templates" />
                     <Tab label="Event Payouts" />
+                    <Tab label="Venue Facilities" />
                 </Tabs>
             </Box>
 
@@ -629,6 +675,82 @@ const EventConfigPage = () => {
             <TabPanel value={tabValue} index={3}>
                 <EventPayoutsTab />
             </TabPanel>
+
+            {/* Venue Facilities Tab */}
+            <TabPanel value={tabValue} index={4}>
+                <div className="flex justify-end mb-4">
+                    <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpenFacModal()} className="!bg-purple-600">
+                        Add Facility
+                    </Button>
+                </div>
+                
+                <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold">
+                                <th className="p-4">Facility Name</th>
+                                <th className="p-4">Status</th>
+                                <th className="p-4 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {facilities.map(fac => (
+                                <tr key={fac._id} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <td className="p-4 font-medium text-slate-800">{fac.name}</td>
+                                    <td className="p-4">
+                                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${fac.isActive ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                                            {fac.isActive ? 'Active' : 'Inactive'}
+                                        </span>
+                                    </td>
+                                    <td className="p-4 text-right">
+                                        <IconButton size="small" onClick={() => handleOpenFacModal(fac)} className="!text-blue-600">
+                                            <EditIcon fontSize="small" />
+                                        </IconButton>
+                                        <IconButton size="small" onClick={() => handleDeleteFac(fac._id)} className="!text-red-600">
+                                            <DeleteIcon fontSize="small" />
+                                        </IconButton>
+                                    </td>
+                                </tr>
+                            ))}
+                            {facilities.length === 0 && (
+                                <tr>
+                                    <td colSpan="3" className="p-8 text-center text-slate-500 font-medium">
+                                        No facilities found. Click 'Add Facility' to create one.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </TabPanel>
+
+            {/* Facility Modal */}
+            <Dialog open={facModalOpen} onClose={() => setFacModalOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle>{editingFac ? 'Edit Facility' : 'Add New Facility'}</DialogTitle>
+                <DialogContent>
+                    <div className="pt-2 space-y-4">
+                        <TextField 
+                            fullWidth 
+                            label="Facility Name" 
+                            value={facForm.name} 
+                            onChange={e => setFacForm({ ...facForm, name: e.target.value })} 
+                        />
+                        <FormControlLabel
+                            control={
+                                <Switch 
+                                    checked={facForm.isActive} 
+                                    onChange={e => setFacForm({ ...facForm, isActive: e.target.checked })} 
+                                />
+                            }
+                            label="Active"
+                        />
+                    </div>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setFacModalOpen(false)}>Cancel</Button>
+                    <Button onClick={handleSaveFac} variant="contained" className="!bg-purple-600">Save</Button>
+                </DialogActions>
+            </Dialog>
 
         </div>
     );

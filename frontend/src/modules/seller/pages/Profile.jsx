@@ -40,6 +40,9 @@ const SellerProfile = () => {
     address: "",
     serviceCoverage: ["hyperlocal"],
     customZones: [],
+    advancePaymentPercentage: 0,
+    physicalPaymentEnabled: false,
+    paymentQrCode: "",
   });
 
   const [newZoneName, setNewZoneName] = useState("");
@@ -67,6 +70,9 @@ const SellerProfile = () => {
         address: data.address || "",
         serviceCoverage: data.serviceCoverage || ["hyperlocal"],
         customZones: data.customZones || [],
+        advancePaymentPercentage: data.advancePaymentPercentage || 0,
+        physicalPaymentEnabled: data.physicalPaymentEnabled || false,
+        paymentQrCode: data.paymentQrCode || "",
       });
     } catch (error) {
       toast.error("Failed to fetch profile");
@@ -218,6 +224,9 @@ const SellerProfile = () => {
         lng: formData.lng,
         radius: formData.radius,
         serviceCoverage: formData.serviceCoverage?.filter(c => c !== "all"),
+        advancePaymentPercentage: Number(formData.advancePaymentPercentage) || 0,
+        physicalPaymentEnabled: formData.physicalPaymentEnabled,
+        paymentQrCode: formData.paymentQrCode,
       };
       await sellerApi.updateProfile(payload);
       toast.success("Profile updated successfully");
@@ -418,6 +427,73 @@ const SellerProfile = () => {
                     />
                   </div>
                 </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                    Advance Payment (%)
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">
+                      💰
+                    </div>
+                    <input
+                      type="number"
+                      name="advancePaymentPercentage"
+                      min="0"
+                      max="100"
+                      value={formData.advancePaymentPercentage}
+                      onChange={handleChange}
+                      disabled={!isEditing}
+                      placeholder="e.g. 20"
+                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                    Physical Payment Enabled
+                  </label>
+                  <div className="flex items-center">
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={formData.physicalPaymentEnabled}
+                        disabled={!isEditing}
+                        onChange={(e) => setFormData({ ...formData, physicalPaymentEnabled: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
+                    </label>
+                    <span className="text-xs font-bold text-slate-500 ml-3">
+                      {formData.physicalPaymentEnabled ? "ON" : "OFF"}
+                    </span>
+                  </div>
+                </div>
+
+                {formData.physicalPaymentEnabled && (
+                  <div className="space-y-3">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                      Payment QR Code / Barcode Link
+                    </label>
+                    <input
+                      type="text"
+                      name="paymentQrCode"
+                      value={formData.paymentQrCode}
+                      onChange={(e) => setFormData({ ...formData, paymentQrCode: e.target.value })}
+                      disabled={!isEditing}
+                      placeholder="Enter QR Code image URL"
+                      className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                    />
+                    {formData.paymentQrCode && (
+                      <div className="mt-2 border border-slate-200 rounded-xl p-2 bg-white inline-block">
+                        <img src={formData.paymentQrCode} alt="QR Preview" className="h-24 w-24 object-contain" />
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </form>
           </Card>
@@ -786,7 +862,7 @@ const SellerProfile = () => {
           )}
 
           {/* Advance Payment Card */}
-          {profile?.advancePaymentPercentage > 0 && (
+          {profile?.advancePaymentPercentage >= 0 && (
             <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-emerald-50 border border-emerald-100 mb-4">
               <div className="flex items-center gap-2 mb-3">
                 <div className="h-8 w-8 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-700 text-base">

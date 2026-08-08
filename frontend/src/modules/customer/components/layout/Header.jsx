@@ -159,13 +159,13 @@ const Header = () => {
 
                     {/* Mobile Right Icons */}
                     <div className="flex items-center gap-3">
-                        <button
+                        {/* <button
                             onClick={() => setIsCustomOrderOpen(true)}
                             title="Custom Request"
                             className="h-10 w-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-sm active:scale-95 transition-transform"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                        </button>
+                        </button> */}
                         <Link to="/checkout" className="h-10 w-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/30 shadow-sm relative active:scale-95 transition-transform">
                             <ShoppingCart size={20} className="text-white" />
                             {cartCount > 0 && (
@@ -231,13 +231,13 @@ const Header = () => {
 
                     {/* Desktop Right Icons */}
                     <div className="hidden md:flex items-center gap-4">
-                        <button 
+                        {/* <button 
                             onClick={() => setIsCustomOrderOpen(true)}
                             className="relative flex items-center justify-center p-2 hover:bg-slate-50 rounded-full transition-colors group"
                             title="Custom Request"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6 text-slate-600 group-hover:text-[var(--primary)] transition-colors"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                        </button>
+                        </button> */}
 
                         <Link to="/wishlist" className="relative flex items-center justify-center p-2 hover:bg-slate-50 rounded-full transition-colors group">
                             <Heart className="h-6 w-6 text-slate-600 group-hover:text-[var(--primary)] transition-colors" />

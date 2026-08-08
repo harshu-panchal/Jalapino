@@ -386,6 +386,20 @@ function eventDefinition(eventType) {
         title: () => "Event Booking Rejected",
         body: (payload) => payload.message || "Your event booking request has been rejected.",
       };
+    case NOTIFICATION_EVENTS.EVENT_CHECKED_IN:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId || payload.customerId),
+        title: () => "Ticket Checked-In Successfully",
+        body: (payload) => `Hi ${payload.memberName || 'Guest'}, your ticket for ${payload.venueName || 'the venue'} has been verified & checked-in successfully!`,
+      };
+    case NOTIFICATION_EVENTS.ADDON_COMPLETED:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId || payload.customerId),
+        title: () => "Add-on Service Completed! ✅",
+        body: (payload) => `Hi, your add-on service "${payload.addonName || 'Decor/Catering'}" for booking ${payload.bookingId || ''} at ${payload.venueName || 'the venue'} has been completed by the seller. Please leave a review!`,
+      };
     default:
       return null;
   }

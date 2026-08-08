@@ -15,12 +15,14 @@ import {
   HiOutlinePlus,
   HiOutlineSquaresPlus,
   HiOutlineXMark,
+  HiOutlineCalendar,
 } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sellerApi } from "../services/sellerApi";
 import { useAuth } from "@core/context/AuthContext";
+import { eventConfigApi } from "../../customer/services/eventConfigApi";
 
 
 const AddProduct = () => {
@@ -78,10 +80,17 @@ const AddProduct = () => {
         sku: "",
       },
     ],
+    capacityMin: "",
+    capacityMax: "",
+    venueAddress: "",
+    venueState: "",
+    venueCity: "",
+    facilities: [],
   });
 
   const [dbCategories, setDbCategories] = useState([]);
   const [dbHsns, setDbHsns] = useState([]);
+  const [dbFacilities, setDbFacilities] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
 
   useEffect(() => {
@@ -116,9 +125,10 @@ const AddProduct = () => {
     }
     const fetchCats = async () => {
       try {
-        const [catRes, hsnRes] = await Promise.all([
+        const [catRes, hsnRes, facRes] = await Promise.all([
           sellerApi.getCategoryTree(),
-          sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } }))
+          sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } })),
+          eventConfigApi.getFacilities().catch(() => [])
         ]);
         if (catRes.data.success) {
           setDbCategories(catRes.data.results || catRes.data.result || []);
@@ -126,8 +136,11 @@ const AddProduct = () => {
         if (hsnRes.data.success) {
           setDbHsns(hsnRes.data.results || []);
         }
+        if (facRes) {
+          setDbFacilities(facRes);
+        }
       } catch (error) {
-        toast.error("Failed to load categories/HSNs");
+        toast.error("Failed to load categories/HSNs/facilities");
       } finally {
         setIsLoadingCats(false);
       }
@@ -208,6 +221,14 @@ const AddProduct = () => {
       data.append("deliveryCoverage", JSON.stringify(formData.deliveryCoverage));
       data.append("colors", JSON.stringify(formData.colors));
 
+      // Venue Info Appends
+      data.append("capacityMin", formData.capacityMin || 0);
+      data.append("capacityMax", formData.capacityMax || 0);
+      data.append("venueAddress", formData.venueAddress || "");
+      data.append("venueState", formData.venueState || "");
+      data.append("venueCity", formData.venueCity || "");
+      data.append("facilities", JSON.stringify(formData.facilities || []));
+
       const response = await sellerApi.createProduct(data);
       const approvalStatus = response?.data?.result?.approvalStatus;
       if (approvalStatus === "pending") {
@@ -284,6 +305,7 @@ const AddProduct = () => {
             { id: "general", label: "General Info", icon: HiOutlineTag },
             { id: "variants", label: "Item Variants", icon: HiOutlineSwatch },
             { id: "category", label: "Groups", icon: HiOutlineFolderOpen },
+            { id: "venue", label: "Venue Settings", icon: HiOutlineCalendar },
             { id: "media", label: "Photos", icon: HiOutlinePhoto },
           ].map((tab) => (
             <button
@@ -854,6 +876,122 @@ const AddProduct = () => {
                         </option>
                       ))}
                   </select>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {modalTab === "venue" && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    Guest Capacity (Min)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.capacityMin}
+                    onChange={(e) =>
+                      setFormData({ ...formData, capacityMin: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                    placeholder="e.g. 50"
+                  />
+                </div>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    Guest Capacity (Max)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.capacityMax}
+                    onChange={(e) =>
+                      setFormData({ ...formData, capacityMax: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                    placeholder="e.g. 200"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1.5 flex flex-col">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                  Venue Full Address
+                </label>
+                <input
+                  type="text"
+                  value={formData.venueAddress}
+                  onChange={(e) =>
+                    setFormData({ ...formData, venueAddress: e.target.value })
+                  }
+                  className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                  placeholder="e.g. 78 Palace Road, Landmark Square"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    State
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.venueState}
+                    onChange={(e) =>
+                      setFormData({ ...formData, venueState: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                    placeholder="e.g. Delhi"
+                  />
+                </div>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    City
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.venueCity}
+                    onChange={(e) =>
+                      setFormData({ ...formData, venueCity: e.target.value })
+                    }
+                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                    placeholder="e.g. Delhi"
+                  />
+                </div>
+              </div>
+
+              {/* Facilities Section */}
+              <div className="space-y-1.5 flex flex-col">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                  Venue Facilities
+                </label>
+                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    {(dbFacilities.length > 0 ? dbFacilities.map(f => f.name) : ["Air Conditioning", "Valet Parking", "Catering Available", "DJ Allowed", "Stage Setup", "Decorations Included", "Audio System"]).map((facility) => {
+                      const isSelected = formData.facilities.includes(facility);
+                      return (
+                        <button
+                          key={facility}
+                          type="button"
+                          onClick={() => {
+                            setFormData((prev) => {
+                              const next = isSelected 
+                                ? prev.facilities.filter(f => f !== facility)
+                                : [...prev.facilities, facility];
+                              return { ...prev, facilities: next };
+                            });
+                          }}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
+                            isSelected 
+                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm" 
+                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                          }`}
+                        >
+                          {facility}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             </div>

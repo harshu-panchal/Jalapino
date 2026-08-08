@@ -205,7 +205,34 @@ const productSchema = new mongoose.Schema(
         transparencyEnabled: {
             type: Boolean,
             default: true,
-        }
+        },
+        capacityMin: {
+            type: Number,
+            default: 0,
+        },
+        capacityMax: {
+            type: Number,
+            default: 0,
+        },
+        venueAddress: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        venueState: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        venueCity: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        facilities: [{
+            type: String,
+            trim: true,
+        }]
     },
     { timestamps: true }
 );

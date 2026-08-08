@@ -202,6 +202,14 @@ export const updateSellerDetails = async (req, res) => {
     const customerImageReviewEnabled = req.body.customerImageReviewEnabled;
     const advanceBookingEnabled = req.body.advanceBookingEnabled;
     const reviewCategoriesEnabled = req.body.reviewCategoriesEnabled;
+    const addonDecorationEnabled = req.body.addonDecorationEnabled;
+    const addonDecorationPrice = req.body.addonDecorationPrice;
+    const addonBridalEnabled = req.body.addonBridalEnabled;
+    const addonBridalPrice = req.body.addonBridalPrice;
+    const addonCateringEnabled = req.body.addonCateringEnabled;
+    const addonCateringPrice = req.body.addonCateringPrice;
+    const physicalPaymentEnabled = req.body.physicalPaymentEnabled;
+    const paymentQrCode = req.body.paymentQrCode;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -246,6 +254,14 @@ export const updateSellerDetails = async (req, res) => {
     if (customerImageReviewEnabled !== undefined) updateData.customerImageReviewEnabled = customerImageReviewEnabled;
     if (advanceBookingEnabled !== undefined) updateData.advanceBookingEnabled = advanceBookingEnabled;
     if (reviewCategoriesEnabled !== undefined) updateData.reviewCategoriesEnabled = reviewCategoriesEnabled;
+    if (addonDecorationEnabled !== undefined) updateData.addonDecorationEnabled = addonDecorationEnabled;
+    if (addonDecorationPrice !== undefined) updateData.addonDecorationPrice = Number(addonDecorationPrice);
+    if (addonBridalEnabled !== undefined) updateData.addonBridalEnabled = addonBridalEnabled;
+    if (addonBridalPrice !== undefined) updateData.addonBridalPrice = Number(addonBridalPrice);
+    if (addonCateringEnabled !== undefined) updateData.addonCateringEnabled = addonCateringEnabled;
+    if (addonCateringPrice !== undefined) updateData.addonCateringPrice = Number(addonCateringPrice);
+    if (physicalPaymentEnabled !== undefined) updateData.physicalPaymentEnabled = physicalPaymentEnabled;
+    if (paymentQrCode !== undefined) updateData.paymentQrCode = paymentQrCode;
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(

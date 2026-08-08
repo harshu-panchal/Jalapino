@@ -3,6 +3,7 @@ import EventCategory from '../models/event/EventCategory.js';
 import PreferenceForm from '../models/event/PreferenceForm.js';
 import CategoryBusinessRule from '../models/event/CategoryBusinessRule.js';
 import City from '../models/City.js';
+import VenueFacility from '../models/event/VenueFacility.js';
 import handleResponse from '../utils/helper.js';
 
 export const getCities = async (req, res) => {
@@ -14,10 +15,22 @@ export const getCities = async (req, res) => {
     }
 };
 
+// Get all active facilities
+export const getFacilities = async (req, res) => {
+    try {
+        const facilities = await VenueFacility.find({ isActive: true }).sort({ name: 1 });
+        return handleResponse(res, 200, 'Facilities fetched successfully', facilities);
+    } catch (error) {
+        console.error('Error fetching facilities:', error);
+        return handleResponse(res, 500, 'Failed to fetch facilities');
+    }
+};
+
 // Get all active event types
 export const getEventTypes = async (req, res) => {
     try {
-        const types = await EventType.find({ isActive: true }).sort({ sortOrder: 1 });
+        // Sort alphabetically A-Z by name
+        const types = await EventType.find({ isActive: true }).sort({ name: 1 });
         return handleResponse(res, 200, 'Event types fetched successfully', types);
     } catch (error) {
         console.error('Error fetching event types:', error);
@@ -28,7 +41,8 @@ export const getEventTypes = async (req, res) => {
 // Get all active event categories with their preference forms and business rules
 export const getEventCategories = async (req, res) => {
     try {
-        const categories = await EventCategory.find({ isActive: true }).sort({ sortOrder: 1 }).lean();
+        // Sort alphabetically A-Z by name
+        const categories = await EventCategory.find({ isActive: true }).sort({ name: 1 }).lean();
         const forms = await PreferenceForm.find({ isActive: true }).lean();
         const businessRules = await CategoryBusinessRule.find().lean();
 
@@ -111,6 +125,20 @@ export const seedEventConfig = async (req, res) => {
                 form.fields = catData.fields;
                 await form.save();
             }
+        }
+
+        // Seed Venue Facilities
+        const defaultFacilities = [
+            "Air Conditioning",
+            "Valet Parking",
+            "Catering Available",
+            "DJ Allowed",
+            "Stage Setup",
+            "Decorations Included",
+            "Audio System"
+        ];
+        for (const facName of defaultFacilities) {
+            await VenueFacility.findOneAndUpdate({ name: facName }, { name: facName, isActive: true }, { upsert: true });
         }
 
         return handleResponse(res, 200, 'Seed successful');

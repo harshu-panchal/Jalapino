@@ -26,7 +26,9 @@ const EventCategoriesPage = () => {
         const fetchCategories = async () => {
             try {
                 const response = await eventConfigApi.getEventCategories();
-                setCategories(response || []);
+                // Sort categories alphabetically A-Z
+                const sorted = (response || []).sort((a, b) => a.name.localeCompare(b.name));
+                setCategories(sorted);
             } catch (error) {
                 console.error("Failed to fetch event categories:", error);
             } finally {

@@ -161,7 +161,7 @@ export const getSellerProfile = async (req, res) => {
 ================================ */
 export const updateSellerProfile = async (req, res) => {
   try {
-    const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius, serviceCoverage, customZones } = req.body;
+    const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius, serviceCoverage, customZones, advancePaymentPercentage } = req.body;
 
     // Find seller
     const seller = await Seller.findById(req.user.id);
@@ -178,6 +178,16 @@ export const updateSellerProfile = async (req, res) => {
     if (pincode !== undefined) seller.pincode = pincode;
     if (city !== undefined) seller.city = city;
     if (state !== undefined) seller.state = state;
+    if (advancePaymentPercentage !== undefined) seller.advancePaymentPercentage = Number(advancePaymentPercentage);
+
+    if (req.body.addonDecorationEnabled !== undefined) seller.addonDecorationEnabled = req.body.addonDecorationEnabled === 'true' || req.body.addonDecorationEnabled === true;
+    if (req.body.addonDecorationPrice !== undefined) seller.addonDecorationPrice = Number(req.body.addonDecorationPrice);
+    if (req.body.addonBridalEnabled !== undefined) seller.addonBridalEnabled = req.body.addonBridalEnabled === 'true' || req.body.addonBridalEnabled === true;
+    if (req.body.addonBridalPrice !== undefined) seller.addonBridalPrice = Number(req.body.addonBridalPrice);
+    if (req.body.addonCateringEnabled !== undefined) seller.addonCateringEnabled = req.body.addonCateringEnabled === 'true' || req.body.addonCateringEnabled === true;
+    if (req.body.addonCateringPrice !== undefined) seller.addonCateringPrice = Number(req.body.addonCateringPrice);
+    if (req.body.physicalPaymentEnabled !== undefined) seller.physicalPaymentEnabled = req.body.physicalPaymentEnabled === 'true' || req.body.physicalPaymentEnabled === true;
+    if (req.body.paymentQrCode !== undefined) seller.paymentQrCode = req.body.paymentQrCode;
 
     if (serviceCoverage !== undefined) {
       if (typeof serviceCoverage === "string") {

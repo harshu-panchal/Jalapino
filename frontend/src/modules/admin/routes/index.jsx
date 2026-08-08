@@ -111,6 +111,7 @@ const CateringBookings = React.lazy(() => import("../pages/catering/CateringBook
 const EventConfigPage = React.lazy(() => import("../pages/events/EventConfigPage"));
 const CityManagementPage = React.lazy(() => import("../pages/events/CityManagementPage"));
 const EventBookingsPage = React.lazy(() => import("../pages/events/EventBookingsPage"));
+const VenueBookingsPage = React.lazy(() => import("../pages/events/VenueBookingsPage"));
 
 const OperationsDashboard = React.lazy(() => import("../pages/OperationsDashboard"));
 
@@ -238,6 +239,7 @@ const navItems = [
       { label: "Configuration", path: "/admin/events/config" },
       { label: "City Management", path: "/admin/events/cities" },
       { label: "All Bookings", path: "/admin/events/bookings" },
+      { label: "Venue Bookings", path: "/admin/events/venue-bookings" },
     ],
   },
   {
@@ -391,6 +393,7 @@ const AdminRoutes = () => {
         <Route path="/events/config" element={<EventConfigPage />} />
         <Route path="/events/cities" element={<CityManagementPage />} />
         <Route path="/events/bookings" element={<EventBookingsPage />} />
+        <Route path="/events/venue-bookings" element={<VenueBookingsPage />} />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -49,6 +49,8 @@ import footerBannerRoute from "./footerBannerRoutes.js";
 import customerImageRoute from "./customerImageRoutes.js";
 import sellerBookingRoute from "./sellerBookingRoutes.js";
 import bookingManagementRoute from "./bookingManagementRoutes.js";
+import venueVisitRoute from "./venueVisitRoutes.js";
+import generalBookingRoute from "./generalBookingRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -120,6 +122,8 @@ const setupRoutes = (app) => {
     router.use("/seller", sellerApprovalRoute);
     router.use("/kitchen", liveKitchenRoute);
     router.use("/", sellerSignupBannerRoute);
+    router.use("/", venueVisitRoute);
+    router.use("/", generalBookingRoute);
 
     app.use("/api", router);
 }

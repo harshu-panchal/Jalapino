@@ -89,6 +89,10 @@ function parseJsonIfString(value) {
 
 function normalizeUrl(value) {
   const normalized = String(value || "").trim();
+  if (!normalized) return "";
+  if (normalized.startsWith("/") || normalized.startsWith("images/") || normalized.startsWith("uploads/")) {
+    return normalized;
+  }
   if (!/^https?:\/\//i.test(normalized)) return "";
   return normalized;
 }

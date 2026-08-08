@@ -23,6 +23,17 @@ export const eventConfigApi = {
         }
     },
 
+    // Get all active facilities
+    getFacilities: async () => {
+        try {
+            const response = await axiosInstance.get('/event-config/facilities');
+            return response.data?.results || response.data?.data || response.data || [];
+        } catch (error) {
+            console.error('Error fetching facilities:', error);
+            throw error;
+        }
+    },
+
     // Get all active event categories with their preference forms
     getEventCategories: async () => {
         try {

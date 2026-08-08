@@ -84,6 +84,12 @@ const PendingSellers = () => {
         quoteFinalPayment: false,
         customerImageReviewEnabled: false,
         advanceBookingEnabled: false,
+        addonDecorationEnabled: false,
+        addonDecorationPrice: 0,
+        addonBridalEnabled: false,
+        addonBridalPrice: 0,
+        addonCateringEnabled: false,
+        addonCateringPrice: 0,
         reviewCategoriesEnabled: [],
     });
     const [allCategories, setAllCategories] = useState([]);
@@ -143,6 +149,14 @@ const PendingSellers = () => {
                         quoteFinalPayment: s.quoteFinalPayment ?? false,
                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                        addonDecorationEnabled: s.addonDecorationEnabled ?? false,
+                        addonDecorationPrice: s.addonDecorationPrice ?? 0,
+                        addonBridalEnabled: s.addonBridalEnabled ?? false,
+                        addonBridalPrice: s.addonBridalPrice ?? 0,
+                        addonCateringEnabled: s.addonCateringEnabled ?? false,
+                        addonCateringPrice: s.addonCateringPrice ?? 0,
+                        physicalPaymentEnabled: s.physicalPaymentEnabled ?? false,
+                        paymentQrCode: s.paymentQrCode ?? "",
                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                     });
                     setAdminRemark(s.adminRemark || '');
@@ -451,6 +465,14 @@ const PendingSellers = () => {
                                                         quoteFinalPayment: s.quoteFinalPayment ?? false,
                                                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                                                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                                                        addonDecorationEnabled: s.addonDecorationEnabled ?? false,
+                                                        addonDecorationPrice: s.addonDecorationPrice ?? 0,
+                                                        addonBridalEnabled: s.addonBridalEnabled ?? false,
+                                                        addonBridalPrice: s.addonBridalPrice ?? 0,
+                                                        addonCateringEnabled: s.addonCateringEnabled ?? false,
+                                                        addonCateringPrice: s.addonCateringPrice ?? 0,
+                                                        physicalPaymentEnabled: s.physicalPaymentEnabled ?? false,
+                                                        paymentQrCode: s.paymentQrCode ?? "",
                                                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                     });
                                                     setAdminRemark(s.adminRemark || '');
@@ -487,24 +509,24 @@ const PendingSellers = () => {
             {/* Review Modal */}
             <AnimatePresence>
                 {isReviewModalOpen && viewingSeller && (
-                    <div className="fixed inset-0 z-[100] overflow-y-auto">
-                        <div className="min-h-full flex items-center justify-center p-4 lg:p-4">
+                    <div className="fixed inset-0 z-[999] overflow-y-auto">
+                        <div className="min-h-full flex items-center justify-center p-0 sm:p-4">
                             <motion.div
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                className="fixed inset-0 bg-slate-900/80 backdrop-blur-md"
-                                onClick={() => {
-                                    setIsReviewModalOpen(false);
-                                    setSearchParams({});
-                                }}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  exit={{ opacity: 0 }}
+                                  className="fixed inset-0 bg-slate-900/80 backdrop-blur-md"
+                                  onClick={() => {
+                                      setIsReviewModalOpen(false);
+                                      setSearchParams({});
+                                  }}
                             />
-
+  
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                                className="w-full max-w-4xl relative z-10 bg-white rounded-2xl shadow-2xl overflow-y-auto max-h-[95vh]"
+                                  initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                                  className="w-full max-w-4xl relative z-10 bg-white rounded-none sm:rounded-2xl shadow-2xl overflow-y-auto h-screen sm:h-auto sm:max-h-[95vh]"
                             >
                                 <div className="grid grid-cols-1 lg:grid-cols-12">
                                     {/* Sidebar Info */}
@@ -680,25 +702,6 @@ const PendingSellers = () => {
                                                     />
 
                                                     <PermissionToggle
-                                                        label="Plan My Event"
-                                                        description="Allow event service bookings"
-                                                        checked={permissions.planMyEventEnabled}
-                                                        activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
-                                                            try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
-                                                                toast.success('Plan my event permission updated');
-                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
-                                                            } catch (err) {
-                                                                toast.error('Failed to update plan my event permission');
-                                                                setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
-                                                            }
-                                                        }}
-                                                    />
-
-                                                    <PermissionToggle
                                                         label="Wholesale Marketplace"
                                                         description="Allow selling in wholesale marketplace"
                                                         checked={permissions.wholesaleEnabled}
@@ -718,7 +721,26 @@ const PendingSellers = () => {
                                                     />
 
                                                     <PermissionToggle
-                                                        label="Custom Product Entry"
+                                                        label="Plan My Event"
+                                                        description="Allow event service bookings"
+                                                        checked={permissions.planMyEventEnabled}
+                                                        activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, planMyEventEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { planMyEventEnabled: checked });
+                                                                toast.success('Plan my event permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, planMyEventEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update plan my event permission');
+                                                                setPermissions(prev => ({ ...prev, planMyEventEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
+                                                        label="Brands & Ingredients"
                                                         description="Allow manual entry of product name, brand, and ingredients"
                                                         checked={permissions.allowCustomProductEntry}
                                                         activeColor="bg-emerald-500" hoverColor="group-hover:text-emerald-600"
@@ -737,7 +759,7 @@ const PendingSellers = () => {
                                                     />
 
                                                     <PermissionToggle
-                                                        label="Live Kitchen"
+                                                        label="Live"
                                                         description="Allow live streaming/camera updates from seller kitchen"
                                                         checked={permissions.liveKitchenEnabled}
                                                         activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
@@ -811,6 +833,196 @@ const PendingSellers = () => {
                                                             }
                                                         }}
                                                     />
+                                                </div>
+
+                                                {/* Optional Add-on Services Section */}
+                                                <div className="flex flex-col gap-1 mt-6 mb-4 border-t border-slate-200 pt-4 pb-1">
+                                                    <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Optional Add-on Services</h5>
+                                                    <p className="text-[10px] text-slate-500 font-medium">Enable add-ons for event booking and configure their prices.</p>
+                                                </div>
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                                    {/* Decoration Add-on */}
+                                                    <div className="space-y-2">
+                                                        <PermissionToggle
+                                                            label="Decoration Add-on"
+                                                            description="Enable decoration service options for booking"
+                                                            checked={permissions.addonDecorationEnabled}
+                                                            activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, addonDecorationEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { addonDecorationEnabled: checked });
+                                                                    toast.success('Decoration add-on status updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, addonDecorationEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    toast.error('Failed to update decoration add-on');
+                                                                    setPermissions(prev => ({ ...prev, addonDecorationEnabled: !checked }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        {permissions.addonDecorationEnabled && (
+                                                            <div className="flex items-center gap-2 pl-12">
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Enter price"
+                                                                    value={permissions.addonDecorationPrice}
+                                                                    onChange={(e) => setPermissions(prev => ({ ...prev, addonDecorationPrice: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { addonDecorationPrice: Number(permissions.addonDecorationPrice) });
+                                                                            toast.success('Decoration price updated');
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update decoration price');
+                                                                        }
+                                                                    }}
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-fuchsia-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Bridal Add-on */}
+                                                    <div className="space-y-2">
+                                                        <PermissionToggle
+                                                            label="Bridal Add-on"
+                                                            description="Enable bridal package options for booking"
+                                                            checked={permissions.addonBridalEnabled}
+                                                            activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, addonBridalEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { addonBridalEnabled: checked });
+                                                                    toast.success('Bridal add-on status updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, addonBridalEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    toast.error('Failed to update bridal add-on');
+                                                                    setPermissions(prev => ({ ...prev, addonBridalEnabled: !checked }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        {permissions.addonBridalEnabled && (
+                                                            <div className="flex items-center gap-2 pl-12">
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Enter price"
+                                                                    value={permissions.addonBridalPrice}
+                                                                    onChange={(e) => setPermissions(prev => ({ ...prev, addonBridalPrice: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { addonBridalPrice: Number(permissions.addonBridalPrice) });
+                                                                            toast.success('Bridal price updated');
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update bridal price');
+                                                                        }
+                                                                    }}
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Catering Add-on */}
+                                                    <div className="space-y-2">
+                                                        <PermissionToggle
+                                                            label="Catering Add-on"
+                                                            description="Enable catering services for booking"
+                                                            checked={permissions.addonCateringEnabled}
+                                                            activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, addonCateringEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { addonCateringEnabled: checked });
+                                                                    toast.success('Catering add-on status updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, addonCateringEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    toast.error('Failed to update catering add-on');
+                                                                    setPermissions(prev => ({ ...prev, addonCateringEnabled: !checked }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        {permissions.addonCateringEnabled && (
+                                                            <div className="flex items-center gap-2 pl-12">
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Enter price"
+                                                                    value={permissions.addonCateringPrice}
+                                                                    onChange={(e) => setPermissions(prev => ({ ...prev, addonCateringPrice: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { addonCateringPrice: Number(permissions.addonCateringPrice) });
+                                                                            toast.success('Catering price updated');
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update catering price');
+                                                                        }
+                                                                    }}
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Physical Payment Settings */}
+                                                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                                    <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Physical Payment Options</h5>
+                                                        <p className="text-[10px] text-slate-500 font-medium">Configure if this seller supports physical/QR code payments.</p>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <PermissionToggle
+                                                            label="Physical Payment Enabled"
+                                                            description="Allow customers to pay physically or via QR code"
+                                                            checked={permissions.physicalPaymentEnabled}
+                                                            activeColor="bg-emerald-600" hoverColor="group-hover:text-emerald-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, physicalPaymentEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { physicalPaymentEnabled: checked });
+                                                                    toast.success('Physical payment status updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, physicalPaymentEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    toast.error('Failed to update physical payment status');
+                                                                    setPermissions(prev => ({ ...prev, physicalPaymentEnabled: !checked }));
+                                                                }
+                                                            }}
+                                                        />
+
+                                                        {permissions.physicalPaymentEnabled && (
+                                                            <div className="space-y-2">
+                                                                <label className="text-[10px] font-bold text-slate-500 uppercase block">Payment QR Code / Barcode Link:</label>
+                                                                <div className="flex items-center gap-2">
+                                                                    <input
+                                                                        type="text"
+                                                                        placeholder="Enter QR Code image URL"
+                                                                        value={permissions.paymentQrCode}
+                                                                        onChange={(e) => setPermissions(prev => ({ ...prev, paymentQrCode: e.target.value }))}
+                                                                        onBlur={async () => {
+                                                                            try {
+                                                                                await adminApi.updateSeller(viewingSeller.id, { paymentQrCode: permissions.paymentQrCode });
+                                                                                toast.success('QR Code link updated');
+                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, paymentQrCode: permissions.paymentQrCode } : seller));
+                                                                            } catch (err) {
+                                                                                toast.error('Failed to update QR Code link');
+                                                                            }
+                                                                        }}
+                                                                        className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
+                                                                    />
+                                                                </div>
+                                                                {permissions.paymentQrCode && (
+                                                                    <div className="mt-2 border border-slate-200 rounded-xl p-2 bg-white inline-block">
+                                                                        <img src={permissions.paymentQrCode} alt="QR Preview" className="h-24 w-24 object-contain" />
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
 
                                                 {/* Customization & Quotation Engine Sub-Permissions */}
@@ -1307,10 +1519,10 @@ const PendingSellers = () => {
                                                         onClick={async () => {
                                                             setIsSavingRemark(true);
                                                             try {
-                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark, adminTerms, advancePaymentPercentage });
-                                                                toast.success('Remarks, Terms & Advance Payment saved successfully');
+                                                                await adminApi.updateSeller(viewingSeller.id, { adminRemark, adminTerms });
+                                                                toast.success('Remarks & Terms saved successfully');
                                                                 setPendingSellers(prev => prev.map(seller =>
-                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark, adminTerms, advancePaymentPercentage } : seller
+                                                                    seller.id === viewingSeller.id ? { ...seller, adminRemark, adminTerms } : seller
                                                                 ));
                                                             } catch (err) {
                                                                 toast.error('Failed to save remarks & terms');
@@ -1342,30 +1554,6 @@ const PendingSellers = () => {
                                                             placeholder="Write any terms and conditions (e.g. 'Please ensure GST documents are updated within 7 days of approval.')..."
                                                             rows={3}
                                                             className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 resize-none placeholder:text-amber-400/70 leading-relaxed"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Advance Payment (%)</label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            value={advancePaymentPercentage}
-                                                            onChange={e => setAdvancePaymentPercentage(e.target.value)}
-                                                            placeholder="e.g. 20"
-                                                            className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-amber-400/70"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Advance Payment (%)</label>
-                                                        <input
-                                                            type="number"
-                                                            min="0"
-                                                            max="100"
-                                                            value={advancePaymentPercentage}
-                                                            onChange={e => setAdvancePaymentPercentage(e.target.value)}
-                                                            placeholder="e.g. 20"
-                                                            className="w-full text-xs font-medium text-amber-900 bg-white/80 border border-amber-200 rounded-xl p-3 outline-none focus:ring-2 focus:ring-amber-300 placeholder:text-amber-400/70"
                                                         />
                                                     </div>
                                                 </div>

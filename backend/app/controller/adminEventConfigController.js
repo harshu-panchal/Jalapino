@@ -199,3 +199,47 @@ export const deletePackageTemplate = async (req, res) => {
         return handleResponse(res, 500, 'Failed to delete package template');
     }
 };
+
+// ---- Venue Facilities ----
+import VenueFacility from '../models/event/VenueFacility.js';
+
+export const getFacilities = async (req, res) => {
+    try {
+        const facilities = await VenueFacility.find().sort({ name: 1 });
+        return handleResponse(res, 200, 'Facilities fetched', facilities);
+    } catch (error) {
+        return handleResponse(res, 500, 'Failed to fetch facilities');
+    }
+};
+
+export const createFacility = async (req, res) => {
+    try {
+        const { name, isActive } = req.body;
+        const facility = await VenueFacility.create({ name, isActive });
+        return handleResponse(res, 201, 'Facility created', facility);
+    } catch (error) {
+        return handleResponse(res, 500, 'Failed to create facility');
+    }
+};
+
+export const updateFacility = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const facility = await VenueFacility.findByIdAndUpdate(id, req.body, { new: true });
+        if (!facility) return handleResponse(res, 404, 'Facility not found');
+        return handleResponse(res, 200, 'Facility updated', facility);
+    } catch (error) {
+        return handleResponse(res, 500, 'Failed to update facility');
+    }
+};
+
+export const deleteFacility = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const facility = await VenueFacility.findByIdAndDelete(id);
+        if (!facility) return handleResponse(res, 404, 'Facility not found');
+        return handleResponse(res, 200, 'Facility deleted');
+    } catch (error) {
+        return handleResponse(res, 500, 'Failed to delete facility');
+    }
+};

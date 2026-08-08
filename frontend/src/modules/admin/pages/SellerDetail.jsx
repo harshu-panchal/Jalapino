@@ -143,6 +143,14 @@ const SellerDetail = () => {
                 quoteQuoteRevision: data.quoteQuoteRevision ?? false,
                 quoteCustomerApproval: data.quoteCustomerApproval ?? false,
                 quoteFinalPayment: data.quoteFinalPayment ?? false,
+                addonDecorationEnabled: data.addonDecorationEnabled ?? false,
+                addonDecorationPrice: data.addonDecorationPrice ?? 0,
+                addonBridalEnabled: data.addonBridalEnabled ?? false,
+                addonBridalPrice: data.addonBridalPrice ?? 0,
+                addonCateringEnabled: data.addonCateringEnabled ?? false,
+                addonCateringPrice: data.addonCateringPrice ?? 0,
+                physicalPaymentEnabled: data.physicalPaymentEnabled ?? false,
+                paymentQrCode: data.paymentQrCode ?? "",
             }));
         } catch (error) {
             console.error(error);
@@ -804,6 +812,187 @@ const SellerDetail = () => {
                                                 />
 
                                             </div>
+
+                                            {/* Optional Add-on Services */}
+                                            <div className="mb-8 mt-8 border-t border-slate-100 pt-6">
+                                                <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Optional Add-on Services</h5>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                                    {/* Decoration Add-on */}
+                                                    <div className="space-y-2">
+                                                        <PermissionToggle
+                                                            label="Decoration Add-on"
+                                                            description="Enable decoration service options for booking"
+                                                            checked={seller.addonDecorationEnabled}
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, addonDecorationEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { addonDecorationEnabled: checked });
+                                                                    showToast('Decoration add-on status updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, addonDecorationEnabled: !checked }));
+                                                                    showToast('Failed to update decoration add-on', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                        {seller.addonDecorationEnabled && (
+                                                            <div className="flex items-center gap-2 pl-12">
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Enter price"
+                                                                    value={seller.addonDecorationPrice}
+                                                                    onChange={(e) => setSeller(prev => ({ ...prev, addonDecorationPrice: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminUsersApi.updateSeller(seller.id, { addonDecorationPrice: Number(seller.addonDecorationPrice) });
+                                                                            showToast('Decoration price updated', 'success');
+                                                                        } catch (err) {
+                                                                            showToast('Failed to update decoration price', 'error');
+                                                                        }
+                                                                    }}
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Bridal Add-on */}
+                                                    <div className="space-y-2">
+                                                        <PermissionToggle
+                                                            label="Bridal Add-on"
+                                                            description="Enable bridal package options for booking"
+                                                            checked={seller.addonBridalEnabled}
+                                                            activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, addonBridalEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { addonBridalEnabled: checked });
+                                                                    showToast('Bridal add-on status updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, addonBridalEnabled: !checked }));
+                                                                    showToast('Failed to update bridal add-on', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                        {seller.addonBridalEnabled && (
+                                                            <div className="flex items-center gap-2 pl-12">
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Enter price"
+                                                                    value={seller.addonBridalPrice}
+                                                                    onChange={(e) => setSeller(prev => ({ ...prev, addonBridalPrice: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminUsersApi.updateSeller(seller.id, { addonBridalPrice: Number(seller.addonBridalPrice) });
+                                                                            showToast('Bridal price updated', 'success');
+                                                                        } catch (err) {
+                                                                            showToast('Failed to update bridal price', 'error');
+                                                                        }
+                                                                    }}
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Catering Add-on */}
+                                                    <div className="space-y-2">
+                                                        <PermissionToggle
+                                                            label="Catering Add-on"
+                                                            description="Enable catering services for booking"
+                                                            checked={seller.addonCateringEnabled}
+                                                            activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, addonCateringEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { addonCateringEnabled: checked });
+                                                                    showToast('Catering add-on status updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, addonCateringEnabled: !checked }));
+                                                                    showToast('Failed to update catering add-on', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                        {seller.addonCateringEnabled && (
+                                                            <div className="flex items-center gap-2 pl-12">
+                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
+                                                                <input
+                                                                    type="number"
+                                                                    placeholder="Enter price"
+                                                                    value={seller.addonCateringPrice}
+                                                                    onChange={(e) => setSeller(prev => ({ ...prev, addonCateringPrice: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminUsersApi.updateSeller(seller.id, { addonCateringPrice: Number(seller.addonCateringPrice) });
+                                                                            showToast('Catering price updated', 'success');
+                                                                        } catch (err) {
+                                                                            showToast('Failed to update catering price', 'error');
+                                                                        }
+                                                                    }}
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Physical Payment Settings */}
+                                            <div className="mb-8 border-t border-slate-100 pt-6">
+                                                <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Physical Payment Options</h5>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
+                                                    <PermissionToggle
+                                                        label="Physical Payment Enabled"
+                                                        description="Allow customers to pay physically or via QR code"
+                                                        checked={seller.physicalPaymentEnabled}
+                                                        activeColor="bg-emerald-600" hoverColor="group-hover:text-emerald-700"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, physicalPaymentEnabled: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { physicalPaymentEnabled: checked });
+                                                                showToast('Physical payment status updated', 'success');
+                                                            } catch (err) {
+                                                                setSeller(prev => ({ ...prev, physicalPaymentEnabled: !checked }));
+                                                                showToast('Failed to update physical payment status', 'error');
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    {seller.physicalPaymentEnabled && (
+                                                        <div className="space-y-2">
+                                                            <label className="text-[10px] font-bold text-slate-500 uppercase block">Payment QR Code / Barcode Link:</label>
+                                                            <div className="flex items-center gap-2">
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Enter QR Code image URL"
+                                                                    value={seller.paymentQrCode}
+                                                                    onChange={(e) => setSeller(prev => ({ ...prev, paymentQrCode: e.target.value }))}
+                                                                    onBlur={async () => {
+                                                                        try {
+                                                                            await adminUsersApi.updateSeller(seller.id, { paymentQrCode: seller.paymentQrCode });
+                                                                            showToast('QR Code link updated', 'success');
+                                                                        } catch (err) {
+                                                                            showToast('Failed to update QR Code link', 'error');
+                                                                        }
+                                                                    }}
+                                                                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
+                                                                />
+                                                            </div>
+                                                            {seller.paymentQrCode && (
+                                                                <div className="mt-2 border border-slate-200 rounded-xl p-2 bg-white inline-block">
+                                                                    <img src={seller.paymentQrCode} alt="QR Preview" className="h-24 w-24 object-contain" />
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
                                         </div>
 
                                         {/* Customization & Quotation Engine Sub-Permissions */}

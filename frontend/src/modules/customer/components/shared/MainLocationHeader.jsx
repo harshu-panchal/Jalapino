@@ -588,7 +588,7 @@ const MainLocationHeader = ({
 
             {/* Right Section: Action Icons */}
             <div className="flex items-center gap-5 lg:gap-8 shrink-0">
-              <motion.button
+              {/* <motion.button
                 whileHover={{ scale: 1.15, rotate: 5 }}
                 whileTap={{ scale: 0.9 }}
                 onClick={() => setIsCustomOrderOpen(true)}
@@ -596,7 +596,7 @@ const MainLocationHeader = ({
                 className="transition-all text-white hover:opacity-80 relative group"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-              </motion.button>
+              </motion.button> */}
 
               <motion.button
                 whileHover={{ scale: 1.15, rotate: 5 }}
@@ -689,7 +689,7 @@ const MainLocationHeader = ({
                 </div>
 
                 {/* Mobile Custom Request Button */}
-                <motion.button
+                {/* <motion.button
                   whileTap={{ scale: 0.9 }}
                   onClick={() => setIsCustomOrderOpen(true)}
                   title="Custom Request"
@@ -697,7 +697,7 @@ const MainLocationHeader = ({
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                   Custom
-                </motion.button>
+                </motion.button> */}
               </div>
             </motion.div>
           </div>

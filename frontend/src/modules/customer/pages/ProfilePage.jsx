@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
     User, MapPin, Package, CreditCard, Wallet, ChevronRight,
-    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Store, Gift
+    LogOut, ShieldCheck, Heart, HelpCircle, Info, Edit2, ChevronLeft, Bell, Store, Gift, Ticket
 } from 'lucide-react';
 import { useAuth } from '@core/context/AuthContext';
 import { useSettings } from '@core/context/SettingsContext';
@@ -183,6 +183,14 @@ const ProfilePage = () => {
                                 path="/wallet"
                                 color="#10b981"
                                 bg="rgba(16,185,129,0.10)"
+                            />
+                            <MenuItem
+                                icon={Ticket}
+                                label="My Event Tickets"
+                                sub="View booked venues, tickets & QR codes"
+                                path="/profile/tickets"
+                                color="#8b5cf6"
+                                bg="rgba(139,92,246,0.10)"
                             />
                             <MenuItem
                                 icon={Gift}

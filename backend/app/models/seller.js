@@ -252,6 +252,38 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    addonDecorationEnabled: {
+      type: Boolean,
+      default: false
+    },
+    addonDecorationPrice: {
+      type: Number,
+      default: 0
+    },
+    addonBridalEnabled: {
+      type: Boolean,
+      default: false
+    },
+    addonBridalPrice: {
+      type: Number,
+      default: 0
+    },
+    addonCateringEnabled: {
+      type: Boolean,
+      default: false
+    },
+    addonCateringPrice: {
+      type: Number,
+      default: 0
+    },
+    physicalPaymentEnabled: {
+      type: Boolean,
+      default: false
+    },
+    paymentQrCode: {
+      type: String,
+      default: ""
+    },
     customerImageReviewEnabled: {
       type: Boolean,
       default: false

@@ -115,6 +115,14 @@ export function formatSellerApplication(seller) {
     quoteCustomerApproval: seller.quoteCustomerApproval || false,
     quoteFinalPayment: seller.quoteFinalPayment || false,
     customerImageReviewEnabled: seller.customerImageReviewEnabled || false,
+    addonDecorationEnabled: seller.addonDecorationEnabled || false,
+    addonDecorationPrice: seller.addonDecorationPrice || 0,
+    addonBridalEnabled: seller.addonBridalEnabled || false,
+    addonBridalPrice: seller.addonBridalPrice || 0,
+    addonCateringEnabled: seller.addonCateringEnabled || false,
+    addonCateringPrice: seller.addonCateringPrice || 0,
+    physicalPaymentEnabled: seller.physicalPaymentEnabled || false,
+    paymentQrCode: seller.paymentQrCode || "",
     reviewCategoriesEnabled: seller.reviewCategoriesEnabled || [],
     verificationScore: docs.length
       ? Math.min(100, 55 + docs.length * 12 + (seller.address ? 10 : 0))

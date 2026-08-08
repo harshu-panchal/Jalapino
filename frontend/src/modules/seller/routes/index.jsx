@@ -37,6 +37,8 @@ const LiveStream = React.lazy(() => import("../pages/LiveStream"));
 const CustomerImageReview = React.lazy(() => import("../pages/CustomerImageReview"));
 const AdvanceBookings = React.lazy(() => import("../pages/AdvanceBookings"));
 const BookingManagement = React.lazy(() => import("../pages/BookingManagement"));
+const SellerVisitManagement = React.lazy(() => import("../pages/SellerVisitManagement"));
+const QRScannerView = React.lazy(() => import("../pages/QRScannerView"));
 
 // Event Seller Pages
 const EventDashboard = React.lazy(() => import("../pages/event/EventDashboard"));
@@ -77,6 +79,8 @@ const navItems = [
     path: "/seller/earnings",
     icon: HiOutlineCurrencyDollar,
   },
+  { label: "Physical Visits", path: "/seller/visit-requests", icon: HiOutlineCalendar },
+  { label: "Ticket Scanner", path: "/seller/scanner", icon: HiOutlineClipboardDocumentList },
   { label: "Profile", path: "/seller/profile", icon: HiOutlineUser },
 ];
 
@@ -90,6 +94,8 @@ const eventNavItems = [
   { label: "Packages", path: "/seller/packages", icon: HiOutlineCube },
   { label: "Reservations", path: "/seller/reservations", icon: HiOutlineClipboardDocumentList },
   { label: "Calendar", path: "/seller/calendar", icon: HiOutlineCalendar },
+  { label: "Physical Visits", path: "/seller/visit-requests", icon: HiOutlineCalendar },
+  { label: "Ticket Scanner", path: "/seller/scanner", icon: HiOutlineClipboardDocumentList },
   { label: "Profile", path: "/seller/profile", icon: HiOutlineUser },
 ];
 
@@ -143,6 +149,8 @@ const SellerRoutes = () => {
             <Route path="/reservations" element={<EventReservations />} />
             <Route path="/calendar" element={<EventCalendar />} />
             <Route path="/booking-management" element={<BookingManagement />} />
+            <Route path="/visit-requests" element={<SellerVisitManagement />} />
+            <Route path="/scanner" element={<QRScannerView />} />
             <Route path="/live" element={<LiveStream />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
@@ -157,6 +165,8 @@ const SellerRoutes = () => {
             <Route path="/customer-images" element={<CustomerImageReview />} />
             <Route path="/advance-bookings" element={<AdvanceBookings />} />
             <Route path="/booking-management" element={<BookingManagement />} />
+            <Route path="/visit-requests" element={<SellerVisitManagement />} />
+            <Route path="/scanner" element={<QRScannerView />} />
             <Route path="/orders" element={<Orders />} />
             <Route path="/returns" element={<Returns />} />
             <Route path="/tracking" element={<DeliveryTracking />} />

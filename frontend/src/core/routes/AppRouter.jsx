@@ -56,6 +56,10 @@ const EventCategoriesPage = lazy(() => import('../../modules/customer/pages/even
 const EventSellersPage = lazy(() => import('../../modules/customer/pages/events/EventSellersPage'));
 const EventPackageSelectionPage = lazy(() => import('../../modules/customer/pages/events/EventPackageSelectionPage'));
 const EventCheckoutPage = lazy(() => import('../../modules/customer/pages/events/EventCheckoutPage'));
+const VenueDiscovery = lazy(() => import('../../modules/customer/pages/events/VenueDiscovery'));
+const CustomerVisitRequests = lazy(() => import('../../modules/customer/pages/events/CustomerVisitRequests'));
+const GeneralBookingForm = lazy(() => import('../../modules/customer/pages/events/GeneralBookingForm'));
+const MyTickets = lazy(() => import('../../modules/customer/pages/events/MyTickets'));
 
 // Lazy load heavy modules
 const SellerModule = lazy(() => import('../../modules/seller/routes/index'));
@@ -180,6 +184,10 @@ const AppRouter = () => {
                         { path: 'plan-my-event/sellers', element: <EventSellersPage /> },
                         { path: 'plan-my-event/packages', element: <EventPackageSelectionPage /> },
                         { path: 'plan-my-event/checkout', element: <EventCheckoutPage /> },
+                        { path: 'plan-my-event/venues', element: <VenueDiscovery /> },
+                        { path: 'plan-my-event/booking', element: <ProtectedRoute><GeneralBookingForm /></ProtectedRoute> },
+                        { path: 'profile/visit-requests', element: <ProtectedRoute><CustomerVisitRequests /></ProtectedRoute> },
+                        { path: 'profile/tickets', element: <ProtectedRoute><MyTickets /></ProtectedRoute> },
                         { path: 'wishlist', element: <ProtectedRoute><WishlistPage /></ProtectedRoute> },
                         { path: 'orders', element: <ProtectedRoute><OrdersPage /></ProtectedRoute> },
                         { path: 'orders/:orderId', element: <ProtectedRoute><OrderDetailPage /></ProtectedRoute> },

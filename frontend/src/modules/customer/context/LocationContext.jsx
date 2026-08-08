@@ -53,16 +53,25 @@ export const LocationProvider = ({ children }) => {
 
   const availableModules = useMemo(() => {
     const currentCityName = currentLocation?.city?.trim()?.toLowerCase() || "";
+    const currentCityState = currentLocation?.state?.trim()?.toLowerCase() || "";
     const cityConfig = citiesConfig.find(c => {
         let dbCity = c.cityName?.trim()?.toLowerCase() || "";
         let locCity = currentCityName;
         
-        if (dbCity === locCity) return true;
-        // strip " ji" to match user's custom naming in DB vs Google Maps
-        if (dbCity.endsWith(" ji")) dbCity = dbCity.replace(/ ji$/, "");
-        if (locCity.endsWith(" ji")) locCity = locCity.replace(/ ji$/, "");
+        let dbState = c.state?.trim()?.toLowerCase() || "";
+        let locState = currentCityState;
         
-        return dbCity === locCity;
+        let cityMatches = false;
+        if (dbCity === locCity) {
+            cityMatches = true;
+        } else {
+            if (dbCity.endsWith(" ji")) dbCity = dbCity.replace(/ ji$/, "");
+            if (locCity.endsWith(" ji")) locCity = locCity.replace(/ ji$/, "");
+            if (dbCity === locCity) cityMatches = true;
+        }
+        
+        const stateMatches = !dbState || !locState || dbState === locState;
+        return cityMatches && stateMatches;
     });
     
     // Default to true if not configured or fallback logic
@@ -71,7 +80,7 @@ export const LocationProvider = ({ children }) => {
       planMyEventEnabled: cityConfig ? (cityConfig.planMyEventEnabled ?? false) : false,
       wholesaleEnabled: cityConfig ? (cityConfig.wholesaleEnabled ?? false) : false
     };
-  }, [currentLocation?.city, citiesConfig]);
+  }, [currentLocation?.city, currentLocation?.state, citiesConfig]);
 
   // Update the current location.
   // By default this does NOT change saved addresses; only explicit
