@@ -7,10 +7,10 @@ import {
   HiOutlineUser, 
   HiOutlineClock, 
   HiOutlinePhone, 
-  HiOutlineLocationMarker,
+  HiOutlineMapPin,
   HiOutlineCheckCircle,
   HiOutlineXCircle,
-  HiOutlineRefresh,
+  HiOutlineArrowPath,
   HiOutlinePlus,
   HiOutlineTrash
 } from 'react-icons/hi2';
@@ -242,7 +242,7 @@ const SellerVisitManagement = () => {
                           }}
                           className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-black rounded-xl flex items-center justify-center gap-1.5"
                         >
-                          <HiOutlineRefresh size={16} /> Propose Reschedule
+                          <HiOutlineArrowPath size={16} /> Propose Reschedule
                         </button>
                         <button 
                           onClick={() => handleUpdateStatus(req._id, 'Rejected')}
@@ -269,7 +269,7 @@ const SellerVisitManagement = () => {
                           }}
                           className="w-full py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-black rounded-xl flex items-center justify-center gap-1.5"
                         >
-                          <HiOutlineRefresh size={16} /> Propose Reschedule
+                          <HiOutlineArrowPath size={16} /> Propose Reschedule
                         </button>
                       </>
                     )}
