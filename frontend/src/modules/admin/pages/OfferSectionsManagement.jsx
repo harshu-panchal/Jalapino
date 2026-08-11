@@ -38,7 +38,6 @@ const OfferSectionsManagement = () => {
     categoryId: "",
     order: 0,
     status: "active",
-    status: "active",
     customImageUrls: [],
     isUploading: false,
   });

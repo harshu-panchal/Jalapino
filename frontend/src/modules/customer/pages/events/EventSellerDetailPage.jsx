@@ -10,7 +10,7 @@ import MainLocationHeader from '../../components/shared/MainLocationHeader';
 import { resolveImageUrl } from '@/core/utils/imageUtils';
 import axiosInstance from '@core/api/axios';
 import { getOrderSocket } from '@/core/services/orderSocket';
-import { getCookie } from '@core/utils/authStorage'; // Auth token getter
+import { getStoredAuthToken } from '@core/utils/authStorage'; // Auth token getter
 
 const EventSellerDetailPage = () => {
     const navigate = useNavigate();
@@ -59,7 +59,7 @@ const EventSellerDetailPage = () => {
         fetchSellerProducts();
 
         // Connect Socket Chat
-        const token = getCookie('auth_customer');
+        const token = getStoredAuthToken('auth_customer');
         if (token) {
             const socket = getOrderSocket(token);
             if (socket) {

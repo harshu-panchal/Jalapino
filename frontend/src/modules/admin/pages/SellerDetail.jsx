@@ -124,8 +124,6 @@ const SellerDetail = () => {
                 totalRevenue: data.stats?.totalRevenue || 0,
                 rating: data.stats?.rating || 0,
                 status: data.applicationStatus === 'pending' ? 'pending' : (data.isVerified && data.isActive ? 'active' : (data.applicationStatus || 'inactive')),
-                retailEnabled: data.retailEnabled ?? true,
-                planMyEventEnabled: data.planMyEventEnabled ?? false,
                 productsEnabled: data.productsEnabled ?? true,
                 stockEnabled: data.stockEnabled ?? true,
                 ordersEnabled: data.ordersEnabled ?? true,
