@@ -106,7 +106,8 @@ const CategoryProductsPage = () => {
                         name: s.name,
                         icon: s.image || 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png'
                     }));
-                    setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...subs]);
+                    const sortedSubs = [...subs].sort((a, b) => a.name.localeCompare(b.name));
+                    setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...sortedSubs]);
                 }
             }
         } catch (error) {

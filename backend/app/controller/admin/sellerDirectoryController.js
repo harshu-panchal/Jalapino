@@ -198,6 +198,7 @@ export const updateSellerDetails = async (req, res) => {
     const quoteSellerQuotation = req.body.quoteSellerQuotation;
     const quoteQuoteRevision = req.body.quoteQuoteRevision;
     const quoteCustomerApproval = req.body.quoteCustomerApproval;
+    const quoteAdvancePayment = req.body.quoteAdvancePayment;
     const quoteFinalPayment = req.body.quoteFinalPayment;
     const customerImageReviewEnabled = req.body.customerImageReviewEnabled;
     const advanceBookingEnabled = req.body.advanceBookingEnabled;
@@ -250,6 +251,7 @@ export const updateSellerDetails = async (req, res) => {
     if (quoteSellerQuotation !== undefined) updateData.quoteSellerQuotation = quoteSellerQuotation;
     if (quoteQuoteRevision !== undefined) updateData.quoteQuoteRevision = quoteQuoteRevision;
     if (quoteCustomerApproval !== undefined) updateData.quoteCustomerApproval = quoteCustomerApproval;
+    if (quoteAdvancePayment !== undefined) updateData.quoteAdvancePayment = quoteAdvancePayment;
     if (quoteFinalPayment !== undefined) updateData.quoteFinalPayment = quoteFinalPayment;
     if (customerImageReviewEnabled !== undefined) updateData.customerImageReviewEnabled = customerImageReviewEnabled;
     if (advanceBookingEnabled !== undefined) updateData.advanceBookingEnabled = advanceBookingEnabled;

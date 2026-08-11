@@ -102,6 +102,7 @@ const RewardManagement = React.lazy(() => import("../pages/RewardManagement"));
 const ReferralSettings = React.lazy(() => import("../pages/ReferralSettings"));
 const HomeVideosManagement = React.lazy(() => import("../pages/HomeVideosManagement"));
 const SellerSignupBanners = React.lazy(() => import("../pages/SellerSignupBanners"));
+const EventBannersManagement = React.lazy(() => import("../pages/EventBannersManagement"));
 
 const CateringDashboard = React.lazy(() => import("../pages/catering/CateringDashboard"));
 const CateringServices = React.lazy(() => import("../pages/catering/CateringServices"));
@@ -238,6 +239,7 @@ const navItems = [
     children: [
       { label: "Configuration", path: "/admin/events/config" },
       { label: "City Management", path: "/admin/events/cities" },
+      { label: "Event Banners", path: "/admin/events/banners" },
       { label: "All Bookings", path: "/admin/events/bookings" },
       { label: "Venue Bookings", path: "/admin/events/venue-bookings" },
     ],
@@ -392,6 +394,7 @@ const AdminRoutes = () => {
 
         <Route path="/events/config" element={<EventConfigPage />} />
         <Route path="/events/cities" element={<CityManagementPage />} />
+        <Route path="/events/banners" element={<EventBannersManagement />} />
         <Route path="/events/bookings" element={<EventBookingsPage />} />
         <Route path="/events/venue-bookings" element={<VenueBookingsPage />} />
 

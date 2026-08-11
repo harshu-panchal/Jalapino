@@ -81,6 +81,7 @@ const PendingSellers = () => {
         quoteSellerQuotation: false,
         quoteQuoteRevision: false,
         quoteCustomerApproval: false,
+        quoteAdvancePayment: false,
         quoteFinalPayment: false,
         customerImageReviewEnabled: false,
         advanceBookingEnabled: false,
@@ -146,6 +147,7 @@ const PendingSellers = () => {
                         quoteSellerQuotation: s.quoteSellerQuotation ?? false,
                         quoteQuoteRevision: s.quoteQuoteRevision ?? false,
                         quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                        quoteAdvancePayment: s.quoteAdvancePayment ?? false,
                         quoteFinalPayment: s.quoteFinalPayment ?? false,
                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
@@ -400,6 +402,7 @@ const PendingSellers = () => {
                                                     quoteSellerQuotation: s.quoteSellerQuotation ?? false,
                                                     quoteQuoteRevision: s.quoteQuoteRevision ?? false,
                                                     quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                                                    quoteAdvancePayment: s.quoteAdvancePayment ?? false,
                                                     quoteFinalPayment: s.quoteFinalPayment ?? false,
                                                     customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                                                     advanceBookingEnabled: s.advanceBookingEnabled ?? false,
@@ -462,6 +465,7 @@ const PendingSellers = () => {
                                                         quoteSellerQuotation: s.quoteSellerQuotation ?? false,
                                                         quoteQuoteRevision: s.quoteQuoteRevision ?? false,
                                                         quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                                                        quoteAdvancePayment: s.quoteAdvancePayment ?? false,
                                                         quoteFinalPayment: s.quoteFinalPayment ?? false,
                                                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                                                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
@@ -835,6 +839,186 @@ const PendingSellers = () => {
                                                     />
                                                 </div>
 
+                                                {/* Customization & Quotation Engine Sub-Permissions */}
+                                                {permissions.customizationEngineEnabled && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Engine Settings</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                            <PermissionToggle
+                                                                label="Reference Photo Upload"
+                                                                description="Allow upload of reference photos"
+                                                                checked={permissions.quoteReferencePhotoUpload}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteReferencePhotoUpload: checked });
+                                                                        toast.success('Reference photo upload permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteReferencePhotoUpload: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Theme Selection"
+                                                                description="Allow selecting themes"
+                                                                checked={permissions.quoteThemeSelection}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteThemeSelection: checked });
+                                                                        toast.success('Theme selection permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteThemeSelection: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteThemeSelection: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Color Combination"
+                                                                description="Allow selecting color combinations"
+                                                                checked={permissions.quoteColorCombination}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteColorCombination: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteColorCombination: checked });
+                                                                        toast.success('Color combination permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteColorCombination: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteColorCombination: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Budget Selection"
+                                                                description="Allow selecting budget options"
+                                                                checked={permissions.quoteBudgetSelection}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteBudgetSelection: checked });
+                                                                        toast.success('Budget selection permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteBudgetSelection: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteBudgetSelection: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Customer Notes"
+                                                                description="Allow customer notes/instructions"
+                                                                checked={permissions.quoteCustomerNotes}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteCustomerNotes: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteCustomerNotes: checked });
+                                                                        toast.success('Customer notes permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerNotes: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteCustomerNotes: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Seller Quotation"
+                                                                description="Allow seller to send quotations"
+                                                                checked={permissions.quoteSellerQuotation}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteSellerQuotation: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteSellerQuotation: checked });
+                                                                        toast.success('Seller quotation permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteSellerQuotation: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteSellerQuotation: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Quote Revision"
+                                                                description="Allow revisions to quotation"
+                                                                checked={permissions.quoteQuoteRevision}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteQuoteRevision: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteQuoteRevision: checked });
+                                                                        toast.success('Quote revision permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteQuoteRevision: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteQuoteRevision: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Customer Approval"
+                                                                description="Allow customer approval step"
+                                                                checked={permissions.quoteCustomerApproval}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteCustomerApproval: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteCustomerApproval: checked });
+                                                                        toast.success('Customer approval permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerApproval: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteCustomerApproval: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                 label="Advance Payment"
+                                                                 description="Allow advance payment step"
+                                                                 checked={permissions.quoteAdvancePayment}
+                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                 onChange={async (e) => {
+                                                                     const checked = e.target.checked;
+                                                                     setPermissions(prev => ({ ...prev, quoteAdvancePayment: checked }));
+                                                                     try {
+                                                                         await adminApi.updateSeller(viewingSeller.id, { quoteAdvancePayment: checked });
+                                                                         toast.success('Advance payment permission updated');
+                                                                         setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteAdvancePayment: checked } : seller));
+                                                                     } catch (err) {
+                                                                         setPermissions(prev => ({ ...prev, quoteAdvancePayment: !checked }));
+                                                                     }
+                                                                 }}
+                                                             />
+                                                            <PermissionToggle
+                                                                label="Final Payment"
+                                                                description="Allow final payment step"
+                                                                checked={permissions.quoteFinalPayment}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteFinalPayment: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteFinalPayment: checked });
+                                                                        toast.success('Final payment permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteFinalPayment: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteFinalPayment: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {/* Optional Add-on Services Section */}
                                                 <div className="flex flex-col gap-1 mt-6 mb-4 border-t border-slate-200 pt-4 pb-1">
                                                     <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Optional Add-on Services</h5>
@@ -1025,168 +1209,6 @@ const PendingSellers = () => {
                                                     </div>
                                                 </div>
 
-                                                {/* Customization & Quotation Engine Sub-Permissions */}
-                                                {permissions.customizationEngineEnabled && (
-                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Engine Settings</h6>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                                            <PermissionToggle
-                                                                label="Reference Photo Upload"
-                                                                description="Allow upload of reference photos"
-                                                                checked={permissions.quoteReferencePhotoUpload}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteReferencePhotoUpload: checked });
-                                                                        toast.success('Reference photo upload permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteReferencePhotoUpload: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Theme Selection"
-                                                                description="Allow selecting themes"
-                                                                checked={permissions.quoteThemeSelection}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteThemeSelection: checked });
-                                                                        toast.success('Theme selection permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteThemeSelection: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteThemeSelection: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Color Combination"
-                                                                description="Allow selecting color combinations"
-                                                                checked={permissions.quoteColorCombination}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteColorCombination: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteColorCombination: checked });
-                                                                        toast.success('Color combination permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteColorCombination: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteColorCombination: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Budget Selection"
-                                                                description="Allow selecting budget options"
-                                                                checked={permissions.quoteBudgetSelection}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteBudgetSelection: checked });
-                                                                        toast.success('Budget selection permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteBudgetSelection: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteBudgetSelection: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Customer Notes"
-                                                                description="Allow customer notes/instructions"
-                                                                checked={permissions.quoteCustomerNotes}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteCustomerNotes: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteCustomerNotes: checked });
-                                                                        toast.success('Customer notes permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerNotes: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteCustomerNotes: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Seller Quotation"
-                                                                description="Allow seller to send quotations"
-                                                                checked={permissions.quoteSellerQuotation}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteSellerQuotation: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteSellerQuotation: checked });
-                                                                        toast.success('Seller quotation permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteSellerQuotation: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteSellerQuotation: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Quote Revision"
-                                                                description="Allow revisions to quotation"
-                                                                checked={permissions.quoteQuoteRevision}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteQuoteRevision: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteQuoteRevision: checked });
-                                                                        toast.success('Quote revision permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteQuoteRevision: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteQuoteRevision: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Customer Approval"
-                                                                description="Allow customer approval step"
-                                                                checked={permissions.quoteCustomerApproval}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteCustomerApproval: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteCustomerApproval: checked });
-                                                                        toast.success('Customer approval permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteCustomerApproval: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteCustomerApproval: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Final Payment"
-                                                                description="Allow final payment step"
-                                                                checked={permissions.quoteFinalPayment}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteFinalPayment: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteFinalPayment: checked });
-                                                                        toast.success('Final payment permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteFinalPayment: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteFinalPayment: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
 
                                                 {/* Row 1.5: Dynamic Categories selection when Retail/Wholesale/Events are enabled */}
                                                 {(permissions.retailEnabled || permissions.wholesaleEnabled || permissions.planMyEventEnabled) && (

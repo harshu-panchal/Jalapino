@@ -408,7 +408,10 @@ const MainLocationHeader = ({
             {availableModules?.retailEnabled && settings?.platformControl?.retailEnabled !== false && (
               <button
                 type="button"
-                onClick={() => toggleMode('retail')}
+                onClick={() => {
+                  toggleMode('retail');
+                  navigate('/');
+                }}
                 className={cn(
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'retail'
@@ -436,7 +439,10 @@ const MainLocationHeader = ({
             {availableModules?.wholesaleEnabled && settings?.platformControl?.wholesaleEnabled !== false && (
               <button
                 type="button"
-                onClick={() => toggleMode('whole')}
+                onClick={() => {
+                  toggleMode('whole');
+                  navigate('/');
+                }}
                 className={cn(
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'whole'

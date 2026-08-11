@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, Heart, User, Menu, MapPin, ShoppingBag, Store, Clapperboard } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -20,6 +20,7 @@ const Header = () => {
     const { count: wishlistCount } = useWishlist();
     const { cartCount } = useCart();
     const location = useLocation();
+    const navigate = useNavigate();
     const isCheckoutPage = location.pathname === '/checkout';
     const [isLocationOpen, setIsLocationOpen] = useState(false);
     const [isCustomOrderOpen, setIsCustomOrderOpen] = useState(false);
@@ -86,7 +87,10 @@ const Header = () => {
                     {settings?.platformControl?.retailEnabled !== false && (
                         <button
                             type="button"
-                            onClick={() => toggleMode('retail')}
+                            onClick={() => {
+                                toggleMode('retail');
+                                navigate('/');
+                            }}
                             className={cn(
                                 "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                                 mode === 'retail'
@@ -110,7 +114,10 @@ const Header = () => {
                     {settings?.platformControl?.wholesaleEnabled !== false && (
                         <button
                             type="button"
-                            onClick={() => toggleMode('whole')}
+                            onClick={() => {
+                                toggleMode('whole');
+                                navigate('/');
+                            }}
                             className={cn(
                                 "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                                 mode === 'whole'

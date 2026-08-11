@@ -113,6 +113,7 @@ export function formatSellerApplication(seller) {
     quoteSellerQuotation: seller.quoteSellerQuotation || false,
     quoteQuoteRevision: seller.quoteQuoteRevision || false,
     quoteCustomerApproval: seller.quoteCustomerApproval || false,
+    quoteAdvancePayment: seller.quoteAdvancePayment || false,
     quoteFinalPayment: seller.quoteFinalPayment || false,
     customerImageReviewEnabled: seller.customerImageReviewEnabled || false,
     addonDecorationEnabled: seller.addonDecorationEnabled || false,

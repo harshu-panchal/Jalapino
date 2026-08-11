@@ -2,328 +2,373 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import StorefrontIcon from '@mui/icons-material/Storefront';
+import SearchIcon from '@mui/icons-material/Search';
 import { motion } from 'framer-motion';
 import CircularProgress from '@mui/material/CircularProgress';
 import { eventConfigApi } from '../../services/eventConfigApi';
+import MainLocationHeader from '../../components/shared/MainLocationHeader';
+import { resolveImageUrl } from '@/core/utils/imageUtils';
+
+// Custom colors mapping based on category names for premium sidebar aesthetics
+const getCategoryStyle = (name = '') => {
+    const lower = name.toLowerCase();
+    if (lower.includes('decor')) return { bg: '#EF4444', text: '#FFFFFF', border: 'border-red-500' }; // Red
+    if (lower.includes('dj')) return { bg: '#FACC15', text: '#0F172A', border: 'border-yellow-450' }; // Yellow
+    if (lower.includes('photograph')) return { bg: '#22C55E', text: '#FFFFFF', border: 'border-green-500' }; // Green
+    if (lower.includes('banquet')) return { bg: '#2563EB', text: '#FFFFFF', border: 'border-blue-600' }; // Blue
+    if (lower.includes('cater')) return { bg: '#8B5CF6', text: '#FFFFFF', border: 'border-purple-600' }; // Purple
+    if (lower.includes('water park')) return { bg: '#38BDF8', text: '#FFFFFF', border: 'border-sky-400' }; // Light Blue
+    if (lower.includes('game')) return { bg: '#84CC16', text: '#FFFFFF', border: 'border-lime-500' }; // Light Green
+    if (lower.includes('restaur')) return { bg: '#F97316', text: '#FFFFFF', border: 'border-orange-500' }; // Orange
+    if (lower.includes('marriage')) return { bg: '#06B6D4', text: '#FFFFFF', border: 'border-cyan-500' }; // Sky Blue
+    if (lower.includes('makeup') || lower.includes('bridal')) return { bg: '#D97706', text: '#FFFFFF', border: 'border-amber-600' }; // Gold
+    
+    // Default fallback
+    return { bg: '#64748B', text: '#FFFFFF', border: 'border-slate-500' };
+};
 
 const EventCategoriesPage = () => {
     const { state } = useLocation();
     const navigate = useNavigate();
-    const [selectedCategories, setSelectedCategories] = useState([]);
-    const [preferences, setPreferences] = useState({});
     const [categories, setCategories] = useState([]);
-    const [isLoading, setIsLoading] = useState(true);
-
-    // state.eventData contains { eventType, guestCount, budget, date, time, location }
-    const eventData = state?.eventData;
+    const [searchTerm, setSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState(null);
+    
+    const [sellers, setSellers] = useState([]);
+    const [isLoadingCategories, setIsLoadingCategories] = useState(true);
+    const [isLoadingSellers, setIsLoadingSellers] = useState(false);
+    const [banners, setBanners] = useState([]);
+    const [currentBannerIndex, setCurrentBannerIndex] = useState(0);
+    
+    const [eventTypes, setEventTypes] = useState([]);
+    const [eventParams, setEventParams] = useState(state?.eventData || {
+        eventType: '',
+        guestCount: '',
+        budget: '',
+        date: '',
+        time: '',
+        location: ''
+    });
 
     useEffect(() => {
-        if (!eventData) {
+        if (!eventParams?.eventType) {
             navigate('/plan-my-event');
             return;
         }
 
-        const fetchCategories = async () => {
+        const fetchCategoriesAndBanners = async () => {
             try {
-                const response = await eventConfigApi.getEventCategories();
+                const [catRes, bannersRes, typesRes] = await Promise.all([
+                    eventConfigApi.getEventCategories(),
+                    eventConfigApi.getEventBanners('plan_my_event'),
+                    eventConfigApi.getEventTypes()
+                ]);
                 // Sort categories alphabetically A-Z
-                const sorted = (response || []).sort((a, b) => a.name.localeCompare(b.name));
+                const sorted = (catRes || []).sort((a, b) => a.name.localeCompare(b.name));
                 setCategories(sorted);
+                if (sorted.length > 0) {
+                    setActiveCategory(sorted[0]);
+                }
+                setBanners(bannersRes || []);
+                setEventTypes(typesRes || []);
             } catch (error) {
                 console.error("Failed to fetch event categories:", error);
             } finally {
-                setIsLoading(false);
+                setIsLoadingCategories(false);
             }
         };
 
-        fetchCategories();
-    }, [eventData, navigate]);
+        fetchCategoriesAndBanners();
+    }, [navigate]);
 
-    const toggleCategory = (catId) => {
-        if (selectedCategories.includes(catId)) {
-            setSelectedCategories(selectedCategories.filter(id => id !== catId));
-            const newPrefs = { ...preferences };
-            delete newPrefs[catId];
-            setPreferences(newPrefs);
-        } else {
-            setSelectedCategories([...selectedCategories, catId]);
-            setPreferences({ ...preferences, [catId]: {} });
+    // Auto rotate banners
+    useEffect(() => {
+        if (banners.length > 1) {
+            const timer = setInterval(() => {
+                setCurrentBannerIndex(prev => (prev + 1) % banners.length);
+            }, 4000);
+            return () => clearInterval(timer);
         }
-    };
+    }, [banners]);
 
-    const handlePreferenceChange = (catId, fieldName, value) => {
-        setPreferences({
-            ...preferences,
-            [catId]: {
-                ...preferences[catId],
-                [fieldName]: value
-            }
-        });
-    };
-
-    const handleImageUpload = async (catId, fieldName, file) => {
-        if (!file) return;
-        try {
-            // Optimistic loading state could be added here
-            const url = await eventConfigApi.uploadMedia(file);
-            if (url) {
-                handlePreferenceChange(catId, fieldName, url);
-            }
-        } catch (error) {
-            console.error("Upload failed", error);
-            alert("Image upload failed. Please try again.");
-        }
-    };
-
-    const handleContinueToCheckout = () => {
-        // Validate
-        if (selectedCategories.length === 0) {
-            alert('Please select at least one service');
-            return;
-        }
-
-        // Validate required preference fields
-        let hasErrors = false;
-        let errorMessage = "Please fill in all required fields:\n";
-
-        for (const catId of selectedCategories) {
-            const category = categories.find(c => c._id === catId);
-            if (!category || !category.fields) continue;
-
-            for (const field of category.fields) {
-                if (field.isRequired) {
-                    const val = preferences[catId]?.[field.fieldName];
-                    if (!val || String(val).trim() === '') {
-                        hasErrors = true;
-                        errorMessage += `- ${field.fieldName} under ${category.name}\n`;
-                    }
+    // Fetch sellers dynamically when active category or eventParams changes
+    useEffect(() => {
+        if (activeCategory && eventParams) {
+            const fetchSellers = async () => {
+                setIsLoadingSellers(true);
+                try {
+                    const params = {
+                        date: eventParams.date,
+                        time: eventParams.time,
+                        guestCount: eventParams.guestCount,
+                        location: eventParams.location,
+                        categories: [activeCategory._id]
+                    };
+                    const result = await eventConfigApi.searchSellers(params);
+                    setSellers(result || []);
+                } catch (error) {
+                    console.error("Failed to fetch sellers:", error);
+                } finally {
+                    setIsLoadingSellers(false);
                 }
-            }
+            };
+            fetchSellers();
         }
+    }, [activeCategory, eventParams]);
 
-        if (hasErrors) {
-            alert(errorMessage);
-            return;
-        }
-        
-        // Now proceed to Seller Discovery
-        console.log("Proceeding with event data:", eventData);
-        console.log("Selected services & preferences:", preferences);
-        navigate('/plan-my-event/sellers', { state: { eventData, preferences, selectedCategories } });
+    const filteredCategories = categories.filter(cat =>
+        cat.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const handleSellerClick = (seller) => {
+        // Direct flow to detailed seller customization/product list page
+        navigate('/plan-my-event/seller-detail', { 
+            state: { 
+                eventData: eventParams, 
+                preferences: { [activeCategory._id]: {} }, 
+                selectedCategories: [activeCategory._id], 
+                selectedSeller: seller 
+            } 
+        });
     };
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-            <div className="sticky top-0 left-0 right-0 h-16 bg-white z-50 flex items-center px-4 shadow-sm shrink-0">
-                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
-                    <ArrowBackIcon />
-                </button>
-                <div className="ml-2">
-                    <h1 className="text-lg font-bold text-slate-800 leading-tight">Select Services</h1>
-                    <p className="text-[10px] text-slate-500 font-medium">Build your {eventData?.eventType} package</p>
-                </div>
-            </div>
+            {/* Main Application Header */}
+            <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
 
-            <div className="flex-1 overflow-y-auto pb-32">
-                <div className="max-w-3xl mx-auto p-4">
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-8">
-                        {isLoading ? (
-                            <div className="col-span-full flex justify-center py-10">
-                                <CircularProgress />
+            {/* Main Layout Workspace with header padding */}
+            <div className="flex-1 flex overflow-hidden w-full" style={{ paddingTop: 'var(--header-height, 180px)' }}>
+                {/* Left Sidebar: Categories */}
+                <div className="w-80 bg-white border-r border-slate-200 flex flex-col shrink-0">
+                    {/* Search Engine Category */}
+                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <div className="relative">
+                            <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                                <SearchIcon sx={{ fontSize: 18 }} />
+                            </span>
+                            <input
+                                type="text"
+                                className="w-full pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 bg-white outline-none transition-all placeholder:text-slate-400"
+                                placeholder="Category (Search Engine)"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Scrollable Categories List */}
+                    <div className="flex-1 overflow-y-auto p-3 space-y-2">
+                        {isLoadingCategories ? (
+                            <div className="flex justify-center py-10">
+                                <CircularProgress size={24} sx={{ color: '#8b5cf6' }} />
+                            </div>
+                        ) : filteredCategories.length === 0 ? (
+                            <div className="text-center py-8 text-slate-400 text-sm">
+                                No categories found
                             </div>
                         ) : (
-                            categories.map(cat => {
-                                const isSelected = selectedCategories.includes(cat._id);
+                            filteredCategories.map(cat => {
+                                const isActive = activeCategory?._id === cat._id;
+                                const style = getCategoryStyle(cat.name);
                                 return (
-                                    <motion.div 
+                                    <button
                                         key={cat._id}
-                                        whileTap={{ scale: 0.95 }}
-                                        onClick={() => toggleCategory(cat._id)}
-                                    className={`relative p-4 rounded-2xl cursor-pointer border-2 transition-all ${isSelected ? 'border-purple-500 bg-purple-50' : 'border-slate-200 bg-white'}`}
-                                >
-                                    <div className="text-3xl mb-2 w-12 h-12 flex items-center justify-center overflow-hidden rounded-xl bg-transparent">
-                                        {(cat.icon?.startsWith('http') || cat.icon?.startsWith('/')) ? (
-                                            <img src={cat.icon} alt={cat.name} className="w-full h-full object-cover" />
-                                        ) : (
-                                            cat.icon
-                                        )}
-                                    </div>
-                                    <h3 className={`font-bold ${isSelected ? 'text-purple-700' : 'text-slate-700'}`}>{cat.name}</h3>
-                                    {isSelected && (
-                                        <div className="absolute top-3 right-3 text-purple-500">
-                                            <CheckCircleIcon sx={{ fontSize: 20 }} />
+                                        onClick={() => setActiveCategory(cat)}
+                                        className={`w-full flex items-center gap-3 p-3 rounded-xl transition-all duration-200 border-2 text-left font-bold ${
+                                            isActive
+                                                ? 'border-slate-800 shadow-md scale-[1.01] ring-2 ring-purple-400/50'
+                                                : 'border-transparent opacity-90 hover:opacity-100'
+                                        }`}
+                                        style={{
+                                            backgroundColor: style.bg,
+                                            color: style.text
+                                        }}
+                                    >
+                                        <div className="text-2xl w-10 h-10 flex items-center justify-center overflow-hidden rounded-lg bg-white/20">
+                                            {(cat.icon?.startsWith('http') || cat.icon?.startsWith('/')) ? (
+                                                <img src={cat.icon} alt={cat.name} className="w-full h-full object-cover" />
+                                            ) : (
+                                                cat.icon || '🎉'
+                                            )}
                                         </div>
-                                    )}
-                                </motion.div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="truncate text-sm tracking-wide">{cat.name}</p>
+                                        </div>
+                                    </button>
                                 );
                             })
                         )}
                     </div>
+                </div>
 
-                    {/* Dynamic Preference Forms */}
-                    {selectedCategories.length > 0 && (
-                        <div className="space-y-6">
-                            <h2 className="text-xl font-black text-slate-800 mb-4">Service Preferences</h2>
-                            {selectedCategories.map(catId => {
-                                const category = categories.find(c => c._id === catId);
-                                if (!category) return null;
-                                return (
-                                    <motion.div 
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        key={catId} 
-                                        className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100"
-                                    >
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <span className="text-xl w-8 h-8 flex items-center justify-center overflow-hidden rounded-md bg-transparent">
-                                                {(category.icon?.startsWith('http') || category.icon?.startsWith('/')) ? (
-                                                    <img src={category.icon} alt={category.name} className="w-full h-full object-cover" />
-                                                ) : (
-                                                    category.icon
-                                                )}
-                                            </span>
-                                            <h3 className="font-bold text-lg text-slate-800">{category.name} Details</h3>
+                {/* Right Area: Banner & Sellers list */}
+                <div className="flex-1 flex flex-col overflow-y-auto bg-slate-50">
+                    {/* Top Banner */}
+                    {banners.length > 0 ? (
+                        <div className="p-6 pb-2 shrink-0">
+                            <div className="w-full aspect-[1448/450] rounded-2xl shadow-[0_8px_24px_rgba(0,0,0,0.05),_0_2px_8px_rgba(0,0,0,0.03)] bg-white relative overflow-hidden">
+                                <div 
+                                    className="w-full h-full flex transition-transform duration-500 ease-out" 
+                                    style={{ transform: `translateX(-${currentBannerIndex * 100}%)` }}
+                                >
+                                    {banners.map((banner, idx) => (
+                                        <div key={banner._id || idx} className="w-full h-full flex-shrink-0 relative">
+                                            <img
+                                                src={resolveImageUrl(banner.imageUrl)}
+                                                alt={banner.title || "Event Banner"}
+                                                className="w-full h-full object-cover object-top rounded-2xl"
+                                            />
                                         </div>
-
-                                        {/* Dynamic Plugin and Business Rule Indicators */}
-                                        <div className="flex flex-wrap gap-2 mb-4">
-                                            {category.activePlugins?.includes('package_builder') && (
-                                                <span className="text-[10px] font-bold bg-indigo-50 text-indigo-600 px-2 py-1 rounded-md border border-indigo-100 uppercase tracking-wider">Packages Available</span>
-                                            )}
-                                            {category.activePlugins?.includes('ingredient_transparency') && (
-                                                <span className="text-[10px] font-bold bg-green-50 text-green-600 px-2 py-1 rounded-md border border-green-100 uppercase tracking-wider">Ingredient Transparency</span>
-                                            )}
-                                            {category.activePlugins?.includes('availability_calendar') && (
-                                                <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-2 py-1 rounded-md border border-blue-100 uppercase tracking-wider">Availability Calendar</span>
-                                            )}
-                                            {category.businessRules?.instantBookingEnabled && (
-                                                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md border border-emerald-100 uppercase tracking-wider">⚡ Instant Booking</span>
-                                            )}
-                                            {category.businessRules?.advancePaymentPercentage > 0 && (
-                                                <span className="text-[10px] font-bold bg-amber-50 text-amber-600 px-2 py-1 rounded-md border border-amber-100 uppercase tracking-wider">{category.businessRules.advancePaymentPercentage}% Advance</span>
-                                            )}
-                                            {category.businessRules?.venueVisitRequired && (
-                                                <span className="text-[10px] font-bold bg-orange-50 text-orange-600 px-2 py-1 rounded-md border border-orange-100 uppercase tracking-wider">Venue Visit</span>
-                                            )}
-                                        </div>
-                                        
-                                        <div className="space-y-4">
-                                            {category.fields.map(field => (
-                                                <div key={field.fieldName}>
-                                                    <label className="block text-sm font-semibold text-slate-700 mb-1">
-                                                        {field.fieldName} {field.isRequired && <span className="text-red-500">*</span>}
-                                                    </label>
-                                                    
-                                                    {field.fieldType === 'SELECT' ? (
-                                                        <select 
-                                                            className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-purple-500 bg-slate-50 outline-none"
-                                                            value={preferences[catId]?.[field.fieldName] || ''}
-                                                            onChange={(e) => handlePreferenceChange(catId, field.fieldName, e.target.value)}
-                                                        >
-                                                            <option value="">Select option...</option>
-                                                            {field.options.map(opt => (
-                                                                <option key={opt} value={opt}>{opt}</option>
-                                                            ))}
-                                                        </select>
-                                                    ) : field.fieldType === 'TEXTAREA' ? (
-                                                        <textarea 
-                                                            className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-purple-500 bg-slate-50 outline-none"
-                                                            rows={3}
-                                                            placeholder={`Enter ${field.fieldName.toLowerCase()}`}
-                                                            value={preferences[catId]?.[field.fieldName] || ''}
-                                                            onChange={(e) => handlePreferenceChange(catId, field.fieldName, e.target.value)}
-                                                        />
-                                                    ) : (field.fieldType === 'IMAGE' || field.fieldName.toLowerCase().includes('image')) ? (
-                                                        <div className="space-y-3">
-                                                            {preferences[catId]?.[field.fieldName] ? (
-                                                                <div className="relative w-full h-40 rounded-xl overflow-hidden border border-slate-200 group">
-                                                                    <img src={preferences[catId][field.fieldName]} alt="Uploaded reference" className="w-full h-full object-cover" />
-                                                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                                                                        <label className="cursor-pointer bg-white text-slate-800 font-bold px-4 py-2 rounded-lg text-sm hover:bg-slate-100">
-                                                                            Change Image
-                                                                            <input 
-                                                                                type="file" 
-                                                                                accept="image/*" 
-                                                                                className="hidden"
-                                                                                onChange={(e) => handleImageUpload(catId, field.fieldName, e.target.files[0])}
-                                                                            />
-                                                                        </label>
-                                                                    </div>
-                                                                </div>
-                                                            ) : (
-                                                                <label className="w-full border-2 border-dashed border-slate-300 rounded-xl p-6 flex flex-col items-center justify-center bg-slate-50 hover:bg-slate-100 cursor-pointer transition-colors group">
-                                                                    <div className="w-12 h-12 bg-white rounded-full shadow-sm flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                                                                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-purple-500"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                                                                    </div>
-                                                                    <span className="text-sm font-semibold text-slate-600">Click to upload an image</span>
-                                                                    <span className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP (Max 5MB)</span>
-                                                                    <input 
-                                                                        type="file" 
-                                                                        accept="image/*" 
-                                                                        className="hidden"
-                                                                        onChange={(e) => handleImageUpload(catId, field.fieldName, e.target.files[0])}
-                                                                    />
-                                                                </label>
-                                                            )}
-                                                        </div>
-                                                    ) : (field.fieldType === 'COLOR' || field.fieldName.toLowerCase().includes('color')) ? (
-                                                        <div className="flex items-center gap-3">
-                                                            <div 
-                                                                className="relative w-12 h-12 rounded-xl shadow-sm border-2 border-slate-200 shrink-0 cursor-pointer overflow-hidden"
-                                                                style={{ backgroundColor: preferences[catId]?.[field.fieldName] || '#ffffff' }}
-                                                            >
-                                                                <input 
-                                                                    type="color"
-                                                                    className="absolute inset-[-50px] w-[200%] h-[200%] opacity-0 cursor-pointer"
-                                                                    value={preferences[catId]?.[field.fieldName] || '#ffffff'}
-                                                                    onChange={(e) => handlePreferenceChange(catId, field.fieldName, e.target.value)}
-                                                                />
-                                                            </div>
-                                                            <input 
-                                                                type="text"
-                                                                className="flex-1 border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-purple-500 bg-slate-50 outline-none uppercase font-mono text-sm"
-                                                                placeholder="#FFFFFF"
-                                                                value={preferences[catId]?.[field.fieldName] || ''}
-                                                                onChange={(e) => handlePreferenceChange(catId, field.fieldName, e.target.value)}
-                                                            />
-                                                        </div>
-                                                    ) : (
-                                                        <input 
-                                                            type="text"
-                                                            className="w-full border border-slate-200 rounded-xl p-3 focus:ring-2 focus:ring-purple-500 bg-slate-50 outline-none"
-                                                            placeholder={`Enter ${field.fieldName.toLowerCase()}`}
-                                                            value={preferences[catId]?.[field.fieldName] || ''}
-                                                            onChange={(e) => handlePreferenceChange(catId, field.fieldName, e.target.value)}
-                                                        />
-                                                    )}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </motion.div>
-                                );
-                            })}
+                                    ))}
+                                </div>
+                                {banners.length > 1 && (
+                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
+                                        {banners.map((_, idx) => (
+                                            <button
+                                                key={idx}
+                                                onClick={() => setCurrentBannerIndex(idx)}
+                                                className={`w-2 h-2 rounded-full transition-all ${currentBannerIndex === idx ? 'bg-purple-600 w-4' : 'bg-slate-350'}`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                                {/* Subtle burgundy border overlay */}
+                                <div className="absolute inset-0 border border-[var(--customer-header-base-color)]/15 rounded-2xl pointer-events-none" />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-6 pb-2 shrink-0">
+                            <div className="relative h-44 rounded-2xl overflow-hidden shadow-sm bg-gradient-to-r from-purple-600 to-indigo-700 text-white flex items-center p-8">
+                                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-white to-transparent"></div>
+                                <div className="relative z-10 max-w-lg">
+                                    <span className="bg-white/20 text-white text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-sm">
+                                        {activeCategory ? activeCategory.name : 'Event Planner'}
+                                    </span>
+                                    <h2 className="text-2xl font-black mt-3 leading-tight">
+                                        Book Top Rated {activeCategory ? activeCategory.name : 'Services'}
+                                    </h2>
+                                    <p className="text-purple-100 text-xs mt-1 font-medium">
+                                        Verified vendors offering instant availability and custom quotes.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     )}
-                </div>
-            </div>
 
-            {/* Bottom Action Bar */}
-            {selectedCategories.length > 0 && (
-                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-slate-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-                    <div className="max-w-3xl mx-auto flex items-center justify-between">
-                        <div>
-                            <p className="text-sm text-slate-500 font-medium">Selected Services</p>
-                            <p className="font-black text-lg text-slate-800">{selectedCategories.length}</p>
+                    {/* Event Type & Date & Time Slot Filters */}
+                    <div className="mx-6 mt-2 p-4 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Event Type</label>
+                                <select
+                                    value={eventParams.eventType}
+                                    onChange={(e) => setEventParams(prev => ({ ...prev, eventType: e.target.value }))}
+                                    className="w-full border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold bg-slate-50 text-slate-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all cursor-pointer"
+                                >
+                                    {eventTypes.map(type => (
+                                        <option key={type.value} value={type.value}>
+                                            {type.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            
+                            <div className="md:col-span-2 grid grid-cols-2 gap-3">
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Date</label>
+                                    <input
+                                        type="date"
+                                        value={eventParams.date}
+                                        onChange={(e) => setEventParams(prev => ({ ...prev, date: e.target.value }))}
+                                        className="w-full border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold bg-slate-50 text-slate-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1.5">Time</label>
+                                    <input
+                                        type="time"
+                                        value={eventParams.time}
+                                        onChange={(e) => setEventParams(prev => ({ ...prev, time: e.target.value }))}
+                                        className="w-full border border-slate-200 rounded-xl p-2.5 outline-none text-sm font-semibold bg-slate-50 text-slate-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                                    />
+                                </div>
+                            </div>
                         </div>
-                        <button 
-                            onClick={handleContinueToCheckout}
-                            className="bg-slate-900 text-white font-bold rounded-xl px-8 py-3.5 hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 active:scale-95"
-                        >
-                            Continue
-                        </button>
+                    </div>
+
+                    {/* Sellers Area */}
+                    <div className="p-6 flex-1">
+                        {isLoadingSellers ? (
+                            <div className="flex flex-col items-center justify-center py-24">
+                                <CircularProgress sx={{ color: '#8b5cf6' }} />
+                                <p className="text-slate-500 font-medium mt-4">Searching available providers...</p>
+                            </div>
+                        ) : sellers.length === 0 ? (
+                            <div className="text-center py-16 bg-white rounded-2xl border border-slate-200">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <StorefrontIcon sx={{ color: '#94a3b8', fontSize: 32 }} />
+                                </div>
+                                <h3 className="text-base font-bold text-slate-800 mb-1">No Providers Available</h3>
+                                <p className="text-slate-500 text-xs max-w-xs mx-auto">
+                                    We couldn't find any active providers for "{activeCategory?.name}" in this area.
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center mb-2 px-1">
+                                    <h3 className="text-xs font-black text-slate-500 uppercase tracking-wider">
+                                        {sellers.length} verified providers for {activeCategory?.name}
+                                    </h3>
+                                </div>
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {sellers.map(seller => (
+                                        <motion.div
+                                            whileHover={{ y: -2 }}
+                                            key={seller._id}
+                                            onClick={() => handleSellerClick(seller)}
+                                            className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md cursor-pointer transition-all flex flex-col justify-between"
+                                        >
+                                            <div>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <h4 className="font-bold text-base text-slate-800 leading-tight">
+                                                            {seller.shopName || seller.name}
+                                                        </h4>
+                                                        <p className="text-xs text-slate-400 mt-0.5">{seller.address?.city || eventData?.location}</p>
+                                                    </div>
+                                                    <span className="text-[10px] bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-md font-bold uppercase tracking-wider">
+                                                        Active
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-3 mt-4 text-xs font-semibold text-slate-600">
+                                                    {seller.reliabilityScore !== undefined && (
+                                                        <span className="flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-1 rounded-md border border-amber-100">
+                                                            ⭐ {seller.reliabilityScore}% Match
+                                                        </span>
+                                                    )}
+                                                    <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
+                                                        Max Cap: {seller.maxGuestCapacity || 'Any'}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between">
+                                                <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider">
+                                                    View Packages & Rates →
+                                                </span>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 };

@@ -103,5 +103,16 @@ export const eventConfigApi = {
             console.error("Error uploading media:", error);
             throw error;
         }
+    },
+
+    // Get active event banners
+    getEventBanners: async (moduleName) => {
+        try {
+            const response = await axiosInstance.get(moduleName ? `/event-banners?module=${moduleName}` : '/event-banners');
+            return response.data?.results || [];
+        } catch (error) {
+            console.error('Error fetching event banners:', error);
+            throw error;
+        }
     }
 };

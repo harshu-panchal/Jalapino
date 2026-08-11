@@ -82,5 +82,28 @@ export const adminEventConfigApi = {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
         return response.data?.url || response.data?.data?.url || response.data?.result?.url || response.data?.results?.url;
+    },
+
+    // ---- Event Banners ----
+    getEventBanners: async (moduleName) => {
+        const response = await axiosInstance.get(moduleName ? `/event-banners?module=${moduleName}` : '/event-banners');
+        return response.data?.results || [];
+    },
+    uploadEventBanners: async (files, moduleName) => {
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('images', files[i]);
+        }
+        if (moduleName) {
+            formData.append('module', moduleName);
+        }
+        const response = await axiosInstance.post('/event-banners', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+    deleteEventBanner: async (id) => {
+        const response = await axiosInstance.delete(`/event-banners/${id}`);
+        return response.data;
     }
 };

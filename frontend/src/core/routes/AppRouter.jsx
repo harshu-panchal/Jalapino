@@ -55,6 +55,7 @@ const PlanMyEventPage = lazy(() => import('../../modules/customer/pages/events/P
 const EventCategoriesPage = lazy(() => import('../../modules/customer/pages/events/EventCategoriesPage'));
 const EventSellersPage = lazy(() => import('../../modules/customer/pages/events/EventSellersPage'));
 const EventPackageSelectionPage = lazy(() => import('../../modules/customer/pages/events/EventPackageSelectionPage'));
+const EventSellerDetailPage = lazy(() => import('../../modules/customer/pages/events/EventSellerDetailPage'));
 const EventCheckoutPage = lazy(() => import('../../modules/customer/pages/events/EventCheckoutPage'));
 const VenueDiscovery = lazy(() => import('../../modules/customer/pages/events/VenueDiscovery'));
 const CustomerVisitRequests = lazy(() => import('../../modules/customer/pages/events/CustomerVisitRequests'));
@@ -183,6 +184,7 @@ const AppRouter = () => {
                         { path: 'plan-my-event/categories', element: <EventCategoriesPage /> },
                         { path: 'plan-my-event/sellers', element: <EventSellersPage /> },
                         { path: 'plan-my-event/packages', element: <EventPackageSelectionPage /> },
+                        { path: 'plan-my-event/seller-detail', element: <EventSellerDetailPage /> },
                         { path: 'plan-my-event/checkout', element: <EventCheckoutPage /> },
                         { path: 'plan-my-event/venues', element: <VenueDiscovery /> },
                         { path: 'plan-my-event/booking', element: <ProtectedRoute><GeneralBookingForm /></ProtectedRoute> },

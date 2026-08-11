@@ -46,6 +46,7 @@ import supportTicketRoute from "./supportTicketRoutes.js";
 import homeVideoRoute from "./homeVideoRoutes.js";
 import sellerSignupBannerRoute from "./sellerSignupBannerRoutes.js";
 import footerBannerRoute from "./footerBannerRoutes.js";
+import eventBannerRoute from "./eventBannerRoutes.js";
 import customerImageRoute from "./customerImageRoutes.js";
 import sellerBookingRoute from "./sellerBookingRoutes.js";
 import bookingManagementRoute from "./bookingManagementRoutes.js";
@@ -100,6 +101,7 @@ const setupRoutes = (app) => {
     router.use("/", couponRoute);
     router.use("/", homeVideoRoute);
     router.use("/footer-banners", footerBannerRoute);
+    router.use("/event-banners", eventBannerRoute);
     router.use("/notifications", notificationRoute);
     router.use("/auth/otp", authOtpRoute);
     router.use("/push", pushRoute);

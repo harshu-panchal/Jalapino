@@ -320,6 +320,10 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    quoteAdvancePayment: {
+      type: Boolean,
+      default: false
+    },
     quoteFinalPayment: {
       type: Boolean,
       default: false

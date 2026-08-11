@@ -52,35 +52,41 @@ export const LocationProvider = ({ children }) => {
   }, []);
 
   const availableModules = useMemo(() => {
-    const currentCityName = currentLocation?.city?.trim()?.toLowerCase() || "";
+    let currentCityName = currentLocation?.city?.trim()?.toLowerCase() || "";
     const currentCityState = currentLocation?.state?.trim()?.toLowerCase() || "";
+
+    // Normalize "Singapore" (Singapore Township, Indore) to "indore"
+    if (currentCityName.includes("singapore") && (currentCityState.includes("madhya pradesh") || (currentLocation?.name || "").toLowerCase().includes("indore"))) {
+      currentCityName = "indore";
+    }
+
     const cityConfig = citiesConfig.find(c => {
-        let dbCity = c.cityName?.trim()?.toLowerCase() || "";
-        let locCity = currentCityName;
-        
-        let dbState = c.state?.trim()?.toLowerCase() || "";
-        let locState = currentCityState;
-        
-        let cityMatches = false;
-        if (dbCity === locCity) {
-            cityMatches = true;
-        } else {
-            if (dbCity.endsWith(" ji")) dbCity = dbCity.replace(/ ji$/, "");
-            if (locCity.endsWith(" ji")) locCity = locCity.replace(/ ji$/, "");
-            if (dbCity === locCity) cityMatches = true;
-        }
-        
-        const stateMatches = !dbState || !locState || dbState === locState;
-        return cityMatches && stateMatches;
+      let dbCity = c.cityName?.trim()?.toLowerCase() || "";
+      let locCity = currentCityName;
+
+      let dbState = c.state?.trim()?.toLowerCase() || "";
+      let locState = currentCityState;
+
+      let cityMatches = false;
+      if (dbCity === locCity) {
+        cityMatches = true;
+      } else {
+        if (dbCity.endsWith(" ji")) dbCity = dbCity.replace(/ ji$/, "");
+        if (locCity.endsWith(" ji")) locCity = locCity.replace(/ ji$/, "");
+        if (dbCity === locCity) cityMatches = true;
+      }
+
+      const stateMatches = !dbState || !locState || dbState === locState;
+      return cityMatches && stateMatches;
     });
-    
+
     // Default to true if not configured or fallback logic
     return {
       retailEnabled: cityConfig ? (cityConfig.retailEnabled ?? true) : true,
       planMyEventEnabled: cityConfig ? (cityConfig.planMyEventEnabled ?? false) : false,
       wholesaleEnabled: cityConfig ? (cityConfig.wholesaleEnabled ?? false) : false
     };
-  }, [currentLocation?.city, currentLocation?.state, citiesConfig]);
+  }, [currentLocation?.city, currentLocation?.state, currentLocation?.name, citiesConfig]);
 
   // Update the current location.
   // By default this does NOT change saved addresses; only explicit
@@ -231,10 +237,15 @@ export const LocationProvider = ({ children }) => {
             const friendlyName =
               displayParts.join(", ") || data.results[0].formatted_address;
 
+            let resolvedCity = locality || liveLocation.city;
+            if (resolvedCity && resolvedCity.toLowerCase().includes("singapore") && ((state || "").toLowerCase().includes("madhya pradesh") || friendlyName.toLowerCase().includes("indore"))) {
+              resolvedCity = "Indore";
+            }
+
             liveLocation = {
               name: friendlyName,
               time: "12-15 mins",
-              city: locality || liveLocation.city,
+              city: resolvedCity,
               state: state || liveLocation.state,
               pincode: pincode || liveLocation.pincode,
               latitude: latitude,
@@ -314,10 +325,10 @@ export const LocationProvider = ({ children }) => {
             "",
           location:
             addr?.location &&
-            typeof addr.location.lat === "number" &&
-            typeof addr.location.lng === "number" &&
-            Number.isFinite(addr.location.lat) &&
-            Number.isFinite(addr.location.lng)
+              typeof addr.location.lat === "number" &&
+              typeof addr.location.lng === "number" &&
+              Number.isFinite(addr.location.lat) &&
+              Number.isFinite(addr.location.lng)
               ? { lat: addr.location.lat, lng: addr.location.lng }
               : null,
           placeId: typeof addr?.placeId === "string" ? addr.placeId : null,
@@ -360,7 +371,7 @@ export const LocationProvider = ({ children }) => {
         updateSavedHome: false,
       });
     }
-    
+
     // Auto-fetch live location on load
     fetchAndCacheLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -376,7 +387,7 @@ export const LocationProvider = ({ children }) => {
     locationError,
     refreshLocation: fetchAndCacheLocation,
     availableModules,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [currentLocation, savedAddresses, isFetchingLocation, locationError, refreshAddresses, availableModules]);
 
   return (

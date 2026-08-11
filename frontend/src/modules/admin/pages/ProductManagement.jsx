@@ -1053,7 +1053,7 @@ const ProductManagement = () => {
                                                             </div>
                                                         ))
                                                     ) : (
-                                                        <div className="col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
+                                                        <div className="    col-span-full rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-10 text-center">
                                                             <p className="text-xs font-medium text-slate-400">No gallery photos added yet.</p>
                                                         </div>
                                                     )}

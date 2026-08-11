@@ -1129,6 +1129,22 @@ const SellerDetail = () => {
                                                         }}
                                                     />
                                                     <PermissionToggle
+                                                        label="Advance Payment"
+                                                        description="Allow advance payment step"
+                                                        checked={seller.quoteAdvancePayment}
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, quoteAdvancePayment: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { quoteAdvancePayment: checked });
+                                                                showToast('Advance payment permission updated', 'success');
+                                                            } catch (err) {
+                                                                setSeller(prev => ({ ...prev, quoteAdvancePayment: !checked }));
+                                                                showToast('Failed to update advance payment permission', 'error');
+                                                            }
+                                                        }}
+                                                    />
+                                                    <PermissionToggle
                                                         label="Final Payment"
                                                         description="Allow final payment step"
                                                         checked={seller.quoteFinalPayment}

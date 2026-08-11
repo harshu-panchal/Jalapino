@@ -6,10 +6,12 @@ import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/or
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
 import { useSettings } from '@/core/context/SettingsContext';
 import { toast } from 'sonner';
+import { useLocation } from '../context/LocationContext';
 
 const OrdersPage = () => {
     const navigate = useNavigate();
     const { settings } = useSettings();
+    const { currentLocation } = useLocation();
     const [activeTab, setActiveTab] = useState(() => {
         return sessionStorage.getItem('jalapino_orders_tab') || 'orders';
     });
@@ -22,6 +24,18 @@ const OrdersPage = () => {
     const [loading, setLoading] = useState(true);
     const [editingEvent, setEditingEvent] = useState(null);
     const [editFormData, setEditFormData] = useState({ guestCount: '', budget: '', date: '', time: '', location: '' });
+
+    const filteredOrders = orders.filter(order => {
+        if (!currentLocation?.city) return true;
+        const orderCity = order.address?.city || '';
+        return orderCity.toLowerCase().includes(currentLocation.city.toLowerCase());
+    });
+
+    const filteredEventBookings = eventBookings.filter(booking => {
+        if (!currentLocation?.city) return true;
+        const bookingLocation = booking.location?.address || booking.location || '';
+        return bookingLocation.toLowerCase().includes(currentLocation.city.toLowerCase());
+    });
 
     // Alternative Seller States
     const [altModalOpen, setAltModalOpen] = useState(false);
@@ -298,7 +312,7 @@ const OrdersPage = () => {
             </div>
 
             <div className="space-y-4 px-4 pb-2">
-                {activeTab === 'orders' && orders.length === 0 && (
+                {activeTab === 'orders' && filteredOrders.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Package size={56} className="text-slate-300 mb-4" />
                         <h3 className="text-base font-semibold text-slate-900 mb-1">No orders yet</h3>
@@ -306,13 +320,13 @@ const OrdersPage = () => {
                             When you place an order, it will appear here so you can track it easily.
                         </p>
                         <Link to="/" className="bg-primary hover:bg-[#0a6d19] text-white px-7 py-2.5 rounded-full font-semibold text-sm shadow-sm transition-colors">
-                            Start Shopping
+                             Start Shopping
                         </Link>
                     </div>
                 )}
 
-                {activeTab === 'orders' && orders.length > 0 && (
-                    orders.map((order) => {
+                {activeTab === 'orders' && filteredOrders.length > 0 && (
+                    filteredOrders.map((order) => {
                         const legacy = getLegacyStatusFromOrder(order);
                         return (
                         <Link
@@ -399,7 +413,7 @@ const OrdersPage = () => {
                     })
                 )}
 
-                {activeTab === 'events' && eventBookings.length === 0 && (
+                {activeTab === 'events' && filteredEventBookings.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Clock size={56} className="text-slate-300 mb-4" />
                         <h3 className="text-base font-semibold text-slate-900 mb-1">No event bookings yet</h3>
@@ -412,8 +426,8 @@ const OrdersPage = () => {
                     </div>
                 )}
 
-                {activeTab === 'events' && eventBookings.length > 0 && (
-                    eventBookings.map((booking) => (
+                {activeTab === 'events' && filteredEventBookings.length > 0 && (
+                    filteredEventBookings.map((booking) => (
                         <div
                             key={booking._id}
                             className="block bg-white rounded-2xl px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] border border-slate-100/80 mb-4"
