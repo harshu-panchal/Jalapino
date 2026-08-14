@@ -248,6 +248,10 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    availableColors: {
+      type: [String],
+      default: []
+    },
     advanceBookingEnabled: {
       type: Boolean,
       default: false
@@ -315,6 +319,14 @@ const sellerSchema = new mongoose.Schema(
     quoteQuoteRevision: {
       type: Boolean,
       default: false
+    },
+    acceptsCOD: {
+      type: Boolean,
+      default: true
+    },
+    acceptsRazorpay: {
+      type: Boolean,
+      default: true
     },
     quoteCustomerApproval: {
       type: Boolean,
@@ -401,6 +413,10 @@ const sellerSchema = new mongoose.Schema(
     advancePaymentPercentage: {
       type: Number,
       default: 0
+    },
+    ticketSystemEnabled: {
+      type: Boolean,
+      default: true
     },
     // ---------------------------------
     bankDetails: {

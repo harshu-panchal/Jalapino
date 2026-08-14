@@ -52,6 +52,7 @@ import sellerBookingRoute from "./sellerBookingRoutes.js";
 import bookingManagementRoute from "./bookingManagementRoutes.js";
 import venueVisitRoute from "./venueVisitRoutes.js";
 import generalBookingRoute from "./generalBookingRoutes.js";
+import chatRoute from "./chatRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -126,6 +127,7 @@ const setupRoutes = (app) => {
     router.use("/", sellerSignupBannerRoute);
     router.use("/", venueVisitRoute);
     router.use("/", generalBookingRoute);
+    router.use("/chats", chatRoute);
 
     app.use("/api", router);
 }

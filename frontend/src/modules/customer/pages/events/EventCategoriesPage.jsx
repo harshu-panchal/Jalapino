@@ -52,34 +52,8 @@ const EventCategoriesPage = () => {
     });
 
     useEffect(() => {
-        if (!eventParams?.eventType) {
-            navigate('/plan-my-event');
-            return;
-        }
-
-        const fetchCategoriesAndBanners = async () => {
-            try {
-                const [catRes, bannersRes, typesRes] = await Promise.all([
-                    eventConfigApi.getEventCategories(),
-                    eventConfigApi.getEventBanners('plan_my_event'),
-                    eventConfigApi.getEventTypes()
-                ]);
-                // Sort categories alphabetically A-Z
-                const sorted = (catRes || []).sort((a, b) => a.name.localeCompare(b.name));
-                setCategories(sorted);
-                if (sorted.length > 0) {
-                    setActiveCategory(sorted[0]);
-                }
-                setBanners(bannersRes || []);
-                setEventTypes(typesRes || []);
-            } catch (error) {
-                console.error("Failed to fetch event categories:", error);
-            } finally {
-                setIsLoadingCategories(false);
-            }
-        };
-
-        fetchCategoriesAndBanners();
+        // Single-page design: categories are now on the main plan-my-event page
+        navigate('/plan-my-event', { replace: true });
     }, [navigate]);
 
     // Auto rotate banners

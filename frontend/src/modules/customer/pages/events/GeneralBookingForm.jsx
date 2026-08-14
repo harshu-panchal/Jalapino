@@ -475,22 +475,33 @@ const GeneralBookingForm = () => {
                             <CurrencyRupeeIcon className="text-purple-600" fontSize="small" />
                             Payment Method
                         </h3>
-
-                        <div className={`grid gap-4 ${venue.sellerId?.physicalPaymentEnabled ? 'grid-cols-3' : 'grid-cols-2'}`}>
-                            <div 
-                                onClick={() => setPaymentMethod('COD')}
-                                className={`p-4 border-2 rounded-2xl cursor-pointer text-center transition-all ${paymentMethod === 'COD' ? 'border-purple-600 bg-purple-50/30' : 'border-slate-100 hover:bg-slate-50'}`}
-                            >
-                                <p className="text-sm font-black text-slate-800">COD</p>
-                                <p className="text-[10px] text-slate-500 font-bold mt-1">Cash on Delivery</p>
-                            </div>
-                            <div 
-                                onClick={() => setPaymentMethod('Razorpay')}
-                                className={`p-4 border-2 rounded-2xl cursor-pointer text-center transition-all ${paymentMethod === 'Razorpay' ? 'border-purple-600 bg-purple-50/30' : 'border-slate-100 hover:bg-slate-50'}`}
-                            >
-                                <p className="text-sm font-black text-slate-800">Online Pay</p>
-                                <p className="text-[10px] text-slate-500 font-bold mt-1">Razorpay / UPI / Cards</p>
-                            </div>
+                        <div className={`grid gap-4 ${[
+                            venue.sellerId?.acceptsCOD !== false,
+                            venue.sellerId?.acceptsRazorpay !== false,
+                            venue.sellerId?.physicalPaymentEnabled
+                        ].filter(Boolean).length === 3 ? 'grid-cols-3' : [
+                            venue.sellerId?.acceptsCOD !== false,
+                            venue.sellerId?.acceptsRazorpay !== false,
+                            venue.sellerId?.physicalPaymentEnabled
+                        ].filter(Boolean).length === 2 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                            {venue.sellerId?.acceptsCOD !== false && (
+                                <div 
+                                    onClick={() => setPaymentMethod('COD')}
+                                    className={`p-4 border-2 rounded-2xl cursor-pointer text-center transition-all ${paymentMethod === 'COD' ? 'border-purple-600 bg-purple-50/30' : 'border-slate-100 hover:bg-slate-50'}`}
+                                >
+                                    <p className="text-sm font-black text-slate-800">COD</p>
+                                    <p className="text-[10px] text-slate-500 font-bold mt-1">Cash on Delivery</p>
+                                </div>
+                            )}
+                            {venue.sellerId?.acceptsRazorpay !== false && (
+                                <div 
+                                    onClick={() => setPaymentMethod('Razorpay')}
+                                    className={`p-4 border-2 rounded-2xl cursor-pointer text-center transition-all ${paymentMethod === 'Razorpay' ? 'border-purple-600 bg-purple-50/30' : 'border-slate-100 hover:bg-slate-50'}`}
+                                >
+                                    <p className="text-sm font-black text-slate-800">Online Pay</p>
+                                    <p className="text-[10px] text-slate-500 font-bold mt-1">Razorpay / UPI / Cards</p>
+                                </div>
+                            )}
                             {venue.sellerId?.physicalPaymentEnabled && (
                                 <div 
                                     onClick={() => setPaymentMethod('Physical')}

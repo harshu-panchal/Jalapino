@@ -337,8 +337,8 @@ const ReferralSettings = () => {
                                             2. A new customer enters the referral code during user signup.
                                         </p>
                                         <p>
-                                            3. {config.eligibilityCondition === 'signup' 
-                                                ? 'Upon successfully validating OTP, the system instantly processes the reward.' 
+                                            3. {config.eligibilityCondition === 'signup'
+                                                ? 'Upon successfully validating OTP, the system instantly processes the reward.'
                                                 : `Payout occurs when the invitee places a qualifying order of at least ₹${config.minOrderValue} and it shifts to "delivered" status.`
                                             }
                                         </p>

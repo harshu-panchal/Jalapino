@@ -352,7 +352,7 @@ const VenueDiscovery = () => {
                         >
                             Clear
                         </button>
-                        {selectedVenues.length === 1 && (
+                        {selectedVenues.length === 1 && selectedVenues[0]?.sellerId?.ticketSystemEnabled !== false && (
                             <button 
                                 onClick={() => {
                                     const venueObj = selectedVenues[0];

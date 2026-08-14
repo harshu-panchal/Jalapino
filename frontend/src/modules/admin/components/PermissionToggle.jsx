@@ -2,12 +2,12 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 
 export const PermissionToggle = ({ label, description, checked, onChange, disabled, activeColor = "bg-emerald-500", hoverColor = "group-hover:text-emerald-600" }) => (
-    <label className={cn("flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 cursor-pointer group transition-colors shadow-sm", disabled ? "opacity-50 cursor-not-allowed" : "hover:border-slate-300")}>
-        <div className="flex flex-col">
-            <span className={cn("text-xs font-bold text-slate-700 transition-colors uppercase tracking-wide", !disabled && hoverColor)}>{label}</span>
-            <span className="text-[9px] text-slate-400">{description}</span>
+    <label className={cn("flex items-center justify-between p-3 rounded-xl bg-white border border-slate-200 cursor-pointer group transition-colors shadow-sm h-full", disabled ? "opacity-50 cursor-not-allowed" : "hover:border-slate-300")}>
+        <div className="flex flex-col flex-1 min-w-0">
+            <span className={cn("text-xs font-bold text-slate-700 transition-colors uppercase tracking-wide break-words", !disabled && hoverColor)}>{label}</span>
+            <span className="text-[9px] text-slate-400 break-words">{description}</span>
         </div>
-        <div className="flex items-center gap-3 ml-4">
+        <div className="flex items-center gap-2 ml-2 shrink-0">
             <span className={cn("text-[10px] font-bold uppercase tracking-wider", checked ? "text-emerald-600" : "text-slate-400")}>
                 {checked ? 'ON' : 'OFF'}
             </span>

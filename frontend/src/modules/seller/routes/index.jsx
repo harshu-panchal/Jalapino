@@ -15,7 +15,8 @@ import {
   HiOutlineChartBarSquare,
   HiOutlineCreditCard,
   HiOutlineMapPin,
-  HiOutlineVideoCamera
+  HiOutlineVideoCamera,
+  HiOutlineChatBubbleLeftRight
 } from "react-icons/hi2";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -47,6 +48,7 @@ const EventReservations = React.lazy(() => import("../pages/event/EventReservati
 const EventCalendar = React.lazy(() => import("../pages/event/EventCalendar"));
 
 const EventRequests = React.lazy(() => import("../pages/event/EventRequests"));
+const SellerChatInbox = React.lazy(() => import("../pages/event/SellerChatInbox"));
 
 const navItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
@@ -79,6 +81,7 @@ const navItems = [
     path: "/seller/earnings",
     icon: HiOutlineCurrencyDollar,
   },
+  { label: "Messages", path: "/seller/chat-inbox", icon: HiOutlineChatBubbleLeftRight },
   { label: "Physical Visits", path: "/seller/visit-requests", icon: HiOutlineCalendar },
   { label: "Ticket Scanner", path: "/seller/scanner", icon: HiOutlineClipboardDocumentList },
   { label: "Profile", path: "/seller/profile", icon: HiOutlineUser },
@@ -94,6 +97,7 @@ const eventNavItems = [
   { label: "Packages", path: "/seller/packages", icon: HiOutlineCube },
   { label: "Reservations", path: "/seller/reservations", icon: HiOutlineClipboardDocumentList },
   { label: "Calendar", path: "/seller/calendar", icon: HiOutlineCalendar },
+  { label: "Messages", path: "/seller/chat-inbox", icon: HiOutlineChatBubbleLeftRight },
   { label: "Physical Visits", path: "/seller/visit-requests", icon: HiOutlineCalendar },
   { label: "Ticket Scanner", path: "/seller/scanner", icon: HiOutlineClipboardDocumentList },
   { label: "Profile", path: "/seller/profile", icon: HiOutlineUser },
@@ -149,6 +153,7 @@ const SellerRoutes = () => {
             <Route path="/reservations" element={<EventReservations />} />
             <Route path="/calendar" element={<EventCalendar />} />
             <Route path="/booking-management" element={<BookingManagement />} />
+            <Route path="/chat-inbox" element={<SellerChatInbox />} />
             <Route path="/visit-requests" element={<SellerVisitManagement />} />
             <Route path="/scanner" element={<QRScannerView />} />
             <Route path="/live" element={<LiveStream />} />
@@ -164,6 +169,7 @@ const SellerRoutes = () => {
             <Route path="/inventory" element={<StockManagement />} />
             <Route path="/customer-images" element={<CustomerImageReview />} />
             <Route path="/advance-bookings" element={<AdvanceBookings />} />
+            <Route path="/chat-inbox" element={<SellerChatInbox />} />
             <Route path="/booking-management" element={<BookingManagement />} />
             <Route path="/visit-requests" element={<SellerVisitManagement />} />
             <Route path="/scanner" element={<QRScannerView />} />

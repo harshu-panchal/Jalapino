@@ -4,6 +4,7 @@
 import { verifySocketToken } from "./socketAuth.js";
 import mongoose from "mongoose";
 import Ticket from "../models/ticket.js";
+import EventChatSession from "../models/event/EventChatSession.js";
 
 let _io = null;
 
@@ -93,6 +94,59 @@ export const initSocket = (io) => {
     socket.on("register_delivery", (deliveryId) => {
       if (deliveryId && socket.user?.role === "delivery") {
         deliverySockets.set(deliveryId.toString(), socket.id);
+      }
+    });
+
+    // Chat logic
+    socket.on("join_room", (roomName) => {
+      if (!roomName) return;
+      socket.join(roomName);
+    });
+
+    socket.on("leave_room", (roomName) => {
+      if (!roomName) return;
+      socket.leave(roomName);
+    });
+
+    socket.on("send_chat_message", async (data) => {
+      // data format: { room: `seller_chat_${sellerId}_${customerId}`, text: 'Hello', senderId: 'customer'/'seller', customerId, sellerId }
+      const { room, text, senderId, customerId, sellerId } = data;
+      if (!room || !text || !customerId || !sellerId) return;
+
+      try {
+          // Find or create chat session
+          let session = await EventChatSession.findOne({
+              customer: customerId,
+              seller: sellerId,
+              status: 'active'
+          });
+
+          if (!session) {
+              session = new EventChatSession({
+                  customer: customerId,
+                  seller: sellerId,
+                  messages: []
+              });
+          }
+
+          const newMessage = {
+              sender: senderId === 'seller' ? 'seller' : 'customer',
+              text: text,
+              isRead: false
+          };
+
+          session.messages.push(newMessage);
+          session.lastMessageAt = new Date();
+          await session.save();
+
+          // Broadcast back to room
+          _io.to(room).emit("chat_message", {
+              ...newMessage,
+              id: session.messages[session.messages.length - 1]._id,
+              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          });
+      } catch (err) {
+          console.error("Error saving chat message:", err);
       }
     });
 

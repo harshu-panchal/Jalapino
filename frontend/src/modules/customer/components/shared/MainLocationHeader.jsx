@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useLayoutEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation as useRouterLocation } from "react-router-dom";
 import { motion, useScroll, useTransform } from "framer-motion";
 import Lottie from "lottie-react";
 import { DotLottieReact } from '@lottiefiles/dotlottie-react';
@@ -187,6 +187,8 @@ const MainLocationHeader = ({
   const appName = settings?.appName || "Jalpaino";
   const logoUrl = LogoImage;
   const navigate = useNavigate();
+  const routerLocation = useRouterLocation();
+  const isPlanMyEventActive = routerLocation.pathname === '/plan-my-event' || routerLocation.pathname.startsWith('/plan-my-event');
 
   // Search Logic
   const handleSearchClick = () => {
@@ -292,14 +294,24 @@ const MainLocationHeader = ({
   const displayNav = "flex";
   const displayCart = "block";
 
-  // Force the premium maroon color for the header
-  const baseHeaderColor = "#CC2020";
+  // Force color based on active mode/route
+  const baseHeaderColor = mode === 'retail' ? "#FF9933" : mode === 'whole' ? "#87CEFA" : "#CC2020";
   const headerFontColor = activeCategory?.headerFontColor || "#111827";
   const headerIconColor = activeCategory?.headerIconColor || "#111111";
 
-  const headerOpacityGradient = baseHeaderColor && baseHeaderColor.startsWith("#")
-    ? buildHeaderOpacityGradient(baseHeaderColor, 1)
-    : "var(--customer-header-gradient)";
+  const EVENT_GRADIENT = "linear-gradient(135deg, #0D0929 0%, #4A1070 50%, #C2185B 100%)";
+  const RETAIL_GRADIENT = "linear-gradient(135deg, #FFB347 0%, #FF9933 40%, #F08010 75%, #E07010 100%)";
+  const WHOLESALE_GRADIENT = "linear-gradient(135deg, #B8E4FF 0%, #87CEFA 40%, #5BB8F5 75%, #3A9FE0 100%)";
+
+  const headerOpacityGradient = isPlanMyEventActive
+    ? EVENT_GRADIENT
+    : mode === 'retail'
+    ? RETAIL_GRADIENT
+    : mode === 'whole'
+    ? WHOLESALE_GRADIENT
+    : (baseHeaderColor && baseHeaderColor.startsWith("#")
+      ? buildHeaderOpacityGradient(baseHeaderColor, 1)
+      : "var(--customer-header-gradient)");
   const headerGradient = buildHeaderGradient(baseHeaderColor);
   const searchBarBg = buildSearchBarBackgroundColor(baseHeaderColor);
   const categoryAccent = headerIconColor;
@@ -415,12 +427,13 @@ const MainLocationHeader = ({
                 className={cn(
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'retail'
-                    ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                    ? "text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.02] font-black"
                     : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
                 )}
                 style={{
                   borderWidth: '3px',
-                  borderColor: 'transparent'
+                  borderColor: 'transparent',
+                  ...(mode === 'retail' ? { background: 'linear-gradient(135deg, #FFB347 0%, #FF9933 40%, #F08010 75%, #E07010 100%)' } : {})
                 }}
               >
                 <img
@@ -446,12 +459,13 @@ const MainLocationHeader = ({
                 className={cn(
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'whole'
-                    ? "bg-[#FACC15] text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.12)] scale-[1.02] font-black"
+                    ? "text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.02] font-black"
                     : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
                 )}
                 style={{
                   borderWidth: '3px',
-                  borderColor: 'transparent'
+                  borderColor: 'transparent',
+                  ...(mode === 'whole' ? { background: 'linear-gradient(135deg, #B8E4FF 0%, #87CEFA 40%, #5BB8F5 75%, #3A9FE0 100%)' } : {})
                 }}
               >
                 <img
@@ -479,15 +493,18 @@ const MainLocationHeader = ({
                 }}
                 className={cn(
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
-                  "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:scale-[1.02]"
+                  isPlanMyEventActive
+                    ? "text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] scale-[1.02] font-black"
+                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:scale-[1.02]"
                 )}
                 style={{
                   borderWidth: '3px',
-                  borderColor: 'transparent'
+                  borderColor: 'transparent',
+                  ...(isPlanMyEventActive ? { background: 'linear-gradient(135deg, #0D0929 0%, #4A1070 50%, #C2185B 100%)' } : {})
                 }}
               >
                 <div className="flex items-center justify-center w-7 h-7 bg-purple-100 rounded-full">
-                  <CelebrationIcon sx={{ fontSize: 18, color: '#9333ea' }} />
+                  <CelebrationIcon sx={{ fontSize: 18, color: isPlanMyEventActive ? '#ffffff' : '#9333ea' }} />
                 </div>
                 <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br />Event</span>
               </button>

@@ -106,6 +106,8 @@ const SellerDetail = () => {
                 email: data.email,
                 phone: data.phone,
                 location: data.address || data.location,
+                description: data.description || '',
+                availableColors: data.availableColors || [],
                 isEventSeller: data.isEventSeller || false,
                 hasProductAccess: data.hasProductAccess !== false,
                 retailEnabled: data.retailEnabled ?? true,
@@ -141,6 +143,9 @@ const SellerDetail = () => {
                 quoteQuoteRevision: data.quoteQuoteRevision ?? false,
                 quoteCustomerApproval: data.quoteCustomerApproval ?? false,
                 quoteFinalPayment: data.quoteFinalPayment ?? false,
+                acceptsCOD: data.acceptsCOD ?? true,
+                acceptsRazorpay: data.acceptsRazorpay ?? true,
+                ticketSystemEnabled: data.ticketSystemEnabled ?? true,
                 addonDecorationEnabled: data.addonDecorationEnabled ?? false,
                 addonDecorationPrice: data.addonDecorationPrice ?? 0,
                 addonBridalEnabled: data.addonBridalEnabled ?? false,
@@ -214,6 +219,8 @@ const SellerDetail = () => {
             name: seller.ownerName,
             phone: seller.phone,
             address: seller.location,
+            description: seller.description,
+            availableColors: seller.availableColors || [],
             sellerStatus: seller.status,
             commissionRate: seller.commissionRate?.replace('%', '') || '10',
             bankDetails: seller.bankInfo,
@@ -1014,22 +1021,7 @@ const SellerDetail = () => {
                                                             }
                                                         }}
                                                     />
-                                                    <PermissionToggle
-                                                        label="Theme Selection"
-                                                        description="Allow selecting themes"
-                                                        checked={seller.quoteThemeSelection}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteThemeSelection: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteThemeSelection: checked });
-                                                                showToast('Theme selection permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteThemeSelection: !checked }));
-                                                                showToast('Failed to update theme selection permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
+
                                                     <PermissionToggle
                                                         label="Color Combination"
                                                         description="Allow selecting color combinations"
@@ -1046,25 +1038,10 @@ const SellerDetail = () => {
                                                             }
                                                         }}
                                                     />
+
                                                     <PermissionToggle
-                                                        label="Budget Selection"
-                                                        description="Allow selecting budget options"
-                                                        checked={seller.quoteBudgetSelection}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteBudgetSelection: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteBudgetSelection: checked });
-                                                                showToast('Budget selection permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteBudgetSelection: !checked }));
-                                                                showToast('Failed to update budget selection permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                    <PermissionToggle
-                                                        label="Customer Notes"
-                                                        description="Allow customer notes/instructions"
+                                                        label="Customer & Seller Chat"
+                                                        description="Allow chat for plan my event"
                                                         checked={seller.quoteCustomerNotes}
                                                         onChange={async (e) => {
                                                             const checked = e.target.checked;
@@ -1161,6 +1138,73 @@ const SellerDetail = () => {
                                                 </div>
                                             </div>
                                         )}
+
+                                        <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                            <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Payment Options</h5>
+                                                <p className="text-[10px] text-slate-500 font-medium">Configure supported payment methods for this seller.</p>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <PermissionToggle
+                                                    label="Cash on Delivery (COD)"
+                                                    description="Allow COD for this seller"
+                                                    checked={seller.acceptsCOD ?? true}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, acceptsCOD: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { acceptsCOD: checked });
+                                                            showToast('COD permission updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, acceptsCOD: !checked }));
+                                                            showToast('Failed to update COD permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+                                                <PermissionToggle
+                                                    label="Razorpay (Online)"
+                                                    description="Allow Razorpay for this seller"
+                                                    checked={seller.acceptsRazorpay ?? true}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, acceptsRazorpay: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { acceptsRazorpay: checked });
+                                                            showToast('Razorpay permission updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, acceptsRazorpay: !checked }));
+                                                            showToast('Failed to update Razorpay permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Event & Ticketing Options */}
+                                        <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                            <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Event & Ticketing Options</h5>
+                                                <p className="text-[10px] text-slate-500 font-medium">Configure event ticketing visibility for this seller.</p>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <PermissionToggle
+                                                    label="Ticket System"
+                                                    description="Show ticketing options for Plan My Event"
+                                                    checked={seller.ticketSystemEnabled ?? true}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, ticketSystemEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { ticketSystemEnabled: checked });
+                                                            showToast('Ticket system visibility updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, ticketSystemEnabled: !checked }));
+                                                            showToast('Failed to update ticket system visibility', 'error');
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+                                        </div>
 
                                         <div>
                                             <h5 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 mt-8">Operational Status</h5>
@@ -1317,6 +1361,66 @@ const SellerDetail = () => {
                                 onChange={e => setEditFormData({ ...editFormData, address: e.target.value })}
                                 className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
                             />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600">About Us / Description (Poster Text)</label>
+                            <textarea
+                                value={editFormData.description || ''}
+                                onChange={e => setEditFormData({ ...editFormData, description: e.target.value })}
+                                placeholder="Welcome to our shop! We offer customized catering..."
+                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
+                                rows={3}
+                            />
+                        </div>
+                        <div className="md:col-span-2">
+                            <label className="text-xs font-bold text-slate-600">Available Colors (Pick a color or type and press Enter)</label>
+                            <div className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus-within:ring-2 focus-within:ring-primary/20 flex flex-wrap gap-2 items-center">
+                                {(editFormData.availableColors || []).map((color, idx) => (
+                                    <span key={idx} className="bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm">
+                                        <div className="w-3 h-3 rounded-full border border-slate-200" style={{ backgroundColor: color }}></div>
+                                        {color}
+                                        <XCircle 
+                                            className="h-3 w-3 ml-1 cursor-pointer text-slate-400 hover:text-red-500" 
+                                            onClick={() => setEditFormData({
+                                                ...editFormData,
+                                                availableColors: editFormData.availableColors.filter((_, i) => i !== idx)
+                                            })}
+                                        />
+                                    </span>
+                                ))}
+                                <input
+                                    type="color"
+                                    className="w-8 h-8 rounded cursor-pointer border-none p-0 bg-transparent"
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (val && !(editFormData.availableColors || []).includes(val)) {
+                                            setEditFormData({
+                                                ...editFormData,
+                                                availableColors: [...(editFormData.availableColors || []), val]
+                                            });
+                                        }
+                                    }}
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="Or type color and press enter..."
+                                    className="bg-transparent border-none outline-none flex-1 min-w-[180px] text-sm"
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            const val = e.target.value.trim();
+                                            if (val && !(editFormData.availableColors || []).includes(val)) {
+                                                setEditFormData({
+                                                    ...editFormData,
+                                                    availableColors: [...(editFormData.availableColors || []), val]
+                                                });
+                                                e.target.value = '';
+                                            }
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <p className="text-[10px] text-slate-500 mt-1">These colors will be shown as clickable options to the customer.</p>
                         </div>
                     </div>
 

@@ -8,21 +8,17 @@ export const searchEventSellers = async (req, res) => {
   try {
     const { date, time, guestCount, location, categories, budget } = req.query;
 
-    if (!date || !guestCount || !categories) {
+    if (!categories) {
       return res.status(400).json({
         success: false,
         error: true,
-        message: "Date, guest count, and categories are required fields",
+        message: "categories is required",
       });
     }
 
-    const requestedDate = new Date(date);
-    requestedDate.setHours(0, 0, 0, 0);
-    
-    const guests = parseInt(guestCount, 10);
-    const categoryIds = categories.split(',').map(id => id.trim());
+    const categoryIds = categories.split(',').map(id => id.trim()).filter(Boolean);
 
-    // 1. Initial query: Verified sellers matching categories and base capacity
+    // 1. Base query: active event sellers with the matching service categories
     const query = {
       isEventSeller: true,
       $or: [
@@ -30,8 +26,15 @@ export const searchEventSellers = async (req, res) => {
         { isActive: true, isVerified: true }
       ],
       serviceCategories: { $in: categoryIds },
-      maxGuestCapacity: { $gte: guests },
     };
+
+    // Apply guest count filter only if provided
+    if (guestCount) {
+      const guests = parseInt(guestCount, 10);
+      if (!isNaN(guests)) {
+        query.maxGuestCapacity = { $gte: guests };
+      }
+    }
 
     const sellers = await Seller.find(query).populate('serviceCategories').lean();
 
@@ -44,51 +47,57 @@ export const searchEventSellers = async (req, res) => {
       });
     }
 
-    // 2. Validate Availability and Reservations for each seller
-    const availableSellers = [];
+    // 2. If date provided, validate Availability and Reservations for each seller
+    if (date) {
+      const requestedDate = new Date(date);
+      requestedDate.setHours(0, 0, 0, 0);
 
-    for (const seller of sellers) {
-      // Check Holiday & Blocked Dates
-      const availability = await SellerAvailability.findOne({
-        sellerId: seller._id,
-        date: requestedDate,
-      });
+      const availableSellers = [];
 
-      if (availability && availability.holidayFlag) {
-        continue; // Seller is on holiday
+      for (const seller of sellers) {
+        // Check Holiday & Blocked Dates
+        const availability = await SellerAvailability.findOne({
+          sellerId: seller._id,
+          date: requestedDate,
+        });
+
+        if (availability && availability.holidayFlag) {
+          continue; // Seller is on holiday
+        }
+
+        // Check max capacity vs current booked capacity
+        let bookedCapacity = availability ? availability.currentBookedCapacity : 0;
+        
+        // Also check active reservations
+        const activeReservations = await SellerReservation.find({
+          sellerId: seller._id,
+          status: "active",
+          reservationExpiryTime: { $gt: new Date() },
+        });
+
+        const currentBookingsAndReservations = activeReservations.length + (bookedCapacity > 0 ? 1 : 0);
+
+        if (seller.maxEventsPerDay && currentBookingsAndReservations >= seller.maxEventsPerDay) {
+          continue; // Seller is fully booked for the day
+        }
+
+        availableSellers.push({ ...seller, isAvailable: true });
       }
 
-      // Check max capacity vs current booked capacity
-      let bookedCapacity = availability ? availability.currentBookedCapacity : 0;
-      
-      // Also check active reservations locking the capacity
-      const activeReservations = await SellerReservation.find({
-        sellerId: seller._id,
-        status: "active",
-        reservationExpiryTime: { $gt: new Date() },
+      return res.status(200).json({
+        success: true,
+        error: false,
+        message: "Available sellers fetched successfully",
+        result: availableSellers,
       });
-
-      // Assuming each reservation locks max capacity of that specific booking
-      // For Phase 1, we simply count reservations as 1 event.
-      // If seller reached maxEventsPerDay, skip.
-      const currentBookingsAndReservations = activeReservations.length + (bookedCapacity > 0 ? 1 : 0); // Simplified for Phase 1
-
-      if (currentBookingsAndReservations >= seller.maxEventsPerDay) {
-        continue; // Seller is fully booked for the day
-      }
-
-      // Check service radius if location coordinates are provided
-      // (Future implementation for geospatial matching)
-      
-      // If all checks pass, add to results
-      availableSellers.push(seller);
     }
 
+    // No date filter — return all sellers with availability unknown
     return res.status(200).json({
       success: true,
       error: false,
-      message: "Available sellers fetched successfully",
-      result: availableSellers,
+      message: "Sellers fetched successfully",
+      result: sellers,
     });
 
   } catch (error) {
@@ -100,6 +109,7 @@ export const searchEventSellers = async (req, res) => {
     });
   }
 };
+
 
 export const getSellerPackagesPublic = async (req, res) => {
   try {

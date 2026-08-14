@@ -24,6 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import { adminEventConfigApi } from '../../services/adminEventConfigApi';
+import { resolveImageUrl } from '@/core/utils/imageUtils';
 import CircularProgress from '@mui/material/CircularProgress';
 import PackageTemplatesTab from './PackageTemplatesTab';
 import EventPayoutsTab from './EventPayoutsTab';
@@ -69,6 +70,7 @@ const EventConfigPage = () => {
 
     const [catForm, setCatForm] = useState({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules } });
     const [uploadingIcon, setUploadingIcon] = useState(false);
+    const [savingCat, setSavingCat] = useState(false);
 
     // States for Venue Facilities
     const [facilities, setFacilities] = useState([]);
@@ -207,6 +209,11 @@ const EventConfigPage = () => {
     };
 
     const handleSaveCategory = async () => {
+        if (!catForm.name.trim()) {
+            alert('Category name is required.');
+            return;
+        }
+        setSavingCat(true);
         try {
             if (editingCat) {
                 await adminEventConfigApi.updateEventCategory(editingCat._id, catForm);
@@ -216,7 +223,10 @@ const EventConfigPage = () => {
             setCatModalOpen(false);
             fetchData();
         } catch (error) {
-            alert(error.response?.data?.message || "Error saving category");
+            console.error('Save category error:', error);
+            alert(error.response?.data?.message || error.message || 'Error saving category');
+        } finally {
+            setSavingCat(false);
         }
     };
 
@@ -354,7 +364,7 @@ const EventConfigPage = () => {
                                 <div className="flex items-center gap-3">
                                     <div className="text-3xl bg-slate-50 w-12 h-12 flex items-center justify-center rounded-xl border border-slate-100 overflow-hidden">
                                         {(cat.icon?.startsWith('http') || cat.icon?.startsWith('/')) ? (
-                                            <img src={cat.icon} alt={cat.name} className="w-full h-full object-cover" />
+                                            <img src={resolveImageUrl(cat.icon)} alt={cat.name} className="w-full h-full object-cover" />
                                         ) : (
                                             cat.icon
                                         )}
@@ -471,7 +481,7 @@ const EventConfigPage = () => {
                                 <div className="flex items-center gap-4">
                                     <div className="w-16 h-16 shrink-0 rounded-lg border-2 border-dashed border-slate-300 overflow-hidden bg-slate-50 flex items-center justify-center relative group cursor-pointer" onClick={() => document.getElementById('icon-upload-button').click()}>
                                         {catForm.icon ? (
-                                            <img src={catForm.icon} alt="Category" className="w-full h-full object-cover" />
+                                            <img src={resolveImageUrl(catForm.icon)} alt="Category" className="w-full h-full object-cover" />
                                         ) : (
                                             <span className="text-xs text-slate-400">No Image</span>
                                         )}
@@ -661,8 +671,17 @@ const EventConfigPage = () => {
                     </div>
                 </DialogContent>
                 <DialogActions sx={{ p: 2, px: 3 }}>
-                    <Button onClick={() => setCatModalOpen(false)} color="inherit" sx={{ fontWeight: 'bold' }}>Cancel</Button>
-                    <Button onClick={handleSaveCategory} variant="contained" className="!bg-purple-600" sx={{ borderRadius: 2, px: 3 }}>Save Configuration</Button>
+                    <Button onClick={() => setCatModalOpen(false)} color="inherit" sx={{ fontWeight: 'bold' }} disabled={savingCat}>Cancel</Button>
+                    <Button 
+                        onClick={handleSaveCategory} 
+                        variant="contained" 
+                        className="!bg-purple-600" 
+                        sx={{ borderRadius: 2, px: 3 }}
+                        disabled={savingCat}
+                        startIcon={savingCat ? <CircularProgress size={16} color="inherit" /> : null}
+                    >
+                        {savingCat ? 'Saving...' : 'Save Configuration'}
+                    </Button>
                 </DialogActions>
             </Dialog>
 

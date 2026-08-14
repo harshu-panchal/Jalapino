@@ -10,12 +10,16 @@ import MainLocationHeader from '../../components/shared/MainLocationHeader';
 import { resolveImageUrl } from '@/core/utils/imageUtils';
 import axiosInstance from '@core/api/axios';
 import { getOrderSocket } from '@/core/services/orderSocket';
-import { getStoredAuthToken } from '@core/utils/authStorage'; // Auth token getter
+import { getStoredAuthToken } from '@core/utils/authStorage';
+import { useAuth } from '@/core/context/AuthContext';
+import AssignmentIcon from '@mui/icons-material/Assignment';
 
-const EventSellerDetailPage = () => {
+const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const navigate = useNavigate();
     const { state: routerState } = useLocation();
-    const { eventData, preferences, selectedCategories, selectedSeller } = routerState || {};
+    const currentState = embeddedState || routerState || {};
+    const { eventData, preferences, selectedCategories, selectedSeller } = currentState;
+    const { user } = useAuth();
 
     const [products, setProducts] = useState([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -23,22 +27,26 @@ const EventSellerDetailPage = () => {
     
     // Customization States
     const [themePreference, setThemePreference] = useState('');
-    const [colorPreference, setColorPreference] = useState('');
+    const [colorPreferences, setColorPreferences] = useState([]);
+    const [colorInput, setColorInput] = useState('');
     const [referencePhoto, setReferencePhoto] = useState(null);
+    const [formDate, setFormDate] = useState(eventData?.date || '');
+    const [formTime, setFormTime] = useState(eventData?.time || '');
+    const [isDateBooked, setIsDateBooked] = useState(false);
+    const [isCheckingDate, setIsCheckingDate] = useState(false);
+
     const [customNotes, setCustomNotes] = useState('');
     const [customBudget, setCustomBudget] = useState('');
     
     // Chat States
-    const [messages, setMessages] = useState([
-        { id: 1, sender: 'seller', text: `Hello! Thanks for choosing ${selectedSeller?.shopName || selectedSeller?.name}. Let us know if you have any custom requests for your ${eventData?.eventType || 'event'}!`, time: 'Just now' }
-    ]);
+    const [messages, setMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
     const chatEndRef = useRef(null);
     const socketRef = useRef(null);
 
     useEffect(() => {
         if (!eventData || !selectedSeller) {
-            navigate('/plan-my-event');
+            if (!embeddedState) navigate('/plan-my-event');
             return;
         }
 
@@ -60,33 +68,87 @@ const EventSellerDetailPage = () => {
 
         // Connect Socket Chat
         const token = getStoredAuthToken('auth_customer');
-        if (token) {
+        let currentSocket = null;
+        let currentRoom = null;
+
+        if (token && user?._id) {
+            currentRoom = `seller_chat_${selectedSeller._id}_${user._id}`;
             const socket = getOrderSocket(token);
             if (socket) {
                 socketRef.current = socket;
-                const roomName = `seller_chat_${selectedSeller._id}`;
-                socket.emit('join_room', roomName);
+                currentSocket = socket;
+                socket.emit('join_room', currentRoom);
 
                 socket.on('chat_message', (msg) => {
-                    if (msg.senderId === selectedSeller._id) {
-                        setMessages(prev => [...prev, {
-                            id: Date.now(),
-                            sender: 'seller',
-                            text: msg.text,
-                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                        }]);
-                    }
+                    // Make sure it doesn't duplicate our own message immediately (backend handles id, but we can just append)
+                    setMessages(prev => [...prev, {
+                        ...msg,
+                        time: msg.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    }]);
                 });
             }
         }
 
-        return () => {
-            if (socketRef.current) {
-                socketRef.current.emit('leave_room', `seller_chat_${selectedSeller._id}`);
-                socketRef.current.off('chat_message');
+        // Fetch chat history
+        const fetchChatHistory = async () => {
+            try {
+                const res = await axiosInstance.get(`/chats/session?sellerId=${selectedSeller._id}`);
+                if (res.data?.status && res.data.result) {
+                    setMessages(res.data.result.messages || []);
+                } else {
+                    // Default welcome message if no history
+                    setMessages([{ id: 1, sender: 'seller', text: `Hello! Thanks for choosing ${selectedSeller?.shopName || selectedSeller?.name}. Let us know if you have any custom requests for your ${eventData?.eventType || 'event'}!`, time: 'Just now' }]);
+                }
+            } catch (err) {
+                console.error("Failed to fetch chat history:", err);
             }
         };
-    }, [eventData, selectedSeller, navigate]);
+
+        if (user?._id) {
+            fetchChatHistory();
+        }
+
+        return () => {
+            if (currentSocket && currentRoom) {
+                currentSocket.emit('leave_room', currentRoom);
+                currentSocket.off('chat_message');
+            }
+        };
+    }, [eventData, selectedSeller, navigate, user]);
+
+    // Check date availability
+    useEffect(() => {
+        const checkAvailability = async () => {
+            if (!formDate || !selectedCategories || selectedCategories.length === 0) {
+                setIsDateBooked(false);
+                return;
+            }
+            
+            setIsCheckingDate(true);
+            try {
+                // If the backend has a specific endpoint we'd use it, 
+                // for now we can check the search API if this seller shows up for this date
+                const catId = selectedCategories[0]._id;
+                const res = await axiosInstance.get(`/events/sellers/search?categoryId=${catId}&date=${formDate}`);
+                const availableSellers = res.data?.result || [];
+                
+                // If seller is not in available sellers list, they are booked
+                const isAvailable = availableSellers.some(s => s._id === selectedSeller._id);
+                setIsDateBooked(!isAvailable);
+            } catch (err) {
+                console.error("Failed to check date availability", err);
+                setIsDateBooked(false); // Default to false on error so we don't block
+            } finally {
+                setIsCheckingDate(false);
+            }
+        };
+
+        const timeoutId = setTimeout(() => {
+            checkAvailability();
+        }, 500);
+
+        return () => clearTimeout(timeoutId);
+    }, [formDate, selectedCategories, selectedSeller._id]);
 
     useEffect(() => {
         chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -105,22 +167,14 @@ const EventSellerDetailPage = () => {
         setMessages(prev => [...prev, newMsg]);
 
         // Emit through socket
-        if (socketRef.current) {
+        if (socketRef.current && user?._id) {
             socketRef.current.emit('send_chat_message', {
-                room: `seller_chat_${selectedSeller._id}`,
+                room: `seller_chat_${selectedSeller._id}_${user._id}`,
                 text: chatInput,
-                senderId: 'customer'
+                senderId: 'customer',
+                customerId: user._id,
+                sellerId: selectedSeller._id
             });
-        } else {
-            // Simulated seller response fallback
-            setTimeout(() => {
-                setMessages(prev => [...prev, {
-                    id: Date.now() + 1,
-                    sender: 'seller',
-                    text: `Thank you for details! We will review your custom notes and product selections and respond shortly.`,
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                }]);
-            }, 1500);
         }
 
         setChatInput('');
@@ -149,7 +203,7 @@ const EventSellerDetailPage = () => {
             ...preferences,
             [selectedCategories[0]]: {
                 themePreference,
-                colorPreference,
+                colorPreferences,
                 referencePhoto,
                 customNotes,
                 customBudget,
@@ -169,17 +223,21 @@ const EventSellerDetailPage = () => {
         });
     };
 
-    return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
-            <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
+    const handleBackClick = () => {
+        if (onBack) {
+            onBack();
+        } else {
+            navigate(-1);
+        }
+    };
 
-            <div className="flex-1 w-full overflow-y-auto" style={{ paddingTop: 'var(--header-height, 180px)' }}>
-                <div className="max-w-5xl mx-auto px-4 pt-4 pb-24">
-                    {/* Header Strip with Back Action */}
-                    <div className="flex items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-                        <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
-                            <ArrowBackIcon />
-                        </button>
+    const content = (
+        <div className="max-w-5xl mx-auto px-4 pt-4 pb-24">
+            {/* Header Strip with Back Action */}
+            <div className="flex items-center gap-3 mb-6 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                <button onClick={handleBackClick} className="p-2 rounded-full hover:bg-slate-100 transition-colors">
+                    <ArrowBackIcon />
+                </button>
                         <div>
                             <h1 className="text-lg font-bold text-slate-800 leading-tight">Customize Request</h1>
                             <p className="text-[10px] text-slate-500 font-medium">Select items & options offered by {selectedSeller?.shopName || selectedSeller?.name}</p>
@@ -286,24 +344,77 @@ const EventSellerDetailPage = () => {
                                 </h3>
 
                                 <div className="space-y-4">
-                                    {/* Color Combination Option */}
-                                    {selectedSeller?.quoteColorCombination !== false && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference</label>
-                                            <input 
-                                                type="text" 
-                                                placeholder="e.g. Pastel Pink and Gold, Classic Red & White"
-                                                value={colorPreference}
-                                                onChange={(e) => setColorPreference(e.target.value)}
-                                                className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
-                                            />
-                                        </div>
-                                    )}
+                                    {/* Color Combination Option (Multiple Colors) */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
+                                            
+                                            {/* Predefined Colors from Admin */}
+                                            {selectedSeller?.availableColors && selectedSeller.availableColors.length > 0 && (
+                                                <div className="flex flex-wrap gap-2 mb-3">
+                                                    {selectedSeller.availableColors.map((color, idx) => {
+                                                        const isSelected = colorPreferences.includes(color);
+                                                        return (
+                                                            <button
+                                                                key={idx}
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (isSelected) {
+                                                                        setColorPreferences(prev => prev.filter(c => c !== color));
+                                                                    } else {
+                                                                        setColorPreferences(prev => [...prev, color]);
+                                                                    }
+                                                                }}
+                                                                className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 ${
+                                                                    isSelected 
+                                                                        ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200" 
+                                                                        : "bg-white text-slate-600 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                                                                }`}
+                                                            >
+                                                                <div 
+                                                                    className={`w-3.5 h-3.5 rounded-full border ${isSelected ? 'border-white/50' : 'border-slate-200'}`} 
+                                                                    style={{ backgroundColor: color }}
+                                                                />
+                                                                {color}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 flex flex-wrap gap-2 items-center focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all">
+                                                {colorPreferences.map((color, idx) => (
+                                                    <span key={idx} className="flex items-center gap-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 shadow-sm">
+                                                        {color}
+                                                        <button 
+                                                            onClick={() => setColorPreferences(prev => prev.filter((_, i) => i !== idx))}
+                                                            className="ml-1 text-slate-400 hover:text-red-500 font-bold"
+                                                        >
+                                                            ×
+                                                        </button>
+                                                    </span>
+                                                ))}
+                                                <input 
+                                                    type="text" 
+                                                    placeholder={colorPreferences.length === 0 ? "Type custom color (Press Enter)" : "Add another color..."}
+                                                    value={colorInput}
+                                                    onChange={(e) => setColorInput(e.target.value)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' && colorInput.trim()) {
+                                                            e.preventDefault();
+                                                            if (!colorPreferences.includes(colorInput.trim())) {
+                                                                setColorPreferences(prev => [...prev, colorInput.trim()]);
+                                                            }
+                                                            setColorInput('');
+                                                        }
+                                                    }}
+                                                    className="flex-1 min-w-[150px] outline-none text-sm font-semibold bg-transparent px-1 py-1"
+                                                />
+                                            </div>
+                                    </div>
 
                                     {/* Theme Selection Option */}
-                                    {selectedSeller?.quoteThemeSelection !== false && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Theme Name</label>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Theme Name</label>
                                             <input 
                                                 type="text" 
                                                 placeholder="e.g. Fairy Tale Theme, Retro Bollywood Night"
@@ -311,13 +422,11 @@ const EventSellerDetailPage = () => {
                                                 onChange={(e) => setThemePreference(e.target.value)}
                                                 className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                             />
-                                        </div>
-                                    )}
+                                    </div>
 
                                     {/* Budget Selection Option */}
-                                    {selectedSeller?.quoteBudgetSelection !== false && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Your Custom Budget Limit (₹)</label>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Your Custom Budget Limit (₹)</label>
                                             <input 
                                                 type="number" 
                                                 placeholder="e.g. 50000"
@@ -325,13 +434,11 @@ const EventSellerDetailPage = () => {
                                                 onChange={(e) => setCustomBudget(e.target.value)}
                                                 className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                             />
-                                        </div>
-                                    )}
+                                    </div>
 
                                     {/* Reference Photo Upload Option */}
-                                    {selectedSeller?.quoteReferencePhotoUpload !== false && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
                                             <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all">
                                                 <input 
                                                     type="file" 
@@ -347,13 +454,11 @@ const EventSellerDetailPage = () => {
                                                     </span>
                                                 </label>
                                             </div>
-                                        </div>
-                                    )}
+                                    </div>
 
                                     {/* Customer Notes Option */}
-                                    {selectedSeller?.quoteCustomerNotes !== false && (
-                                        <div>
-                                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
                                             <textarea 
                                                 rows={3}
                                                 placeholder="Write specific guidelines, food allergy notices, or schedule requests for the seller..."
@@ -362,20 +467,14 @@ const EventSellerDetailPage = () => {
                                                 className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                             />
                                         </div>
-                                    )}
                                 </div>
                             </div>
-                        </div>
-
-                        {/* Right Column: Chat and Action Sticky Summary */}
-                        <div className="lg:col-span-4 space-y-6">
-                            
                             {/* Live Chat with Seller (Socket.io) */}
                             <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
                                 <div className="bg-slate-50 px-5 py-3 border-b border-slate-150 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                                        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Chat with Seller</h4>
+                                        <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Seller & Customer Chat Option</h4>
                                     </div>
                                     <span className="text-[9px] font-bold text-slate-400 uppercase">Realtime</span>
                                 </div>
@@ -421,6 +520,72 @@ const EventSellerDetailPage = () => {
                                 </div>
                             </div>
 
+                            {/* --- New Event Details Form Below Chat --- */}
+                            <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-6">
+                                <div className="flex items-center gap-4 mb-6">
+                                    <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-200 shrink-0">
+                                        <AssignmentIcon sx={{ color: 'white' }} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-xl font-bold text-slate-800">Event Details</h3>
+                                        <p className="text-sm text-slate-500">Provide details to customize your plan</p>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex justify-between">
+                                            <span>Date</span>
+                                            {isCheckingDate && <span className="text-purple-500 normal-case text-[10px]">Checking...</span>}
+                                            {!isCheckingDate && isDateBooked && <span className="text-red-500 normal-case text-[10px]">Already Booked!</span>}
+                                            {!isCheckingDate && !isDateBooked && formDate && <span className="text-green-500 normal-case text-[10px]">Available</span>}
+                                        </label>
+                                        <input 
+                                            type="date" 
+                                            value={formDate}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            onChange={(e) => setFormDate(e.target.value)}
+                                            className={`w-full border rounded-xl p-3 outline-none text-sm font-semibold bg-white transition-all ${
+                                                isDateBooked ? 'border-red-300 text-red-500 bg-red-50 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
+                                                : 'border-slate-200 text-slate-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
+                                            }`}
+                                        />
+                                        {isDateBooked && (
+                                            <p className="text-[10px] text-red-500 mt-1 font-semibold">
+                                                This date is already booked for this seller. Please select another date.
+                                            </p>
+                                        )}
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Time</label>
+                                        <input 
+                                            type="time" 
+                                            value={formTime}
+                                            onChange={(e) => setFormTime(e.target.value)}
+                                            className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold text-slate-700 bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="flex flex-col gap-3">
+                                    <button 
+                                        onClick={handleProceed}
+                                        disabled={isDateBooked || isCheckingDate}
+                                        className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-[13px] tracking-wide shadow-md">
+                                        START PLANNING
+                                    </button>
+                                    <button 
+                                        onClick={() => navigate('/plan-my-event/venues')}
+                                        className="w-full py-3.5 bg-white border-2 border-purple-500 text-purple-600 font-extrabold rounded-xl hover:bg-purple-50 transition-all text-[13px] tracking-wide">
+                                        EXPLORE & VISIT VENUES
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Right Column: Action Sticky Summary */}
+                        <div className="lg:col-span-4 space-y-6 relative">
+
                             {/* Sticky Summary Card */}
                             <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
                                 <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">Plan Summary</h4>
@@ -453,7 +618,18 @@ const EventSellerDetailPage = () => {
 
                         </div>
                     </div>
-                </div>
+        </div>
+    );
+
+    if (embeddedState) {
+        return content;
+    }
+
+    return (
+        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+            <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
+            <div className="flex-1 w-full overflow-y-auto" style={{ paddingTop: 'var(--header-height, 180px)' }}>
+                {content}
             </div>
         </div>
     );

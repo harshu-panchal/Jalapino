@@ -31,7 +31,7 @@ export const searchVenues = async (req, res) => {
     console.log('Constructed Filter:', JSON.stringify(filter));
 
     const venues = await Product.find(filter)
-      .populate('sellerId', 'shopName name address addonDecorationEnabled addonDecorationPrice addonBridalEnabled addonBridalPrice addonCateringEnabled addonCateringPrice')
+      .populate('sellerId', 'shopName name address ticketSystemEnabled addonDecorationEnabled addonDecorationPrice addonBridalEnabled addonBridalPrice addonCateringEnabled addonCateringPrice')
       .lean();
 
     console.log('Venues found count:', venues.length);

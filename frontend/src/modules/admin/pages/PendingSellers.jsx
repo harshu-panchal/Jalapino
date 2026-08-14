@@ -149,6 +149,9 @@ const PendingSellers = () => {
                         quoteCustomerApproval: s.quoteCustomerApproval ?? false,
                         quoteAdvancePayment: s.quoteAdvancePayment ?? false,
                         quoteFinalPayment: s.quoteFinalPayment ?? false,
+                        acceptsCOD: s.acceptsCOD ?? true,
+                        acceptsRazorpay: s.acceptsRazorpay ?? true,
+                        ticketSystemEnabled: s.ticketSystemEnabled ?? true,
                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
                         addonDecorationEnabled: s.addonDecorationEnabled ?? false,
@@ -861,23 +864,7 @@ const PendingSellers = () => {
                                                                     }
                                                                 }}
                                                             />
-                                                            <PermissionToggle
-                                                                label="Theme Selection"
-                                                                description="Allow selecting themes"
-                                                                checked={permissions.quoteThemeSelection}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteThemeSelection: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteThemeSelection: checked });
-                                                                        toast.success('Theme selection permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteThemeSelection: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteThemeSelection: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
+
                                                             <PermissionToggle
                                                                 label="Color Combination"
                                                                 description="Allow selecting color combinations"
@@ -895,26 +882,10 @@ const PendingSellers = () => {
                                                                     }
                                                                 }}
                                                             />
+
                                                             <PermissionToggle
-                                                                label="Budget Selection"
-                                                                description="Allow selecting budget options"
-                                                                checked={permissions.quoteBudgetSelection}
-                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, quoteBudgetSelection: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteBudgetSelection: checked });
-                                                                        toast.success('Budget selection permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteBudgetSelection: checked } : seller));
-                                                                    } catch (err) {
-                                                                        setPermissions(prev => ({ ...prev, quoteBudgetSelection: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Customer Notes"
-                                                                description="Allow customer notes/instructions"
+                                                                label="Customer & Seller Chat"
+                                                                description="Allow chat for plan my event"
                                                                 checked={permissions.quoteCustomerNotes}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
 
@@ -1019,146 +990,49 @@ const PendingSellers = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Optional Add-on Services Section */}
-                                                <div className="flex flex-col gap-1 mt-6 mb-4 border-t border-slate-200 pt-4 pb-1">
-                                                    <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Optional Add-on Services</h5>
-                                                    <p className="text-[10px] text-slate-500 font-medium">Enable add-ons for event booking and configure their prices.</p>
-                                                </div>
-                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                    {/* Decoration Add-on */}
-                                                    <div className="space-y-2">
-                                                        <PermissionToggle
-                                                            label="Decoration Add-on"
-                                                            description="Enable decoration service options for booking"
-                                                            checked={permissions.addonDecorationEnabled}
-                                                            activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setPermissions(prev => ({ ...prev, addonDecorationEnabled: checked }));
-                                                                try {
-                                                                    await adminApi.updateSeller(viewingSeller.id, { addonDecorationEnabled: checked });
-                                                                    toast.success('Decoration add-on status updated');
-                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, addonDecorationEnabled: checked } : seller));
-                                                                } catch (err) {
-                                                                    toast.error('Failed to update decoration add-on');
-                                                                    setPermissions(prev => ({ ...prev, addonDecorationEnabled: !checked }));
-                                                                }
-                                                            }}
-                                                        />
-                                                        {permissions.addonDecorationEnabled && (
-                                                            <div className="flex items-center gap-2 pl-12">
-                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="Enter price"
-                                                                    value={permissions.addonDecorationPrice}
-                                                                    onChange={(e) => setPermissions(prev => ({ ...prev, addonDecorationPrice: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminApi.updateSeller(viewingSeller.id, { addonDecorationPrice: Number(permissions.addonDecorationPrice) });
-                                                                            toast.success('Decoration price updated');
-                                                                        } catch (err) {
-                                                                            toast.error('Failed to update decoration price');
-                                                                        }
-                                                                    }}
-                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-fuchsia-500"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
 
-                                                    {/* Bridal Add-on */}
-                                                    <div className="space-y-2">
-                                                        <PermissionToggle
-                                                            label="Bridal Add-on"
-                                                            description="Enable bridal package options for booking"
-                                                            checked={permissions.addonBridalEnabled}
-                                                            activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setPermissions(prev => ({ ...prev, addonBridalEnabled: checked }));
-                                                                try {
-                                                                    await adminApi.updateSeller(viewingSeller.id, { addonBridalEnabled: checked });
-                                                                    toast.success('Bridal add-on status updated');
-                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, addonBridalEnabled: checked } : seller));
-                                                                } catch (err) {
-                                                                    toast.error('Failed to update bridal add-on');
-                                                                    setPermissions(prev => ({ ...prev, addonBridalEnabled: !checked }));
-                                                                }
-                                                            }}
-                                                        />
-                                                        {permissions.addonBridalEnabled && (
-                                                            <div className="flex items-center gap-2 pl-12">
-                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="Enter price"
-                                                                    value={permissions.addonBridalPrice}
-                                                                    onChange={(e) => setPermissions(prev => ({ ...prev, addonBridalPrice: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminApi.updateSeller(viewingSeller.id, { addonBridalPrice: Number(permissions.addonBridalPrice) });
-                                                                            toast.success('Bridal price updated');
-                                                                        } catch (err) {
-                                                                            toast.error('Failed to update bridal price');
-                                                                        }
-                                                                    }}
-                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Catering Add-on */}
-                                                    <div className="space-y-2">
-                                                        <PermissionToggle
-                                                            label="Catering Add-on"
-                                                            description="Enable catering services for booking"
-                                                            checked={permissions.addonCateringEnabled}
-                                                            activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setPermissions(prev => ({ ...prev, addonCateringEnabled: checked }));
-                                                                try {
-                                                                    await adminApi.updateSeller(viewingSeller.id, { addonCateringEnabled: checked });
-                                                                    toast.success('Catering add-on status updated');
-                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, addonCateringEnabled: checked } : seller));
-                                                                } catch (err) {
-                                                                    toast.error('Failed to update catering add-on');
-                                                                    setPermissions(prev => ({ ...prev, addonCateringEnabled: !checked }));
-                                                                }
-                                                            }}
-                                                        />
-                                                        {permissions.addonCateringEnabled && (
-                                                            <div className="flex items-center gap-2 pl-12">
-                                                                <span className="text-[10px] font-bold text-slate-500 uppercase">Price:</span>
-                                                                <input
-                                                                    type="number"
-                                                                    placeholder="Enter price"
-                                                                    value={permissions.addonCateringPrice}
-                                                                    onChange={(e) => setPermissions(prev => ({ ...prev, addonCateringPrice: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminApi.updateSeller(viewingSeller.id, { addonCateringPrice: Number(permissions.addonCateringPrice) });
-                                                                            toast.success('Catering price updated');
-                                                                        } catch (err) {
-                                                                            toast.error('Failed to update catering price');
-                                                                        }
-                                                                    }}
-                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
-                                                                />
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
 
                                                 {/* Physical Payment Settings */}
                                                 <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
                                                     <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
-                                                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Physical Payment Options</h5>
-                                                        <p className="text-[10px] text-slate-500 font-medium">Configure if this seller supports physical/QR code payments.</p>
+                                                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Payment Options</h5>
+                                                        <p className="text-[10px] text-slate-500 font-medium">Configure supported payment methods for this seller.</p>
                                                     </div>
                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <PermissionToggle
+                                                            label="Cash on Delivery (COD)"
+                                                            description="Allow COD for this seller"
+                                                            checked={permissions.acceptsCOD ?? true}
+                                                            activeColor="bg-emerald-600" hoverColor="group-hover:text-emerald-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, acceptsCOD: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { acceptsCOD: checked });
+                                                                    toast.success('COD permission updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, acceptsCOD: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, acceptsCOD: !checked }));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <PermissionToggle
+                                                            label="Razorpay (Online)"
+                                                            description="Allow Razorpay for this seller"
+                                                            checked={permissions.acceptsRazorpay ?? true}
+                                                            activeColor="bg-emerald-600" hoverColor="group-hover:text-emerald-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, acceptsRazorpay: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { acceptsRazorpay: checked });
+                                                                    toast.success('Razorpay permission updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, acceptsRazorpay: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, acceptsRazorpay: !checked }));
+                                                                }
+                                                            }}
+                                                        />
                                                         <PermissionToggle
                                                             label="Physical Payment Enabled"
                                                             description="Allow customers to pay physically or via QR code"
@@ -1206,6 +1080,34 @@ const PendingSellers = () => {
                                                                 )}
                                                             </div>
                                                         )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Event & Ticketing Options */}
+                                                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                                    <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Event & Ticketing Options</h5>
+                                                        <p className="text-[10px] text-slate-500 font-medium">Configure event ticketing visibility for this seller.</p>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <PermissionToggle
+                                                            label="Ticket System"
+                                                            description="Show ticketing options for Plan My Event"
+                                                            checked={permissions.ticketSystemEnabled ?? true}
+                                                            activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, ticketSystemEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { ticketSystemEnabled: checked });
+                                                                    toast.success('Ticket system visibility updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ticketSystemEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, ticketSystemEnabled: !checked }));
+                                                                    toast.error('Failed to update ticket system visibility');
+                                                                }
+                                                            }}
+                                                        />
                                                     </div>
                                                 </div>
 
@@ -1596,6 +1498,27 @@ const PendingSellers = () => {
                                                     className="flex-1 py-4 bg-slate-100 hover:bg-amber-50 hover:text-amber-600 text-slate-600 rounded-2xl text-[10px] font-bold tracking-widest transition-all uppercase"
                                                 >
                                                     BOUNCE BACK
+                                                </button>
+                                                <button
+                                                    disabled={isProcessing}
+                                                    onClick={async () => {
+                                                        setIsProcessing(true);
+                                                        try {
+                                                            await adminApi.updateSeller(viewingSeller.id, { ...permissions, adminRemark, adminTerms, advancePaymentPercentage });
+                                                            toast.success('Seller updated successfully');
+                                                            setIsReviewModalOpen(false);
+                                                            setSearchParams({});
+                                                            setViewingSeller(null);
+                                                            await fetchPendingSellers();
+                                                        } catch (error) {
+                                                            toast.error(error.response?.data?.message || 'Failed to update seller');
+                                                        } finally {
+                                                            setIsProcessing(false);
+                                                        }
+                                                    }}
+                                                    className="flex-1 py-4 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded-2xl text-[10px] font-bold tracking-widest transition-all uppercase"
+                                                >
+                                                    UPDATE
                                                 </button>
                                                 <button
                                                     disabled={isProcessing}

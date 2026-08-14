@@ -165,6 +165,7 @@ export const updateSellerDetails = async (req, res) => {
       name, 
       phone, 
       address, 
+      description,
       sellerStatus, 
       commissionRate, 
       bankDetails,
@@ -182,7 +183,8 @@ export const updateSellerDetails = async (req, res) => {
       allowedRetailCategories,
       allowedWholesaleCategories,
       allowedEventCategories,
-      serviceCategories
+      serviceCategories,
+      availableColors
     } = req.body;
     const adminRemark = req.body.adminRemark;
     const adminTerms = req.body.adminTerms;
@@ -200,6 +202,8 @@ export const updateSellerDetails = async (req, res) => {
     const quoteCustomerApproval = req.body.quoteCustomerApproval;
     const quoteAdvancePayment = req.body.quoteAdvancePayment;
     const quoteFinalPayment = req.body.quoteFinalPayment;
+    const acceptsCOD = req.body.acceptsCOD;
+    const acceptsRazorpay = req.body.acceptsRazorpay;
     const customerImageReviewEnabled = req.body.customerImageReviewEnabled;
     const advanceBookingEnabled = req.body.advanceBookingEnabled;
     const reviewCategoriesEnabled = req.body.reviewCategoriesEnabled;
@@ -211,6 +215,7 @@ export const updateSellerDetails = async (req, res) => {
     const addonCateringPrice = req.body.addonCateringPrice;
     const physicalPaymentEnabled = req.body.physicalPaymentEnabled;
     const paymentQrCode = req.body.paymentQrCode;
+    const ticketSystemEnabled = req.body.ticketSystemEnabled;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -219,6 +224,7 @@ export const updateSellerDetails = async (req, res) => {
     if (name) updateData.name = name;
     if (phone) updateData.phone = phone;
     if (address) updateData.address = address;
+    if (description !== undefined) updateData.description = description;
     if (sellerStatus) updateData.sellerStatus = sellerStatus;
     if (commissionRate !== undefined) updateData.commissionRate = Number(commissionRate);
     if (bankDetails) updateData.bankDetails = bankDetails;
@@ -237,6 +243,7 @@ export const updateSellerDetails = async (req, res) => {
     if (allowedWholesaleCategories !== undefined) updateData.allowedWholesaleCategories = allowedWholesaleCategories;
     if (allowedEventCategories !== undefined) updateData.allowedEventCategories = allowedEventCategories;
     if (serviceCategories !== undefined) updateData.serviceCategories = serviceCategories;
+    if (availableColors !== undefined) updateData.availableColors = availableColors;
     if (adminRemark !== undefined) updateData.adminRemark = adminRemark;
     if (adminTerms !== undefined) updateData.adminTerms = adminTerms;
     if (advancePaymentPercentage !== undefined) updateData.advancePaymentPercentage = Number(advancePaymentPercentage);
@@ -253,6 +260,8 @@ export const updateSellerDetails = async (req, res) => {
     if (quoteCustomerApproval !== undefined) updateData.quoteCustomerApproval = quoteCustomerApproval;
     if (quoteAdvancePayment !== undefined) updateData.quoteAdvancePayment = quoteAdvancePayment;
     if (quoteFinalPayment !== undefined) updateData.quoteFinalPayment = quoteFinalPayment;
+    if (acceptsCOD !== undefined) updateData.acceptsCOD = acceptsCOD;
+    if (acceptsRazorpay !== undefined) updateData.acceptsRazorpay = acceptsRazorpay;
     if (customerImageReviewEnabled !== undefined) updateData.customerImageReviewEnabled = customerImageReviewEnabled;
     if (advanceBookingEnabled !== undefined) updateData.advanceBookingEnabled = advanceBookingEnabled;
     if (reviewCategoriesEnabled !== undefined) updateData.reviewCategoriesEnabled = reviewCategoriesEnabled;
@@ -264,6 +273,7 @@ export const updateSellerDetails = async (req, res) => {
     if (addonCateringPrice !== undefined) updateData.addonCateringPrice = Number(addonCateringPrice);
     if (physicalPaymentEnabled !== undefined) updateData.physicalPaymentEnabled = physicalPaymentEnabled;
     if (paymentQrCode !== undefined) updateData.paymentQrCode = paymentQrCode;
+    if (ticketSystemEnabled !== undefined) updateData.ticketSystemEnabled = ticketSystemEnabled;
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(
