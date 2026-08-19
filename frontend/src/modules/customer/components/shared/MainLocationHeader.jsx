@@ -39,6 +39,7 @@ import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import CelebrationIcon from "@mui/icons-material/Celebration";
 
 import { useCustomerMode } from "../../context/CustomerModeContext";
+import { useAuth } from "@core/context/AuthContext";
 
 /** Full-width bottom stroke + tab curve; l/r are 0–100% of column where the inner bump sits. */
 function buildActiveTabPath(l, r) {
@@ -166,6 +167,7 @@ const MainLocationHeader = ({
   isAbsolute = false,
 }) => {
   const { mode, toggleMode } = useCustomerMode();
+  const { user: authUser } = useAuth();
   const { scrollY } = useScroll();
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const [isCustomOrderOpen, setIsCustomOrderOpen] = useState(false);
@@ -202,7 +204,7 @@ const MainLocationHeader = ({
   };
 
   // Search placeholder animation
-  const [searchPlaceholder, setSearchPlaceholder] = useState("Search ");
+  const [searchPlaceholder, setSearchPlaceholder] = useState(isPlanMyEventActive ? "Search by seller or product" : "Search ");
   const [typingState, setTypingState] = useState({
     textIndex: 0,
     charIndex: 0,
@@ -220,6 +222,8 @@ const MainLocationHeader = ({
   ];
 
   useEffect(() => {
+    if (isPlanMyEventActive) return;
+    
     const { textIndex, charIndex, isDeleting, isPaused } = typingState;
     const currentPhrase = typingPhrases[textIndex];
 
@@ -428,12 +432,12 @@ const MainLocationHeader = ({
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'retail'
                     ? "text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.02] font-black"
-                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
+                    : "text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] opacity-70"
                 )}
                 style={{
                   borderWidth: '3px',
-                  borderColor: 'transparent',
-                  ...(mode === 'retail' ? { background: 'linear-gradient(135deg, #FFB347 0%, #FF9933 40%, #F08010 75%, #E07010 100%)' } : {})
+                  borderColor: mode === 'retail' ? 'white' : 'transparent',
+                  background: 'linear-gradient(135deg, #FFB347 0%, #FF9933 40%, #F08010 75%, #E07010 100%)'
                 }}
               >
                 <img
@@ -460,12 +464,12 @@ const MainLocationHeader = ({
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   mode === 'whole'
                     ? "text-slate-900 shadow-[0_8px_24px_rgba(0,0,0,0.15)] scale-[1.02] font-black"
-                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)]"
+                    : "text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] opacity-70"
                 )}
                 style={{
                   borderWidth: '3px',
-                  borderColor: 'transparent',
-                  ...(mode === 'whole' ? { background: 'linear-gradient(135deg, #B8E4FF 0%, #87CEFA 40%, #5BB8F5 75%, #3A9FE0 100%)' } : {})
+                  borderColor: mode === 'whole' ? 'white' : 'transparent',
+                  background: 'linear-gradient(135deg, #B8E4FF 0%, #87CEFA 40%, #5BB8F5 75%, #3A9FE0 100%)'
                 }}
               >
                 <img
@@ -495,17 +499,15 @@ const MainLocationHeader = ({
                   "flex-1 max-w-[160px] flex flex-row items-center justify-center gap-2.5 rounded-2xl h-14 cursor-pointer select-none transition-all duration-300 border",
                   isPlanMyEventActive
                     ? "text-white shadow-[0_8px_24px_rgba(0,0,0,0.25)] scale-[1.02] font-black"
-                    : "bg-white text-slate-900 shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:scale-[1.02]"
+                    : "text-white shadow-[0_4px_12px_rgba(0,0,0,0.06)] hover:scale-[1.02] opacity-70"
                 )}
                 style={{
                   borderWidth: '3px',
-                  borderColor: 'transparent',
-                  ...(isPlanMyEventActive ? { background: 'linear-gradient(135deg, #0D0929 0%, #4A1070 50%, #C2185B 100%)' } : {})
+                  borderColor: isPlanMyEventActive ? 'white' : 'transparent',
+                  background: 'linear-gradient(135deg, #0D0929 0%, #4A1070 50%, #C2185B 100%)'
                 }}
               >
-                <div className="flex items-center justify-center w-7 h-7 bg-purple-100 rounded-full">
-                  <CelebrationIcon sx={{ fontSize: 18, color: isPlanMyEventActive ? '#ffffff' : '#9333ea' }} />
-                </div>
+                <CelebrationIcon sx={{ fontSize: 28, color: '#ffffff' }} />
                 <span className="text-[9px] sm:text-[10px] tracking-wider uppercase font-black leading-tight text-center">Plan My<br />Event</span>
               </button>
             )}
@@ -552,13 +554,15 @@ const MainLocationHeader = ({
                 <span
                   className="text-lg md:text-xl font-black uppercase tracking-wider text-white leading-none transition-transform duration-300 group-hover:scale-105"
                 >
-                  {appName}
+                  {isPlanMyEventActive ? (authUser?.name || 'Welcome') : appName}
                 </span>
-                <span
-                  className="text-xs md:text-sm font-semibold text-white/95 mt-2.5 tracking-wide"
-                >
-                  हर घर का हुनर, हर घर तक
-                </span>
+                {!isPlanMyEventActive && (
+                  <span
+                    className="text-xs md:text-sm font-semibold text-white/95 mt-2.5 tracking-wide transition-all duration-300"
+                  >
+                    {mode === 'whole' ? 'Buy More · Save More' : 'हर घर का हुनर, हर घर तक'}
+                  </span>
+                )}
               </div>
 
               {/* Location Block (Desktop inline row) */}
@@ -679,13 +683,15 @@ const MainLocationHeader = ({
                 <span
                   className="text-lg font-black uppercase tracking-wider text-white leading-none"
                 >
-                  {appName}
+                  {isPlanMyEventActive ? (authUser?.name || 'Welcome') : appName}
                 </span>
-                <span
-                  className="text-xs font-semibold text-white/95 mt-2.5 tracking-wide"
-                >
-                  हर घर का हुनर, हर घर तक
-                </span>
+                {!isPlanMyEventActive && (
+                  <span
+                    className="text-xs font-semibold text-white/95 mt-2.5 tracking-wide transition-all duration-300"
+                  >
+                    {mode === 'whole' ? 'Buy More · Save More' : 'हर घर का हुनर, हर घर तक'}
+                  </span>
+                )}
               </div>
               <div className="flex justify-between items-start">
                 <div className="flex flex-col">

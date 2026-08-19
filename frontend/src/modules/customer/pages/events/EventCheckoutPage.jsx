@@ -25,6 +25,13 @@ const EventCheckoutPage = () => {
     }, [eventData, selectedCategories, selectedSeller, navigate]);
 
     const [isSending, setIsSending] = useState(false);
+    const [customerProfile, setCustomerProfile] = useState(null);
+
+    useEffect(() => {
+        customerApi.getProfile()
+            .then(res => setCustomerProfile(res?.data?.result || {}))
+            .catch(console.error);
+    }, []);
 
     // Calculate total amount based on package or budget
     const totalAmount = selectedPackage
@@ -67,6 +74,38 @@ const EventCheckoutPage = () => {
 
             <div className="flex-1 overflow-y-auto pb-32">
                 <div className="max-w-xl mx-auto p-4 space-y-6">
+
+                    {/* Customer Event Details Card */}
+                    {customerProfile && (
+                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-purple-100 relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-4 opacity-5">
+                                <CelebrationIcon sx={{ fontSize: 100 }} />
+                            </div>
+                            <h2 className="font-bold text-lg text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                                <span>🎉</span> Your Event Details
+                            </h2>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">👤 Name</span>
+                                    <span className="font-semibold text-slate-800">{customerProfile.name || 'Not provided'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">⚧ Gender</span>
+                                    <span className="font-semibold text-slate-800 capitalize">{customerProfile.gender || 'Not provided'}</span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">🎂 Date of Birth</span>
+                                    <span className="font-semibold text-slate-800">
+                                        {customerProfile.dateOfBirth ? new Date(customerProfile.dateOfBirth).toLocaleDateString('en-IN') : 'Not provided'}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">📍 Function Location</span>
+                                    <span className="font-semibold text-slate-800">{customerProfile.functionLocation || 'Not provided'}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* Summary Card */}
                     <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">

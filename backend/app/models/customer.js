@@ -104,6 +104,23 @@ const userSchema = new mongoose.Schema(
 
         addresses: [addressSchema],
 
+        gender: {
+            type: String,
+            enum: ["male", "female", "other", "prefer_not_say"],
+            default: null,
+        },
+
+        dateOfBirth: {
+            type: Date,
+            default: null,
+        },
+
+        functionLocation: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+
         /**
          * @deprecated Phase 4 (P4-7). Use the canonical
          * `Wallet({ownerType:"CUSTOMER", ownerId:<userId>}).availableBalance`

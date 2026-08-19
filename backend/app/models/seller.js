@@ -236,6 +236,10 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    eventDetailsEnabled: {
+      type: Boolean,
+      default: false
+    },
     allowCustomProductEntry: {
       type: Boolean,
       default: false
@@ -243,6 +247,30 @@ const sellerSchema = new mongoose.Schema(
     liveKitchenEnabled: {
       type: Boolean,
       default: false
+    },
+    liveAddToCartEnabled: {
+      type: Boolean,
+      default: false
+    },
+    liveServicesEnabled: {
+      type: Boolean,
+      default: false
+    },
+    liveEnabled: {
+      type: Boolean,
+      default: false
+    },
+    videoUploadEnabled: {
+      type: Boolean,
+      default: false
+    },
+    activeVideoSubscription: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SellerSubscription'
+    },
+    usedVideoStorageMB: {
+      type: Number,
+      default: 0
     },
     customizationEngineEnabled: {
       type: Boolean,

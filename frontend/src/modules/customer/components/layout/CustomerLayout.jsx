@@ -142,9 +142,10 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     const finalShowFooterMessageMobile = showFooterMessage && !isProductDetailOpen;
 
     const isCategoryPage = path.startsWith('/category');
+    const isPlanMyEventPage = path.startsWith('/plan-my-event');
 
     return (
-        <div className={cn("min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden", isCategoryPage && "h-screen overflow-hidden")}>
+        <div className={cn("min-h-screen bg-slate-50 flex flex-col font-sans overflow-x-hidden", isCategoryPage && "h-screen overflow-hidden", isPlanMyEventPage && "h-screen")}>
             {/* Header logic: Always show on desktop if showHeader is true. On mobile, hide if product detail is open. */}
             {showHeader && (
                 <>
@@ -159,7 +160,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage) ? "pb-0" : "pb-16")}>
+            <main className={cn("flex-1 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage || isPlanMyEventPage) ? "pb-0" : "pb-16")}>
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {children}
                 </div>
@@ -176,7 +177,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
             <ProductDetailSheet />
             <SearchOverlay isOpen={isSearchOpen} onClose={closeSearch} />
 
-            {!isCategoryPage && (
+            {(!isCategoryPage && !isPlanMyEventPage) && (
                 <div className="hidden md:block">
                     <Footer />
                 </div>

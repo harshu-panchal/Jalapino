@@ -140,6 +140,11 @@ const productSchema = new mongoose.Schema(
             trim: true,
             default: "",
         },
+        videos: [{
+            url: { type: String, required: true },
+            sizeMB: { type: Number, default: 0 },
+            uploadedAt: { type: Date, default: Date.now }
+        }],
         shelfLife: {
             type: String,
             trim: true,

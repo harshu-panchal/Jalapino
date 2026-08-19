@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import SearchIcon from '@mui/icons-material/Search';
@@ -11,6 +11,8 @@ import EventSellerDetailPage from './EventSellerDetailPage';
 import MainLocationHeader from '../../components/shared/MainLocationHeader';
 import { resolveImageUrl } from '@/core/utils/imageUtils';
 import axiosInstance from '@core/api/axios';
+import { useAuth } from '@core/context/AuthContext';
+import { customerApi } from '../../services/customerApi';
 
 /* ── category color map (same as EventCategoriesPage) ── */
 const getCategoryStyle = (name = '') => {
@@ -158,6 +160,18 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
 ════════════════════════════════════════════════ */
 const PlanMyEventPage = () => {
     const navigate = useNavigate();
+    const { user: authUser, isAuthenticated } = useAuth();
+    const saveTimerRef = useRef(null);
+
+    /* — event info form (name / gender / dob / functionLocation) — */
+    const [eventInfo, setEventInfo] = useState({
+        name: '',
+        gender: '',
+        dateOfBirth: '',
+        functionLocation: '',
+    });
+    const [savingInfo, setSavingInfo] = useState(false);
+    const [savedInfo,  setSavedInfo]  = useState(false);
 
     /* — left sidebar — */
     const [categories,     setCategories]     = useState([]);
@@ -181,9 +195,96 @@ const PlanMyEventPage = () => {
     /* — inline detail view — */
     const [selectedSellerDetail, setSelectedSellerDetail] = useState(null);
 
+    /* — dynamic cards state — */
+    const [liveStreams, setLiveStreams] = useState([]);
+    const [areaSellers, setAreaSellers] = useState([]);
+
+    const embeddedState = React.useMemo(() => ({
+        selectedSeller: selectedSellerDetail,
+        selectedCategories: [activeCategory?.name || ''],
+        eventData: {
+            eventType: selectedType,
+            date: filterDate,
+            time: filterTime,
+        },
+        preferences: {}
+    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime]);
+
     /* — banners — */
     const [banners,           setBanners]           = useState([]);
     const [currentBannerIdx,  setCurrentBannerIdx]  = useState(0);
+
+    /* ── load event info from customer profile ── */
+    useEffect(() => {
+        const defaultMocks = [
+            { _id: 'm1', shopName: 'The Grand Venue', city: 'Local Area', profileImage: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=200' },
+            { _id: 'm2', shopName: 'Luxury Decorators', city: 'Local Area', profileImage: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=200' },
+            { _id: 'm3', shopName: 'DJ Night Rockers', city: 'Local Area', profileImage: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=200' }
+        ];
+
+        const fetchArea = (city) => {
+            const url = city ? `/events/sellers/area?city=${encodeURIComponent(city)}` : `/events/sellers/area`;
+            axiosInstance.get(url)
+                .then(r => {
+                    let sellers = r.data?.result || [];
+                    if (sellers.length === 0) sellers = defaultMocks;
+                    setAreaSellers(sellers);
+                })
+                .catch(() => setAreaSellers(defaultMocks));
+        };
+
+        if (!isAuthenticated) {
+            fetchArea();
+            return;
+        }
+
+        customerApi.getProfile().then(res => {
+            const p = res?.data?.result || {};
+            setEventInfo({
+                name:             p.name             || '',
+                gender:           p.gender           || '',
+                dateOfBirth:      p.dateOfBirth ? p.dateOfBirth.split('T')[0] : '',
+                functionLocation: p.functionLocation || '',
+            });
+            fetchArea(p.functionLocation || p.city);
+        }).catch(() => fetchArea());
+    }, [isAuthenticated]);
+
+    /* ── fetch live streams ── */
+    useEffect(() => {
+        const fetchLiveStreams = async () => {
+            try {
+                const res = await axiosInstance.get('/kitchen/public/streams');
+                let streams = res.data?.result || [];
+                if (streams.length === 0) {
+                    streams = [
+                        { _id: 'mock1', sellerId: { shopName: 'Haldiram Live Kitchen' }, cookingStatus: 'Preparing Ingredients', photoUpdates: [{ imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=300' }] },
+                        { _id: 'mock2', sellerId: { shopName: 'Ramu Kaka Caterers' }, cookingStatus: 'Cooking Now', photoUpdates: [{ imageUrl: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=300' }] }
+                    ];
+                }
+                setLiveStreams(streams);
+            } catch (err) {
+                console.error("Failed to fetch live streams", err);
+            }
+        };
+        fetchLiveStreams();
+    }, []);
+
+    /* ── debounced save to DB whenever eventInfo changes ── */
+    const handleEventInfoChange = (field, value) => {
+        setEventInfo(prev => ({ ...prev, [field]: value }));
+        setSavedInfo(false);
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(async () => {
+            try {
+                setSavingInfo(true);
+                await customerApi.updateProfile({ [field]: value || null });
+                setSavedInfo(true);
+                setTimeout(() => setSavedInfo(false), 2000);
+            } catch {}
+            finally { setSavingInfo(false); }
+        }, 800);
+    };
 
     /* ── initial data load ── */
     useEffect(() => {
@@ -224,14 +325,15 @@ const PlanMyEventPage = () => {
         return () => clearInterval(t);
     }, [banners]);
 
-    /* ── fetch sellers when category / date / time changes ── */
-    const fetchSellers = useCallback(async (cat, date, time) => {
+    /* ── fetch sellers when category / date / time / location changes ── */
+    const fetchSellers = useCallback(async (cat, date, time, loc) => {
         if (!cat) return;
         setLoadingSellers(true);
         try {
             const params = new URLSearchParams({ categories: cat._id });
             if (date) params.append('date', date);
             if (time) params.append('time', time);
+            if (loc) params.append('location', loc);
             const res = await axiosInstance.get(`/events/sellers/search?${params.toString()}`);
             const data = res.data?.result || res.data?.results || [];
             setSellers(Array.isArray(data) ? data : []);
@@ -244,10 +346,10 @@ const PlanMyEventPage = () => {
     }, []);
 
     useEffect(() => {
-        fetchSellers(activeCategory, filterDate, filterTime);
+        fetchSellers(activeCategory, filterDate, filterTime, eventInfo.functionLocation);
         // Reset detail view if category/filters change
         setSelectedSellerDetail(null);
-    }, [activeCategory, filterDate, filterTime, fetchSellers]);
+    }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, fetchSellers]);
 
     /* ── filtered sellers (by global search) ── */
     const filteredSellers = globalSearch.trim()
@@ -267,34 +369,12 @@ const PlanMyEventPage = () => {
 
     /* ════════════════════ RENDER ════════════════════ */
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+        <div className="h-[100dvh] bg-slate-50 flex flex-col font-sans overflow-hidden">
             <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
 
-            <div className="flex flex-col flex-1 w-full" style={{ paddingTop: 'var(--header-height, 180px)' }}>
-                {/* ─── FULL WIDTH TOP BAR (Breadcrumb + Unified Search) ─── */}
-                <div className="bg-white border-b border-slate-200 px-4 py-3 flex flex-col md:flex-row items-center gap-4 shadow-sm z-20 shrink-0">
-                    <div className="flex items-center gap-2 shrink-0 w-full md:w-48 lg:w-64 xl:w-72">
-                        <button onClick={() => navigate('/')} className="text-xs font-semibold text-slate-500 hover:text-purple-600 transition-colors flex items-center gap-1">
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}><path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                            Home
-                        </button>
-                        <span className="text-slate-300">›</span>
-                        <span className="text-xs font-bold text-slate-700">Plan My Event</span>
-                    </div>
-                    
-                    <div className="flex-1 relative w-full lg:max-w-4xl xl:max-w-5xl">
-                        <SearchIcon sx={{ fontSize: 20 }} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                            type="text"
-                            value={globalSearch}
-                            onChange={e => setGlobalSearch(e.target.value)}
-                            placeholder="Search by Seller or Product..."
-                            className="w-full pl-10 pr-4 py-2.5 text-sm border border-slate-200 rounded-2xl outline-none focus:ring-2 focus:ring-purple-500 bg-slate-50 placeholder:text-slate-400 font-medium"
-                        />
-                    </div>
-                </div>
+            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px)' }}>
 
-            <div className="flex-1 flex flex-col lg:flex-row overflow-hidden w-full">
+            <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden w-full">
                 {/* ══════════════ LEFT SIDEBAR ══════════════ */}
                 <div className="w-full lg:w-72 xl:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col shrink-0 shadow-sm z-10 lg:max-h-full">
 
@@ -313,7 +393,7 @@ const PlanMyEventPage = () => {
                     </div>
 
                     {/* Categories List */}
-                    <div className="flex-1 overflow-x-auto lg:overflow-x-hidden overflow-y-hidden lg:overflow-y-auto p-3 flex flex-row lg:flex-col gap-2">
+                    <div className="flex-1 overflow-x-auto lg:overflow-x-hidden overflow-y-hidden lg:overflow-y-auto overscroll-contain p-3 flex flex-row lg:flex-col gap-2" style={{ WebkitOverflowScrolling: 'touch' }}>
                         {loadingCats ? (
                             <div className="flex justify-center pt-10 w-full">
                                 <CircularProgress size={24} sx={{ color: '#8b5cf6' }} />
@@ -351,11 +431,11 @@ const PlanMyEventPage = () => {
                 </div>
 
                 {/* ══════════════ RIGHT PANEL ══════════════ */}
-                <div className="flex-1 flex flex-col overflow-hidden relative">
-                    <div className="flex-1 overflow-y-auto bg-slate-50 scroll-smooth">
+                <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
+                    <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-50" style={{ WebkitOverflowScrolling: 'touch' }}>
                         
                         {/* ─── BANNER (optional) ─── */}
-                        {banners.length > 0 && (
+                        {banners.length > 0 && !selectedSellerDetail && (
                             <div className="px-5 pt-4 pb-2 shrink-0 bg-slate-50">
                                 <div className="w-full aspect-[1448/350] rounded-2xl overflow-hidden relative shadow-sm">
                                     <div
@@ -386,6 +466,82 @@ const PlanMyEventPage = () => {
                                 </div>
                             </div>
                         )}
+
+                        {/* ─── FEATURE CARDS: Subscribe & Live ─── */}
+                        <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Blue Card: Area Sellers */}
+                                <div className="relative overflow-hidden w-full bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 shadow-md border-b-4 border-blue-800 flex flex-col min-h-[140px]">
+                                    <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
+                                    <div className="flex items-center gap-2 mb-3 z-10 shrink-0">
+                                        <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
+                                            <span className="text-xs">📍</span>
+                                        </div>
+                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">Top in Your Area</h4>
+                                    </div>
+                                    <div className="z-10 flex-1 flex flex-col justify-center">
+                                        {areaSellers.length > 0 ? (
+                                            <div className="flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                                {areaSellers.map(s => (
+                                                    <div key={s._id} className="snap-start shrink-0 w-32 bg-white/10 rounded-xl p-2 cursor-pointer hover:bg-white/20 transition-colors" onClick={() => setSelectedSellerDetail(s)}>
+                                                        <div className="w-full h-16 bg-white/20 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
+                                                            {s.profileImage ? <img src={resolveImageUrl(s.profileImage)} alt={s.shopName} className="w-full h-full object-cover" /> : <span className="text-white/50 text-[10px]">No image</span>}
+                                                        </div>
+                                                        <p className="text-white font-bold text-[11px] truncate leading-tight">{s.shopName || s.name}</p>
+                                                        <p className="text-blue-100 text-[9px] truncate">{s.city || 'Local Area'}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center text-center">
+                                                <span className="text-white font-black text-lg md:text-xl drop-shadow-md leading-snug">Data Subscribe Plan</span>
+                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">Sellers selecting this area will appear here</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Yellow Card: Live Streams */}
+                                <div className="relative overflow-hidden w-full bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-4 shadow-md border-b-4 border-amber-600 flex flex-col min-h-[140px]">
+                                    <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
+                                    <div className="flex items-center gap-2 mb-3 z-10 shrink-0">
+                                        <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                                            <span className="text-white text-[9px] font-black">LIVE</span>
+                                        </div>
+                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">Active Streams</h4>
+                                    </div>
+                                    <div className="z-10 flex-1 flex flex-col justify-center">
+                                        {liveStreams.length > 0 ? (
+                                            <div className="flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                                {liveStreams.map(stream => (
+                                                    <div 
+                                                        key={stream._id} 
+                                                        className="snap-start shrink-0 w-36 bg-black/20 rounded-xl overflow-hidden cursor-pointer hover:bg-black/30 transition-colors relative border border-white/10"
+                                                        onClick={() => navigate(`/reels?type=event&productId=${stream._id}`)}
+                                                    >
+                                                        <div className="w-full h-16 bg-black/40 flex items-center justify-center relative">
+                                                            <span className="text-2xl text-white/50 z-10">▶</span>
+                                                            {stream.photoUpdates?.length > 0 && (
+                                                                <img src={resolveImageUrl(stream.photoUpdates[stream.photoUpdates.length - 1].imageUrl)} className="absolute inset-0 w-full h-full object-cover opacity-50" />
+                                                            )}
+                                                        </div>
+                                                        <div className="p-2">
+                                                            <p className="text-white font-bold text-[11px] truncate leading-tight">{stream.sellerId?.shopName || 'Live Event'}</p>
+                                                            <p className="text-amber-100 text-[9px] truncate">{stream.cookingStatus || 'Streaming Now'}</p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center text-center">
+                                                <span className="text-white font-black text-2xl md:text-3xl drop-shadow-md tracking-widest uppercase">Live</span>
+                                                <span className="text-amber-100 text-[10px] mt-1">No active streams right now</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         {/* ─── FILTERS: Event Type + Date + Time ─── */}
                         <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
@@ -457,20 +613,79 @@ const PlanMyEventPage = () => {
                                 )}
                             </div>
                         </div>
+                        {/* ─── EVENT INFO CARD ─── */}
+                        <div className="px-5 pt-4 pb-2">
+                                <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <h3 className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
+                                            <span>🎉</span> Your Event Details
+                                        </h3>
+                                        {savingInfo && <span className="text-[10px] text-slate-400 font-medium">Saving...</span>}
+                                        {savedInfo  && <span className="text-[10px] text-green-500 font-bold">✓ Saved</span>}
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {/* Name */}
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👤 Name</label>
+                                            <input
+                                                type="text"
+                                                value={eventInfo.name}
+                                                onChange={e => handleEventInfoChange('name', e.target.value)}
+                                                placeholder="Your full name"
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                            />
+                                        </div>
 
+                                        {/* Gender */}
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">⚧ Gender</label>
+                                            <div className="flex gap-3 items-center h-[38px]">
+                                                {['male', 'female'].map(g => (
+                                                    <label key={g} className="flex items-center gap-1.5 cursor-pointer select-none">
+                                                        <input
+                                                            type="radio"
+                                                            name="gender"
+                                                            value={g}
+                                                            checked={eventInfo.gender === g}
+                                                            onChange={() => handleEventInfoChange('gender', g)}
+                                                            className="accent-purple-600 w-3.5 h-3.5"
+                                                        />
+                                                        <span className="text-sm font-semibold text-slate-700 capitalize">{g === 'male' ? '♂ Male' : '♀ Female'}</span>
+                                                    </label>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Date of Birth */}
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">🎂 Date of Birth</label>
+                                            <input
+                                                type="date"
+                                                value={eventInfo.dateOfBirth}
+                                                max={new Date().toISOString().split('T')[0]}
+                                                onChange={e => handleEventInfoChange('dateOfBirth', e.target.value)}
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400"
+                                            />
+                                        </div>
+
+                                        {/* Function Location */}
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
+                                            <input
+                                                type="text"
+                                                value={eventInfo.functionLocation}
+                                                onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
+                                                placeholder="City / Venue area"
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         {selectedSellerDetail ? (
                             <div className="w-full bg-slate-50">
                                 <EventSellerDetailPage 
-                                    embeddedState={{
-                                        selectedSeller: selectedSellerDetail,
-                                        selectedCategories: [activeCategory?.name || ''],
-                                        eventData: {
-                                            eventType: selectedType,
-                                            date: filterDate,
-                                            time: filterTime,
-                                        },
-                                        preferences: {}
-                                    }}
+                                    embeddedState={embeddedState}
                                     onBack={() => setSelectedSellerDetail(null)}
                                 />
                             </div>

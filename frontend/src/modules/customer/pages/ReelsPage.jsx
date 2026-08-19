@@ -7,7 +7,7 @@ import { useProductDetail } from '../context/ProductDetailContext';
 import { useToast } from '@shared/components/ui/Toast';
 import { useLocation as useAppLocation } from '../context/LocationContext';
 import { customerApi } from '../services/customerApi';
-import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
+import { applyCloudinaryTransform, resolveImageUrl } from '@/core/utils/imageUtils';
 import { cn } from '@/lib/utils';
 
 // Helper to extract YouTube ID
@@ -24,11 +24,16 @@ const ReelItem = ({ product, isActive, activeIndex, index, isMuted, setIsMuted }
     const { openProduct } = useProductDetail();
     const { showToast } = useToast();
     const [ratingData, setRatingData] = useState({ average: null, count: 0 });
+    const [likeData, setLikeData] = useState({ isLiked: false, count: product.likes?.length || 0 });
 
     useEffect(() => {
+        setLikeData({
+            isLiked: false, 
+            count: product.likes?.length || 0
+        });
         const fetchRating = async () => {
             const productId = product.id || product._id;
-            if (!productId) return;
+            if (!productId || product.isLiveStream) return;
             try {
                 const res = await customerApi.getProductReviews(productId);
                 if (res.data.success) {
@@ -107,10 +112,27 @@ const ReelItem = ({ product, isActive, activeIndex, index, isMuted, setIsMuted }
         );
     };
 
+    const handleToggleLike = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        try {
+            const res = await customerApi.toggleLiveStreamLike(product._id || product.id);
+            if (res.data.success) {
+                setLikeData({
+                    isLiked: res.data.result.liked,
+                    count: res.data.result.totalLikes
+                });
+                showToast(res.data.result.liked ? "Stream liked!" : "Like removed", 'success');
+            }
+        } catch (err) {
+            showToast("Failed to toggle like. Please login first.", "error");
+        }
+    };
+
     return (
         <div className="reel-slide w-full h-[calc(100vh-70px)] md:h-screen snap-start bg-black relative flex items-center justify-center overflow-hidden pt-16">
             {/* Main Video Embed */}
-            {isActive && videoId ? (
+            {isActive && (videoId || product.videoUrl) ? (
                 <div className="absolute inset-0 w-full h-full">
                     {/* Dark/Blur background backdrop matching YT style */}
                     <div 
@@ -118,16 +140,27 @@ const ReelItem = ({ product, isActive, activeIndex, index, isMuted, setIsMuted }
                         style={{ backgroundImage: `url(${applyCloudinaryTransform(product.mainImage || product.image, "w_100")})` }}
                     />
                     
-                    {/* YouTube Portrait Embed */}
-                    <div className="relative w-full h-full max-w-[480px] mx-auto z-10 aspect-[9/16] bg-black">
-                        <iframe
-                            src={`https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&mute=${isMuted ? 1 : 0}&modestbranding=1&playsinline=1&controls=0&loop=1&playlist=${videoId}`}
-                            title={product.name}
-                            frameBorder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowFullScreen
-                            className="w-full h-full object-cover"
-                        ></iframe>
+                    {/* YouTube Portrait Embed / Local HTML5 Video */}
+                    <div className="relative w-full h-full max-w-[480px] mx-auto z-10 aspect-[9/16] bg-black flex items-center justify-center">
+                        {videoId ? (
+                            <iframe
+                                src={`https://www.youtube.com/embed/${videoId}?rel=0&autoplay=1&mute=${isMuted ? 1 : 0}&modestbranding=1&playsinline=1&controls=0&loop=1&playlist=${videoId}`}
+                                title={product.name}
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                                className="w-full h-full object-cover"
+                            ></iframe>
+                        ) : (
+                            <video
+                                src={resolveImageUrl(product.videoUrl)}
+                                autoPlay
+                                loop
+                                muted={isMuted}
+                                playsInline
+                                className="w-full h-full object-cover"
+                            />
+                        )}
                     </div>
                 </div>
             ) : (
@@ -217,6 +250,24 @@ const ReelItem = ({ product, isActive, activeIndex, index, isMuted, setIsMuted }
 
                 {/* Vertical actions sidebar (Likes, Shares, Details) */}
                 <div className="flex flex-col items-center gap-6 pb-2 pointer-events-auto">
+                    {/* Like (Only for Live Streams) */}
+                    {product.isLiveStream && (
+                        <button
+                            onClick={handleToggleLike}
+                            className="flex flex-col items-center gap-1.5 group cursor-pointer focus:outline-none"
+                        >
+                            <div className={cn(
+                                "w-12 h-12 rounded-full flex items-center justify-center transition-all bg-white/10 backdrop-blur-md border border-white/10 hover:bg-white/20 active:scale-90",
+                                likeData.isLiked && "bg-red-500/20 border-red-500/40 text-red-500"
+                            )}>
+                                <Heart size={20} className={cn(likeData.isLiked && "fill-current")} />
+                            </div>
+                            <span className="text-[10px] font-bold tracking-wider text-zinc-300 drop-shadow-md">
+                                {likeData.count} {likeData.count === 1 ? 'Like' : 'Likes'}
+                            </span>
+                        </button>
+                    )}
+
                     {/* Wishlist */}
                     <button
                         onClick={handleToggleWishlist}
@@ -287,6 +338,9 @@ const ReelsPage = () => {
         const fetchReelProducts = async () => {
             setIsLoading(true);
             try {
+                const searchParamsObj = new URLSearchParams(location.search);
+                const filterType = searchParamsObj.get('type') || 'retail';
+
                 const params = {
                     hasVideo: "true",
                     limit: 20
@@ -298,36 +352,52 @@ const ReelsPage = () => {
                     params.lat = currentLocation.latitude;
                     params.lng = currentLocation.longitude;
                 }
-                const [productsRes, streamsRes] = await Promise.allSettled([
-                    customerApi.getProducts(params),
-                    customerApi.getLiveKitchenStreams()
-                ]);
+
+                const fetchPromises = [];
+                if (filterType === 'retail' || filterType === 'all') {
+                    fetchPromises.push(customerApi.getProducts(params));
+                } else {
+                    fetchPromises.push(Promise.resolve({ status: 'skipped' }));
+                }
+
+                if (filterType === 'event' || filterType === 'all') {
+                    fetchPromises.push(customerApi.getLiveKitchenStreams());
+                } else {
+                    fetchPromises.push(Promise.resolve({ status: 'skipped' }));
+                }
+
+                const [productsRes, streamsRes] = await Promise.allSettled(fetchPromises);
 
                 let combinedFeed = [];
 
-                if (productsRes.status === 'fulfilled' && productsRes.value?.data?.success) {
-                    const items = productsRes.value.data.result?.items || productsRes.value.data.results || [];
-                    combinedFeed = combinedFeed.concat(items.filter(item => item.videoUrl));
+                if (filterType === 'retail' || filterType === 'all') {
+                    if (productsRes.status === 'fulfilled' && productsRes.value?.data?.success) {
+                        const items = productsRes.value.data.result?.items || productsRes.value.data.results || [];
+                        combinedFeed = combinedFeed.concat(items.filter(item => item.videoUrl));
+                    }
                 }
 
-                if (streamsRes.status === 'fulfilled' && streamsRes.value?.data?.success) {
-                    const streams = streamsRes.value.data.results || streamsRes.value.data.result || streamsRes.value.data.data || [];
-                    const mappedStreams = (Array.isArray(streams) ? streams : [streams]).map(stream => ({
-                        _id: stream._id,
-                        name: stream.sellerId?.shopName ? `${stream.sellerId.shopName} - Live Kitchen` : "Live Kitchen",
-                        description: "Watch live preparation straight from our kitchen.",
-                        videoUrl: stream.streamUrl,
-                        isLiveStream: true,
-                        brand: stream.sellerId?.shopName || "Kitchen",
-                        price: 0
-                    }));
-                    
-                    const queryLower = searchQuery.toLowerCase().trim();
-                    const filteredStreams = queryLower
-                        ? mappedStreams.filter(s => s.name.toLowerCase().includes(queryLower) || s.brand.toLowerCase().includes(queryLower))
-                        : mappedStreams;
+                if (filterType === 'event' || filterType === 'all') {
+                    if (streamsRes.status === 'fulfilled' && streamsRes.value?.data?.success) {
+                        const streams = streamsRes.value.data.results || streamsRes.value.data.result || streamsRes.value.data.data || [];
+                        const mappedStreams = (Array.isArray(streams) ? streams : [streams]).map(stream => ({
+                            _id: stream._id,
+                            name: stream.sellerId?.shopName ? `${stream.sellerId.shopName} - Live Kitchen` : "Live Kitchen",
+                            description: "Watch live preparation straight from our kitchen.",
+                            videoUrl: stream.streamUrl,
+                            isLiveStream: true,
+                            likes: stream.likes || [],
+                            brand: stream.sellerId?.shopName || "Kitchen",
+                            price: 0
+                        }));
                         
-                    combinedFeed = combinedFeed.concat(filteredStreams);
+                        const queryLower = searchQuery.toLowerCase().trim();
+                        const filteredStreams = queryLower
+                            ? mappedStreams.filter(s => s.name.toLowerCase().includes(queryLower) || s.brand.toLowerCase().includes(queryLower))
+                            : mappedStreams;
+                            
+                        combinedFeed = combinedFeed.concat(filteredStreams);
+                    }
                 }
 
                 // Shuffle combined feed for better UX only if no search query is present

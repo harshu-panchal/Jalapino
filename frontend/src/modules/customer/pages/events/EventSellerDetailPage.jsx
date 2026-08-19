@@ -41,7 +41,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     // Chat States
     const [messages, setMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
-    const chatEndRef = useRef(null);
+    const chatContainerRef = useRef(null);
     const socketRef = useRef(null);
 
     useEffect(() => {
@@ -151,7 +151,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     }, [formDate, selectedCategories, selectedSeller._id]);
 
     useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+        if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
     }, [messages]);
 
     const handleSendMessage = () => {
@@ -480,7 +482,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 </div>
 
                                 {/* Messages Board */}
-                                <div className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+                                <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
                                     {messages.map(msg => {
                                         const isCustomer = msg.sender === 'customer';
                                         return (
@@ -498,7 +500,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             </div>
                                         );
                                     })}
-                                    <div ref={chatEndRef} />
                                 </div>
 
                                 {/* Input bar */}

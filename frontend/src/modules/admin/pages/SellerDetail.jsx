@@ -80,6 +80,8 @@ const SellerDetail = () => {
         maxCapacity: 500,
         allowCustomProductEntry: false,
         liveKitchenEnabled: false,
+        liveAddToCartEnabled: false,
+        liveServicesEnabled: false,
         customizationEngineEnabled: false,
         quoteReferencePhotoUpload: false,
         quoteThemeSelection: false,
@@ -112,6 +114,7 @@ const SellerDetail = () => {
                 hasProductAccess: data.hasProductAccess !== false,
                 retailEnabled: data.retailEnabled ?? true,
                 planMyEventEnabled: data.planMyEventEnabled ?? false,
+                eventDetailsEnabled: data.eventDetailsEnabled ?? false,
                 eventCategory: (data.serviceCategories && data.serviceCategories.length > 0) ? data.serviceCategories[0] : '',
                 maxCapacity: data.maxGuestCapacity || 500,
                 commissionRate: data.commissionRate ? `${data.commissionRate}%` : '10%',
@@ -133,6 +136,8 @@ const SellerDetail = () => {
                 analyticsEnabled: data.analyticsEnabled ?? true,
                 allowCustomProductEntry: data.allowCustomProductEntry ?? false,
                 liveKitchenEnabled: data.liveKitchenEnabled ?? false,
+                liveAddToCartEnabled: data.liveAddToCartEnabled ?? false,
+                liveServicesEnabled: data.liveServicesEnabled ?? false,
                 customizationEngineEnabled: data.customizationEngineEnabled ?? false,
                 quoteReferencePhotoUpload: data.quoteReferencePhotoUpload ?? false,
                 quoteThemeSelection: data.quoteThemeSelection ?? false,
@@ -727,6 +732,24 @@ const SellerDetail = () => {
                                                 />
 
                                                 <PermissionToggle
+                                                    label="Event Details"
+                                                    description="Grant seller access to view customer event details"
+                                                    checked={seller.eventDetailsEnabled}
+                                                    activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, eventDetailsEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { eventDetailsEnabled: checked });
+                                                            showToast('Event details permission updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, eventDetailsEnabled: !checked }));
+                                                            showToast('Failed to update event details permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+                                                <PermissionToggle
                                                     label="Custom Product Entry"
                                                     description="Allow manual entry of product name, brand, and ingredients"
                                                     checked={seller.allowCustomProductEntry}
@@ -758,6 +781,26 @@ const SellerDetail = () => {
                                                         } catch (err) {
                                                             setSeller(prev => ({ ...prev, liveKitchenEnabled: !checked }));
                                                             showToast('Failed to update live kitchen permission', 'error');
+                                                        }
+                                                    }}
+                                                />
+
+
+
+                                                <PermissionToggle
+                                                    label="Video Subscriptions & Uploads"
+                                                    description="Allow seller to upload product videos and buy video plans"
+                                                    checked={seller.videoUploadEnabled}
+                                                    activeColor="bg-blue-600" hoverColor="group-hover:text-blue-700"
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, videoUploadEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { videoUploadEnabled: checked });
+                                                            showToast('Video permissions updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, videoUploadEnabled: !checked }));
+                                                            showToast('Failed to update video permissions', 'error');
                                                         }
                                                     }}
                                                 />
@@ -997,10 +1040,50 @@ const SellerDetail = () => {
                                                     )}
                                                 </div>
                                             </div>
+                                            {/* Live Kitchen Sub-Permissions */}
+                                            {seller.liveKitchenEnabled && (
+                                                <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                    <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Kitchen Settings</h6>
+                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                        <PermissionToggle
+                                                            label="Add to Cart"
+                                                            description="Allow customers to add items to cart directly from live"
+                                                            checked={seller.liveAddToCartEnabled}
+                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, liveAddToCartEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { liveAddToCartEnabled: checked });
+                                                                    showToast('Live Add to Cart permission updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, liveAddToCartEnabled: !checked }));
+                                                                    showToast('Failed to update live Add to Cart permission', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                        <PermissionToggle
+                                                            label="Services"
+                                                            description="Allow booking services from live"
+                                                            checked={seller.liveServicesEnabled}
+                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, liveServicesEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { liveServicesEnabled: checked });
+                                                                    showToast('Live Services permission updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, liveServicesEnabled: !checked }));
+                                                                    showToast('Failed to update live Services permission', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                    </div>
+                                                </div>
+                                            )}
 
-                                        </div>
-
-                                        {/* Customization & Quotation Engine Sub-Permissions */}
+                                            {/* Customization & Quotation Engine Sub-Permissions */}
                                         {seller.customizationEngineEnabled && (
                                             <div className="mb-8">
                                                 <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Customization & Quotation Settings</h5>
@@ -1138,6 +1221,7 @@ const SellerDetail = () => {
                                                 </div>
                                             </div>
                                         )}
+                                        </div>
 
                                         <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
                                             <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">

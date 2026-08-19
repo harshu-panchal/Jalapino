@@ -80,4 +80,13 @@ export const sellerApi = {
     updateVisitRequestStatus: (id, data) => axiosInstance.patch(`/venues/visit-requests/${id}/status`, data),
     getVenueAvailability: (params) => axiosInstance.get('/venues/availability', { params }),
     setVenueAvailability: (data) => axiosInstance.post('/venues/availability', data),
+
+    // Video Subscriptions & Uploads
+    getVideoPlans: () => axiosInstance.get('/product-videos/plans'),
+    createSubscriptionOrder: (data) => axiosInstance.post('/product-videos/subscribe/create-order', data),
+    subscribeVideoPlan: (data) => axiosInstance.post('/product-videos/subscribe', data),
+    checkVideoUploadIntent: (data) => axiosInstance.post('/product-videos/check-intent', data),
+    uploadVideo: (data) => axiosInstance.post('/product-videos/upload', data, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    })
 };

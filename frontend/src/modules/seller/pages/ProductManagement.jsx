@@ -21,6 +21,8 @@ import {
   HiOutlineFolderOpen,
   HiOutlineSwatch,
   HiOutlineSquaresPlus,
+  HiOutlineFilm,
+  HiOutlineTruck,
 } from "react-icons/hi2";
 import Modal from "@shared/components/ui/Modal";
 import { cn } from "@/lib/utils";
@@ -45,6 +47,8 @@ const ProductManagement = () => {
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
   const [summaryStats, setSummaryStats] = useState(null);
+  const [videoPayment, setVideoPayment] = useState(null); // { file, totalAmount, extraMB, razorpayOrder }
+  const [videoUploading, setVideoUploading] = useState(false);
 
   const fetchProducts = async (requestedPage = 1) => {
     setIsLoading(true);
@@ -327,6 +331,111 @@ const ProductManagement = () => {
       return <Badge variant="error" className="text-[10px] px-2 py-0.5">Rejected</Badge>;
     }
     return <Badge variant="success" className="text-[10px] px-2 py-0.5">Approved</Badge>;
+  };
+
+  const executeVideoUpload = async (file, paymentParams = {}) => {
+    const uploadToast = toast.loading('Uploading video...');
+    setVideoUploading(true);
+    try {
+      const uploadData = new FormData();
+      uploadData.append('video', file);
+      
+      // Pass optional editing product ID to tie it to the product immediately
+      if (editingItem && (editingItem._id || editingItem.id)) {
+        uploadData.append('productId', editingItem._id || editingItem.id);
+      }
+      
+      if (paymentParams.paymentMethod) {
+        uploadData.append('paymentMethod', paymentParams.paymentMethod);
+      }
+      if (paymentParams.razorpay_order_id) {
+        uploadData.append('razorpay_order_id', paymentParams.razorpay_order_id);
+      }
+      if (paymentParams.razorpay_payment_id) {
+        uploadData.append('razorpay_payment_id', paymentParams.razorpay_payment_id);
+      }
+      if (paymentParams.razorpay_signature) {
+        uploadData.append('razorpay_signature', paymentParams.razorpay_signature);
+      }
+
+      const uploadRes = await sellerApi.uploadVideo(uploadData);
+      
+      if (uploadRes.data.success) {
+        toast.success('Video uploaded successfully!', { id: uploadToast });
+        setFormData({ ...formData, videoUrl: uploadRes.data.videoUrl });
+        setVideoPayment(null);
+      }
+    } catch (error) {
+      console.error("Video upload error:", error);
+      toast.error(error.response?.data?.message || "Failed to upload video", { id: uploadToast });
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
+  const handleVideoUpload = async (e) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const fileSizeMB = file.size / (1024 * 1024);
+      
+      const checkToast = toast.loading('Checking storage limits...');
+      
+      try {
+        const intentRes = await sellerApi.checkVideoUploadIntent({ fileSizeMB });
+        toast.dismiss(checkToast);
+        
+        const { requiresPayment, totalAmount, mbToCharge, razorpayOrder } = intentRes.data;
+
+        if (requiresPayment) {
+          setVideoPayment({
+            file,
+            totalAmount,
+            mbToCharge,
+            razorpayOrder
+          });
+        } else {
+          await executeVideoUpload(file);
+        }
+      } catch (error) {
+        toast.dismiss(checkToast);
+        console.error("Intent check error:", error);
+        toast.error("Failed to check storage limits");
+      }
+    }
+  };
+
+  const handleVideoPayCOD = async () => {
+    if (!videoPayment) return;
+    await executeVideoUpload(videoPayment.file, { paymentMethod: 'COD' });
+  };
+
+  const handleVideoPayRazorpay = async () => {
+    if (!videoPayment || !videoPayment.razorpayOrder) return;
+    try {
+      const order = videoPayment.razorpayOrder;
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Jalapino',
+        description: 'Extra Storage Payment',
+        order_id: order.id,
+        handler: async (response) => {
+          await executeVideoUpload(videoPayment.file, {
+            paymentMethod: 'Razorpay',
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature,
+          });
+        },
+        prefill: {},
+        theme: { color: '#E11D48' },
+      };
+      const rzp = new window.Razorpay(options);
+      rzp.open();
+    } catch (err) {
+      toast.error('Failed to initiate online payment');
+    }
   };
 
   const handleSave = async () => {
@@ -1494,23 +1603,45 @@ const ProductManagement = () => {
                       </div>
 
                       {/* Product Video Section */}
-                      <div className="space-y-3 pt-6 border-t border-slate-100">
-                        <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                          Product Video (YouTube URL)
-                        </label>
-                        <div className="flex flex-col gap-2">
-                          <input
-                            type="text"
-                            value={formData.videoUrl || ""}
-                            onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
-                            placeholder="e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ"
-                            className="w-full px-4 py-2.5 bg-slate-100/50 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                          />
-                          <p className="text-[11px] text-slate-500 font-medium leading-relaxed ml-1">
-                            Provide a link to an unlisted YouTube video (30-50 seconds) recorded in portrait orientation showcasing the product.
-                          </p>
+                      {user?.videoUploadEnabled && (
+                        <div className="space-y-3 pt-6 border-t border-slate-100">
+                          <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                            Product Video (Direct Upload)
+                          </label>
+                          <div className="flex flex-col gap-2">
+                            <div className="relative w-full border-2 border-dashed border-slate-200 rounded-lg bg-slate-50 p-6 flex flex-col items-center justify-center hover:border-brand-400 transition-colors">
+                              <input
+                                type="file"
+                                accept="video/*"
+                                onChange={handleVideoUpload}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                              />
+                              <HiOutlineFilm className="h-8 w-8 text-slate-400 mb-2" />
+                              <p className="text-sm font-semibold text-slate-700">Click or drag a video file to upload</p>
+                              <p className="text-xs text-slate-500 mt-1">Storage limits apply. Extra MBs will be charged.</p>
+                            </div>
+                            
+                            {formData.videoUrl && (
+                              <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-brand-700 text-sm font-semibold">
+                                  <HiOutlineFilm className="h-5 w-5" />
+                                  <span>Video successfully uploaded</span>
+                                </div>
+                                <button 
+                                  type="button" 
+                                  onClick={() => setFormData({ ...formData, videoUrl: "" })}
+                                  className="text-rose-500 hover:text-rose-700 font-bold text-xs uppercase tracking-wider"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            )}
+                            <p className="text-[11px] text-slate-500 font-medium leading-relaxed ml-1 mt-2">
+                              Upload a short video (30-50 seconds) recorded in portrait orientation showcasing the product. This uses your active Video Subscription storage.
+                            </p>
+                          </div>
                         </div>
-                      </div>
+                      )}
                     </div>
                   )}
 
@@ -1742,6 +1873,61 @@ const ProductManagement = () => {
           </div>
         </div>
       </Modal>
+      {videoPayment && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-250">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+              <h3 className="text-lg font-bold text-slate-800">Video Storage Payment</h3>
+              <button onClick={() => setVideoPayment(null)} className="text-slate-400 hover:text-slate-600">
+                <HiOutlineXMark size={22} />
+              </button>
+            </div>
+            <div className="p-6">
+              <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
+                <p className="text-sm font-semibold text-rose-800">Storage Limit Exceeded</p>
+                <p className="text-xs text-rose-600 mt-1">
+                  This upload exceeds your included storage by <strong>{videoPayment.mbToCharge.toFixed(2)} MB</strong>.
+                </p>
+                <div className="mt-3 flex justify-between items-baseline">
+                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Required Amount:</span>
+                  <span className="text-2xl font-black text-rose-600">₹{videoPayment.totalAmount}</span>
+                </div>
+              </div>
+
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Select Payment Method</p>
+              <div className="space-y-3">
+                <button
+                  onClick={handleVideoPayRazorpay}
+                  disabled={videoUploading}
+                  className="w-full flex items-center justify-between px-5 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold disabled:opacity-60"
+                >
+                  <div className="flex items-center gap-3">
+                    <HiOutlineFilm size={20} />
+                    <span>Pay Online (Razorpay)</span>
+                  </div>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Instant</span>
+                </button>
+
+                <button
+                  onClick={handleVideoPayCOD}
+                  disabled={videoUploading}
+                  className="w-full flex items-center justify-between px-5 py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all font-bold disabled:opacity-60"
+                >
+                  <div className="flex items-center gap-3">
+                    <HiOutlineTruck size={20} />
+                    <span>Cash on Delivery (COD)</span>
+                  </div>
+                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Pending</span>
+                </button>
+              </div>
+              
+              {videoUploading && (
+                <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">Uploading and processing video...</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div >
   );
 };

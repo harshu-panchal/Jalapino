@@ -15,6 +15,7 @@ export const customerApi = {
   getProducts: (params) => getWithDedupe("/products", params),
   getProductById: (id, params) => getWithDedupe(`/products/${id}`, params),
   getLiveKitchenStreams: () => getWithDedupe("/kitchen/public/streams"),
+  toggleLiveStreamLike: (streamId) => axiosInstance.post(`/kitchen/streams/${streamId}/like`),
   getHomeVideos: () => getWithDedupe("/home-videos", {}, { ttl: 30 * 1000 }),
   getFooterBanners: () => getWithDedupe("/footer-banners", {}, { ttl: 60 * 1000 }),
 

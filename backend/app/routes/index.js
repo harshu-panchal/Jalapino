@@ -4,6 +4,8 @@ import adminRoute from "./adminAuth.js";
 import sellerRoute from "./sellerAuth.js";
 import categoryRoute from "./categoryRoutes.js";
 import productRoute from "./productRoutes.js";
+import productVideoRoute from "./productVideoRoutes.js";
+import serviceRoute from "./serviceRoutes.js";
 import cartRoute from "./cartRoutes.js";
 import wishlistRoute from "./wishlistRoutes.js";
 import orderRoute from "./orderRoutes.js";
@@ -38,6 +40,7 @@ import eventPayoutRoute from "./eventPayoutRoutes.js";
 import appConfigRoute from "./appConfigRoutes.js";
 import sellerCalendarRoute from "./sellerCalendarRoutes.js";
 import liveKitchenRoute from "./liveKitchenRoutes.js";
+import videoSubscriptionRoute from "./videoSubscriptionRoutes.js";
 import express from "express";
 import { checkMaintenanceMode } from "../middleware/maintenanceMiddleware.js";
 
@@ -83,6 +86,8 @@ const setupRoutes = (app) => {
     router.use("/settings", settingsRoute);
     router.use("/categories", categoryRoute);
     router.use("/products", productRoute);
+    router.use("/product-videos", productVideoRoute);
+    router.use("/services", serviceRoute);
     router.use("/cart", cartRoute);
     router.use("/wishlist", wishlistRoute);
     router.use("/orders", orderRoute);
@@ -124,6 +129,7 @@ const setupRoutes = (app) => {
     router.use("/seller/packages", sellerPackageRoute);
     router.use("/seller", sellerApprovalRoute);
     router.use("/kitchen", liveKitchenRoute);
+    router.use("/admin/video-subscriptions", videoSubscriptionRoute);
     router.use("/", sellerSignupBannerRoute);
     router.use("/", venueVisitRoute);
     router.use("/", generalBookingRoute);

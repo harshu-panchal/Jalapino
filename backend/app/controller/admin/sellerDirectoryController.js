@@ -172,6 +172,7 @@ export const updateSellerDetails = async (req, res) => {
       hasProductAccess,
       retailEnabled,
       planMyEventEnabled,
+      eventDetailsEnabled,
       categoriesEnabled,
       bookingSlotsEnabled,
       productsEnabled,
@@ -191,6 +192,8 @@ export const updateSellerDetails = async (req, res) => {
     const advancePaymentPercentage = req.body.advancePaymentPercentage;
     const allowCustomProductEntry = req.body.allowCustomProductEntry;
     const liveKitchenEnabled = req.body.liveKitchenEnabled;
+    const liveAddToCartEnabled = req.body.liveAddToCartEnabled;
+    const liveServicesEnabled = req.body.liveServicesEnabled;
     const customizationEngineEnabled = req.body.customizationEngineEnabled;
     const quoteReferencePhotoUpload = req.body.quoteReferencePhotoUpload;
     const quoteThemeSelection = req.body.quoteThemeSelection;
@@ -216,6 +219,7 @@ export const updateSellerDetails = async (req, res) => {
     const physicalPaymentEnabled = req.body.physicalPaymentEnabled;
     const paymentQrCode = req.body.paymentQrCode;
     const ticketSystemEnabled = req.body.ticketSystemEnabled;
+    const videoUploadEnabled = req.body.videoUploadEnabled;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -231,6 +235,7 @@ export const updateSellerDetails = async (req, res) => {
     if (hasProductAccess !== undefined) updateData.hasProductAccess = hasProductAccess;
     if (retailEnabled !== undefined) updateData.retailEnabled = retailEnabled;
     if (planMyEventEnabled !== undefined) updateData.planMyEventEnabled = planMyEventEnabled;
+    if (eventDetailsEnabled !== undefined) updateData.eventDetailsEnabled = eventDetailsEnabled;
     if (categoriesEnabled !== undefined) updateData.categoriesEnabled = categoriesEnabled;
     if (bookingSlotsEnabled !== undefined) updateData.bookingSlotsEnabled = bookingSlotsEnabled;
     if (productsEnabled !== undefined) updateData.productsEnabled = productsEnabled;
@@ -246,9 +251,12 @@ export const updateSellerDetails = async (req, res) => {
     if (availableColors !== undefined) updateData.availableColors = availableColors;
     if (adminRemark !== undefined) updateData.adminRemark = adminRemark;
     if (adminTerms !== undefined) updateData.adminTerms = adminTerms;
+    if (videoUploadEnabled !== undefined) updateData.videoUploadEnabled = videoUploadEnabled;
     if (advancePaymentPercentage !== undefined) updateData.advancePaymentPercentage = Number(advancePaymentPercentage);
     if (allowCustomProductEntry !== undefined) updateData.allowCustomProductEntry = allowCustomProductEntry;
     if (liveKitchenEnabled !== undefined) updateData.liveKitchenEnabled = liveKitchenEnabled;
+    if (liveAddToCartEnabled !== undefined) updateData.liveAddToCartEnabled = liveAddToCartEnabled;
+    if (liveServicesEnabled !== undefined) updateData.liveServicesEnabled = liveServicesEnabled;
     if (customizationEngineEnabled !== undefined) updateData.customizationEngineEnabled = customizationEngineEnabled;
     if (quoteReferencePhotoUpload !== undefined) updateData.quoteReferencePhotoUpload = quoteReferencePhotoUpload;
     if (quoteThemeSelection !== undefined) updateData.quoteThemeSelection = quoteThemeSelection;

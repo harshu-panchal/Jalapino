@@ -58,6 +58,7 @@ const PendingSellers = () => {
     const [permissions, setPermissions] = useState({
         retailEnabled: true,
         planMyEventEnabled: false,
+        eventDetailsEnabled: false,
         categoriesEnabled: true,
         bookingSlotsEnabled: false,
         productsEnabled: true,
@@ -72,6 +73,8 @@ const PendingSellers = () => {
         serviceCategories: [],
         allowCustomProductEntry: false,
         liveKitchenEnabled: false,
+        liveAddToCartEnabled: false,
+        liveServicesEnabled: false,
         customizationEngineEnabled: false,
         quoteReferencePhotoUpload: false,
         quoteThemeSelection: false,
@@ -124,6 +127,7 @@ const PendingSellers = () => {
                     setPermissions({
                         retailEnabled: s.retailEnabled ?? true,
                         planMyEventEnabled: s.planMyEventEnabled ?? false,
+                        eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                         categoriesEnabled: s.categoriesEnabled ?? true,
                         bookingSlotsEnabled: s.bookingSlotsEnabled ?? false,
                         productsEnabled: s.productsEnabled ?? true,
@@ -138,6 +142,8 @@ const PendingSellers = () => {
                         serviceCategories: s.serviceCategories || [],
                         allowCustomProductEntry: s.allowCustomProductEntry ?? false,
                         liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                        liveAddToCartEnabled: s.liveAddToCartEnabled ?? false,
+                        liveServicesEnabled: s.liveServicesEnabled ?? false,
                         customizationEngineEnabled: s.customizationEngineEnabled ?? false,
                         quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
                         quoteThemeSelection: s.quoteThemeSelection ?? false,
@@ -154,6 +160,7 @@ const PendingSellers = () => {
                         ticketSystemEnabled: s.ticketSystemEnabled ?? true,
                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                        videoUploadEnabled: s.videoUploadEnabled ?? false,
                         addonDecorationEnabled: s.addonDecorationEnabled ?? false,
                         addonDecorationPrice: s.addonDecorationPrice ?? 0,
                         addonBridalEnabled: s.addonBridalEnabled ?? false,
@@ -396,6 +403,8 @@ const PendingSellers = () => {
                                                     serviceCategories: s.serviceCategories || [],
                                                     allowCustomProductEntry: s.allowCustomProductEntry ?? false,
                                                     liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                                                    liveAddToCartEnabled: s.liveAddToCartEnabled ?? false,
+                                                    liveServicesEnabled: s.liveServicesEnabled ?? false,
                                                     customizationEngineEnabled: s.customizationEngineEnabled ?? false,
                                                     quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
                                                     quoteThemeSelection: s.quoteThemeSelection ?? false,
@@ -409,6 +418,7 @@ const PendingSellers = () => {
                                                     quoteFinalPayment: s.quoteFinalPayment ?? false,
                                                     customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                                                     advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                                                    videoUploadEnabled: s.videoUploadEnabled ?? false,
                                                     reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                 });
                                                 setSearchParams({ review: s.id });
@@ -459,6 +469,8 @@ const PendingSellers = () => {
                                                         serviceCategories: s.serviceCategories || [],
                                                         allowCustomProductEntry: s.allowCustomProductEntry ?? false,
                                                         liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                                                        liveAddToCartEnabled: s.liveAddToCartEnabled ?? false,
+                                                        liveServicesEnabled: s.liveServicesEnabled ?? false,
                                                         customizationEngineEnabled: s.customizationEngineEnabled ?? false,
                                                         quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
                                                         quoteThemeSelection: s.quoteThemeSelection ?? false,
@@ -472,6 +484,8 @@ const PendingSellers = () => {
                                                         quoteFinalPayment: s.quoteFinalPayment ?? false,
                                                         customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
                                                         advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                                                        videoUploadEnabled: s.videoUploadEnabled ?? false,
+                                                        reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                         addonDecorationEnabled: s.addonDecorationEnabled ?? false,
                                                         addonDecorationPrice: s.addonDecorationPrice ?? 0,
                                                         addonBridalEnabled: s.addonBridalEnabled ?? false,
@@ -747,6 +761,25 @@ const PendingSellers = () => {
                                                     />
 
                                                     <PermissionToggle
+                                                        label="Event Details"
+                                                        description="Grant seller access to view customer event details"
+                                                        checked={permissions.eventDetailsEnabled}
+                                                        activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, eventDetailsEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { eventDetailsEnabled: checked });
+                                                                toast.success('Event details permission updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, eventDetailsEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update event details permission');
+                                                                setPermissions(prev => ({ ...prev, eventDetailsEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    <PermissionToggle
                                                         label="Brands & Ingredients"
                                                         description="Allow manual entry of product name, brand, and ingredients"
                                                         checked={permissions.allowCustomProductEntry}
@@ -780,6 +813,27 @@ const PendingSellers = () => {
                                                             } catch (err) {
                                                                 toast.error('Failed to update live kitchen permission');
                                                                 setPermissions(prev => ({ ...prev, liveKitchenEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+
+
+                                                    <PermissionToggle
+                                                        label="Video Subscriptions & Uploads"
+                                                        description="Allow seller to upload product videos and buy video plans"
+                                                        checked={permissions.videoUploadEnabled}
+                                                        activeColor="bg-blue-600" hoverColor="group-hover:text-blue-700"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setPermissions(prev => ({ ...prev, videoUploadEnabled: checked }));
+                                                            try {
+                                                                await adminApi.updateSeller(viewingSeller.id, { videoUploadEnabled: checked });
+                                                                toast.success('Video permissions updated');
+                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, videoUploadEnabled: checked } : seller));
+                                                            } catch (err) {
+                                                                toast.error('Failed to update video permissions');
+                                                                setPermissions(prev => ({ ...prev, videoUploadEnabled: !checked }));
                                                             }
                                                         }}
                                                     />
@@ -841,6 +895,51 @@ const PendingSellers = () => {
                                                         }}
                                                     />
                                                 </div>
+
+                                                {/* Live Kitchen Sub-Permissions */}
+                                                {permissions.liveKitchenEnabled && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Kitchen Settings</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                            <PermissionToggle
+                                                                label="Add to Cart"
+                                                                description="Allow customers to add items to cart directly from live"
+                                                                checked={permissions.liveAddToCartEnabled}
+                                                                activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, liveAddToCartEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { liveAddToCartEnabled: checked });
+                                                                        toast.success('Live Add to Cart permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, liveAddToCartEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update live Add to Cart permission');
+                                                                        setPermissions(prev => ({ ...prev, liveAddToCartEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Services"
+                                                                description="Allow booking services from live"
+                                                                checked={permissions.liveServicesEnabled}
+                                                                activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, liveServicesEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { liveServicesEnabled: checked });
+                                                                        toast.success('Live Services permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, liveServicesEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update live Services permission');
+                                                                        setPermissions(prev => ({ ...prev, liveServicesEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 {/* Customization & Quotation Engine Sub-Permissions */}
                                                 {permissions.customizationEngineEnabled && (

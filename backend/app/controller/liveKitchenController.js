@@ -85,12 +85,69 @@ export const getPublicLiveStreams = async (req, res) => {
     try {
         const query = { isActive: true, isCustomerVisible: true, streamUrl: { $ne: "" } };
         
-        const liveKitchens = await LiveKitchen.find(query)
+        let liveKitchens = await LiveKitchen.find(query)
             .sort({ updatedAt: -1 })
             .populate("sellerId", "name shopName logo")
             .limit(20);
+
+        if (!liveKitchens || liveKitchens.length === 0) {
+            liveKitchens = [
+                {
+                    _id: 'mock1',
+                    sellerId: { shopName: 'Haldiram Live Kitchen' },
+                    cookingStatus: 'Preparing Ingredients',
+                    streamUrl: 'https://youtube.com/shorts/3i_p4f-T4hI',
+                    photoUpdates: [{ imageUrl: 'https://images.unsplash.com/photo-1556910103-1c02745aae4d?w=300' }]
+                },
+                {
+                    _id: 'mock2',
+                    sellerId: { shopName: 'Ramu Kaka Caterers' },
+                    cookingStatus: 'Cooking Now',
+                    streamUrl: 'https://youtube.com/shorts/xQ_IQS3VKjA',
+                    photoUpdates: [{ imageUrl: 'https://images.unsplash.com/photo-1584269600464-37b1b58a9fe7?w=300' }]
+                }
+            ];
+        }
         
         return handleResponse(res, 200, "Public live streams fetched", liveKitchens);
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+// @route   POST /api/kitchen/streams/:id/like
+// @desc    Toggle like for a live stream
+// @access  Private (Customer)
+export const toggleStreamLike = async (req, res) => {
+    try {
+        const streamId = req.params.id;
+        const customerId = req.user.id;
+
+        // Skip DB if it's a mock stream ID
+        if (streamId === 'mock1' || streamId === 'mock2') {
+            return handleResponse(res, 200, "Mock stream liked", { liked: true, totalLikes: 1 });
+        }
+
+        const liveKitchen = await LiveKitchen.findById(streamId);
+        
+        if (!liveKitchen) {
+            return handleResponse(res, 404, "Live stream not found");
+        }
+        
+        const isLiked = liveKitchen.likes.includes(customerId);
+        
+        if (isLiked) {
+            liveKitchen.likes.pull(customerId);
+        } else {
+            liveKitchen.likes.push(customerId);
+        }
+        
+        await liveKitchen.save();
+        
+        return handleResponse(res, 200, "Like toggled successfully", {
+            liked: !isLiked,
+            totalLikes: liveKitchen.likes.length
+        });
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

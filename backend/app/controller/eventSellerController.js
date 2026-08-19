@@ -36,6 +36,18 @@ export const searchEventSellers = async (req, res) => {
       }
     }
 
+    // Apply location filtering if provided
+    if (location) {
+      query.$and = [
+        {
+          $or: [
+            { city: { $regex: new RegExp(location, "i") } },
+            { "customZones.city": { $regex: new RegExp(location, "i") } }
+          ]
+        }
+      ];
+    }
+
     const sellers = await Seller.find(query).populate('serviceCategories').lean();
 
     if (!sellers || sellers.length === 0) {
@@ -136,6 +148,50 @@ export const getSellerPackagesPublic = async (req, res) => {
       success: false,
       error: true,
       message: error.message || "Failed to fetch seller packages",
+    });
+  }
+};
+
+export const getAreaSellers = async (req, res) => {
+  try {
+    const { city } = req.query;
+    let query = {
+      isEventSeller: true,
+      $or: [
+        { sellerStatus: 'active', sellerVerificationStatus: 'verified' },
+        { isActive: true, isVerified: true }
+      ]
+    };
+    
+    // If a specific location/city is provided
+    if (city) {
+      query.$and = [
+        {
+          $or: [
+            { city: { $regex: new RegExp(city, "i") } },
+            { "customZones.city": { $regex: new RegExp(city, "i") } }
+          ]
+        }
+      ];
+    }
+
+    // Fetch sellers that have some location set
+    const sellers = await Seller.find(query)
+      .select('shopName name city customZones profileImage')
+      .limit(10)
+      .lean();
+
+    return res.status(200).json({
+      success: true,
+      error: false,
+      result: sellers,
+    });
+  } catch (error) {
+    console.error("Error fetching area sellers:", error);
+    return res.status(500).json({
+      success: false,
+      error: true,
+      message: error.message || "Failed to fetch area sellers",
     });
   }
 };
