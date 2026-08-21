@@ -23,6 +23,14 @@ const eventCategorySchema = new mongoose.Schema({
         type: String,
         trim: true
     }],
+    showDateFilters: {
+        type: Boolean,
+        default: true
+    },
+    showEventDetailsForm: {
+        type: Boolean,
+        default: true
+    },
     // Allows admin to sort categories
     sortOrder: {
         type: Number,

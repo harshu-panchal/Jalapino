@@ -123,6 +123,10 @@ export const customerApi = {
   getEventBookingDetails: (id) => axiosInstance.get(`/events/${id}`),
   getAlternativeSellers: (bookingId, categoryId) => axiosInstance.get(`/events/${bookingId}/alternative-sellers/${categoryId}`),
   reassignSeller: (bookingId, data) => axiosInstance.put(`/events/${bookingId}/reassign-seller`, data),
+  
+  // Venue Visits
+  createVenueVisitRequests: (data) => axiosInstance.post("/venues/visit-requests", data),
+  getMyVenueVisitRequests: () => axiosInstance.get("/venues/visit-requests/mine"),
 
   createTicket: (data) => axiosInstance.post("/tickets/create", data),
   createSupportTicket: (data) => axiosInstance.post("/support-tickets", data),

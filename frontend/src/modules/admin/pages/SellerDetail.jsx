@@ -115,6 +115,8 @@ const SellerDetail = () => {
                 retailEnabled: data.retailEnabled ?? true,
                 planMyEventEnabled: data.planMyEventEnabled ?? false,
                 eventDetailsEnabled: data.eventDetailsEnabled ?? false,
+                primaryContactEnabled: data.primaryContactEnabled ?? true,
+                coupleContactEnabled: data.coupleContactEnabled ?? true,
                 eventCategory: (data.serviceCategories && data.serviceCategories.length > 0) ? data.serviceCategories[0] : '',
                 maxCapacity: data.maxGuestCapacity || 500,
                 commissionRate: data.commissionRate ? `${data.commissionRate}%` : '10%',
@@ -749,6 +751,45 @@ const SellerDetail = () => {
                                                     }}
                                                 />
 
+                                                {seller.eventDetailsEnabled && (
+                                                    <>
+                                                        <PermissionToggle
+                                                            label="↳ Primary Contact"
+                                                            description="Allow individual/primary contact bookings"
+                                                            checked={seller.primaryContactEnabled}
+                                                            activeColor="bg-fuchsia-400" hoverColor="group-hover:text-fuchsia-500"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, primaryContactEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { primaryContactEnabled: checked });
+                                                                    showToast('Primary contact permission updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, primaryContactEnabled: !checked }));
+                                                                    showToast('Failed to update primary contact permission', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                        <PermissionToggle
+                                                            label="↳ Couple Booking"
+                                                            description="Allow couple bookings with anniversary dates"
+                                                            checked={seller.coupleContactEnabled}
+                                                            activeColor="bg-fuchsia-400" hoverColor="group-hover:text-fuchsia-500"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setSeller(prev => ({ ...prev, coupleContactEnabled: checked }));
+                                                                try {
+                                                                    await adminUsersApi.updateSeller(seller.id, { coupleContactEnabled: checked });
+                                                                    showToast('Couple booking permission updated', 'success');
+                                                                } catch (err) {
+                                                                    setSeller(prev => ({ ...prev, coupleContactEnabled: !checked }));
+                                                                    showToast('Failed to update couple booking permission', 'error');
+                                                                }
+                                                            }}
+                                                        />
+                                                    </>
+                                                )}
+
                                                 <PermissionToggle
                                                     label="Custom Product Entry"
                                                     description="Allow manual entry of product name, brand, and ingredients"
@@ -1284,6 +1325,22 @@ const SellerDetail = () => {
                                                         } catch (err) {
                                                             setSeller(prev => ({ ...prev, ticketSystemEnabled: !checked }));
                                                             showToast('Failed to update ticket system visibility', 'error');
+                                                        }
+                                                    }}
+                                                />
+                                                <PermissionToggle
+                                                    label="Venue Visits"
+                                                    description="Allow physical visit requests for venues"
+                                                    checked={seller.venueVisitsEnabled ?? true}
+                                                    onChange={async (e) => {
+                                                        const checked = e.target.checked;
+                                                        setSeller(prev => ({ ...prev, venueVisitsEnabled: checked }));
+                                                        try {
+                                                            await adminUsersApi.updateSeller(seller.id, { venueVisitsEnabled: checked });
+                                                            showToast('Venue visits visibility updated', 'success');
+                                                        } catch (err) {
+                                                            setSeller(prev => ({ ...prev, venueVisitsEnabled: !checked }));
+                                                            showToast('Failed to update venue visits visibility', 'error');
                                                         }
                                                     }}
                                                 />

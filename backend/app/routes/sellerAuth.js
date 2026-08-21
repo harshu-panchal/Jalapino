@@ -58,6 +58,7 @@ router.get(
 
 router.put(
     "/profile",
+    upload.any(),
     verifyToken,
     allowRoles("seller"),
     updateSellerProfile

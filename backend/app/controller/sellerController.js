@@ -3,6 +3,7 @@ import Transaction from "../models/transaction.js";
 import { handleResponse, calculateDistance } from "../utils/helper.js";
 import mongoose from "mongoose";
 import { invalidateSellerName } from "../services/entityNameCache.js";
+import { saveRawFile } from "../services/localStorageService.js";
 
 /* ===============================
    GET NEARBY SELLERS
@@ -168,6 +169,47 @@ export const updateSellerProfile = async (req, res) => {
     if (!seller) {
       return handleResponse(res, 404, "Seller not found");
     }
+
+    const documentFiles = req.files || [];
+    const uploadedBanners = [];
+
+    if (Array.isArray(documentFiles) && documentFiles.length > 0) {
+        for (const file of documentFiles) {
+            try {
+                const fieldName = file.fieldname;
+                const isBanner = fieldName === 'banners' || fieldName.startsWith('banner');
+                if (isBanner) {
+                    let url = await saveRawFile(file.buffer, "banners", file.originalname);
+                    const reqDomain = `${req.protocol}://${req.get("host")}`;
+                    const envDomain = process.env.API_DOMAIN || "http://localhost:7000";
+                    if (url.startsWith("/")) url = `${reqDomain}${url}`;
+                    
+                    if (url.includes("localhost") || url.includes("host:7000") || url.startsWith("http://10.0.2.2")) {
+                        if (url.startsWith(envDomain)) url = url.replace(envDomain, reqDomain);
+                        else if (url.startsWith("host:7000")) url = url.replace("host:7000", reqDomain);
+                        else if (url.startsWith("http://host:7000")) url = url.replace("http://host:7000", reqDomain);
+                    }
+                    uploadedBanners.push(url);
+                }
+            } catch (err) {
+                console.error("Failed to upload banner", err);
+            }
+        }
+    }
+
+    // In updateProfile, we either replace existing banners or append.
+    // If the client sends `keptBanners` (JSON string array), we keep those, and add the new `uploadedBanners`.
+    let finalBanners = [...(seller.banners || [])];
+    
+    if (req.body.keptBanners !== undefined) {
+      try {
+        finalBanners = JSON.parse(req.body.keptBanners);
+      } catch (e) {
+        console.error("Failed to parse keptBanners", e);
+      }
+    }
+    
+    seller.banners = [...finalBanners, ...uploadedBanners];
 
     // Update fields if provided
     if (name) seller.name = name;

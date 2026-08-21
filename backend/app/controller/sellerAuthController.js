@@ -143,13 +143,16 @@ export const signupSeller = async (req, res) => {
         // 1. Handle file uploads if they exist in req.files (multipart form)
         const documentFiles = req.files || [];
         const uploadedDocs = {};
+        const uploadedBanners = [];
 
         if (Array.isArray(documentFiles) && documentFiles.length > 0) {
             for (const file of documentFiles) {
                 try {
                     const fieldName = file.fieldname;
-                    if (fieldName && Object.keys(SELLER_DOCUMENT_FIELDS).includes(fieldName)) {
-                        let url = await saveRawFile(file.buffer, "docs", file.originalname);
+                    const isBanner = fieldName === 'banners' || fieldName.startsWith('banner');
+                    
+                    if (fieldName && (Object.keys(SELLER_DOCUMENT_FIELDS).includes(fieldName) || isBanner)) {
+                        let url = await saveRawFile(file.buffer, isBanner ? "banners" : "docs", file.originalname);
                         
                         // Dynamically use the request's domain instead of .env to handle both localhost and live automatically
                         const reqDomain = `${req.protocol}://${req.get("host")}`;
@@ -171,10 +174,14 @@ export const signupSeller = async (req, res) => {
                             }
                         }
 
-                        uploadedDocs[fieldName] = url;
+                        if (isBanner) {
+                            uploadedBanners.push(url);
+                        } else {
+                            uploadedDocs[fieldName] = url;
+                        }
                     }
                 } catch (err) {
-                    console.error("Failed to upload document to Cloudinary", err);
+                    console.error("Failed to upload document or banner", err);
                 }
             }
         }
@@ -262,6 +269,7 @@ export const signupSeller = async (req, res) => {
             city,
             state,
             documents: sellerDocuments,
+            banners: uploadedBanners,
             applicationStatus: "pending",
             isVerified: false,
             emailVerified: true,

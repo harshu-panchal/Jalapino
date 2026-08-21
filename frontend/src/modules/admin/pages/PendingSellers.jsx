@@ -59,6 +59,8 @@ const PendingSellers = () => {
         retailEnabled: true,
         planMyEventEnabled: false,
         eventDetailsEnabled: false,
+        primaryContactEnabled: true,
+        coupleContactEnabled: true,
         categoriesEnabled: true,
         bookingSlotsEnabled: false,
         productsEnabled: true,
@@ -128,6 +130,8 @@ const PendingSellers = () => {
                         retailEnabled: s.retailEnabled ?? true,
                         planMyEventEnabled: s.planMyEventEnabled ?? false,
                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                        primaryContactEnabled: s.primaryContactEnabled ?? true,
+                        coupleContactEnabled: s.coupleContactEnabled ?? true,
                         categoriesEnabled: s.categoriesEnabled ?? true,
                         bookingSlotsEnabled: s.bookingSlotsEnabled ?? false,
                         productsEnabled: s.productsEnabled ?? true,
@@ -391,6 +395,9 @@ const PendingSellers = () => {
                                                 setPermissions({
                                                     retailEnabled: s.retailEnabled ?? true,
                                                     planMyEventEnabled: s.planMyEventEnabled ?? false,
+                                                    eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                                                    primaryContactEnabled: s.primaryContactEnabled ?? true,
+                                                    coupleContactEnabled: s.coupleContactEnabled ?? true,
                                                     productsEnabled: s.productsEnabled ?? true,
                                                     stockEnabled: s.stockEnabled ?? true,
                                                     ordersEnabled: s.ordersEnabled ?? true,
@@ -457,6 +464,9 @@ const PendingSellers = () => {
                                                     setPermissions({
                                                         retailEnabled: s.retailEnabled ?? true,
                                                         planMyEventEnabled: s.planMyEventEnabled ?? false,
+                                                        eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                                                        primaryContactEnabled: s.primaryContactEnabled ?? true,
+                                                        coupleContactEnabled: s.coupleContactEnabled ?? true,
                                                         productsEnabled: s.productsEnabled ?? true,
                                                         stockEnabled: s.stockEnabled ?? true,
                                                         ordersEnabled: s.ordersEnabled ?? true,
@@ -702,7 +712,8 @@ const PendingSellers = () => {
                                                     <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Module Access Permissions</h5>
                                                     <p className="text-[10px] text-slate-500 font-medium">Enable or disable specific features for this seller before approval.</p>
                                                 </div>
-                                                {/* Row 1: 2-column Layout (Retail Store, Plan My Event, Wholesale) */}
+
+                                                {/* Row 1: Main Toggles */}
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80">
                                                     <PermissionToggle
                                                         label="Retail Store (Master)"
@@ -895,6 +906,51 @@ const PendingSellers = () => {
                                                         }}
                                                     />
                                                 </div>
+
+                                                {/* Event Details Sub-Permissions */}
+                                                {permissions.eventDetailsEnabled && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Event Contact Options</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <PermissionToggle
+                                                                label="Primary Contact"
+                                                                description="Allow individual/primary contact bookings"
+                                                                checked={permissions.primaryContactEnabled}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, primaryContactEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { primaryContactEnabled: checked });
+                                                                        toast.success('Primary contact permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, primaryContactEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update primary contact permission');
+                                                                        setPermissions(prev => ({ ...prev, primaryContactEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Couple"
+                                                                description="Allow couple bookings with anniversary dates"
+                                                                checked={permissions.coupleContactEnabled}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, coupleContactEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { coupleContactEnabled: checked });
+                                                                        toast.success('Couple booking permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, coupleContactEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update couple booking permission');
+                                                                        setPermissions(prev => ({ ...prev, coupleContactEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 {/* Live Kitchen Sub-Permissions */}
                                                 {permissions.liveKitchenEnabled && (
@@ -1204,6 +1260,24 @@ const PendingSellers = () => {
                                                                 } catch (err) {
                                                                     setPermissions(prev => ({ ...prev, ticketSystemEnabled: !checked }));
                                                                     toast.error('Failed to update ticket system visibility');
+                                                                }
+                                                            }}
+                                                        />
+                                                        <PermissionToggle
+                                                            label="Venue Visits"
+                                                            description="Allow physical visit requests for venues"
+                                                            checked={permissions.venueVisitsEnabled ?? true}
+                                                            activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, venueVisitsEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { venueVisitsEnabled: checked });
+                                                                    toast.success('Venue visits visibility updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, venueVisitsEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, venueVisitsEnabled: !checked }));
+                                                                    toast.error('Failed to update venue visits visibility');
                                                                 }
                                                             }}
                                                         />
