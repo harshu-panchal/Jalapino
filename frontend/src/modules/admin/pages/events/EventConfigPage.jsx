@@ -68,7 +68,7 @@ const EventConfigPage = () => {
         autoAssignSeller: false
     };
 
-    const [catForm, setCatForm] = useState({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules } });
+    const [catForm, setCatForm] = useState({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules }, showDateFilters: true, showEventDetailsForm: true });
     const [uploadingIcon, setUploadingIcon] = useState(false);
     const [savingCat, setSavingCat] = useState(false);
 
@@ -188,11 +188,13 @@ const EventConfigPage = () => {
                 isActive: cat.isActive, 
                 fields: cat.fields || [],
                 activePlugins: cat.activePlugins || [],
-                businessRules: cat.businessRules || { ...defaultBusinessRules }
+                businessRules: cat.businessRules || { ...defaultBusinessRules },
+                showDateFilters: cat.showDateFilters !== false,
+                showEventDetailsForm: cat.showEventDetailsForm !== false
             });
         } else {
             setEditingCat(null);
-            setCatForm({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules } });
+            setCatForm({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules }, showDateFilters: true, showEventDetailsForm: true });
         }
         setCatModalOpen(true);
     };
@@ -526,6 +528,20 @@ const EventConfigPage = () => {
                             </div>
                         </div>
                     </Box>
+
+                    <div className="border-t border-slate-200 pt-6 mt-2 mb-6">
+                        <h3 className="font-bold text-lg text-slate-800 mb-4">Customer Form Settings</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <FormControlLabel
+                                control={<Switch checked={catForm.showDateFilters} onChange={e => setCatForm({...catForm, showDateFilters: e.target.checked})} color="primary" />}
+                                label={<span className="font-medium text-slate-700">Show Date/Time Filters</span>}
+                            />
+                            <FormControlLabel
+                                control={<Switch checked={catForm.showEventDetailsForm} onChange={e => setCatForm({...catForm, showEventDetailsForm: e.target.checked})} color="primary" />}
+                                label={<span className="font-medium text-slate-700">Show Event Details Form</span>}
+                            />
+                        </div>
+                    </div>
 
                     <div className="border-t border-slate-200 pt-6 mt-2 mb-6">
                         <h3 className="font-bold text-lg text-slate-800 mb-4">Platform Features (Plugins)</h3>

@@ -1177,7 +1177,6 @@ const AddProduct = () => {
               </div>
 
               {/* Product Video Section */}
-              {user?.videoUploadEnabled && (
                 <div className="space-y-3 pt-6 border-t border-slate-100">
                   <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
                     Product Video (Direct Upload)
@@ -1215,7 +1214,6 @@ const AddProduct = () => {
                     </p>
                   </div>
                 </div>
-              )}
 
               <p className="text-xs text-slate-600 font-medium italic text-center pt-4 border-t border-slate-50">
                 Quick Tip: Using WebP format at 800x800px makes your store load

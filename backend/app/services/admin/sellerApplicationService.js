@@ -112,6 +112,15 @@ export async function approveSellerApplicationById({ sellerId, reviewedBy, permi
     if (typeof permissions.planMyEventEnabled === 'boolean') {
       updateData.planMyEventEnabled = permissions.planMyEventEnabled;
     }
+    if (typeof permissions.eventDetailsEnabled === 'boolean') {
+      updateData.eventDetailsEnabled = permissions.eventDetailsEnabled;
+    }
+    if (typeof permissions.primaryContactEnabled === 'boolean') {
+      updateData.primaryContactEnabled = permissions.primaryContactEnabled;
+    }
+    if (typeof permissions.coupleContactEnabled === 'boolean') {
+      updateData.coupleContactEnabled = permissions.coupleContactEnabled;
+    }
     if (typeof permissions.liveKitchenEnabled === 'boolean') {
       updateData.liveKitchenEnabled = permissions.liveKitchenEnabled;
     }

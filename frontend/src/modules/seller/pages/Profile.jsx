@@ -49,6 +49,8 @@ const SellerProfile = () => {
   const [newZoneCity, setNewZoneCity] = useState("");
   const [newAreaInput, setNewAreaInput] = useState("");
   const [editingZoneIndex, setEditingZoneIndex] = useState(null);
+  const [uploadedBanners, setUploadedBanners] = useState([]);
+  const [keptBanners, setKeptBanners] = useState([]);
 
   useEffect(() => {
     fetchProfile();
@@ -74,6 +76,7 @@ const SellerProfile = () => {
         physicalPaymentEnabled: data.physicalPaymentEnabled || false,
         paymentQrCode: data.paymentQrCode || "",
       });
+      setKeptBanners(data.banners || []);
     } catch (error) {
       toast.error("Failed to fetch profile");
     } finally {
@@ -204,6 +207,23 @@ const SellerProfile = () => {
     });
   };
 
+  const handleBannerChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (keptBanners.length + uploadedBanners.length + files.length > 5) {
+      toast.error("You can only have up to 5 banners total.");
+      return;
+    }
+    setUploadedBanners(prev => [...prev, ...files].slice(0, 5 - keptBanners.length));
+  };
+
+  const removeUploadedBanner = (index) => {
+    setUploadedBanners(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeKeptBanner = (index) => {
+    setKeptBanners(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     // Basic phone validation: must be exactly 10 digits
@@ -218,7 +238,8 @@ const SellerProfile = () => {
     }
     setIsSaving(true);
     try {
-      const payload = {
+      const payload = new FormData();
+      Object.entries({
         ...formData,
         lat: formData.lat,
         lng: formData.lng,
@@ -227,10 +248,25 @@ const SellerProfile = () => {
         advancePaymentPercentage: Number(formData.advancePaymentPercentage) || 0,
         physicalPaymentEnabled: formData.physicalPaymentEnabled,
         paymentQrCode: formData.paymentQrCode,
-      };
+      }).forEach(([key, value]) => {
+          if (value !== null && value !== undefined && value !== "") {
+              if (key === "serviceCoverage" || key === "customZones") {
+                  payload.append(key, JSON.stringify(value));
+              } else {
+                  payload.append(key, value);
+              }
+          }
+      });
+      
+      payload.append("keptBanners", JSON.stringify(keptBanners));
+      uploadedBanners.forEach(file => {
+          payload.append("banners", file);
+      });
+
       await sellerApi.updateProfile(payload);
       toast.success("Profile updated successfully");
       setIsEditing(false);
+      setUploadedBanners([]);
       fetchProfile();
     } catch (error) {
       toast.error(error.response?.data?.message || "Failed to update profile");
@@ -773,6 +809,76 @@ const SellerProfile = () => {
                   exactly at your physical storefront for accurate delivery
                   assignments.
                 </p>
+              </div>
+            </div>
+          </Card>
+
+          {/* Promotional Banners Card */}
+          <Card className="p-8 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-lg">
+            <div className="flex justify-between items-center mb-8 border-b border-slate-50 pb-4">
+              <h3 className="text-xl font-black text-slate-900">
+                Promotional Banners
+              </h3>
+              {!isEditing && (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  className="bg-slate-900 text-white hover:bg-black rounded-lg px-6 py-2 text-[10px] font-black tracking-[2px]">
+                  MANAGE
+                </Button>
+              )}
+            </div>
+            <div className="space-y-4">
+              <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                Upload up to 5 banners to display on your storefront
+              </p>
+              
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                {/* Kept Banners */}
+                {keptBanners.map((url, idx) => (
+                  <div key={`kept-${idx}`} className="relative group aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                    <img src={url} alt="Banner" className="w-full h-full object-cover" />
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => removeKeptBanner(idx)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {/* Uploaded Banners */}
+                {uploadedBanners.map((file, idx) => (
+                  <div key={`new-${idx}`} className="relative group aspect-video rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                    <img src={URL.createObjectURL(file)} alt="Banner" className="w-full h-full object-cover" />
+                    {isEditing && (
+                      <button
+                        type="button"
+                        onClick={() => removeUploadedBanner(idx)}
+                        className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      >
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+
+                {/* Upload Button */}
+                {isEditing && (keptBanners.length + uploadedBanners.length) < 5 && (
+                  <label className="aspect-video rounded-xl border-2 border-dashed border-slate-300 hover:border-brand-500 bg-slate-50 flex flex-col items-center justify-center cursor-pointer transition-colors">
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleBannerChange}
+                    />
+                    <span className="text-2xl text-slate-400">+</span>
+                    <span className="text-[10px] font-bold text-slate-500 mt-1">Add Banner</span>
+                  </label>
+                )}
               </div>
             </div>
           </Card>
