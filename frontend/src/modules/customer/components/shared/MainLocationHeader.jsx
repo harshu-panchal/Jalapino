@@ -340,22 +340,31 @@ const MainLocationHeader = ({
   const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
-    const handleScroll = () => {
-      const currentScrollY = window.scrollY;
+    const handleScroll = (e) => {
+      const target = e.target;
+      let currentScrollY = 0;
+
+      if (target === document || target === window) {
+        currentScrollY = window.scrollY;
+      } else if (target.id === 'main-scroll-container') {
+        currentScrollY = target.scrollTop;
+      } else {
+        return;
+      }
 
       if (currentScrollY < 50) {
         setIsSwitcherVisible(true);
-      } else if (currentScrollY > lastScrollY) {
+      } else if (currentScrollY > lastScrollY + 10) {
         setIsSwitcherVisible(false);
-      } else {
+      } else if (currentScrollY < lastScrollY - 10) {
         setIsSwitcherVisible(true);
       }
 
       setLastScrollY(currentScrollY);
     };
 
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
+    return () => window.removeEventListener('scroll', handleScroll, { capture: true });
   }, [lastScrollY]);
 
   // Update dynamic CSS variable for the banner sticky top and padding offset
@@ -368,6 +377,11 @@ const MainLocationHeader = ({
     };
   }, [isSwitcherVisible]);
 
+  const isSwitcherVisibleRef = useRef(isSwitcherVisible);
+  useEffect(() => {
+    isSwitcherVisibleRef.current = isSwitcherVisible;
+  }, [isSwitcherVisible]);
+
   const headerRef = useRef(null);
 
   useEffect(() => {
@@ -375,16 +389,21 @@ const MainLocationHeader = ({
     if (!el) return;
 
     const handleResize = () => {
-      document.documentElement.style.setProperty('--header-height', `${el.offsetHeight}px`);
+      // Only update the CSS variable when the header is fully expanded.
+      // This prevents the page padding from shrinking during scroll, which causes shaking.
+      if (isSwitcherVisibleRef.current) {
+        document.documentElement.style.setProperty('--header-height', `${el.offsetHeight}px`);
+      }
     };
 
     const ro = new ResizeObserver(handleResize);
     ro.observe(el);
-    handleResize();
+    
+    // Slight delay for initial render to ensure DOM is settled
+    setTimeout(handleResize, 100);
 
     return () => {
       ro.disconnect();
-      document.documentElement.style.removeProperty('--header-height');
     };
   }, []);
 
@@ -417,7 +436,7 @@ const MainLocationHeader = ({
 
           {/* Mode Switcher Cards */}
           <div className={cn(
-            "flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto relative z-30 overflow-hidden",
+            "flex justify-center items-center gap-3 w-full max-w-sm sm:max-w-md md:max-w-lg mx-auto relative z-30 overflow-hidden transition-all duration-300 ease-in-out",
             isSwitcherVisible ? "opacity-100 scale-100 h-14 mb-3.5" : "opacity-0 scale-95 pointer-events-none h-0 mb-0"
           )}>
             {/* Retail Card */}
@@ -549,7 +568,11 @@ const MainLocationHeader = ({
             {/* Left Section: Logo + Location row */}
             <div className="flex items-center gap-4 lg:gap-8">
               <div
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  if (!isPlanMyEventActive) {
+                    navigate("/");
+                  }
+                }}
                 className="flex flex-col items-start cursor-pointer select-none shrink-0 group">
                 <span
                   className="text-lg md:text-xl font-black uppercase tracking-wider text-white leading-none transition-transform duration-300 group-hover:scale-105"
@@ -634,14 +657,16 @@ const MainLocationHeader = ({
                 <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
               </motion.button>
 
-              <motion.button
-                whileHover={{ scale: 1.15, rotate: 5 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/reels")}
-                className="transition-all text-white hover:opacity-80"
-              >
-                <Clapperboard size={24} />
-              </motion.button>
+              {!isPlanMyEventActive && (
+                <motion.button
+                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => navigate("/reels")}
+                  className="transition-all text-white hover:opacity-80"
+                >
+                  <Clapperboard size={24} />
+                </motion.button>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.15, rotate: -5 }}
@@ -677,7 +702,11 @@ const MainLocationHeader = ({
               }}
               className="relative z-10 pb-4">
               <div
-                onClick={() => navigate("/")}
+                onClick={() => {
+                  if (!isPlanMyEventActive) {
+                    navigate("/");
+                  }
+                }}
                 className="mb-3 flex flex-col items-start cursor-pointer select-none"
               >
                 <span

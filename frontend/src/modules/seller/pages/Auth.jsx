@@ -237,6 +237,7 @@ const Auth = () => {
   };
 
   const [documents, setDocuments] = useState({});
+  const [uploadedBanners, setUploadedBanners] = useState([]);
   const [categoriesList, setCategoriesList] = useState([]);
   const [activeDocAction, setActiveDocAction] = useState(null); // stores the doc id currently waiting for camera/gallery action
   const fileInputRefs = React.useRef({});
@@ -428,6 +429,19 @@ const Auth = () => {
     setDocuments({ ...documents, [docId]: e.target.files[0] });
   };
 
+  const handleBannerChange = (e) => {
+    const files = Array.from(e.target.files);
+    if (uploadedBanners.length + files.length > 5) {
+      toast.error("You can only upload up to 5 banners.");
+      return;
+    }
+    setUploadedBanners(prev => [...prev, ...files].slice(0, 5));
+  };
+
+  const removeBanner = (index) => {
+    setUploadedBanners(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendVerificationOtp = async (field) => {
     const currentValue = formData[field];
     const isEmailField = field === "email";
@@ -615,6 +629,12 @@ const Auth = () => {
             }
           });
 
+          uploadedBanners.forEach((file) => {
+            if (file) {
+              signupPayload.append("banners", file);
+            }
+          });
+
           return sellerApi.signup(signupPayload);
         })();
 
@@ -635,6 +655,7 @@ const Auth = () => {
           gstCertificate: null,
           idProof: null,
         });
+        setUploadedBanners([]);
         setVerifications({
           email: createInitialVerificationState(),
           phone: createInitialVerificationState(),
@@ -1389,6 +1410,50 @@ const Auth = () => {
                 {/* SIGNUP STEP 3 (Verification documents) */}
                 {!isLogin && signupStep === 3 && (
                   <div className="space-y-4">
+                    <div className="pt-2">
+                      <p className="text-sm font-black text-slate-600 uppercase tracking-widest mb-3">
+                        Promotional Banners (Max 5)
+                      </p>
+                      <div className="space-y-3">
+                        <label className={`flex items-center justify-between p-3.5 rounded-lg border-2 border-dashed transition-all cursor-pointer ${uploadedBanners.length >= 5 ? "opacity-50 cursor-not-allowed border-slate-200" : "border-slate-300 hover:border-brand-500 bg-slate-50"}`}>
+                          <input
+                            type="file"
+                            multiple
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleBannerChange}
+                            disabled={uploadedBanners.length >= 5}
+                          />
+                          <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white text-slate-600 shadow-sm rounded-md shrink-0">
+                              <Upload className="w-4 h-4" />
+                            </div>
+                            <div className="text-left">
+                              <p className="text-xs font-bold text-slate-700">Upload Banners</p>
+                              <p className="text-[10px] text-slate-500 font-medium">Select up to 5 images</p>
+                            </div>
+                          </div>
+                        </label>
+
+                        {uploadedBanners.length > 0 && (
+                          <div className="grid grid-cols-5 gap-2 mt-3">
+                            {uploadedBanners.map((file, idx) => (
+                              <div key={idx} className="relative group aspect-square rounded-md overflow-hidden bg-slate-100 border border-slate-200">
+                                <img src={URL.createObjectURL(file)} alt="banner preview" className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => removeBanner(idx)}
+                                  className="absolute top-1 right-1 bg-white rounded-full p-1 text-slate-400 hover:text-red-500 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                  <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
                     <div className="pt-2">
                       <p className="text-sm font-black text-slate-600 uppercase tracking-widest mb-3">
                         Verification Documents

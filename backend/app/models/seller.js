@@ -83,6 +83,11 @@ const sellerSchema = new mongoose.Schema(
       other: { type: String, trim: true },
     },
 
+    banners: [{
+      type: String,
+      trim: true,
+    }],
+
     role: {
       type: String,
       default: "seller",
@@ -236,9 +241,21 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    venueVisitsEnabled: {
+      type: Boolean,
+      default: true // Default true to match current behavior, but can be toggled off
+    },
     eventDetailsEnabled: {
       type: Boolean,
       default: false
+    },
+    primaryContactEnabled: {
+      type: Boolean,
+      default: true
+    },
+    coupleContactEnabled: {
+      type: Boolean,
+      default: true
     },
     allowCustomProductEntry: {
       type: Boolean,

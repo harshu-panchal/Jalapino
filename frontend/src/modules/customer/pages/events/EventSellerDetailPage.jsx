@@ -29,6 +29,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [themePreference, setThemePreference] = useState('');
     const [colorPreferences, setColorPreferences] = useState([]);
     const [colorInput, setColorInput] = useState('');
+    const [materialPreference, setMaterialPreference] = useState('');
     const [referencePhoto, setReferencePhoto] = useState(null);
     const [formDate, setFormDate] = useState(eventData?.date || '');
     const [formTime, setFormTime] = useState(eventData?.time || '');
@@ -206,6 +207,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             [selectedCategories[0]]: {
                 themePreference,
                 colorPreferences,
+                materialPreference,
                 referencePhoto,
                 customNotes,
                 customBudget,
@@ -346,6 +348,46 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 </h3>
 
                                 <div className="space-y-4">
+                                    {/* Material Preference (Flower/Balloon) */}
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Decoration Type</label>
+                                        <div className="flex items-center gap-6">
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input 
+                                                    type="radio" 
+                                                    name="material" 
+                                                    value="Flower"
+                                                    checked={materialPreference === 'Flower'}
+                                                    onChange={(e) => setMaterialPreference(e.target.value)}
+                                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
+                                                />
+                                                <span className="text-sm font-semibold text-slate-700">Flower</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input 
+                                                    type="radio" 
+                                                    name="material" 
+                                                    value="Balloon"
+                                                    checked={materialPreference === 'Balloon'}
+                                                    onChange={(e) => setMaterialPreference(e.target.value)}
+                                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
+                                                />
+                                                <span className="text-sm font-semibold text-slate-700">Balloon</span>
+                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer">
+                                                <input 
+                                                    type="radio" 
+                                                    name="material" 
+                                                    value="Both"
+                                                    checked={materialPreference === 'Both'}
+                                                    onChange={(e) => setMaterialPreference(e.target.value)}
+                                                    className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
+                                                />
+                                                <span className="text-sm font-semibold text-slate-700">Both</span>
+                                            </label>
+                                        </div>
+                                    </div>
+
                                     {/* Color Combination Option (Multiple Colors) */}
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
@@ -396,6 +438,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     </span>
                                                 ))}
                                                 <input 
+                                                    type="color"
+                                                    value={colorInput.startsWith('#') ? colorInput : '#8b5cf6'}
+                                                    onChange={(e) => setColorInput(e.target.value)}
+                                                    className="w-8 h-8 rounded-md border-0 p-0 shrink-0 cursor-pointer bg-transparent"
+                                                />
+                                                <input 
                                                     type="text" 
                                                     placeholder={colorPreferences.length === 0 ? "Type custom color (Press Enter)" : "Add another color..."}
                                                     value={colorInput}
@@ -411,6 +459,18 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     }}
                                                     className="flex-1 min-w-[150px] outline-none text-sm font-semibold bg-transparent px-1 py-1"
                                                 />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (colorInput.trim() && !colorPreferences.includes(colorInput.trim())) {
+                                                            setColorPreferences(prev => [...prev, colorInput.trim()]);
+                                                            setColorInput('');
+                                                        }
+                                                    }}
+                                                    className="bg-purple-600 text-white px-3 py-1 rounded-md text-xs font-bold shrink-0 hover:bg-purple-700 transition-colors"
+                                                >
+                                                    Add
+                                                </button>
                                             </div>
                                     </div>
 
@@ -533,46 +593,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex justify-between">
-                                            <span>Date</span>
-                                            {isCheckingDate && <span className="text-purple-500 normal-case text-[10px]">Checking...</span>}
-                                            {!isCheckingDate && isDateBooked && <span className="text-red-500 normal-case text-[10px]">Already Booked!</span>}
-                                            {!isCheckingDate && !isDateBooked && formDate && <span className="text-green-500 normal-case text-[10px]">Available</span>}
-                                        </label>
-                                        <input 
-                                            type="date" 
-                                            value={formDate}
-                                            min={new Date().toISOString().split('T')[0]}
-                                            onChange={(e) => setFormDate(e.target.value)}
-                                            className={`w-full border rounded-xl p-3 outline-none text-sm font-semibold bg-white transition-all ${
-                                                isDateBooked ? 'border-red-300 text-red-500 bg-red-50 focus:border-red-500 focus:ring-1 focus:ring-red-500' 
-                                                : 'border-slate-200 text-slate-700 focus:border-purple-500 focus:ring-1 focus:ring-purple-500'
-                                            }`}
-                                        />
-                                        {isDateBooked && (
-                                            <p className="text-[10px] text-red-500 mt-1 font-semibold">
-                                                This date is already booked for this seller. Please select another date.
-                                            </p>
-                                        )}
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Time</label>
-                                        <input 
-                                            type="time" 
-                                            value={formTime}
-                                            onChange={(e) => setFormTime(e.target.value)}
-                                            className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold text-slate-700 bg-white focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
-                                        />
-                                    </div>
-                                </div>
-
                                 <div className="flex flex-col gap-3">
                                     <button 
                                         onClick={handleProceed}
-                                        disabled={isDateBooked || isCheckingDate}
-                                        className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold rounded-xl hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all text-[13px] tracking-wide shadow-md">
+                                        className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold rounded-xl hover:opacity-90 transition-all text-[13px] tracking-wide shadow-md">
                                         START PLANNING
                                     </button>
                                     <button 

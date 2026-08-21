@@ -34,6 +34,15 @@ const getCategoryStyle = (name = '') => {
 const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
     const [products, setProducts]       = useState([]);
     const [loadingProd, setLoadingProd] = useState(true);
+    const [currentBanner, setCurrentBanner] = useState(0);
+
+    useEffect(() => {
+        if (!seller.banners || seller.banners.length <= 1) return;
+        const interval = setInterval(() => {
+            setCurrentBanner(prev => (prev + 1) % seller.banners.length);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [seller.banners]);
 
     useEffect(() => {
         let cancelled = false;
@@ -62,6 +71,30 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
             onClick={() => onSelect(seller)}
             className="bg-white rounded-2xl border border-slate-200 shadow-sm cursor-pointer overflow-hidden flex flex-col"
         >
+            {seller.banners && seller.banners.length > 0 && (
+                <div className="w-full h-32 relative overflow-hidden bg-slate-900 shrink-0">
+                    <AnimatePresence mode="wait">
+                        <motion.img
+                            key={currentBanner}
+                            src={resolveImageUrl(seller.banners[currentBanner])}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.5 }}
+                            className="absolute inset-0 w-full h-full object-cover"
+                            alt="Seller Banner"
+                        />
+                    </AnimatePresence>
+                    {seller.banners.length > 1 && (
+                        <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5 z-10">
+                            {seller.banners.map((_, idx) => (
+                                <div key={idx} className={`w-1.5 h-1.5 rounded-full transition-all ${idx === currentBanner ? 'bg-white scale-125' : 'bg-white/50'}`} />
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+            
             {/* Seller Header */}
             <div
                 className="px-4 pt-4 pb-3 flex items-center justify-between"
@@ -165,9 +198,11 @@ const PlanMyEventPage = () => {
 
     /* — event info form (name / gender / dob / functionLocation) — */
     const [eventInfo, setEventInfo] = useState({
+        bookingType: 'individual',
         name: '',
         gender: '',
         dateOfBirth: '',
+        anniversaryDate: '',
         functionLocation: '',
     });
     const [savingInfo, setSavingInfo] = useState(false);
@@ -241,9 +276,11 @@ const PlanMyEventPage = () => {
         customerApi.getProfile().then(res => {
             const p = res?.data?.result || {};
             setEventInfo({
+                bookingType:      p.bookingType      || 'individual',
                 name:             p.name             || '',
                 gender:           p.gender           || '',
                 dateOfBirth:      p.dateOfBirth ? p.dateOfBirth.split('T')[0] : '',
+                anniversaryDate:  p.anniversaryDate ? p.anniversaryDate.split('T')[0] : '',
                 functionLocation: p.functionLocation || '',
             });
             fetchArea(p.functionLocation || p.city);
@@ -303,7 +340,7 @@ const PlanMyEventPage = () => {
                     });
 
                 setCategories(sorted);
-                if (sorted.length > 0) setActiveCategory(sorted[0]);
+                // if (sorted.length > 0) setActiveCategory(sorted[0]); // Removed default selection
 
                 setEventTypes(Array.isArray(typesRes) ? typesRes : []);
                 if (typesRes?.length > 0) setSelectedType(typesRes[0].value || typesRes[0]._id);
@@ -362,6 +399,7 @@ const PlanMyEventPage = () => {
     const filteredCats = categories.filter(c =>
         c.name.toLowerCase().includes(catSearch.toLowerCase())
     );
+    const displayedCats = activeCategory ? [activeCategory] : filteredCats;
 
     const handleSellerSelect = (seller) => {
         setSelectedSellerDetail(seller);
@@ -398,44 +436,59 @@ const PlanMyEventPage = () => {
                             <div className="flex justify-center pt-10 w-full">
                                 <CircularProgress size={24} sx={{ color: '#8b5cf6' }} />
                             </div>
-                        ) : filteredCats.length === 0 ? (
+                        ) : displayedCats.length === 0 ? (
                             <p className="text-center text-slate-400 text-sm py-8 w-full">No categories found</p>
                         ) : (
-                            filteredCats.map(cat => {
-                                const isActive = activeCategory?._id === cat._id;
-                                const style = getCategoryStyle(cat.name);
-                                return (
+                            <>
+                                {activeCategory && (
                                     <button
-                                        key={cat._id}
-                                        onClick={() => setActiveCategory(cat)}
-                                        className={`shrink-0 lg:w-full flex items-center gap-3 px-3 py-2 lg:py-3 rounded-xl transition-all duration-150 text-left font-bold border-2 ${
-                                            isActive
-                                                ? 'border-slate-800 scale-[1.01] ring-2 ring-purple-400/50 shadow-md'
-                                                : 'border-transparent opacity-85 hover:opacity-100 hover:scale-[1.01]'
-                                        }`}
-                                        style={{ backgroundColor: style.bg, color: style.text }}
+                                        onClick={() => {
+                                            setActiveCategory(null);
+                                            // Reset other selections when going back to all categories if needed, 
+                                            // but setActiveCategory(null) is enough for the sidebar.
+                                        }}
+                                        className="shrink-0 lg:w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-150 text-left font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200"
                                     >
-                                        <div className="w-9 h-9 rounded-lg overflow-hidden bg-white/20 flex items-center justify-center shrink-0">
-                                            {(cat.icon?.startsWith('http') || cat.icon?.startsWith('/')) ? (
-                                                <img src={resolveImageUrl(cat.icon)} alt={cat.name} className="w-full h-full object-cover" />
-                                            ) : (
-                                                <span className="text-xl">{cat.icon || '🎉'}</span>
-                                            )}
-                                        </div>
-                                        <span className="text-sm tracking-wide truncate">{cat.name}</span>
+                                        <span className="text-lg leading-none">←</span>
+                                        <span className="text-sm">View All Categories</span>
                                     </button>
-                                );
-                            })
+                                )}
+                                {displayedCats.map(cat => {
+                                    const isActive = activeCategory?._id === cat._id;
+                                    const style = getCategoryStyle(cat.name);
+                                    return (
+                                        <button
+                                            key={cat._id}
+                                            onClick={() => setActiveCategory(isActive ? null : cat)}
+                                            className={`shrink-0 lg:w-full flex items-center gap-3 px-3 py-2 lg:py-3 rounded-xl transition-all duration-150 text-left font-bold border-2 ${
+                                                isActive
+                                                    ? 'border-slate-800 scale-[1.01] ring-2 ring-purple-400/50 shadow-md'
+                                                    : 'border-transparent opacity-85 hover:opacity-100 hover:scale-[1.01]'
+                                            }`}
+                                            style={{ backgroundColor: style.bg, color: style.text }}
+                                        >
+                                            <div className="w-9 h-9 rounded-lg overflow-hidden bg-white/20 flex items-center justify-center shrink-0">
+                                                {(cat.icon?.startsWith('http') || cat.icon?.startsWith('/')) ? (
+                                                    <img src={resolveImageUrl(cat.icon)} alt={cat.name} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-xl">{cat.icon || '🎉'}</span>
+                                                )}
+                                            </div>
+                                            <span className="text-sm tracking-wide truncate">{cat.name}</span>
+                                        </button>
+                                    );
+                                })}
+                            </>
                         )}
                     </div>
                 </div>
 
                 {/* ══════════════ RIGHT PANEL ══════════════ */}
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden relative">
-                    <div className="flex-1 overflow-y-auto overscroll-contain bg-slate-50" style={{ WebkitOverflowScrolling: 'touch' }}>
+                    <div id="main-scroll-container" className="flex-1 overflow-y-auto overscroll-contain bg-slate-50" style={{ WebkitOverflowScrolling: 'touch' }}>
                         
                         {/* ─── BANNER (optional) ─── */}
-                        {banners.length > 0 && !selectedSellerDetail && (
+                        {banners.length > 0 && !selectedSellerDetail && !activeCategory && (
                             <div className="px-5 pt-4 pb-2 shrink-0 bg-slate-50">
                                 <div className="w-full aspect-[1448/350] rounded-2xl overflow-hidden relative shadow-sm">
                                     <div
@@ -468,47 +521,17 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FEATURE CARDS: Subscribe & Live ─── */}
-                        <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {/* Blue Card: Area Sellers */}
+                        {!activeCategory && (
+                            <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {/* Blue Card: Live */}
                                 <div className="relative overflow-hidden w-full bg-gradient-to-br from-blue-500 to-blue-700 rounded-2xl p-4 shadow-md border-b-4 border-blue-800 flex flex-col min-h-[140px]">
                                     <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
                                     <div className="flex items-center gap-2 mb-3 z-10 shrink-0">
-                                        <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
-                                            <span className="text-xs">📍</span>
-                                        </div>
-                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">Top in Your Area</h4>
-                                    </div>
-                                    <div className="z-10 flex-1 flex flex-col justify-center">
-                                        {areaSellers.length > 0 ? (
-                                            <div className="flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-                                                {areaSellers.map(s => (
-                                                    <div key={s._id} className="snap-start shrink-0 w-32 bg-white/10 rounded-xl p-2 cursor-pointer hover:bg-white/20 transition-colors" onClick={() => setSelectedSellerDetail(s)}>
-                                                        <div className="w-full h-16 bg-white/20 rounded-lg mb-2 overflow-hidden flex items-center justify-center">
-                                                            {s.profileImage ? <img src={resolveImageUrl(s.profileImage)} alt={s.shopName} className="w-full h-full object-cover" /> : <span className="text-white/50 text-[10px]">No image</span>}
-                                                        </div>
-                                                        <p className="text-white font-bold text-[11px] truncate leading-tight">{s.shopName || s.name}</p>
-                                                        <p className="text-blue-100 text-[9px] truncate">{s.city || 'Local Area'}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="flex flex-col items-center justify-center text-center">
-                                                <span className="text-white font-black text-lg md:text-xl drop-shadow-md leading-snug">Data Subscribe Plan</span>
-                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">Sellers selecting this area will appear here</span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Yellow Card: Live Streams */}
-                                <div className="relative overflow-hidden w-full bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-4 shadow-md border-b-4 border-amber-600 flex flex-col min-h-[140px]">
-                                    <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
-                                    <div className="flex items-center gap-2 mb-3 z-10 shrink-0">
-                                        <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
+                                        <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center animate-pulse shadow-sm">
                                             <span className="text-white text-[9px] font-black">LIVE</span>
                                         </div>
-                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">Active Streams</h4>
+                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">LIVE</h4>
                                     </div>
                                     <div className="z-10 flex-1 flex flex-col justify-center">
                                         {liveStreams.length > 0 ? (
@@ -516,34 +539,68 @@ const PlanMyEventPage = () => {
                                                 {liveStreams.map(stream => (
                                                     <div 
                                                         key={stream._id} 
-                                                        className="snap-start shrink-0 w-36 bg-black/20 rounded-xl overflow-hidden cursor-pointer hover:bg-black/30 transition-colors relative border border-white/10"
-                                                        onClick={() => navigate(`/reels?type=event&productId=${stream._id}`)}
+                                                        className="snap-start shrink-0 w-36 bg-black/20 rounded-xl overflow-hidden cursor-pointer hover:bg-black/30 transition-colors relative border border-white/10 shadow-sm"
+                                                        onClick={() => setSelectedSellerDetail(stream.sellerId || stream)}
                                                     >
                                                         <div className="w-full h-16 bg-black/40 flex items-center justify-center relative">
-                                                            <span className="text-2xl text-white/50 z-10">▶</span>
+                                                            <span className="text-2xl text-white/50 z-10 drop-shadow-md">▶</span>
                                                             {stream.photoUpdates?.length > 0 && (
                                                                 <img src={resolveImageUrl(stream.photoUpdates[stream.photoUpdates.length - 1].imageUrl)} className="absolute inset-0 w-full h-full object-cover opacity-50" />
                                                             )}
                                                         </div>
-                                                        <div className="p-2">
+                                                        <div className="p-2 bg-black/10">
                                                             <p className="text-white font-bold text-[11px] truncate leading-tight">{stream.sellerId?.shopName || 'Live Event'}</p>
-                                                            <p className="text-amber-100 text-[9px] truncate">{stream.cookingStatus || 'Streaming Now'}</p>
+                                                            <p className="text-blue-100 text-[9px] truncate">{stream.cookingStatus || 'Streaming Now'}</p>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-center">
-                                                <span className="text-white font-black text-2xl md:text-3xl drop-shadow-md tracking-widest uppercase">Live</span>
-                                                <span className="text-amber-100 text-[10px] mt-1">No active streams right now</span>
+                                                <span className="text-white font-black text-xl md:text-2xl drop-shadow-md uppercase tracking-wider">LIVE</span>
+                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">No active streams right now</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Yellow Card: Reels */}
+                                <div className="relative overflow-hidden w-full bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl p-4 shadow-md border-b-4 border-amber-600 flex flex-col min-h-[140px]">
+                                    <div className="absolute inset-0 bg-white/20 opacity-0 hover:opacity-100 transition-opacity pointer-events-none"></div>
+                                    <div className="flex items-center gap-2 mb-3 z-10 shrink-0">
+                                        <div className="w-7 h-7 bg-white/30 rounded-full flex items-center justify-center shadow-sm">
+                                            <span className="text-white text-xs">🎬</span>
+                                        </div>
+                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">REELS</h4>
+                                    </div>
+                                    <div className="z-10 flex-1 flex flex-col justify-center">
+                                        {areaSellers.length > 0 ? (
+                                            <div className="flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
+                                                {areaSellers.map(s => (
+                                                    <div key={s._id} className="snap-start shrink-0 w-32 bg-white/10 rounded-xl p-2 cursor-pointer hover:bg-white/20 transition-all border border-white/5 shadow-sm" onClick={() => navigate(`/reels?type=retail&sellerId=${s._id}`)}>
+                                                        <div className="w-full h-16 bg-black/30 rounded-lg mb-2 overflow-hidden flex items-center justify-center relative shadow-inner group">
+                                                            <span className="text-2xl text-white/70 z-10 drop-shadow-md group-hover:scale-110 transition-transform">▶</span>
+                                                            {s.profileImage ? <img src={resolveImageUrl(s.profileImage)} alt={s.shopName} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity" /> : <span className="text-white/50 text-[10px] font-medium absolute z-0">No image</span>}
+                                                        </div>
+                                                        <p className="text-white font-bold text-[11px] truncate leading-tight">{s.shopName || s.name}</p>
+                                                        <p className="text-amber-100 text-[9px] truncate">{s.city || 'Local Area'}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="flex flex-col items-center justify-center text-center">
+                                                <span className="text-white font-black text-lg md:text-xl drop-shadow-md leading-snug">REELS</span>
+                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Sellers selecting this area will appear here</span>
                                             </div>
                                         )}
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        )}
 
                         {/* ─── FILTERS: Event Type + Date + Time ─── */}
+                        {(!activeCategory || activeCategory.showDateFilters !== false) && (
                         <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                             <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                 {/* Event Type */}
@@ -613,57 +670,89 @@ const PlanMyEventPage = () => {
                                 )}
                             </div>
                         </div>
+                        )}
                         {/* ─── EVENT INFO CARD ─── */}
+                        {(!activeCategory || activeCategory.showEventDetailsForm !== false) && (
                         <div className="px-5 pt-4 pb-2">
                                 <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4">
                                     <div className="flex items-center justify-between mb-3">
-                                        <h3 className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
-                                            <span>🎉</span> Your Event Details
-                                        </h3>
-                                        {savingInfo && <span className="text-[10px] text-slate-400 font-medium">Saving...</span>}
-                                        {savedInfo  && <span className="text-[10px] text-green-500 font-bold">✓ Saved</span>}
-                                    </div>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                        {/* Name */}
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👤 Name</label>
-                                            <input
-                                                type="text"
-                                                value={eventInfo.name}
-                                                onChange={e => handleEventInfoChange('name', e.target.value)}
-                                                placeholder="Your full name"
-                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
-                                            />
-                                        </div>
-
-                                        {/* Gender */}
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">⚧ Gender</label>
-                                            <div className="flex gap-3 items-center h-[38px]">
-                                                {['male', 'female'].map(g => (
-                                                    <label key={g} className="flex items-center gap-1.5 cursor-pointer select-none">
+                                        <div className="flex items-center gap-4">
+                                            <h3 className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
+                                                <span>🎉</span> Your Event Details
+                                            </h3>
+                                            
+                                            {/* Booking Type Toggle */}
+                                            <div className="flex items-center gap-3 bg-purple-50 rounded-full px-3 py-1 border border-purple-100">
+                                                {['individual', 'couple'].map(bt => (
+                                                    <label key={bt} className="flex items-center gap-1.5 cursor-pointer select-none">
                                                         <input
                                                             type="radio"
-                                                            name="gender"
-                                                            value={g}
-                                                            checked={eventInfo.gender === g}
-                                                            onChange={() => handleEventInfoChange('gender', g)}
-                                                            className="accent-purple-600 w-3.5 h-3.5"
+                                                            name="bookingType"
+                                                            value={bt}
+                                                            checked={eventInfo.bookingType === bt}
+                                                            onChange={() => handleEventInfoChange('bookingType', bt)}
+                                                            className="accent-purple-600 w-3 h-3"
                                                         />
-                                                        <span className="text-sm font-semibold text-slate-700 capitalize">{g === 'male' ? '♂ Male' : '♀ Female'}</span>
+                                                        <span className="text-[10px] font-black text-purple-800 uppercase tracking-wider">{bt === 'individual' ? '👤 Primary Contact' : '💑 Couple'}</span>
                                                     </label>
                                                 ))}
                                             </div>
                                         </div>
-
-                                        {/* Date of Birth */}
+                                        
+                                        <div className="flex items-center gap-2">
+                                            {savingInfo && <span className="text-[10px] text-slate-400 font-medium">Saving...</span>}
+                                            {savedInfo  && <span className="text-[10px] text-green-500 font-bold">✓ Saved</span>}
+                                        </div>
+                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                        {/* Name */}
                                         <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">🎂 Date of Birth</label>
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                                {eventInfo.bookingType === 'couple' ? '💑 Couple Names' : '👤 Primary Contact'}
+                                            </label>
+                                            <input
+                                                type="text"
+                                                value={eventInfo.name}
+                                                onChange={e => handleEventInfoChange('name', e.target.value)}
+                                                placeholder={eventInfo.bookingType === 'couple' ? "e.g. Rahul & Priya" : "Your full name"}
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                            />
+                                        </div>
+
+                                        {/* Gender (Only for Individual) */}
+                                        {eventInfo.bookingType === 'individual' && (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">⚧ Gender</label>
+                                                <div className="flex gap-3 items-center h-[38px]">
+                                                    {['male', 'female', 'other'].map(g => (
+                                                        <label key={g} className="flex items-center gap-1.5 cursor-pointer select-none">
+                                                            <input
+                                                                type="radio"
+                                                                name="gender"
+                                                                value={g}
+                                                                checked={eventInfo.gender === g}
+                                                                onChange={() => handleEventInfoChange('gender', g)}
+                                                                className="accent-purple-600 w-3.5 h-3.5"
+                                                            />
+                                                            <span className="text-sm font-semibold text-slate-700 capitalize">
+                                                                {g === 'male' ? '♂ Male' : g === 'female' ? '♀ Female' : '⚧ Other'}
+                                                            </span>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Date of Birth or Anniversary Date */}
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                                {eventInfo.bookingType === 'couple' ? '💍 Anniversary / Marriage Date' : '🎂 Date of Birth'}
+                                            </label>
                                             <input
                                                 type="date"
-                                                value={eventInfo.dateOfBirth}
+                                                value={eventInfo.bookingType === 'couple' ? eventInfo.anniversaryDate : eventInfo.dateOfBirth}
                                                 max={new Date().toISOString().split('T')[0]}
-                                                onChange={e => handleEventInfoChange('dateOfBirth', e.target.value)}
+                                                onChange={e => handleEventInfoChange(eventInfo.bookingType === 'couple' ? 'anniversaryDate' : 'dateOfBirth', e.target.value)}
                                                 className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400"
                                             />
                                         </div>
@@ -682,6 +771,7 @@ const PlanMyEventPage = () => {
                                     </div>
                                 </div>
                             </div>
+                        )}
                         {selectedSellerDetail ? (
                             <div className="w-full bg-slate-50">
                                 <EventSellerDetailPage 

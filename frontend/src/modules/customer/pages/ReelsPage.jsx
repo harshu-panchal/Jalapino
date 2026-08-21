@@ -340,11 +340,15 @@ const ReelsPage = () => {
             try {
                 const searchParamsObj = new URLSearchParams(location.search);
                 const filterType = searchParamsObj.get('type') || 'retail';
+                const sellerId = searchParamsObj.get('sellerId');
 
                 const params = {
                     hasVideo: "true",
                     limit: 20
                 };
+                if (sellerId) {
+                    params.sellerId = sellerId;
+                }
                 if (searchQuery.trim()) {
                     params.search = searchQuery.trim();
                 }

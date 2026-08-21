@@ -14,6 +14,12 @@ const navItems = [
 const BottomNav = () => {
     const location = useLocation();
     const isReelsPage = location.pathname === '/reels';
+    const isPlanMyEventActive = location.pathname === '/plan-my-event' || location.pathname.startsWith('/plan-my-event');
+    
+    const filteredNavItems = navItems.filter(item => {
+        if (isPlanMyEventActive && item.label === 'Reels') return false;
+        return true;
+    });
 
     return (
         <div 
@@ -22,7 +28,7 @@ const BottomNav = () => {
                 isReelsPage ? "bg-black border-t border-slate-900" : "bg-white border-t border-gray-100"
             )}
         >
-            {navItems.map((item) => {
+            {filteredNavItems.map((item) => {
                 const isActive = location.pathname === item.path ||
                     (item.path !== '/' && location.pathname.startsWith(item.path));
 

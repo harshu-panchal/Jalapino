@@ -87,6 +87,8 @@ export function formatSellerApplication(seller) {
     retailEnabled: seller.retailEnabled ?? true,
     planMyEventEnabled: seller.planMyEventEnabled ?? false,
     eventDetailsEnabled: seller.eventDetailsEnabled ?? false,
+    primaryContactEnabled: seller.primaryContactEnabled ?? true,
+    coupleContactEnabled: seller.coupleContactEnabled ?? true,
     categoriesEnabled: seller.categoriesEnabled ?? true,
     bookingSlotsEnabled: seller.bookingSlotsEnabled ?? false,
     productsEnabled: seller.productsEnabled ?? true,

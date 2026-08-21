@@ -110,7 +110,18 @@ const userSchema = new mongoose.Schema(
             default: null,
         },
 
+        bookingType: {
+            type: String,
+            enum: ["individual", "couple"],
+            default: "individual",
+        },
+
         dateOfBirth: {
+            type: Date,
+            default: null,
+        },
+
+        anniversaryDate: {
             type: Date,
             default: null,
         },
