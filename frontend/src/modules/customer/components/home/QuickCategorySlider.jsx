@@ -134,7 +134,7 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
           "fixed left-0 right-0 z-[190] bg-white shadow-sm border-b border-gray-200",
           isStuck ? "opacity-100 translate-y-0" : "opacity-0 translate-y-0 pointer-events-none"
         )}
-        style={{ top: 'var(--header-height, 160px)' }}
+        style={{ top: headerHeight > 0 ? `${headerHeight}px` : 'var(--header-height, 160px)' }}
       >
         <div className="container mx-auto px-4 md:px-8 lg:px-[50px]">
           <div className="flex items-center gap-4 md:gap-8 overflow-x-auto no-scrollbar">

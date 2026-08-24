@@ -41,6 +41,7 @@ export const checkoutPreviewSchema = Joi.object({
   walletAmount: Joi.number().min(0).default(0),
   paymentMode: Joi.string().valid("ONLINE", "COD").default("COD"),
   timeSlot: Joi.string().allow("", null),
+  moduleType: Joi.string().valid("retail", "wholesale").default("retail"),
   couponId: Joi.string().allow("", null).optional(),
   // Audit Phase 5 (C-2 + H-7): accept the coupon CODE as an alternative
   // to couponId so the server can re-validate the coupon end-to-end

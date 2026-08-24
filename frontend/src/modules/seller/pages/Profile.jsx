@@ -43,6 +43,8 @@ const SellerProfile = () => {
     advancePaymentPercentage: 0,
     physicalPaymentEnabled: false,
     paymentQrCode: "",
+    minGuestCapacity: 1,
+    maxGuestCapacity: 500,
   });
 
   const [newZoneName, setNewZoneName] = useState("");
@@ -75,6 +77,8 @@ const SellerProfile = () => {
         advancePaymentPercentage: data.advancePaymentPercentage || 0,
         physicalPaymentEnabled: data.physicalPaymentEnabled || false,
         paymentQrCode: data.paymentQrCode || "",
+        minGuestCapacity: data.minGuestCapacity || 1,
+        maxGuestCapacity: data.maxGuestCapacity || 500,
       });
       setKeptBanners(data.banners || []);
     } catch (error) {
@@ -481,6 +485,49 @@ const SellerProfile = () => {
                       onChange={handleChange}
                       disabled={!isEditing}
                       placeholder="e.g. 20"
+                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                    />
+                  </div>
+                </div>
+
+
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                    Min Guest Capacity
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">
+                      👥
+                    </div>
+                    <input
+                      type="number"
+                      name="minGuestCapacity"
+                      min="1"
+                      value={formData.minGuestCapacity}
+                      onChange={handleChange}
+                      disabled={!isEditing}
+                      placeholder="e.g. 50"
+                      className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                    Max Guest Capacity
+                  </label>
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300">
+                      👥
+                    </div>
+                    <input
+                      type="number"
+                      name="maxGuestCapacity"
+                      min="1"
+                      value={formData.maxGuestCapacity}
+                      onChange={handleChange}
+                      disabled={!isEditing}
+                      placeholder="e.g. 500"
                       className="w-full pl-14 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
                     />
                   </div>

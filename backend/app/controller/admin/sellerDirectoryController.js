@@ -141,12 +141,12 @@ export const getSellerById = async (req, res) => {
 export const updateSellerType = async (req, res) => {
   try {
     const { id } = req.params;
-    const { isEventSeller, serviceCategories, maxGuestCapacity } = req.body;
+    const { isEventSeller, serviceCategories, minGuestCapacity, maxGuestCapacity } = req.body;
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
     const seller = await Seller.findByIdAndUpdate(
       id,
-      { $set: { isEventSeller, serviceCategories, maxGuestCapacity } },
+      { $set: { isEventSeller, serviceCategories, minGuestCapacity, maxGuestCapacity } },
       { new: true }
     );
     

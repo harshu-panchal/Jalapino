@@ -118,6 +118,7 @@ const SellerDetail = () => {
                 primaryContactEnabled: data.primaryContactEnabled ?? true,
                 coupleContactEnabled: data.coupleContactEnabled ?? true,
                 eventCategory: (data.serviceCategories && data.serviceCategories.length > 0) ? data.serviceCategories[0] : '',
+                minCapacity: data.minGuestCapacity || 1,
                 maxCapacity: data.maxGuestCapacity || 500,
                 commissionRate: data.commissionRate ? `${data.commissionRate}%` : '10%',
                 joinedDate: new Date(data.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
@@ -196,6 +197,7 @@ const SellerDetail = () => {
             await adminUsersApi.updateSellerType(id, {
                 isEventSeller: seller.isEventSeller,
                 serviceCategories: seller.eventCategory ? [seller.eventCategory] : [],
+                minGuestCapacity: seller.minCapacity,
                 maxGuestCapacity: seller.maxCapacity
             });
             showToast('Event settings updated!', 'success');

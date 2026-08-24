@@ -150,7 +150,7 @@ export const placeOrder = async (req, res) => {
       return handleResponse(res, 401, "Unauthorized");
     }
 
-    const { address, payment, timeSlot, items, paymentMode: paymentModeRaw } =
+    const { address, payment, timeSlot, items, paymentMode: paymentModeRaw, moduleType } =
       req.body || {};
 
     const payload = validateWithJoi(createFinanceOrderSchema, {
@@ -162,6 +162,7 @@ export const placeOrder = async (req, res) => {
         inferPaymentMode(payment) ||
         "COD",
       timeSlot: timeSlot || "now",
+      moduleType: moduleType || "retail",
       tipAmount: Number(req.body?.tipAmount || 0),
     });
 

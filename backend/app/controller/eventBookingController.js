@@ -45,6 +45,9 @@ export const createEventBooking = async (req, res) => {
         if (seller) {
             // Check guest capacity
             const requestedGuests = parseInt(eventData.guestCount, 10) || 1;
+            if (seller.minGuestCapacity && requestedGuests < seller.minGuestCapacity) {
+                return handleResponse(res, 400, `The requested guest count is below the provider's minimum capacity of ${seller.minGuestCapacity}.`);
+            }
             if (seller.maxGuestCapacity && requestedGuests > seller.maxGuestCapacity) {
                 return handleResponse(res, 400, `The requested guest count exceeds the provider's maximum capacity of ${seller.maxGuestCapacity}.`);
             }

@@ -5,6 +5,7 @@ import { useInViewAnimation } from "@/core/hooks/useInViewAnimation";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../../../core/context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
+import { useCustomerMode } from "../context/CustomerModeContext";
 import { customerApi } from "../services/customerApi";
 import { useLocation as useAppLocation } from "../context/LocationContext";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
@@ -85,6 +86,7 @@ const CheckoutPage = () => {
   const { showToast } = useToast();
   const { user, isAuthenticated } = useAuth();
   const { settings } = useSettings();
+  const { isWholesale } = useCustomerMode();
 
   const wishlistSectionRef = useRef(null);
   const wishlistFetchedRef = useRef(false);
@@ -684,6 +686,7 @@ const CheckoutPage = () => {
       discountTotal: discountAmount,
       taxTotal: 0,
       tipAmount: selectedTip,
+      moduleType: isWholesale ? "wholesale" : "retail",
       paymentMode: selectedPayment === "online" ? "ONLINE" : "COD",
       timeSlot: selectedTimeSlot,
     });
@@ -756,6 +759,7 @@ const CheckoutPage = () => {
         discountTotal: discountAmount,
         taxTotal: taxAmount,
         tipAmount: selectedTip,
+        moduleType: isWholesale ? "wholesale" : "retail",
         timeSlot: selectedTimeSlot,
         walletAmount: walletAmountToUse,
         items: cart.map((item) => ({

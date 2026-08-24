@@ -500,6 +500,7 @@ export async function placeOrderAtomic({
         seller: entry.sellerId,
         items: mapOrderItemsForPersistence(entry.items),
         address: normalizedAddress,
+        moduleType: normalizedPayload.moduleType || "retail",
         paymentMode,
         paymentStatus:
           paymentMode === "ONLINE"

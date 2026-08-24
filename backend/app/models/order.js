@@ -19,6 +19,11 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+    moduleType: {
+      type: String,
+      enum: ["retail", "wholesale"],
+      default: "retail",
+    },
     seller: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Seller",

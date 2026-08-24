@@ -95,7 +95,7 @@ const EventSellersPage = () => {
                                                     ⭐ {seller.reliabilityScore}% Reliable
                                                 </span>
                                             )}
-                                            <span className="text-xs text-slate-500 font-medium">Cap: {seller.maxGuestCapacity} Guests</span>
+                                            <span className="text-xs text-slate-500 font-medium">Cap: {seller.minGuestCapacity || 1} - {seller.maxGuestCapacity || 'Max'} Guests</span>
                                         </div>
                                     </div>
                                     <div className="bg-purple-50 p-2 rounded-xl text-purple-600">

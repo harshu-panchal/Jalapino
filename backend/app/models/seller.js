@@ -180,6 +180,10 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 2
     },
+    minGuestCapacity: {
+      type: Number,
+      default: 1
+    },
     maxGuestCapacity: {
       type: Number,
       default: 500

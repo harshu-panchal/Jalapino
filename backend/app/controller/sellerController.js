@@ -221,6 +221,8 @@ export const updateSellerProfile = async (req, res) => {
     if (city !== undefined) seller.city = city;
     if (state !== undefined) seller.state = state;
     if (advancePaymentPercentage !== undefined) seller.advancePaymentPercentage = Number(advancePaymentPercentage);
+    if (req.body.minGuestCapacity !== undefined) seller.minGuestCapacity = Number(req.body.minGuestCapacity);
+    if (req.body.maxGuestCapacity !== undefined) seller.maxGuestCapacity = Number(req.body.maxGuestCapacity);
 
     if (req.body.addonDecorationEnabled !== undefined) seller.addonDecorationEnabled = req.body.addonDecorationEnabled === 'true' || req.body.addonDecorationEnabled === true;
     if (req.body.addonDecorationPrice !== undefined) seller.addonDecorationPrice = Number(req.body.addonDecorationPrice);

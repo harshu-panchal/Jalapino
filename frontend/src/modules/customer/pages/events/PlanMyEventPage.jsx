@@ -177,7 +177,7 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
             {/* Footer CTA */}
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
                 <span className="text-[11px] text-slate-500 font-medium">
-                    Cap: {seller.maxGuestCapacity || '—'} guests
+                    Cap: {seller.minGuestCapacity || 1} - {seller.maxGuestCapacity || '—'} guests
                 </span>
                 <span className="text-[11px] font-bold text-purple-600 flex items-center gap-1">
                     View Details <ArrowForwardIosIcon sx={{ fontSize: 10 }} />

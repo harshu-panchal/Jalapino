@@ -325,7 +325,7 @@ const EventCategoriesPage = () => {
                                                         </span>
                                                     )}
                                                     <span className="bg-slate-100 text-slate-600 px-2 py-1 rounded-md">
-                                                        Max Cap: {seller.maxGuestCapacity || 'Any'}
+                                                        Cap: {seller.minGuestCapacity || 1} - {seller.maxGuestCapacity || 'Any'}
                                                     </span>
                                                 </div>
                                             </div>
