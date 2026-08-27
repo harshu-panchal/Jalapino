@@ -113,7 +113,7 @@ const EventCategoriesPage = () => {
             <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
 
             {/* Main Layout Workspace with header padding */}
-            <div className="flex-1 flex overflow-hidden w-full" style={{ paddingTop: 'var(--header-height, 180px)' }}>
+            <div className="flex-1 flex overflow-hidden w-full transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 180px) - var(--header-shrink-offset, 0px))' }}>
                 {/* Left Sidebar: Categories */}
                 <div className="w-80 bg-white border-r border-slate-200 flex flex-col shrink-0">
                     {/* Search Engine Category */}

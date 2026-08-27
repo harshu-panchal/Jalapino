@@ -139,6 +139,14 @@ const PendingSellers = () => {
                         ordersEnabled: s.ordersEnabled ?? true,
                         walletEnabled: s.walletEnabled ?? true,
                         analyticsEnabled: s.analyticsEnabled ?? true,
+                        showStandardDateTime: s.showStandardDateTime ?? false,
+                        showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                        isShopActive: s.isShopActive ?? true,
+                        shopTimingsEnabled: s.shopTimingsEnabled ?? false,
+                        shopOpeningTime: s.shopOpeningTime || "10:30 AM",
+                        shopClosingTime: s.shopClosingTime || "10:40 PM",
+                        advanceBookingBuffer: s.advanceBookingBuffer || 0,
+                        advanceBookingBufferUnit: s.advanceBookingBufferUnit || "days",
                         wholesaleEnabled: s.wholesaleEnabled ?? false,
                         allowedRetailCategories: s.allowedRetailCategories || [],
                         allowedWholesaleCategories: s.allowedWholesaleCategories || [],
@@ -150,6 +158,9 @@ const PendingSellers = () => {
                         liveServicesEnabled: s.liveServicesEnabled ?? false,
                         customizationEngineEnabled: s.customizationEngineEnabled ?? false,
                         quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
+                        demoTrialEnabled: s.demoTrialEnabled ?? false,
+                        demoTrialDays: s.demoTrialDays || 15,
+                        demoStartDate: s.demoStartDate,
                         quoteThemeSelection: s.quoteThemeSelection ?? false,
                         quoteColorCombination: s.quoteColorCombination ?? false,
                         quoteBudgetSelection: s.quoteBudgetSelection ?? false,
@@ -174,6 +185,8 @@ const PendingSellers = () => {
                         physicalPaymentEnabled: s.physicalPaymentEnabled ?? false,
                         paymentQrCode: s.paymentQrCode ?? "",
                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
+                        showStandardDateTime: s.showStandardDateTime ?? false,
+                        showAdvancedDateTime: s.showAdvancedDateTime ?? false,
                     });
                     setAdminRemark(s.adminRemark || '');
                     setAdminTerms(s.adminTerms || '');
@@ -427,6 +440,11 @@ const PendingSellers = () => {
                                                     advanceBookingEnabled: s.advanceBookingEnabled ?? false,
                                                     videoUploadEnabled: s.videoUploadEnabled ?? false,
                                                     reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
+                                                    showStandardDateTime: s.showStandardDateTime ?? false,
+                                                    showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                                                    demoTrialEnabled: s.demoTrialEnabled ?? false,
+                                                    demoTrialDays: s.demoTrialDays || 15,
+                                                    demoStartDate: s.demoStartDate,
                                                 });
                                                 setSearchParams({ review: s.id });
                                                 setIsReviewModalOpen(true);
@@ -907,16 +925,16 @@ const PendingSellers = () => {
                                                     />
                                                 </div>
 
-                                                {/* Event Details Sub-Permissions */}
+                                                {/* Event & Ticketing Options (Inside Event Details) */}
                                                 {permissions.eventDetailsEnabled && (
                                                     <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Event Contact Options</h6>
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contact & Ticketing Options</h6>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <PermissionToggle
                                                                 label="Primary Contact"
-                                                                description="Allow individual/primary contact bookings"
+                                                                description="Allow primary contact details collection"
                                                                 checked={permissions.primaryContactEnabled}
-                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
                                                                 onChange={async (e) => {
                                                                     const checked = e.target.checked;
                                                                     setPermissions(prev => ({ ...prev, primaryContactEnabled: checked }));
@@ -931,20 +949,65 @@ const PendingSellers = () => {
                                                                 }}
                                                             />
                                                             <PermissionToggle
-                                                                label="Couple"
-                                                                description="Allow couple bookings with anniversary dates"
+                                                                label="Couple Contact"
+                                                                description="Allow couple details collection"
                                                                 checked={permissions.coupleContactEnabled}
-                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
                                                                 onChange={async (e) => {
                                                                     const checked = e.target.checked;
                                                                     setPermissions(prev => ({ ...prev, coupleContactEnabled: checked }));
                                                                     try {
                                                                         await adminApi.updateSeller(viewingSeller.id, { coupleContactEnabled: checked });
-                                                                        toast.success('Couple booking permission updated');
+                                                                        toast.success('Couple contact permission updated');
                                                                         setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, coupleContactEnabled: checked } : seller));
                                                                     } catch (err) {
-                                                                        toast.error('Failed to update couple booking permission');
+                                                                        toast.error('Failed to update couple contact permission');
                                                                         setPermissions(prev => ({ ...prev, coupleContactEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {/* Date & Time Slot Settings */}
+                                                {permissions.eventDetailsEnabled && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DATE & TIME SLOT Setting</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <PermissionToggle
+                                                                label="Standard Date & Time"
+                                                                description="Standard Date and Time selection"
+                                                                checked={!!permissions.showStandardDateTime}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, showStandardDateTime: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { showStandardDateTime: checked });
+                                                                        toast.success('Standard Date & Time setting updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showStandardDateTime: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update Date & Time setting');
+                                                                        setPermissions(prev => ({ ...prev, showStandardDateTime: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Advanced Date Range & Time Slot"
+                                                                description="Advanced date range and multiple time slots"
+                                                                checked={permissions.showAdvancedDateTime}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, showAdvancedDateTime: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { showAdvancedDateTime: checked });
+                                                                        toast.success('Advanced Date & Time setting updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showAdvancedDateTime: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update Advanced Date & Time setting');
+                                                                        setPermissions(prev => ({ ...prev, showAdvancedDateTime: !checked }));
                                                                     }
                                                                 }}
                                                             />
@@ -1235,6 +1298,166 @@ const PendingSellers = () => {
                                                                 )}
                                                             </div>
                                                         )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Shop Operation Settings */}
+                                                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
+                                                    <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
+                                                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Shop Operation Settings</h5>
+                                                        <p className="text-[10px] text-slate-500 font-medium">Control shop visibility, timings, and advance booking rules.</p>
+                                                    </div>
+                                                    <div className="grid grid-cols-1 gap-4">
+                                                        <PermissionToggle
+                                                            label="Seller Shop Off & On"
+                                                            description="If OFF, shop will not be visible on Customer App"
+                                                            checked={permissions.isShopActive ?? true}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, isShopActive: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { isShopActive: checked });
+                                                                    toast.success('Shop visibility updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, isShopActive: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, isShopActive: !checked }));
+                                                                    toast.error('Failed to update shop visibility');
+                                                                }
+                                                            }}
+                                                        />
+
+                                                        <PermissionToggle
+                                                            label="Seller Shop Timing"
+                                                            description="Enable to enforce strict shop opening/closing hours"
+                                                            checked={permissions.shopTimingsEnabled ?? false}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, shopTimingsEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { shopTimingsEnabled: checked });
+                                                                    toast.success('Shop timings toggled');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopTimingsEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, shopTimingsEnabled: !checked }));
+                                                                    toast.error('Failed to toggle shop timings');
+                                                                }
+                                                            }}
+                                                        />
+
+                                                        {permissions.shopTimingsEnabled && (
+                                                            <div className="flex items-center gap-4 pl-4 border-l-2 border-fuchsia-200 ml-2">
+                                                                <div className="flex flex-col gap-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Opening Time</label>
+                                                                    <input type="time"
+                                                                        value={(permissions.shopOpeningTime || "10:30 AM").replace(/ (AM|PM)/, "")}
+                                                                        onChange={async (e) => {
+                                                                            const val = e.target.value;
+                                                                            setPermissions(prev => ({ ...prev, shopOpeningTime: val }));
+                                                                            try {
+                                                                                await adminApi.updateSeller(viewingSeller.id, { shopOpeningTime: val });
+                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopOpeningTime: val } : seller));
+                                                                            } catch (err) { toast.error("Failed to update"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex flex-col gap-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Closing Time</label>
+                                                                    <input type="time"
+                                                                        value={(permissions.shopClosingTime || "10:40 PM").replace(/ (AM|PM)/, "")}
+                                                                        onChange={async (e) => {
+                                                                            const val = e.target.value;
+                                                                            setPermissions(prev => ({ ...prev, shopClosingTime: val }));
+                                                                            try {
+                                                                                await adminApi.updateSeller(viewingSeller.id, { shopClosingTime: val });
+                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopClosingTime: val } : seller));
+                                                                            } catch (err) { toast.error("Failed to update"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <div className="flex flex-col gap-2 mt-2">
+                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                                                Advance Booking Buffer
+                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Minimum time before booking</span>
+                                                            </label>
+                                                            <div className="flex gap-2 w-full max-w-xs">
+                                                                <input type="number" min="0"
+                                                                    value={permissions.advanceBookingBuffer ?? 0}
+                                                                    onChange={async (e) => {
+                                                                        const val = Number(e.target.value);
+                                                                        setPermissions(prev => ({ ...prev, advanceBookingBuffer: val }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { advanceBookingBuffer: val });
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBuffer: val } : seller));
+                                                                        } catch (err) { toast.error("Failed to update"); }
+                                                                    }}
+                                                                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                />
+                                                                <select
+                                                                    value={permissions.advanceBookingBufferUnit || 'days'}
+                                                                    onChange={async (e) => {
+                                                                        const val = e.target.value;
+                                                                        setPermissions(prev => ({ ...prev, advanceBookingBufferUnit: val }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { advanceBookingBufferUnit: val });
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBufferUnit: val } : seller));
+                                                                        } catch (err) { toast.error("Failed to update"); }
+                                                                    }}
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-slate-50"
+                                                                >
+                                                                    <option value="days">Days</option>
+                                                                    <option value="hours">Hours</option>
+                                                                </select>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
+                                                            <PermissionToggle
+                                                                label="Enable Demo Trial"
+                                                                description="Automatically turn off shop when demo period ends"
+                                                                checked={permissions.demoTrialEnabled ?? false}
+                                                                activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, demoTrialEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { demoTrialEnabled: checked });
+                                                                        toast.success('Demo trial status updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, demoTrialEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, demoTrialEnabled: !checked }));
+                                                                        toast.error('Failed to update demo trial status');
+                                                                    }
+                                                                }}
+                                                            />
+
+                                                            {permissions.demoTrialEnabled && (
+                                                                <div className="flex flex-col gap-2 mt-3 pl-4 border-l-2 border-orange-200 ml-2">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Demo Free Days</label>
+                                                                    <div className="flex gap-2 items-center">
+                                                                        <input type="number" min="1"
+                                                                            value={permissions.demoTrialDays || 15}
+                                                                            onChange={async (e) => {
+                                                                                const val = Number(e.target.value);
+                                                                                setPermissions(prev => ({ ...prev, demoTrialDays: val }));
+                                                                                try {
+                                                                                    await adminApi.updateSeller(viewingSeller.id, { demoTrialDays: val });
+                                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, demoTrialDays: val } : seller));
+                                                                                } catch (err) { toast.error("Failed to update"); }
+                                                                            }}
+                                                                            className="w-24 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 outline-none"
+                                                                        />
+                                                                        <span className="text-xs text-slate-500 font-medium">Days</span>
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
 

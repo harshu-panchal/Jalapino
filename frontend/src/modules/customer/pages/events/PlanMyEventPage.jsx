@@ -218,6 +218,7 @@ const PlanMyEventPage = () => {
     const [eventTypes,    setEventTypes]    = useState([]);
     const [selectedType,  setSelectedType]  = useState('');
     const [filterDate,    setFilterDate]    = useState('');
+    const [filterEndDate, setFilterEndDate] = useState('');
     const [filterTime,    setFilterTime]    = useState('');
 
     /* — right panel sellers — */
@@ -388,13 +389,53 @@ const PlanMyEventPage = () => {
         setSelectedSellerDetail(null);
     }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, fetchSellers]);
 
-    /* ── filtered sellers (by global search) ── */
+    /* ── filtered sellers (by global search & smart filtering) ── */
+    let smartFilteredSellers = sellers.filter(s => {
+        if (s.isShopActive === false) return false;
+
+        // Check Demo Trial Expiry
+        if (s.demoTrialEnabled && s.demoStartDate) {
+            const startDate = new Date(s.demoStartDate).getTime();
+            const now = new Date().getTime();
+            const daysPassed = (now - startDate) / (1000 * 60 * 60 * 24);
+            const trialDays = s.demoTrialDays || 15;
+            
+            if (daysPassed > trialDays) {
+                return false; // Demo expired, hide seller
+            }
+        }
+        return true;
+    }); // Hide inactive shops or expired demos
+
+    // Filter by Advance Booking Buffer if a date is selected
+    if (filterDate) {
+        const selectedTime = new Date(filterDate).getTime();
+        const currentTime = new Date().getTime();
+        const hoursDiff = (selectedTime - currentTime) / (1000 * 60 * 60);
+        
+        smartFilteredSellers = smartFilteredSellers.filter(s => {
+            if (!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) return true;
+            
+            const requiredHours = s.advanceBookingBufferUnit === 'hours' 
+                ? s.advanceBookingBuffer 
+                : s.advanceBookingBuffer * 24;
+                
+            return hoursDiff >= requiredHours;
+        });
+    }
+
+    if (eventInfo.bookingType === 'couple') {
+        smartFilteredSellers = smartFilteredSellers.filter(s => s.coupleContactEnabled !== false);
+    } else {
+        smartFilteredSellers = smartFilteredSellers.filter(s => s.primaryContactEnabled !== false);
+    }
+
     const filteredSellers = globalSearch.trim()
-        ? sellers.filter(s =>
+        ? smartFilteredSellers.filter(s =>
             (s.shopName || s.name || '').toLowerCase().includes(globalSearch.toLowerCase()) ||
             (s.description || '').toLowerCase().includes(globalSearch.toLowerCase())
         )
-        : sellers;
+        : smartFilteredSellers;
 
     const filteredCats = categories.filter(c =>
         c.name.toLowerCase().includes(catSearch.toLowerCase())
@@ -408,27 +449,34 @@ const PlanMyEventPage = () => {
     /* ════════════════════ RENDER ════════════════════ */
     return (
         <div className="h-[100dvh] bg-slate-50 flex flex-col font-sans overflow-hidden">
-            <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
-
-            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px)' }}>
-
+            <MainLocationHeader 
+                hideSearchBar={false} 
+                isAbsolute={false} 
+                onLogoClick={() => {
+                    setActiveCategory(null);
+                    setSelectedSellerDetail(null);
+                }}
+            />
+            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
             <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden w-full">
                 {/* ══════════════ LEFT SIDEBAR ══════════════ */}
                 <div className="w-full lg:w-72 xl:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col shrink-0 shadow-sm z-10 lg:max-h-full">
 
                     {/* Category Search */}
-                    <div className="p-3 border-b border-slate-100">
-                        <div className="relative">
-                            <SearchIcon sx={{ fontSize: 16 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                            <input
-                                type="text"
-                                value={catSearch}
-                                onChange={e => setCatSearch(e.target.value)}
-                                placeholder="Search category..."
-                                className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 bg-slate-50 placeholder:text-slate-400"
-                            />
+                    {!activeCategory && (
+                        <div className="p-3 border-b border-slate-100">
+                            <div className="relative">
+                                <SearchIcon sx={{ fontSize: 16 }} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <input
+                                    type="text"
+                                    value={catSearch}
+                                    onChange={e => setCatSearch(e.target.value)}
+                                    placeholder="Search category..."
+                                    className="w-full pl-8 pr-3 py-2 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-400 bg-slate-50 placeholder:text-slate-400"
+                                />
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Categories List */}
                     <div className="flex-1 overflow-x-auto lg:overflow-x-hidden overflow-y-hidden lg:overflow-y-auto overscroll-contain p-3 flex flex-row lg:flex-col gap-2" style={{ WebkitOverflowScrolling: 'touch' }}>
@@ -450,7 +498,7 @@ const PlanMyEventPage = () => {
                                         className="shrink-0 lg:w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-150 text-left font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200"
                                     >
                                         <span className="text-lg leading-none">←</span>
-                                        <span className="text-sm">View All Categories</span>
+                                        <span className="text-sm">Home</span>
                                     </button>
                                 )}
                                 {displayedCats.map(cat => {
@@ -459,7 +507,7 @@ const PlanMyEventPage = () => {
                                     return (
                                         <button
                                             key={cat._id}
-                                            onClick={() => setActiveCategory(isActive ? null : cat)}
+                                            onClick={() => setActiveCategory(cat)}
                                             className={`shrink-0 lg:w-full flex items-center gap-3 px-3 py-2 lg:py-3 rounded-xl transition-all duration-150 text-left font-bold border-2 ${
                                                 isActive
                                                     ? 'border-slate-800 scale-[1.01] ring-2 ring-purple-400/50 shadow-md'
@@ -620,37 +668,84 @@ const PlanMyEventPage = () => {
                                     </select>
                                 </div>
 
-                                {/* Date */}
-                                <div className="flex flex-col gap-1 min-w-[160px]">
-                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
-                                        📅 Date
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={filterDate}
-                                        onChange={e => setFilterDate(e.target.value)}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
-                                    />
-                                </div>
+                                {/* Date Section */}
+                                {(!activeCategory || activeCategory.dateSelectionType !== 'range') ? (
+                                    <div className="flex flex-col gap-1 min-w-[160px]">
+                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                                            📅 Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={filterDate}
+                                            onChange={e => setFilterDate(e.target.value)}
+                                            min={new Date().toISOString().split('T')[0]}
+                                            className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                        />
+                                    </div>
+                                ) : (
+                                    <>
+                                        <div className="flex flex-col gap-1 min-w-[160px]">
+                                            <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                                                📅 Start Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={filterDate}
+                                                onChange={e => setFilterDate(e.target.value)}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1 min-w-[160px]">
+                                            <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                                                📅 End Date
+                                            </label>
+                                            <input
+                                                type="date"
+                                                value={filterEndDate}
+                                                onChange={e => setFilterEndDate(e.target.value)}
+                                                min={filterDate || new Date().toISOString().split('T')[0]}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                    </>
+                                )}
 
-                                {/* Time */}
-                                <div className="flex flex-col gap-1 min-w-[140px]">
-                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
-                                        🕐 Time Slot
-                                    </label>
-                                    <input
-                                        type="time"
-                                        value={filterTime}
-                                        onChange={e => setFilterTime(e.target.value)}
-                                        className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
-                                    />
-                                </div>
+                                {/* Time Section */}
+                                {(!activeCategory || activeCategory.timeSelectionType !== 'single') ? (
+                                    <div className="flex flex-col gap-1 min-w-[180px]">
+                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                                            🕐 Time Slot
+                                        </label>
+                                        <select
+                                            value={filterTime}
+                                            onChange={e => setFilterTime(e.target.value)}
+                                            className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                                        >
+                                            <option value="">-- Select Slot --</option>
+                                            {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM"].map(slot => (
+                                                <option key={slot} value={slot}>{slot}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                ) : (
+                                    <div className="flex flex-col gap-1 min-w-[160px]">
+                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                                            🕐 Time
+                                        </label>
+                                        <input
+                                            type="time"
+                                            value={filterTime}
+                                            onChange={e => setFilterTime(e.target.value)}
+                                            className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Clear filters */}
-                                {(filterDate || filterTime) && (
+                                {(filterDate || filterEndDate || filterTime) && (
                                     <button
-                                        onClick={() => { setFilterDate(''); setFilterTime(''); }}
+                                        onClick={() => { setFilterDate(''); setFilterEndDate(''); setFilterTime(''); }}
                                         className="text-xs text-red-500 font-bold hover:underline self-end pb-2"
                                     >
                                         ✕ Clear Filters
@@ -680,22 +775,19 @@ const PlanMyEventPage = () => {
                                             <h3 className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
                                                 <span>🎉</span> Your Event Details
                                             </h3>
-                                            
-                                            {/* Booking Type Toggle */}
-                                            <div className="flex items-center gap-3 bg-purple-50 rounded-full px-3 py-1 border border-purple-100">
-                                                {['individual', 'couple'].map(bt => (
-                                                    <label key={bt} className="flex items-center gap-1.5 cursor-pointer select-none">
-                                                        <input
-                                                            type="radio"
-                                                            name="bookingType"
-                                                            value={bt}
-                                                            checked={eventInfo.bookingType === bt}
-                                                            onChange={() => handleEventInfoChange('bookingType', bt)}
-                                                            className="accent-purple-600 w-3 h-3"
-                                                        />
-                                                        <span className="text-[10px] font-black text-purple-800 uppercase tracking-wider">{bt === 'individual' ? '👤 Primary Contact' : '💑 Couple'}</span>
-                                                    </label>
-                                                ))}
+                                            <div className="flex bg-purple-50 rounded-lg p-0.5 ml-2">
+                                                <button
+                                                    onClick={() => handleEventInfoChange('bookingType', 'individual')}
+                                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${eventInfo.bookingType === 'individual' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                >
+                                                    Individual
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEventInfoChange('bookingType', 'couple')}
+                                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${eventInfo.bookingType === 'couple' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                >
+                                                    Couple
+                                                </button>
                                             </div>
                                         </div>
                                         

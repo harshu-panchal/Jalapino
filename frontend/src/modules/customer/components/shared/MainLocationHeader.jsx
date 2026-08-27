@@ -165,6 +165,7 @@ const MainLocationHeader = ({
   onCategorySelect,
   hideSearchBar = false,
   isAbsolute = false,
+  onLogoClick,
 }) => {
   const { mode, toggleMode } = useCustomerMode();
   const { user: authUser } = useAuth();
@@ -569,7 +570,11 @@ const MainLocationHeader = ({
             <div className="flex items-center gap-4 lg:gap-8">
               <div
                 onClick={() => {
-                  if (!isPlanMyEventActive) {
+                  if (onLogoClick) {
+                    onLogoClick();
+                  } else if (isPlanMyEventActive) {
+                    navigate("/plan-my-event");
+                  } else {
                     navigate("/");
                   }
                 }}
@@ -703,7 +708,11 @@ const MainLocationHeader = ({
               className="relative z-10 pb-4">
               <div
                 onClick={() => {
-                  if (!isPlanMyEventActive) {
+                  if (onLogoClick) {
+                    onLogoClick();
+                  } else if (isPlanMyEventActive) {
+                    navigate("/plan-my-event");
+                  } else {
                     navigate("/");
                   }
                 }}

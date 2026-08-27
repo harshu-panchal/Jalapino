@@ -655,7 +655,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
-            <div className="flex-1 w-full overflow-y-auto" style={{ paddingTop: 'var(--header-height, 180px)' }}>
+            <div className="flex-1 w-full overflow-y-auto transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 180px) - var(--header-shrink-offset, 0px))' }}>
                 {content}
             </div>
         </div>

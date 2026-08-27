@@ -222,6 +222,16 @@ export const updateSellerDetails = async (req, res) => {
     const paymentQrCode = req.body.paymentQrCode;
     const ticketSystemEnabled = req.body.ticketSystemEnabled;
     const videoUploadEnabled = req.body.videoUploadEnabled;
+    const showStandardDateTime = req.body.showStandardDateTime;
+    const showAdvancedDateTime = req.body.showAdvancedDateTime;
+    const isShopActive = req.body.isShopActive;
+    const shopTimingsEnabled = req.body.shopTimingsEnabled;
+    const shopOpeningTime = req.body.shopOpeningTime;
+    const shopClosingTime = req.body.shopClosingTime;
+    const advanceBookingBuffer = req.body.advanceBookingBuffer;
+    const advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
+    const demoTrialEnabled = req.body.demoTrialEnabled;
+    const demoTrialDays = req.body.demoTrialDays;
 
     const Seller = await import("../../models/seller.js").then((m) => m.default);
     
@@ -247,6 +257,12 @@ export const updateSellerDetails = async (req, res) => {
     if (ordersEnabled !== undefined) updateData.ordersEnabled = ordersEnabled;
     if (walletEnabled !== undefined) updateData.walletEnabled = walletEnabled;
     if (analyticsEnabled !== undefined) updateData.analyticsEnabled = analyticsEnabled;
+    if (isShopActive !== undefined) updateData.isShopActive = isShopActive;
+    if (shopTimingsEnabled !== undefined) updateData.shopTimingsEnabled = shopTimingsEnabled;
+    if (shopOpeningTime !== undefined) updateData.shopOpeningTime = shopOpeningTime;
+    if (shopClosingTime !== undefined) updateData.shopClosingTime = shopClosingTime;
+    if (advanceBookingBuffer !== undefined) updateData.advanceBookingBuffer = advanceBookingBuffer;
+    if (advanceBookingBufferUnit !== undefined) updateData.advanceBookingBufferUnit = advanceBookingBufferUnit;
     if (wholesaleEnabled !== undefined) updateData.wholesaleEnabled = wholesaleEnabled;
     if (allowedRetailCategories !== undefined) updateData.allowedRetailCategories = allowedRetailCategories;
     if (allowedWholesaleCategories !== undefined) updateData.allowedWholesaleCategories = allowedWholesaleCategories;
@@ -283,9 +299,26 @@ export const updateSellerDetails = async (req, res) => {
     if (addonBridalPrice !== undefined) updateData.addonBridalPrice = Number(addonBridalPrice);
     if (addonCateringEnabled !== undefined) updateData.addonCateringEnabled = addonCateringEnabled;
     if (addonCateringPrice !== undefined) updateData.addonCateringPrice = Number(addonCateringPrice);
+    if (showStandardDateTime !== undefined) updateData.showStandardDateTime = showStandardDateTime;
+    if (showAdvancedDateTime !== undefined) updateData.showAdvancedDateTime = showAdvancedDateTime;
     if (physicalPaymentEnabled !== undefined) updateData.physicalPaymentEnabled = physicalPaymentEnabled;
     if (paymentQrCode !== undefined) updateData.paymentQrCode = paymentQrCode;
     if (ticketSystemEnabled !== undefined) updateData.ticketSystemEnabled = ticketSystemEnabled;
+
+    const existingSeller = await Seller.findById(id);
+    if (!existingSeller) throw new Error("Seller not found");
+
+    if (demoTrialDays !== undefined) updateData.demoTrialDays = Number(demoTrialDays);
+    if (demoTrialEnabled !== undefined) {
+        updateData.demoTrialEnabled = demoTrialEnabled;
+        if (demoTrialEnabled === true && !existingSeller.demoTrialEnabled) {
+            // Started demo just now
+            updateData.demoStartDate = new Date();
+        } else if (demoTrialEnabled === false) {
+            // Optional: reset start date when disabled
+            updateData.demoStartDate = null;
+        }
+    }
 
     // Find and update
     const seller = await Seller.findByIdAndUpdate(
@@ -293,8 +326,6 @@ export const updateSellerDetails = async (req, res) => {
       { $set: updateData },
       { new: true }
     );
-
-    if (!seller) throw new Error("Seller not found");
     
     return handleResponse(res, 200, "Seller details updated successfully", seller);
   } catch (error) {

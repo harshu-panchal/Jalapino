@@ -261,6 +261,14 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    showStandardDateTime: {
+      type: Boolean,
+      default: false
+    },
+    showAdvancedDateTime: {
+      type: Boolean,
+      default: false
+    },
     allowCustomProductEntry: {
       type: Boolean,
       default: false
@@ -437,6 +445,50 @@ const sellerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Category'
     }],
+    isShopActive: {
+      type: Boolean,
+      default: true
+    },
+    showStandardDateTime: {
+      type: Boolean,
+      default: false
+    },
+    showAdvancedDateTime: {
+      type: Boolean,
+      default: false
+    },
+    shopTimingsEnabled: {
+      type: Boolean,
+      default: false
+    },
+    shopOpeningTime: {
+      type: String,
+      default: "10:30 AM"
+    },
+    shopClosingTime: {
+      type: String,
+      default: "10:40 PM"
+    },
+    advanceBookingBuffer: {
+      type: Number,
+      default: 0
+    },
+    advanceBookingBufferUnit: {
+      type: String,
+      enum: ['hours', 'days'],
+      default: 'days'
+    },
+    demoTrialEnabled: {
+      type: Boolean,
+      default: false
+    },
+    demoTrialDays: {
+      type: Number,
+      default: 15
+    },
+    demoStartDate: {
+      type: Date
+    },
     cancellationPolicies: [{
       categoryId: {
         type: mongoose.Schema.Types.ObjectId,
