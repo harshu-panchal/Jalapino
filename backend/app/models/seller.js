@@ -180,6 +180,19 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 2
     },
+    capacityEnabled: {
+      type: Boolean,
+      default: false
+    },
+    totalCapacity: {
+      type: Number,
+      default: 100
+    },
+    bookingType: {
+      type: String,
+      enum: ['one_time', 'multiple_time'],
+      default: 'multiple_time'
+    },
     minGuestCapacity: {
       type: Number,
       default: 1

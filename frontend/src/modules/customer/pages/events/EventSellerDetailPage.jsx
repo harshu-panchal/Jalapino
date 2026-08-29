@@ -261,9 +261,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     <p className="text-xs text-white/90 mt-1 font-semibold flex items-center gap-1.5">
                         📍 {selectedSeller?.address || 'Indore, Madhya Pradesh'}
                     </p>
-                    <p className="text-xs text-white/90 mt-1 font-semibold flex items-center gap-1.5">
-                        👥 Capacity: {selectedSeller?.minGuestCapacity || 1} - {selectedSeller?.maxGuestCapacity || 'Max'} Guests
-                    </p>
+                    {selectedSeller?.capacityEnabled && (
+                        <div className="flex flex-col gap-0.5 mt-1">
+                            <p className="text-xs text-white/90 font-semibold flex items-center gap-1.5">
+                                👥 Total Capacity: {selectedSeller?.totalCapacity || 100}
+                            </p>
+                            <p className="text-[10px] text-white/70 flex items-center gap-1.5 pl-5">
+                                └ Booking Range: {selectedSeller?.minGuestCapacity || 1} - {selectedSeller?.maxGuestCapacity || 'Max'} Guests
+                            </p>
+                        </div>
+                    )}
 
                     <div className="mt-5 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 max-w-2xl">
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-300">About Us / Description</h3>

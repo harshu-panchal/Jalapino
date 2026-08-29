@@ -120,6 +120,9 @@ const SellerDetail = () => {
                 eventCategory: (data.serviceCategories && data.serviceCategories.length > 0) ? data.serviceCategories[0] : '',
                 minCapacity: data.minGuestCapacity || 1,
                 maxCapacity: data.maxGuestCapacity || 500,
+                capacityEnabled: data.capacityEnabled ?? false,
+                totalCapacity: data.totalCapacity || 100,
+                bookingType: data.bookingType || 'multiple_time',
                 commissionRate: data.commissionRate ? `${data.commissionRate}%` : '10%',
                 joinedDate: new Date(data.createdAt || Date.now()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
                 bankInfo: {
@@ -990,6 +993,104 @@ const SellerDetail = () => {
                                                         </div>
                                                     </div>
                                                 )}
+
+                                                {/* Capacity Settings */}
+                                                <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                    <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">CAPACITY TYPE</h6>
+                                                    
+                                                    <PermissionToggle
+                                                        label="AT Same Location Seller Capacity"
+                                                        description="Show capacity on Seller Banner UI"
+                                                        checked={seller.capacityEnabled}
+                                                        activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
+                                                        onChange={async (e) => {
+                                                            const checked = e.target.checked;
+                                                            setSeller(prev => ({ ...prev, capacityEnabled: checked }));
+                                                            try {
+                                                                await adminUsersApi.updateSeller(seller.id, { capacityEnabled: checked });
+                                                                showToast('Capacity setting updated', 'success');
+                                                            } catch (err) {
+                                                                showToast('Failed to update capacity setting', 'error');
+                                                                setSeller(prev => ({ ...prev, capacityEnabled: !checked }));
+                                                            }
+                                                        }}
+                                                    />
+
+                                                    {seller.capacityEnabled && (
+                                                        <div className="flex flex-col gap-3 mt-2 pl-4 border-l-2 border-amber-200">
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="flex flex-col gap-1 flex-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Total Product Capacity</label>
+                                                                    <input type="number" min="0"
+                                                                        value={seller.totalCapacity}
+                                                                        onChange={(e) => setSeller(prev => ({ ...prev, totalCapacity: Number(e.target.value) }))}
+                                                                        onBlur={async () => {
+                                                                            try {
+                                                                                await adminUsersApi.updateSeller(seller.id, { totalCapacity: seller.totalCapacity });
+                                                                                showToast('Total capacity updated', 'success');
+                                                                            } catch (err) { showToast("Failed to update", "error"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                                
+                                                                <div className="flex flex-col gap-1 flex-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Booking Type</label>
+                                                                    <select
+                                                                        value={seller.bookingType}
+                                                                        onChange={async (e) => {
+                                                                            const val = e.target.value;
+                                                                            setSeller(prev => ({ ...prev, bookingType: val }));
+                                                                            try {
+                                                                                await adminUsersApi.updateSeller(seller.id, { bookingType: val });
+                                                                                showToast('Booking type updated', 'success');
+                                                                            } catch (err) { showToast("Failed to update", "error"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none bg-white"
+                                                                    >
+                                                                        <option value="one_time">One Time</option>
+                                                                        <option value="multiple_time">Multiple Time</option>
+                                                                    </select>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="flex items-center gap-4">
+                                                                <div className="flex flex-col gap-1 flex-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Minimum Capacity</label>
+                                                                    <input type="number" min="0"
+                                                                        value={seller.minCapacity}
+                                                                        onChange={(e) => setSeller(prev => ({ ...prev, minCapacity: Number(e.target.value) }))}
+                                                                        onBlur={async () => {
+                                                                            try {
+                                                                                await adminUsersApi.updateSellerType(seller.id, {
+                                                                                    minGuestCapacity: seller.minCapacity
+                                                                                });
+                                                                                showToast('Minimum capacity updated', 'success');
+                                                                            } catch (err) { showToast("Failed to update", "error"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                                <div className="flex flex-col gap-1 flex-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Maximum Capacity</label>
+                                                                    <input type="number" min="0"
+                                                                        value={seller.maxCapacity}
+                                                                        onChange={(e) => setSeller(prev => ({ ...prev, maxCapacity: Number(e.target.value) }))}
+                                                                        onBlur={async () => {
+                                                                            try {
+                                                                                await adminUsersApi.updateSellerType(seller.id, {
+                                                                                    maxGuestCapacity: seller.maxCapacity
+                                                                                });
+                                                                                showToast('Maximum capacity updated', 'success');
+                                                                            } catch (err) { showToast("Failed to update", "error"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
 
                                                 <PermissionToggle
                                                     label="Custom Product Entry"
