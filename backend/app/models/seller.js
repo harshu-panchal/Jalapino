@@ -29,6 +29,14 @@ const sellerSchema = new mongoose.Schema(
       select: false,
     },
 
+    resetPasswordToken: {
+      type: String,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
+    },
+
     shopName: {
       type: String,
       required: true,

@@ -97,11 +97,14 @@ const Auth = () => {
 
   const [searchParams] = useSearchParams();
   const isSignupMode = searchParams.get("mode") === "signup" || searchParams.get("signup") === "true";
+  const resetTokenParam = searchParams.get("token");
+  
   const [isLogin, setIsLogin] = useState(() => {
     const saved = sessionStorage.getItem('sellerAuthIsLogin');
     if (saved !== null) return saved === 'true';
     return !isSignupMode;
   });
+  const [isForgotPassword, setIsForgotPassword] = useState(!!resetTokenParam);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [signupStep, setSignupStep] = useState(() => {
@@ -115,7 +118,13 @@ const Auth = () => {
   const panelRef = React.useRef(null);
 
   const handleBack = () => {
-    if (!isLogin && signupStep > 1) {
+    if (isForgotPassword) {
+      if (resetTokenParam) {
+        navigate('/seller/auth');
+      } else {
+        setIsForgotPassword(false);
+      }
+    } else if (!isLogin && signupStep > 1) {
       setSignupStep(prev => prev - 1);
     } else if (isSignupMode) {
       navigate('/#footer-banner-carousel');
@@ -176,6 +185,9 @@ const Auth = () => {
     const defaultData = {
       email: "",
       password: "",
+      forgotPasswordEmail: "",
+      newPassword: "",
+      confirmPassword: "",
       name: "",
       shopName: "",
       phone: "",
@@ -530,6 +542,50 @@ const Auth = () => {
 
 
 
+  const handleForgotPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.forgotPasswordEmail) {
+      toast.error("Please enter your email");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await sellerApi.forgotPassword({ email: formData.forgotPasswordEmail });
+      toast.success(response.data.message || "Password reset email sent");
+      setIsForgotPassword(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to process request");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    if (formData.newPassword !== formData.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (formData.newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const response = await sellerApi.resetPassword({ 
+        token: resetTokenParam, 
+        newPassword: formData.newPassword 
+      });
+      toast.success(response.data.message || "Password reset successfully");
+      navigate('/seller/auth');
+      setIsForgotPassword(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Failed to reset password");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -862,18 +918,22 @@ const Auth = () => {
                 </div>
 
                 <span className="md:hidden inline-block px-4 py-1 bg-slate-100 text-slate-800 rounded-full text-[10px] font-black uppercase tracking-widest border border-slate-200">
-                  {isLogin
-                    ? "Welcome Back"
-                    : `New Partnership - Step ${signupStep} of 3`}
+                  {isForgotPassword
+                    ? "Account Recovery"
+                    : isLogin
+                      ? "Welcome Back"
+                      : `New Partnership - Step ${signupStep} of 3`}
                 </span>
                 <h1 className="text-3xl font-black text-slate-900 tracking-tighter">
                   Seller{" "}
                   <span className="text-slate-900">
-                    {isLogin ? "Login" : "Signup"}
+                    {isForgotPassword ? (resetTokenParam ? "Reset Password" : "Forgot Password") : (isLogin ? "Login" : "Signup")}
                   </span>
                 </h1>
                 <p className="text-slate-600 font-medium text-base leading-relaxed">
-                  {isLogin
+                  {isForgotPassword
+                    ? (resetTokenParam ? "Enter your new password below." : "Enter your email to receive a password reset link.")
+                    : isLogin
                     ? "Access your unified seller dashboard and manage orders."
                     : signupStep === 1
                       ? "Register your store and start selling instantly."
@@ -883,9 +943,66 @@ const Auth = () => {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={isForgotPassword ? (resetTokenParam ? handleResetPasswordSubmit : handleForgotPasswordSubmit) : handleSubmit} className="space-y-4">
+                {isForgotPassword && !resetTokenParam && (
+                  <div className="relative group">
+                    <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                      <Mail size={18} />
+                    </div>
+                    <input
+                      type="email"
+                      name="forgotPasswordEmail"
+                      required
+                      placeholder="Enter registered email"
+                      className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
+                      value={formData.forgotPasswordEmail}
+                      onChange={handleChange}
+                    />
+                  </div>
+                )}
+                {isForgotPassword && resetTokenParam && (
+                  <>
+                    <div className="relative group mb-4">
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                        <Lock size={18} />
+                      </div>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="newPassword"
+                        required
+                        minLength={6}
+                        placeholder="New Password"
+                        className="w-full pl-12 pr-14 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
+                        value={formData.newPassword}
+                        onChange={handleChange}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors px-2"
+                        tabIndex="-1">
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                    <div className="relative group">
+                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                        <Lock size={18} />
+                      </div>
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        name="confirmPassword"
+                        required
+                        minLength={6}
+                        placeholder="Confirm Password"
+                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
+                        value={formData.confirmPassword}
+                        onChange={handleChange}
+                      />
+                    </div>
+                  </>
+                )}
                 {/* LOGIN OR SIGNUP STEP 1 */}
-                {(isLogin || signupStep === 1) && (
+                {!isForgotPassword && (isLogin || signupStep === 1) && (
                   <>
                     {!isLogin && (
                       <div className="flex flex-col gap-4">
@@ -1580,11 +1697,13 @@ const Auth = () => {
                     className={`${!isLogin && signupStep > 1 ? "w-2/3" : "w-full"} bg-slate-900 text-white rounded-lg py-4 text-sm font-black tracking-[2px] shadow-[0_25px_50px_-12px_rgba(0,0,0,0.3)] hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 group`}>
                     {isLoading
                       ? "WORKING..."
-                      : isLogin
-                        ? "ENTER DASHBOARD"
-                        : signupStep < 3
-                          ? "NEXT STEP"
-                          : "SUBMIT APPLICATION"}
+                      : isForgotPassword
+                        ? (resetTokenParam ? "RESET PASSWORD" : "SEND RESET LINK")
+                        : isLogin
+                          ? "ENTER DASHBOARD"
+                          : signupStep < 3
+                            ? "NEXT STEP"
+                            : "SUBMIT APPLICATION"}
                     <ArrowRight
                       className="group-hover:translate-x-2 transition-transform"
                       size={20}
@@ -1604,11 +1723,21 @@ const Auth = () => {
                         email: createInitialVerificationState(),
                         phone: createInitialVerificationState(),
                       });
+                      setIsForgotPassword(false);
                     }}
                     className="text-slate-900 hover:text-black transition-colors px-2">
                     {isLogin ? "Register Store" : "Sign In"}
                   </button>
                 </p>
+                {isLogin && !isForgotPassword && (
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(true)}
+                    className="text-brand-600 hover:text-brand-700 font-bold text-sm transition-colors mt-2"
+                  >
+                    Forgot Password?
+                  </button>
+                )}
               </div>
             </motion.div>
           </AnimatePresence>

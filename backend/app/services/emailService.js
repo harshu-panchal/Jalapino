@@ -156,6 +156,77 @@ export async function sendSellerVerificationOtpEmail({
   };
 }
 
+export async function sendSellerPasswordResetEmail({
+  email,
+  resetToken,
+}) {
+  if (!useRealEmailOTP()) {
+    logger.info("Seller password reset email generated in mock mode", {
+      email,
+      resetToken,
+      mode: "mock",
+    });
+    return {
+      delivered: false,
+      mode: "mock",
+    };
+  }
+
+  const transporter = getTransporter();
+  const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/seller/auth?token=${resetToken}`;
+  
+  await transporter.sendMail({
+    from: getMailFrom(),
+    to: email,
+    subject: "Reset Your Jalapino Seller Password",
+    text: `You requested a password reset. Click the following link to reset your password: ${resetUrl}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+          <style>
+              body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7f6; margin: 0; padding: 0; }
+              .container { max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05); overflow: hidden; }
+              .header { background-color: #111827; padding: 30px 20px; text-align: center; color: white; }
+              .header h1 { margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 1px; }
+              .content { padding: 40px 30px; text-align: center; color: #333333; }
+              .content p { font-size: 16px; line-height: 1.6; color: #555555; margin-bottom: 25px; }
+              .btn-container { margin: 30px 0; }
+              .reset-btn { background-color: #111827; color: #ffffff; padding: 14px 30px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px; display: inline-block; }
+              .footer { background-color: #f9f9f9; padding: 20px; text-align: center; border-top: 1px solid #eeeeee; }
+              .footer p { margin: 0; font-size: 12px; color: #999999; }
+          </style>
+      </head>
+      <body>
+          <div class="container">
+              <div class="header">
+                  <h1>Jalapino Seller Partner</h1>
+              </div>
+              <div class="content">
+                  <h2>Password Reset Request</h2>
+                  <p>We received a request to reset the password for your seller account associated with this email address.</p>
+                  <p>Click the button below to set a new password. This link is valid for 1 hour.</p>
+                  <div class="btn-container">
+                      <a href="${resetUrl}" class="reset-btn" style="color: #ffffff;">Reset Password</a>
+                  </div>
+                  <p>If you didn't request a password reset, you can safely ignore this email.</p>
+              </div>
+              <div class="footer">
+                  <p>&copy; ${new Date().getFullYear()} Jalapino. All rights reserved.</p>
+                  <p>This is an automated message, please do not reply.</p>
+              </div>
+          </div>
+      </body>
+      </html>
+    `,
+  });
+
+  return {
+    delivered: true,
+    mode: "real",
+  };
+}
+
 export function __resetEmailTransportForTests() {
   cachedTransporter = null;
 }

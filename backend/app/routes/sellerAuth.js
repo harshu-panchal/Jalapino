@@ -4,6 +4,8 @@ import {
     loginSeller,
     sendSellerSignupOtp,
     verifySellerSignupOtp,
+    forgotPassword,
+    resetPassword,
 } from "../controller/sellerAuthController.js";
 import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings } from "../controller/sellerStatsController.js";
@@ -45,6 +47,8 @@ router.post(
     signupSeller
 );
 router.post("/login", loginSeller);
+router.post("/forgot-password", authRouteRateLimiter, forgotPassword);
+router.post("/reset-password", authRouteRateLimiter, resetPassword);
 router.post("/save-fcm-token", verifyToken, saveFcmToken);
 router.get("/nearby", getNearbySellers);
 

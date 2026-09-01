@@ -7,6 +7,8 @@ import {
     verifySellerVerificationToken,
 } from "../services/sellerVerificationService.js";
 import { saveRawFile } from "../services/localStorageService.js";
+import crypto from "crypto";
+import { sendSellerPasswordResetEmail } from "../services/emailService.js";
 
 /* ===============================
    Utils
@@ -413,6 +415,70 @@ export const loginSeller = async (req, res) => {
             token,
             seller,
         });
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+/* ===============================
+   FORGOT PASSWORD
+================================ */
+export const forgotPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return handleResponse(res, 400, "Email is required");
+        }
+
+        const seller = await Seller.findOne({ email: new RegExp(`^${email}$`, "i") });
+        if (!seller) {
+            return handleResponse(res, 200, "If your email is registered, you will receive a reset link.");
+        }
+
+        const resetToken = crypto.randomBytes(32).toString("hex");
+        
+        seller.resetPasswordToken = resetToken;
+        seller.resetPasswordExpires = Date.now() + 3600000; // 1 hour
+        await seller.save();
+
+        await sendSellerPasswordResetEmail({
+            email: seller.email,
+            resetToken
+        });
+
+        return handleResponse(res, 200, "Password reset email sent successfully. Please check your inbox.");
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+/* ===============================
+   RESET PASSWORD
+================================ */
+export const resetPassword = async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+        
+        if (!token || !newPassword) {
+            return handleResponse(res, 400, "Token and new password are required");
+        }
+
+        const seller = await Seller.findOne({
+            resetPasswordToken: token,
+            resetPasswordExpires: { $gt: Date.now() }
+        }).select('+password');
+
+        if (!seller) {
+            return handleResponse(res, 400, "Password reset token is invalid or has expired.");
+        }
+
+        seller.password = newPassword;
+        seller.resetPasswordToken = undefined;
+        seller.resetPasswordExpires = undefined;
+        
+        await seller.save();
+
+        return handleResponse(res, 200, "Password has been reset successfully. You can now log in.");
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }
