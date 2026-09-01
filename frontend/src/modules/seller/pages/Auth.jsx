@@ -104,6 +104,7 @@ const Auth = () => {
     if (saved !== null) return saved === 'true';
     return !isSignupMode;
   });
+  const [loginMethod, setLoginMethod] = useState('email');
   const [isForgotPassword, setIsForgotPassword] = useState(!!resetTokenParam);
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -185,6 +186,7 @@ const Auth = () => {
     const defaultData = {
       email: "",
       password: "",
+      otp: "",
       forgotPasswordEmail: "",
       newPassword: "",
       confirmPassword: "",
@@ -612,13 +614,21 @@ const Auth = () => {
           return;
         }
       }
-      // Password: min 6 characters
-      const pwd = (formData.password || "").trim();
-      if (pwd.length < 6) {
-        toast.error(
-          "Password must be at least 6 characters.",
-        );
-        return;
+      // Password validation for email login or signup
+      if (loginMethod === "email" || !isLogin) {
+        const pwd = (formData.password || "").trim();
+        if (pwd.length < 6) {
+          toast.error("Password must be at least 6 characters.");
+          return;
+        }
+      }
+      // OTP validation for phone login
+      if (isLogin && loginMethod === "phone") {
+        const otpVal = (formData.otp || "").trim();
+        if (otpVal.length !== 6) {
+          toast.error("OTP must be 6 digits.");
+          return;
+        }
       }
 
       if (!isLogin && signupStep < 3) {
@@ -652,10 +662,11 @@ const Auth = () => {
           .join(", ");
 
       const response = isLogin
-        ? await sellerApi.login({
-          email: formData.email,
-          password: formData.password,
-        })
+        ? await sellerApi.login(
+            loginMethod === "email" 
+              ? { email: formData.email, password: formData.password }
+              : { phone: formData.phone, otp: formData.otp }
+          )
         : await (() => {
           const signupPayload = new FormData();
 
@@ -1004,6 +1015,24 @@ const Auth = () => {
                 {/* LOGIN OR SIGNUP STEP 1 */}
                 {!isForgotPassword && (isLogin || signupStep === 1) && (
                   <>
+                    {isLogin && (
+                      <div className="flex gap-2 mb-4 p-1 bg-slate-100 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => setLoginMethod('email')}
+                          className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${loginMethod === 'email' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          Email ID
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setLoginMethod('phone')}
+                          className={`flex-1 py-2 text-xs font-bold rounded-md transition-all ${loginMethod === 'phone' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                          Mobile & OTP
+                        </button>
+                      </div>
+                    )}
                     {!isLogin && (
                       <div className="flex flex-col gap-4">
                         <div className="relative group">
@@ -1065,10 +1094,12 @@ const Auth = () => {
                       </div>
                     )}
 
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
-                        <Mail size={18} />
-                      </div>
+                    {(!isLogin || (isLogin && loginMethod === 'email')) && (
+                      <>
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                            <Mail size={18} />
+                          </div>
                       <input
                         type="email"
                         name="email"
@@ -1140,9 +1171,11 @@ const Auth = () => {
                         <CheckCircle className="h-4 w-4" />
                         <span>Email verified successfully.</span>
                       </div>
+                        )}
+                      </>
                     )}
 
-                    {!isLogin && (
+                    {(!isLogin) && (
                       <>
                         <div className="relative group">
                           <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
@@ -1214,10 +1247,46 @@ const Auth = () => {
                       </>
                     )}
 
-                    <div className="relative group">
-                      <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
-                        <Lock size={18} />
-                      </div>
+                    {isLogin && loginMethod === "phone" && (
+                      <>
+                        <div className="relative group">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                            <Phone size={18} />
+                          </div>
+                          <input
+                            type="tel"
+                            name="phone"
+                            required
+                            placeholder="Contact Number"
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
+                            value={formData.phone}
+                            onChange={handleChange}
+                          />
+                        </div>
+                        <div className="relative group mt-4">
+                          <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                            <Lock size={18} />
+                          </div>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={6}
+                            name="otp"
+                            required
+                            placeholder="Enter 6-digit OTP"
+                            value={formData.otp}
+                            onChange={(e) => setFormData(prev => ({ ...prev, otp: e.target.value.replace(/\D/g, "").slice(0, 6) }))}
+                            className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-200 transition-all placeholder:text-slate-500"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {(!isLogin || (isLogin && loginMethod === 'email')) && (
+                      <div className="relative group mt-4">
+                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-violet-600 transition-colors">
+                          <Lock size={18} />
+                        </div>
                       <input
                         type={showPassword ? "text" : "password"}
                         name="password"
@@ -1235,8 +1304,9 @@ const Auth = () => {
                         className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-600 transition-colors px-2"
                         tabIndex="-1">
                         {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                      </button>
-                    </div>
+                        </button>
+                      </div>
+                    )}
                   </>
                 )}
 

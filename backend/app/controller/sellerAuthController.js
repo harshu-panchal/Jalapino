@@ -355,24 +355,36 @@ export const verifySellerSignupOtp = async (req, res) => {
 ================================ */
 export const loginSeller = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, phone, otp } = req.body;
 
-        if (!email || !password) {
-            return handleResponse(res, 400, "Email and password are required");
-        }
+        let seller;
 
-        // Include password for comparison
-        const emailQuery = email ? new RegExp(`^${email}$`, "i") : undefined;
-        const seller = await Seller.findOne({ email: emailQuery }).select("+password");
+        if (phone && otp) {
+            if (otp !== "123456") {
+                return handleResponse(res, 401, "Invalid OTP");
+            }
+            seller = await Seller.findOne({ phone });
+            if (!seller) {
+                return handleResponse(res, 404, "Seller not found with this mobile number");
+            }
+        } else {
+            if (!email || !password) {
+                return handleResponse(res, 400, "Email/Password or Phone/OTP are required");
+            }
 
-        if (!seller) {
-            return handleResponse(res, 404, "Seller not found");
-        }
+            // Include password for comparison
+            const emailQuery = email ? new RegExp(`^${email}$`, "i") : undefined;
+            seller = await Seller.findOne({ email: emailQuery }).select("+password");
 
-        const isMatch = await seller.comparePassword(password);
+            if (!seller) {
+                return handleResponse(res, 404, "Seller not found");
+            }
 
-        if (!isMatch) {
-            return handleResponse(res, 401, "Invalid credentials");
+            const isMatch = await seller.comparePassword(password);
+
+            if (!isMatch) {
+                return handleResponse(res, 401, "Invalid credentials");
+            }
         }
 
         const applicationStatus =
