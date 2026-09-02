@@ -363,7 +363,7 @@ const VenueDiscovery = () => {
                                 Book Tickets
                             </button>
                         )}
-                        {selectedVenues.every(v => v.sellerId?.venueVisitsEnabled !== false) && (
+                        {selectedVenues.every(v => v.sellerId?.bookingSlotsEnabled === true) && (
                             <button 
                                 onClick={() => setIsRequestModalOpen(true)}
                                 className="flex-1 sm:flex-none px-8 py-3 bg-slate-900 text-white text-xs font-black rounded-2xl shadow-lg shadow-slate-900/10 hover:bg-black"

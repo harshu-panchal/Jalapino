@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { sellerApi } from '../services/sellerApi';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '@core/context/AuthContext';
+import { Navigate } from 'react-router-dom';
 import { 
   HiOutlineCalendar, 
   HiOutlineUser, 
@@ -16,6 +18,8 @@ import {
 } from 'react-icons/hi2';
 
 const SellerVisitManagement = () => {
+  const { user } = useAuth();
+  
   const [activeTab, setActiveTab] = useState('requests'); // 'requests' or 'availability'
   const [requests, setRequests] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +27,10 @@ const SellerVisitManagement = () => {
   // Reschedule Form state
   const [reschedulingVisit, setReschedulingVisit] = useState(null);
   const [newDate, setNewDate] = useState('');
+
+  if (user?.bookingSlotsEnabled !== true) {
+    return <Navigate to="/seller" />;
+  }
   const [newTimeSlot, setNewTimeSlot] = useState('');
 
   // Availability Settings state

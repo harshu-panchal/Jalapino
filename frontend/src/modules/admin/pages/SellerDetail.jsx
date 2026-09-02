@@ -110,6 +110,7 @@ const SellerDetail = () => {
                 location: data.address || data.location,
                 description: data.description || '',
                 availableColors: data.availableColors || [],
+                category: data.category || '',
                 isEventSeller: data.isEventSeller || false,
                 hasProductAccess: data.hasProductAccess !== false,
                 retailEnabled: data.retailEnabled ?? true,
@@ -580,7 +581,11 @@ const SellerDetail = () => {
                                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{seller.id}</p>
                                                     </div>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-4">
+                                                <div className="grid grid-cols-3 gap-4">
+                                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</p>
+                                                        <p className="text-xs font-black text-slate-900 capitalize">{seller.category || (seller.isEventSeller ? 'Event Seller' : 'N/A')}</p>
+                                                    </div>
                                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Commission</p>
                                                         <p className="text-xs font-black text-slate-900">{seller.commissionRate}</p>
@@ -1054,7 +1059,24 @@ const SellerDetail = () => {
                                                                 </div>
                                                             </div>
                                                             
-                                                            <div className="flex items-center gap-4">
+                                                            <div className="flex items-center gap-4 mt-3">
+                                                                <div className="flex flex-col gap-1 flex-1">
+                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Number of Shops</label>
+                                                                    <input type="number" min="1"
+                                                                        value={seller.numberOfShops || 1}
+                                                                        onChange={(e) => setSeller(prev => ({ ...prev, numberOfShops: Number(e.target.value) }))}
+                                                                        onBlur={async () => {
+                                                                            try {
+                                                                                await adminUsersApi.updateSeller(seller.id, { numberOfShops: seller.numberOfShops });
+                                                                                showToast('Number of shops updated', 'success');
+                                                                            } catch (err) { showToast("Failed to update", "error"); }
+                                                                        }}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                    />
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="flex items-center gap-4 mt-3">
                                                                 <div className="flex flex-col gap-1 flex-1">
                                                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Minimum Capacity</label>
                                                                     <input type="number" min="0"
@@ -1185,7 +1207,7 @@ const SellerDetail = () => {
                                                 />
 
                                                 <PermissionToggle
-                                                    label="Advance Booking System"
+                                                    label="Advance Payment System"
                                                     description="Allow seller to manage advance bookings and status"
                                                     checked={seller.advanceBookingEnabled}
                                                     activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"

@@ -72,6 +72,11 @@ export const sellerApi = {
 
     // Live Kitchen
     updateLiveStreamUrl: (orderId, streamUrl) => axiosInstance.post('/kitchen/stream', { orderId, streamUrl }),
+    uploadLiveStreamVideo: (formData) => axiosInstance.post('/kitchen/stream/upload', formData, {
+        headers: {
+            'Content-Type': 'multipart/form-data',
+        },
+    }),
 
     // Customer Images
     approveCustomerImage: (id) => axiosInstance.put(`/customer-images/${id}/approve`),

@@ -258,9 +258,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     <h2 className="text-3xl font-black mt-3 leading-tight drop-shadow-md">
                         {selectedSeller?.shopName || selectedSeller?.name}
                     </h2>
-                    <p className="text-xs text-white/90 mt-1 font-semibold flex items-center gap-1.5">
+                    <a 
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedSeller?.address || 'Indore, Madhya Pradesh')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-white/90 mt-1 font-semibold flex items-center gap-1.5 hover:text-white hover:underline w-fit cursor-pointer"
+                    >
                         📍 {selectedSeller?.address || 'Indore, Madhya Pradesh'}
-                    </p>
+                    </a>
                     {selectedSeller?.capacityEnabled && (
                         <div className="flex flex-col gap-0.5 mt-1">
                             <p className="text-xs text-white/90 font-semibold flex items-center gap-1.5">
@@ -640,11 +645,35 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 <span>Selected Products:</span>
                                 <span>{selectedProducts.length} items</span>
                             </div>
+                            <div className="flex justify-between text-xs font-semibold text-slate-600">
+                                <span>Guests:</span>
+                                <span className={
+                                    (parseInt(eventData?.guestCount, 10) || 1) < (selectedSeller?.minGuestCapacity || 1) || 
+                                    (parseInt(eventData?.guestCount, 10) || 1) > (selectedSeller?.maxGuestCapacity || 500) 
+                                        ? "text-rose-500 font-bold" : ""
+                                }>
+                                    {eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})
+                                </span>
+                            </div>
                         </div>
+
+                        {((parseInt(eventData?.guestCount, 10) || 1) < (selectedSeller?.minGuestCapacity || 1) || 
+                          (parseInt(eventData?.guestCount, 10) || 1) > (selectedSeller?.maxGuestCapacity || 500)) && (
+                            <div className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg font-bold">
+                                Your guest count ({eventData?.guestCount || 1}) is outside the provider's allowed capacity ({selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500}). Please go back and adjust your guest count.
+                            </div>
+                        )}
 
                         <button
                             onClick={handleProceed}
-                            className="w-full py-3 bg-purple-600 text-white font-extrabold rounded-2xl hover:bg-purple-700 active:scale-95 transition-all shadow-md shadow-purple-200 text-center"
+                            disabled={((parseInt(eventData?.guestCount, 10) || 1) < (selectedSeller?.minGuestCapacity || 1) || 
+                                       (parseInt(eventData?.guestCount, 10) || 1) > (selectedSeller?.maxGuestCapacity || 500))}
+                            className={`w-full py-3 ${
+                                ((parseInt(eventData?.guestCount, 10) || 1) >= (selectedSeller?.minGuestCapacity || 1) && 
+                                 (parseInt(eventData?.guestCount, 10) || 1) <= (selectedSeller?.maxGuestCapacity || 500)) 
+                                 ? 'bg-purple-600 hover:bg-purple-700 active:scale-95 shadow-purple-200' 
+                                 : 'bg-slate-300 cursor-not-allowed'
+                            } text-white font-extrabold rounded-2xl transition-all shadow-md text-center`}
                         >
                             Proceed to Checkout
                         </button>

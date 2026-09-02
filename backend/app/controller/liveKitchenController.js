@@ -1,5 +1,6 @@
 import LiveKitchen from "../models/liveKitchen.js";
 import { handleResponse } from "../utils/helper.js";
+import fs from "fs";
 
 // @route   POST /api/kitchen/stream
 // @desc    Update or create live stream URL for a seller
@@ -21,6 +22,38 @@ export const updateStreamUrl = async (req, res) => {
         
         return handleResponse(res, 200, "Stream URL updated successfully", liveKitchen);
     } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+// @route   POST /api/kitchen/stream/upload
+// @desc    Upload live stream video for a seller
+// @access  Private (Seller/Admin)
+export const uploadStreamVideo = async (req, res) => {
+    try {
+        const { orderId } = req.body;
+        const sellerId = req.user.id;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ success: false, message: "No video file provided" });
+        }
+
+        const videoUrl = `/uploads/videos/${file.filename}`;
+
+        let liveKitchen = await LiveKitchen.findOne({ sellerId, orderId: orderId || null });
+        
+        if (liveKitchen) {
+            liveKitchen.streamUrl = videoUrl;
+            liveKitchen.isActive = true;
+            await liveKitchen.save();
+        } else {
+            liveKitchen = await LiveKitchen.create({ sellerId, orderId: orderId || null, streamUrl: videoUrl });
+        }
+        
+        return handleResponse(res, 200, "Stream video uploaded successfully", liveKitchen);
+    } catch (error) {
+        if (req.file && req.file.path) fs.unlinkSync(req.file.path);
         return handleResponse(res, 500, error.message);
     }
 };

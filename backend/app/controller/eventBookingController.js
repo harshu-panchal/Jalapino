@@ -57,15 +57,38 @@ export const createEventBooking = async (req, res) => {
             const endOfDay = new Date(startOfDay);
             endOfDay.setDate(endOfDay.getDate() + 1);
 
-            const existingBookings = await EventBooking.countDocuments({
+            const bookingsOnDate = await EventBooking.find({
                 "services.seller": sellerId,
                 eventDate: { $gte: startOfDay, $lt: endOfDay },
-                overallStatus: { $nin: ['CANCELLED', 'REJECTED'] },
-                "services.status": { $in: ['ACCEPTED', 'CONFIRMED'] }
+                overallStatus: { $nin: ['CANCELLED', 'REJECTED'] }
             });
 
-            if (existingBookings >= (seller.maxEventsPerDay || 2)) {
-                return handleResponse(res, 400, "The selected provider has reached their maximum booking capacity for this date.");
+            const existingBookingsCount = bookingsOnDate.length;
+            const numberOfShops = seller.numberOfShops || 1;
+            
+            if (seller.bookingType === 'one_time') {
+                if (existingBookingsCount >= numberOfShops) {
+                    return handleResponse(res, 400, "The selected provider has reached their maximum booking capacity for this date (One-time bookings full).");
+                }
+            } else {
+                // Multiple time -> check total capacity
+                let consumedCapacity = 0;
+                bookingsOnDate.forEach(b => {
+                    // Try to get guest count from booking data
+                    let gCount = 1;
+                    if (b.eventData?.guestCount) {
+                        gCount = parseInt(b.eventData.guestCount, 10);
+                    } else if (b.guestCount) {
+                        gCount = parseInt(b.guestCount, 10);
+                    }
+                    if (isNaN(gCount)) gCount = 1;
+                    consumedCapacity += gCount;
+                });
+                
+                const maxAllowedCapacity = (seller.totalCapacity || 100) * numberOfShops;
+                if ((consumedCapacity + requestedGuests) > maxAllowedCapacity) {
+                    return handleResponse(res, 400, `The selected provider does not have enough capacity on this date. Available capacity: ${maxAllowedCapacity - consumedCapacity}`);
+                }
             }
         }
         // -------------------------------------------------------

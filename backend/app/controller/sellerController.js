@@ -25,6 +25,7 @@ export const getNearbySellers = async (req, res) => {
     const sellers = await Seller.find({
       isActive: true,
       isVerified: true,
+      isShopActive: { $ne: false },
       location: {
         $near: {
           $geometry: {
@@ -36,8 +37,52 @@ export const getNearbySellers = async (req, res) => {
       },
     }).lean();
 
-    // Filter based on individual service radius
+    // Helper to check if current time is within open/close hours
+    const isWithinOperatingHours = (openingTime, closingTime) => {
+        if (!openingTime || !closingTime) return true; // Fail safe
+        
+        const now = new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istTime = new Date(now.getTime() + (now.getTimezoneOffset() * 60000) + istOffset);
+        
+        const currentHours = istTime.getHours();
+        const currentMinutes = istTime.getMinutes();
+        const currentTotalMinutes = currentHours * 60 + currentMinutes;
+
+        const parseTimeStr = (timeStr) => {
+            const [time, modifier] = timeStr.split(' ');
+            let [hours, minutes] = time.split(':');
+            hours = parseInt(hours, 10);
+            minutes = parseInt(minutes, 10);
+            
+            if (hours === 12) {
+                hours = modifier.toUpperCase() === 'PM' ? 12 : 0;
+            } else if (modifier.toUpperCase() === 'PM') {
+                hours += 12;
+            }
+            return hours * 60 + minutes;
+        };
+
+        const openTotalMinutes = parseTimeStr(openingTime);
+        const closeTotalMinutes = parseTimeStr(closingTime);
+
+        if (closeTotalMinutes > openTotalMinutes) {
+            return currentTotalMinutes >= openTotalMinutes && currentTotalMinutes <= closeTotalMinutes;
+        } else {
+            // Closes next day (e.g. 10 PM to 2 AM)
+            return currentTotalMinutes >= openTotalMinutes || currentTotalMinutes <= closeTotalMinutes;
+        }
+    };
+
+    // Filter based on individual service radius and timings
     const nearbySellers = sellers.filter((seller) => {
+      // Check timings
+      if (seller.shopTimingsEnabled) {
+          if (!isWithinOperatingHours(seller.shopOpeningTime, seller.shopClosingTime)) {
+              return false; // Skip this seller if outside operating hours
+          }
+      }
+
       const sellerLng = seller.location.coordinates[0];
       const sellerLat = seller.location.coordinates[1];
       const distance = calculateDistance(
@@ -162,10 +207,11 @@ export const getSellerProfile = async (req, res) => {
 ================================ */
 export const updateSellerProfile = async (req, res) => {
   try {
-    const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius, serviceCoverage, customZones, advancePaymentPercentage } = req.body;
+    const { name, shopName, phone, address, locality, pincode, city, state, lat, lng, radius, serviceCoverage, customZones, advancePaymentPercentage, isShopActive, shopTimingsEnabled, shopOpeningTime, shopClosingTime } = req.body;
 
     // Find seller
     const seller = await Seller.findById(req.user.id);
+    import('fs').then(fs => fs.appendFileSync('update.log', JSON.stringify(req.body) + '\n'));
     if (!seller) {
       return handleResponse(res, 404, "Seller not found");
     }
@@ -223,6 +269,9 @@ export const updateSellerProfile = async (req, res) => {
     if (advancePaymentPercentage !== undefined) seller.advancePaymentPercentage = Number(advancePaymentPercentage);
     if (req.body.minGuestCapacity !== undefined) seller.minGuestCapacity = Number(req.body.minGuestCapacity);
     if (req.body.maxGuestCapacity !== undefined) seller.maxGuestCapacity = Number(req.body.maxGuestCapacity);
+    if (req.body.totalCapacity !== undefined) seller.totalCapacity = Number(req.body.totalCapacity);
+    if (req.body.bookingType !== undefined) seller.bookingType = req.body.bookingType;
+    if (req.body.numberOfShops !== undefined) seller.numberOfShops = Number(req.body.numberOfShops);
 
     if (req.body.addonDecorationEnabled !== undefined) seller.addonDecorationEnabled = req.body.addonDecorationEnabled === 'true' || req.body.addonDecorationEnabled === true;
     if (req.body.addonDecorationPrice !== undefined) seller.addonDecorationPrice = Number(req.body.addonDecorationPrice);
@@ -232,6 +281,12 @@ export const updateSellerProfile = async (req, res) => {
     if (req.body.addonCateringPrice !== undefined) seller.addonCateringPrice = Number(req.body.addonCateringPrice);
     if (req.body.physicalPaymentEnabled !== undefined) seller.physicalPaymentEnabled = req.body.physicalPaymentEnabled === 'true' || req.body.physicalPaymentEnabled === true;
     if (req.body.paymentQrCode !== undefined) seller.paymentQrCode = req.body.paymentQrCode;
+
+    // Shop Operation Settings
+    if (isShopActive !== undefined) seller.isShopActive = isShopActive === 'true' || isShopActive === true;
+    if (shopTimingsEnabled !== undefined) seller.shopTimingsEnabled = shopTimingsEnabled === 'true' || shopTimingsEnabled === true;
+    if (shopOpeningTime !== undefined) seller.shopOpeningTime = shopOpeningTime;
+    if (shopClosingTime !== undefined) seller.shopClosingTime = shopClosingTime;
 
     if (serviceCoverage !== undefined) {
       if (typeof serviceCoverage === "string") {

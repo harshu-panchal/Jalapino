@@ -906,7 +906,7 @@ const PendingSellers = () => {
                                                     />
 
                                                     <PermissionToggle
-                                                        label="Advance Booking System"
+                                                        label="Advance Payment System"
                                                         description="Allow seller to manage advance bookings and status"
                                                         checked={permissions.advanceBookingEnabled}
                                                         activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"

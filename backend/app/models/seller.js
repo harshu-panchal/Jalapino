@@ -136,6 +136,16 @@ const sellerSchema = new mongoose.Schema(
       trim: true,
     },
 
+    adminRemark: {
+      type: String,
+      trim: true,
+    },
+
+    adminTerms: {
+      type: String,
+      trim: true,
+    },
+
     isActive: {
       type: Boolean,
       default: false,
@@ -209,10 +219,38 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 500
     },
+    numberOfShops: {
+      type: Number,
+      default: 1
+    },
     businessTimings: {
       start: { type: String, default: "09:00" },
       end: { type: String, default: "22:00" }
     },
+    isShopActive: {
+      type: Boolean,
+      default: true
+    },
+    shopTimingsEnabled: {
+      type: Boolean,
+      default: false
+    },
+    shopOpeningTime: {
+      type: String,
+      default: "09:00 AM"
+    },
+    shopClosingTime: {
+      type: String,
+      default: "09:00 PM"
+    },
+    addonDecorationEnabled: { type: Boolean, default: false },
+    addonDecorationPrice: { type: Number, default: 0 },
+    addonBridalEnabled: { type: Boolean, default: false },
+    addonBridalPrice: { type: Number, default: 0 },
+    addonCateringEnabled: { type: Boolean, default: false },
+    addonCateringPrice: { type: Number, default: 0 },
+    physicalPaymentEnabled: { type: Boolean, default: false },
+    paymentQrCode: { type: String, trim: true },
     emergencyBookingAvailable: {
       type: Boolean,
       default: false
@@ -262,6 +300,12 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    wholesaleEnabled: { type: Boolean, default: false },
+    productsEnabled: { type: Boolean, default: true },
+    stockEnabled: { type: Boolean, default: true },
+    ordersEnabled: { type: Boolean, default: true },
+    walletEnabled: { type: Boolean, default: true },
+    analyticsEnabled: { type: Boolean, default: true },
     planMyEventEnabled: {
       type: Boolean,
       default: false

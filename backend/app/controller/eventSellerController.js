@@ -21,6 +21,7 @@ export const searchEventSellers = async (req, res) => {
     // 1. Base query: active event sellers with the matching service categories
     const query = {
       isEventSeller: true,
+      isShopActive: { $ne: false },
       $or: [
         { sellerStatus: 'active', sellerVerificationStatus: 'verified' },
         { isActive: true, isVerified: true }
@@ -38,11 +39,13 @@ export const searchEventSellers = async (req, res) => {
 
     // Apply location filtering if provided
     if (location) {
+      const parts = location.split(',').map(p => p.trim()).filter(Boolean);
+      const regexes = parts.map(p => new RegExp(p, "i"));
       query.$and = [
         {
           $or: [
-            { city: { $regex: new RegExp(location, "i") } },
-            { "customZones.city": { $regex: new RegExp(location, "i") } }
+            { city: { $in: regexes } },
+            { "customZones.city": { $in: regexes } }
           ]
         }
       ];

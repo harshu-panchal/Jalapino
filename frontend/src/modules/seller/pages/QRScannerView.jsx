@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Html5Qrcode } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
@@ -14,18 +15,60 @@ const QRScannerView = () => {
     const [scanResult, setScanResult] = useState(null); // { success: boolean, checkedIn: boolean, message: string, ticket: object }
     const [isLoading, setIsLoading] = useState(false);
     const [isCheckingIn, setIsCheckingIn] = useState(false);
+    const [isScannerReady, setIsScannerReady] = useState(false);
 
-    const handleVerify = async (e) => {
-        e.preventDefault();
-        if (!qrInput.trim()) {
-            toast.error("Please enter a valid QR token or ticket ID.");
-            return;
-        }
+    const html5QrCodeRef = useRef(null);
 
+    useEffect(() => {
+        let isMounted = true;
+        
+        const startScanner = async () => {
+            if (!scanResult && !isLoading) {
+                try {
+                    const html5QrCode = new Html5Qrcode("reader");
+                    html5QrCodeRef.current = html5QrCode;
+                    
+                    await html5QrCode.start(
+                        { facingMode: "environment" }, // back camera
+                        { fps: 10 }, // removed qrbox to remove the ugly black overlay
+                        (decodedText) => {
+                            if (decodedText && decodedText.trim() !== '') {
+                                setQrInput(decodedText.trim());
+                                // Stop scanning
+                                if (html5QrCodeRef.current?.isScanning) {
+                                    html5QrCodeRef.current.stop().then(() => {
+                                        verifyTokenDirect(decodedText.trim());
+                                    }).catch(err => console.error(err));
+                                }
+                            }
+                        },
+                        (errorMessage) => {
+                            // ignored
+                        }
+                    );
+                    
+                    if (isMounted) setIsScannerReady(true);
+                } catch (err) {
+                    console.warn("Camera could not be started", err);
+                }
+            }
+        };
+
+        startScanner();
+
+        return () => {
+            isMounted = false;
+            if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
+                html5QrCodeRef.current.stop().catch(err => console.error("Failed to stop scanner", err));
+            }
+        };
+    }, [scanResult, isLoading]);
+
+    const verifyTokenDirect = async (token) => {
         setIsLoading(true);
         setScanResult(null);
         try {
-            const res = await generalBookingApi.scanTicket({ secureQrToken: qrInput.trim(), confirm: false });
+            const res = await generalBookingApi.scanTicket({ secureQrToken: token, confirm: false });
             setScanResult({
                 success: true,
                 checkedIn: false,
@@ -43,6 +86,15 @@ const QRScannerView = () => {
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleVerify = async (e) => {
+        e.preventDefault();
+        if (!qrInput.trim()) {
+            toast.error("Please enter a valid QR token or ticket ID.");
+            return;
+        }
+        verifyTokenDirect(qrInput.trim());
     };
 
     const handleConfirmCheckIn = async () => {
@@ -79,27 +131,38 @@ const QRScannerView = () => {
             </div>
 
             <div className="max-w-md mx-auto w-full px-4 py-6 flex flex-col space-y-6">
-                {/* Visual Scanner Frame Mock */}
-                <div className="relative border-4 border-dashed border-purple-500/40 rounded-3xl p-6 bg-slate-950/50 shadow-2xl flex flex-col items-center justify-center text-center w-full min-h-[16rem] sm:min-h-[18rem] h-auto mx-auto py-8">
+                {/* Visual Scanner Frame */}
+                <div className="relative border-4 border-dashed border-purple-500/40 rounded-3xl bg-slate-950/50 shadow-2xl flex flex-col items-center justify-center text-center w-full min-h-[16rem] sm:min-h-[18rem] h-auto mx-auto overflow-hidden p-0">
                     <div className="absolute inset-0 bg-gradient-to-t from-purple-900/10 to-transparent pointer-events-none"></div>
                     
                     <AnimatePresence mode="wait">
-                        {!scanResult && !isLoading && (
-                            <motion.div 
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                className="space-y-4"
-                            >
-                                <QrCodeScannerIcon className="text-purple-400" sx={{ fontSize: 80 }} />
-                                <div>
-                                    <h3 className="text-lg font-black">Scan Ticket QR</h3>
-                                    <p className="text-xs text-slate-400 max-w-xs mt-1">
-                                        Enter the secure QR token below to verify the customer ticket in real time.
-                                    </p>
+                        <div 
+                            style={{ display: (!scanResult && !isLoading) ? 'block' : 'none' }}
+                            className="w-full h-full min-h-[16rem] rounded-2xl overflow-hidden relative shadow-inner bg-black"
+                        >
+                            {/* Native App Scanner Overlay */}
+                            <div className="absolute inset-0 pointer-events-none z-20 flex items-center justify-center">
+                                {/* Scanner Target Box */}
+                                <div className="w-[200px] h-[200px] border-2 border-white/20 rounded-xl relative overflow-hidden">
+                                    {/* Corner Accents */}
+                                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-purple-500 rounded-tl-lg"></div>
+                                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-purple-500 rounded-tr-lg"></div>
+                                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-purple-500 rounded-bl-lg"></div>
+                                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-purple-500 rounded-br-lg"></div>
+                                    
+                                    {/* Animated Scan Line */}
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-purple-500 shadow-[0_0_15px_3px_rgba(168,85,247,0.8)] animate-[scan_2s_ease-in-out_infinite]"></div>
                                 </div>
-                            </motion.div>
-                        )}
+                            </div>
+
+                            {!isScannerReady && !scanResult && !isLoading && (
+                                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10 text-slate-400">
+                                    <QrCodeScannerIcon sx={{ fontSize: 60 }} className="mb-2 opacity-50 animate-pulse" />
+                                    <p className="text-xs font-bold uppercase tracking-wider">Starting Camera...</p>
+                                </div>
+                            )}
+                            <div id="reader" className="w-full h-full text-slate-800 [&_video]:object-cover [&_video]:w-full [&_video]:h-full [&_video]:absolute [&_video]:inset-0" style={{ border: 'none' }}></div>
+                        </div>
 
                         {isLoading && (
                             <motion.div 

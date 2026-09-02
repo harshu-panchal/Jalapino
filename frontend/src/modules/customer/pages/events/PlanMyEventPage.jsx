@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useJsApiLoader } from '@react-google-maps/api';
 import SearchIcon from '@mui/icons-material/Search';
 import StorefrontIcon from '@mui/icons-material/Storefront';
 import CircularProgress from '@mui/material/CircularProgress';
@@ -13,7 +14,7 @@ import { resolveImageUrl } from '@/core/utils/imageUtils';
 import axiosInstance from '@core/api/axios';
 import { useAuth } from '@core/context/AuthContext';
 import { customerApi } from '../../services/customerApi';
-
+import { useLocation as useAppLocation } from '../../context/LocationContext';
 /* ── category color map (same as EventCategoriesPage) ── */
 const getCategoryStyle = (name = '') => {
     const lower = name.toLowerCase();
@@ -191,10 +192,22 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
 /* ════════════════════════════════════════════════
    MAIN PAGE
 ════════════════════════════════════════════════ */
+const libraries = ['places'];
+
 const PlanMyEventPage = () => {
     const navigate = useNavigate();
     const { user: authUser, isAuthenticated } = useAuth();
+    const { currentLocation } = useAppLocation();
+    
+    const { isLoaded } = useJsApiLoader({
+        id: "google-map-script",
+        googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || "",
+        libraries,
+    });
+
     const saveTimerRef = useRef(null);
+    const locationInputRef = useRef(null);
+    const autocompleteRef = useRef(null);
 
     /* — event info form (name / gender / dob / functionLocation) — */
     const [eventInfo, setEventInfo] = useState({
@@ -249,6 +262,57 @@ const PlanMyEventPage = () => {
     /* — banners — */
     const [banners,           setBanners]           = useState([]);
     const [currentBannerIdx,  setCurrentBannerIdx]  = useState(0);
+
+    /* ── auto-fill functionLocation from global location if empty ── */
+    const hasAutoFilledLocation = useRef(false);
+    useEffect(() => {
+        if (currentLocation?.name && !eventInfo.functionLocation && !hasAutoFilledLocation.current) {
+            setEventInfo(prev => ({ ...prev, functionLocation: currentLocation.name }));
+            hasAutoFilledLocation.current = true;
+        }
+    }, [currentLocation?.name, eventInfo.functionLocation]);
+
+    /* ── initialize google maps autocomplete for function location ── */
+    useEffect(() => {
+        if (!isLoaded || !locationInputRef.current) return;
+        if (autocompleteRef.current) return;
+
+        if (window.google?.maps?.places) {
+            const autocomplete = new window.google.maps.places.Autocomplete(locationInputRef.current, {
+                fields: ["formatted_address", "name"]
+            });
+            autocompleteRef.current = autocomplete;
+            
+            autocomplete.addListener("place_changed", () => {
+                const place = autocomplete.getPlace();
+                const address = place.formatted_address || place.name;
+                if (address) {
+                    // Directly update state and trigger save
+                    setEventInfo(prev => ({ ...prev, functionLocation: address }));
+                    setSavedInfo(false);
+                    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+                    saveTimerRef.current = setTimeout(async () => {
+                        try {
+                            setSavingInfo(true);
+                            await customerApi.updateProfile({ functionLocation: address });
+                            setSavedInfo(true);
+                        } catch (err) {
+                            console.error('Failed to save functionLocation', err);
+                        } finally {
+                            setSavingInfo(false);
+                        }
+                    }, 800);
+                }
+            });
+        }
+
+        return () => {
+            if (autocompleteRef.current) {
+                window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+                autocompleteRef.current = null;
+            }
+        };
+    }, [isLoaded]);
 
     /* ── load event info from customer profile ── */
     useEffect(() => {
@@ -391,7 +455,7 @@ const PlanMyEventPage = () => {
 
     /* ── filtered sellers (by global search & smart filtering) ── */
     let smartFilteredSellers = sellers.filter(s => {
-        if (s.isShopActive === false) return false;
+        if (String(s.isShopActive) === 'false') return false;
 
         // Check Demo Trial Expiry
         if (s.demoTrialEnabled && s.demoStartDate) {
@@ -457,7 +521,7 @@ const PlanMyEventPage = () => {
                     setSelectedSellerDetail(null);
                 }}
             />
-            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
+            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
             <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden w-full">
                 {/* ══════════════ LEFT SIDEBAR ══════════════ */}
                 <div className="w-full lg:w-72 xl:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col shrink-0 shadow-sm z-10 lg:max-h-full">
@@ -853,6 +917,7 @@ const PlanMyEventPage = () => {
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
                                             <input
+                                                ref={locationInputRef}
                                                 type="text"
                                                 value={eventInfo.functionLocation}
                                                 onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
@@ -870,6 +935,14 @@ const PlanMyEventPage = () => {
                                     embeddedState={embeddedState}
                                     onBack={() => setSelectedSellerDetail(null)}
                                 />
+                            </div>
+                        ) : !activeCategory ? (
+                            <div className="px-5 pt-20 pb-8 flex flex-col items-center justify-center text-center">
+                                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-4 border border-amber-100 shadow-sm">
+                                    <StorefrontIcon sx={{ color: '#d97706', fontSize: 40 }} />
+                                </div>
+                                <h3 className="text-xl font-black text-slate-700 mb-2">Select a Category</h3>
+                                <p className="text-slate-500 text-sm max-w-sm">Please select a category from the sidebar to view available service providers for your event.</p>
                             </div>
                         ) : (
                             <div className="px-5 pt-3 pb-8">

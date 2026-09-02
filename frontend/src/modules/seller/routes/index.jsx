@@ -140,6 +140,10 @@ const SellerRoutes = () => {
     activeNavItems = activeNavItems.filter(item => !['Video Plans'].includes(item.label));
   }
 
+  if (user?.bookingSlotsEnabled !== true) {
+    activeNavItems = activeNavItems.filter(item => !['Physical Visits'].includes(item.label));
+  }
+
   if (hasRetailAccess) {
     if (user?.productsEnabled === false) {
       activeNavItems = activeNavItems.filter(item => !['Products'].includes(item.label));
