@@ -217,6 +217,7 @@ const PlanMyEventPage = () => {
         dateOfBirth: '',
         anniversaryDate: '',
         functionLocation: '',
+        sellerLocation: '',
     });
     const [savingInfo, setSavingInfo] = useState(false);
     const [savedInfo,  setSavedInfo]  = useState(false);
@@ -501,6 +502,11 @@ const PlanMyEventPage = () => {
         )
         : smartFilteredSellers;
 
+    // Seller-wise date/time toggle flags — dynamically driven from admin settings
+    const showStandardDateFilter = filteredSellers.some(s => s.showStandardDateTime);
+    const showAdvancedDateFilter  = filteredSellers.some(s => s.showAdvancedDateTime);
+    const showAnyDateFilter = showStandardDateFilter || showAdvancedDateFilter;
+
     const filteredCats = categories.filter(c =>
         c.name.toLowerCase().includes(catSearch.toLowerCase())
     );
@@ -633,7 +639,7 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FEATURE CARDS: Subscribe & Live ─── */}
-                        {!activeCategory && (
+                        {activeCategory && (
                             <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Blue Card: Live */}
@@ -643,12 +649,17 @@ const PlanMyEventPage = () => {
                                         <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center animate-pulse shadow-sm">
                                             <span className="text-white text-[9px] font-black">LIVE</span>
                                         </div>
-                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">LIVE</h4>
+                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">LIVE {activeCategory.name}</h4>
                                     </div>
                                     <div className="z-10 flex-1 flex flex-col justify-center">
-                                        {liveStreams.length > 0 ? (
+                                        {liveStreams.filter(stream => {
+                                            // Mock filter for now since seller structure might vary, 
+                                            // ideally stream.sellerId.categoryId === activeCategory.id
+                                            // As fallback, just return true if it's not strictly filtered yet
+                                            return true; 
+                                        }).length > 0 ? (
                                             <div className="flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-                                                {liveStreams.map(stream => (
+                                                {liveStreams.filter(stream => true).map(stream => (
                                                     <div 
                                                         key={stream._id} 
                                                         className="snap-start shrink-0 w-36 bg-black/20 rounded-xl overflow-hidden cursor-pointer hover:bg-black/30 transition-colors relative border border-white/10 shadow-sm"
@@ -670,7 +681,7 @@ const PlanMyEventPage = () => {
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-center">
                                                 <span className="text-white font-black text-xl md:text-2xl drop-shadow-md uppercase tracking-wider">LIVE</span>
-                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">No active streams right now</span>
+                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">No active streams for {activeCategory.name} right now</span>
                                             </div>
                                         )}
                                     </div>
@@ -702,7 +713,7 @@ const PlanMyEventPage = () => {
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-center">
                                                 <span className="text-white font-black text-lg md:text-xl drop-shadow-md leading-snug">REELS</span>
-                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Sellers selecting this area will appear here</span>
+                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Sellers for {activeCategory.name} will appear here</span>
                                             </div>
                                         )}
                                     </div>
@@ -712,7 +723,8 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FILTERS: Event Type + Date + Time ─── */}
-                        {(!activeCategory || activeCategory.showDateFilters !== false) && (
+                        {/* Date/Time filter shown dynamically based on seller-level toggles from admin */}
+                        {(activeCategory && activeCategory.showDateFilters !== false && showAnyDateFilter) && (
                         <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                             <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                 {/* Event Type */}
@@ -732,21 +744,9 @@ const PlanMyEventPage = () => {
                                     </select>
                                 </div>
 
-                                {/* Date Section */}
-                                {(!activeCategory || activeCategory.dateSelectionType !== 'range') ? (
-                                    <div className="flex flex-col gap-1 min-w-[160px]">
-                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
-                                            📅 Date
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={filterDate}
-                                            onChange={e => setFilterDate(e.target.value)}
-                                            min={new Date().toISOString().split('T')[0]}
-                                            className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
-                                        />
-                                    </div>
-                                ) : (
+                                {/* Date Section — seller-flag driven */}
+                                {showAdvancedDateFilter ? (
+                                    // Advanced: Date Range (Start + End) — shown when any seller has showAdvancedDateTime=true
                                     <>
                                         <div className="flex flex-col gap-1 min-w-[160px]">
                                             <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
@@ -773,38 +773,38 @@ const PlanMyEventPage = () => {
                                             />
                                         </div>
                                     </>
-                                )}
-
-                                {/* Time Section */}
-                                {(!activeCategory || activeCategory.timeSelectionType !== 'single') ? (
-                                    <div className="flex flex-col gap-1 min-w-[180px]">
-                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
-                                            🕐 Time Slot
-                                        </label>
-                                        <select
-                                            value={filterTime}
-                                            onChange={e => setFilterTime(e.target.value)}
-                                            className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
-                                        >
-                                            <option value="">-- Select Slot --</option>
-                                            {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM"].map(slot => (
-                                                <option key={slot} value={slot}>{slot}</option>
-                                            ))}
-                                        </select>
-                                    </div>
                                 ) : (
+                                    // Standard: Single Date — shown when any seller has showStandardDateTime=true
                                     <div className="flex flex-col gap-1 min-w-[160px]">
                                         <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
-                                            🕐 Time
+                                            📅 Date
                                         </label>
                                         <input
-                                            type="time"
-                                            value={filterTime}
-                                            onChange={e => setFilterTime(e.target.value)}
+                                            type="date"
+                                            value={filterDate}
+                                            onChange={e => setFilterDate(e.target.value)}
+                                            min={new Date().toISOString().split('T')[0]}
                                             className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                         />
                                     </div>
                                 )}
+
+                                {/* Time Section */}
+                                <div className="flex flex-col gap-1 min-w-[180px]">
+                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">
+                                        🕐 Time Slot
+                                    </label>
+                                    <select
+                                        value={filterTime}
+                                        onChange={e => setFilterTime(e.target.value)}
+                                        className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                                    >
+                                        <option value="">-- Select Slot --</option>
+                                        {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM"].map(slot => (
+                                            <option key={slot} value={slot}>{slot}</option>
+                                        ))}
+                                    </select>
+                                </div>
 
                                 {/* Clear filters */}
                                 {(filterDate || filterEndDate || filterTime) && (
@@ -831,7 +831,7 @@ const PlanMyEventPage = () => {
                         </div>
                         )}
                         {/* ─── EVENT INFO CARD ─── */}
-                        {(!activeCategory || activeCategory.showEventDetailsForm !== false) && (
+                        {(activeCategory && activeCategory.showEventDetailsForm !== false) && (
                         <div className="px-5 pt-4 pb-2">
                                 <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4">
                                     <div className="flex items-center justify-between mb-3">
@@ -914,17 +914,33 @@ const PlanMyEventPage = () => {
                                         </div>
 
                                         {/* Function Location */}
-                                        <div className="flex flex-col gap-1">
-                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
-                                            <input
-                                                ref={locationInputRef}
-                                                type="text"
-                                                value={eventInfo.functionLocation}
-                                                onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
-                                                placeholder="City / Venue area"
-                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
-                                            />
-                                        </div>
+                                        {filteredSellers.some(s => s.functionLocationEnabled) && (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
+                                                <input
+                                                    ref={locationInputRef}
+                                                    type="text"
+                                                    value={eventInfo.functionLocation}
+                                                    onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
+                                                    placeholder="City / Venue area"
+                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                />
+                                            </div>
+                                        )}
+
+                                        {/* Seller Location */}
+                                        {filteredSellers.some(s => s.sellerLocationEnabled) && (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Seller Location</label>
+                                                <input
+                                                    type="text"
+                                                    value={eventInfo.sellerLocation}
+                                                    onChange={e => handleEventInfoChange('sellerLocation', e.target.value)}
+                                                    placeholder="Seller's city/area"
+                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>

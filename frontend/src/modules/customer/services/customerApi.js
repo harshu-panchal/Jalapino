@@ -21,6 +21,7 @@ export const customerApi = {
 
   // Sellers & Location
   getNearbySellers: (params) => getWithDedupe("/seller/nearby", params),
+  getActiveLiveSellers: () => axiosInstance.get("/live/active"),
 
   // Custom Image Requests
   uploadCustomerImage: (data) => axiosInstance.post("/customer-images/upload", data),

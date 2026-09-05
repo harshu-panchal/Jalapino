@@ -302,6 +302,7 @@ const Home = () => {
   const [offerSections, setOfferSections] = useState(() => cachedHomePageData?.offerSections || []);
   const [noServiceData, setNoServiceData] = useState(null);
   const [homeVideos, setHomeVideos] = useState([]);
+  const [liveSellers, setLiveSellers] = useState([]);
 
   useEffect(() => {
     const fetchVideos = async () => {
@@ -315,6 +316,21 @@ const Home = () => {
       }
     };
     fetchVideos();
+  }, []);
+
+  // Fetch active live sellers and refresh every 30s
+  useEffect(() => {
+    const fetchLive = async () => {
+      try {
+        const res = await customerApi.getActiveLiveSellers();
+        setLiveSellers(res.data?.data || []);
+      } catch (e) {
+        // silently ignore if no live sellers
+      }
+    };
+    fetchLive();
+    const interval = setInterval(fetchLive, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleVideoClick = (item) => {
@@ -582,6 +598,40 @@ const Home = () => {
             <div ref={categoriesRef}>
             <QuickCategorySlider categories={effectiveQuickCategories} onCategoryClick={(id) => navigate(`/category/${id}`)} isScrolled={isScrolled && !categoriesVisible} />
           </div>
+
+          {/* 🔴 Live Now Section */}
+          {liveSellers.length > 0 && (
+            <div className="w-full max-w-7xl mx-auto px-4 md:px-8 lg:px-[50px] mb-6">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                </span>
+                <h2 className="text-lg md:text-xl font-black text-slate-800 uppercase tracking-wide">Live Now</h2>
+                <span className="text-xs font-bold bg-red-100 text-red-600 px-2 py-0.5 rounded-full">{liveSellers.length} Live</span>
+              </div>
+              <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x">
+                {liveSellers.map((seller) => (
+                  <motion.div
+                    key={seller._id}
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => navigate(`/live/${seller._id}`)}
+                    className="relative shrink-0 w-[140px] cursor-pointer snap-start"
+                  >
+                    <div className="w-full aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-red-500 to-pink-600 flex items-center justify-center shadow-lg shadow-red-500/20 border-2 border-red-400">
+                      <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      <div className="absolute top-2 left-2 bg-red-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full animate-pulse">🔴 LIVE</div>
+                    </div>
+                    <p className="mt-2 text-xs font-bold text-slate-700 text-center truncate">{seller.shopName || seller.name}</p>
+                    <p className="text-[10px] text-slate-500 text-center truncate">{seller.liveStreaming?.title || 'Live Stream'}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Promotional Videos Section */}
           {homeVideos.length > 0 && (

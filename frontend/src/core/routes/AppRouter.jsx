@@ -48,6 +48,7 @@ const PaymentStatusPage = lazy(() => import('../../modules/customer/pages/Paymen
 const SearchPage = lazy(() => import('../../modules/customer/pages/SearchPage'));
 const WalletPage = lazy(() => import('../../modules/customer/pages/WalletPage'));
 const ReelsPage = lazy(() => import('../../modules/customer/pages/ReelsPage'));
+const WatchLive = lazy(() => import('../../modules/customer/pages/WatchLive'));
 const SpinWinPage = lazy(() => import('../../modules/customer/pages/SpinWinPage'));
 const ReferEarnPage = lazy(() => import('../../modules/customer/pages/ReferEarnPage'));
 const CateringPage = lazy(() => import('../../modules/customer/pages/CateringPage'));
@@ -209,6 +210,11 @@ const AppRouter = () => {
                         { path: 'refer-earn', element: <ProtectedRoute><ReferEarnPage /></ProtectedRoute> },
                         { path: 'catering', element: <CateringPage /> },
                     ]
+                },
+                {
+                    // WatchLive OUTSIDE CustomerLayout for true full-screen
+                    path: 'live/:sellerId',
+                    element: <WatchLive />,
                 },
                 {
                     path: '*',

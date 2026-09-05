@@ -70,7 +70,11 @@ export const sellerApi = {
     getEventRequests: () => axiosInstance.get('/seller/event-requests'),
     updateEventRequestStatus: (id, data) => axiosInstance.put(`/seller/event-requests/${id}/status`, data),
 
-    // Live Kitchen
+    // Live Streaming
+    startLiveStream: (data) => axiosInstance.post('/live/start', data),
+    endLiveStream: () => axiosInstance.post('/live/end'),
+
+    // Live Kitchen (Legacy)
     updateLiveStreamUrl: (orderId, streamUrl) => axiosInstance.post('/kitchen/stream', { orderId, streamUrl }),
     uploadLiveStreamVideo: (formData) => axiosInstance.post('/kitchen/stream/upload', formData, {
         headers: {

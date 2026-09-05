@@ -1,280 +1,172 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { HiOutlineVideoCamera, HiVideoCamera, HiStop, HiArrowUpTray, HiOutlineLink } from 'react-icons/hi2';
+import React, { useState, useEffect, useRef } from 'react';
+import { ZegoUIKitPrebuilt } from '@zegocloud/zego-uikit-prebuilt';
 import { sellerApi } from '../services/sellerApi';
 import { toast } from 'sonner';
 
+// ZegoCloud credentials
+const ZEGO_APP_ID = 1732820129;
+const ZEGO_SERVER_SECRET = "40d2982f470a4fd09949979efbadc1be";
+
 const LiveStream = () => {
-    const [liveStreamUrl, setLiveStreamUrl] = useState("");
-    const [isLoading, setIsLoading] = useState(false);
-    
-    // Camera Recording States
-    const [activeTab, setActiveTab] = useState('youtube'); // 'youtube' or 'camera'
-    const [isRecording, setIsRecording] = useState(false);
-    const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
-    const [recordedBlob, setRecordedBlob] = useState(null);
-    
-    const videoRef = useRef(null);
-    const mediaRecorderRef = useRef(null);
-    const chunksRef = useRef([]);
+    const [seller, setSeller] = useState(null);
+    const [isLive, setIsLive] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const containerRef = useRef(null);
+    const zegoInitialized = useRef(false);
+    const zpRef = useRef(null);
 
-    // Stop camera when unmounting or switching tabs
+    // Step 1: Fetch Seller Profile
     useEffect(() => {
-        return () => stopCamera();
-    }, [activeTab]);
-
-    const startCamera = async () => {
-        try {
-            let stream;
+        const fetchSeller = async () => {
             try {
-                // Try with audio first
-                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            } catch (err) {
-                // If it fails (likely due to missing microphone), try video only
-                console.warn("Could not get audio track, trying video only...", err);
-                stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
-                toast.info("Microphone not found. Recording video only.");
+                const res = await sellerApi.getProfile();
+                if (res.data?.success) {
+                    setSeller(res.data.result);
+                }
+            } catch (error) {
+                console.error("Failed to fetch seller profile:", error);
+                toast.error("Failed to load seller information.");
+            } finally {
+                setIsLoading(false);
             }
-            
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-            }
-            setRecordedVideoUrl(null);
-            setRecordedBlob(null);
-        } catch (error) {
-            console.error("Camera access error:", error);
-            toast.error("Could not access camera.");
-        }
-    };
-
-    const stopCamera = () => {
-        if (videoRef.current && videoRef.current.srcObject) {
-            videoRef.current.srcObject.getTracks().forEach(track => track.stop());
-            videoRef.current.srcObject = null;
-        }
-    };
-
-    const startRecording = () => {
-        if (!videoRef.current || !videoRef.current.srcObject) return;
-        chunksRef.current = [];
-        const stream = videoRef.current.srcObject;
-        const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
-        
-        mediaRecorder.ondataavailable = (event) => {
-            if (event.data.size > 0) chunksRef.current.push(event.data);
         };
-        
-        mediaRecorder.onstop = () => {
-            const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-            setRecordedBlob(blob);
-            const url = URL.createObjectURL(blob);
-            setRecordedVideoUrl(url);
-            stopCamera();
-        };
-        
-        mediaRecorderRef.current = mediaRecorder;
-        mediaRecorder.start();
-        setIsRecording(true);
-    };
+        fetchSeller();
+    }, []);
 
-    const stopRecording = () => {
-        if (mediaRecorderRef.current && isRecording) {
-            mediaRecorderRef.current.stop();
-            setIsRecording(false);
-        }
-    };
+    // Step 2: Start ZegoCloud AFTER seller data loaded + Go Live button clicked
+    const startZegoLive = async () => {
+        if (!seller || !containerRef.current || zegoInitialized.current) return;
 
-    const handleCameraUpload = async () => {
-        if (!recordedBlob) return;
-        setIsLoading(true);
         try {
-            const formData = new FormData();
-            formData.append('video', recordedBlob, 'livestream.webm');
-            const res = await sellerApi.uploadLiveStreamVideo(formData);
-            if (res.data.success) {
-                toast.success('Recorded Live Stream published successfully!');
+            const roomID = `room_${seller._id}`;
+
+            // Mark seller as live in backend DB
+            await sellerApi.startLiveStream({
+                roomId: roomID,
+                title: `${seller.shopName || seller.name}'s Live Show`
+            });
+
+            zegoInitialized.current = true;
+            setIsLive(true);
+
+            // Validate credentials
+            if (!ZEGO_APP_ID || !ZEGO_SERVER_SECRET) {
+                toast.error("ZegoCloud credentials missing.");
+                zegoInitialized.current = false;
+                setIsLive(false);
+                await sellerApi.endLiveStream();
+                return;
             }
+
+            const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
+                ZEGO_APP_ID,
+                ZEGO_SERVER_SECRET,
+                roomID,
+                seller._id,
+                seller.name || 'Seller'
+            );
+
+            const zp = ZegoUIKitPrebuilt.create(kitToken);
+            zpRef.current = zp;
+
+            zp.joinRoom({
+                container: containerRef.current,
+                scenario: {
+                    mode: ZegoUIKitPrebuilt.LiveStreaming,
+                    config: {
+                        role: ZegoUIKitPrebuilt.Host,
+                    },
+                },
+                showPreJoinView: false,
+                turnOnCameraWhenJoining: true,
+                turnOnMicrophoneWhenJoining: true,
+                onLeaveRoom: async () => {
+                    await handleStopLive();
+                }
+            });
+
+            toast.success("You are now LIVE!");
+
         } catch (error) {
-            console.error("Live Stream Upload Error:", error);
-            toast.error(error.response?.data?.message || 'Failed to upload recorded stream');
-        } finally {
-            setIsLoading(false);
+            zegoInitialized.current = false;
+            setIsLive(false);
+            console.error("ZegoCloud Error:", error);
+            toast.error("Failed to start live stream. Please try again.");
         }
     };
 
-    const handleStreamSubmit = async () => {
-        if (!liveStreamUrl) return;
-        setIsLoading(true);
+    const handleStopLive = async () => {
         try {
-            const res = await sellerApi.updateLiveStreamUrl(null, liveStreamUrl);
-            if (res.data.success) {
-                toast.success('Live Stream published to User Reels successfully!');
+            if (zpRef.current) {
+                try { zpRef.current.destroy(); } catch (e) { /* ignore */ }
+                zpRef.current = null;
             }
+            zegoInitialized.current = false;
+            await sellerApi.endLiveStream();
+            setIsLive(false);
+            toast.success("Live Stream Ended");
         } catch (error) {
-            console.error("Live Stream Upload Error:", error);
-            toast.error(error.response?.data?.message || 'Failed to update Live Stream');
-        } finally {
-            setIsLoading(false);
+            console.error("Failed to end live stream:", error);
         }
     };
 
-    const handleStopStream = async () => {
-        setIsLoading(true);
-        try {
-            const res = await sellerApi.updateLiveStreamUrl(null, "");
-            if (res.data.success) {
-                setLiveStreamUrl("");
-                toast.success('Live Stream stopped successfully!');
-            }
-        } catch (error) {
-            console.error("Live Stream Stop Error:", error);
-            toast.error(error.response?.data?.message || 'Failed to stop Live Stream');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+    if (isLoading) {
+        return <div className="p-8 text-center text-slate-500">Loading live streaming setup...</div>;
+    }
 
     return (
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className="max-w-6xl mx-auto space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 md:p-8">
-                <div className="flex items-center gap-3 mb-6">
-                    <div className="w-12 h-12 rounded-xl bg-red-50 text-red-500 flex items-center justify-center relative">
-                        <HiOutlineVideoCamera className="w-6 h-6" />
-                        <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse border-2 border-white"></span>
-                    </div>
+                <div className="flex items-center justify-between mb-6 border-b border-slate-100 pb-6">
                     <div>
-                        <h2 className="text-xl font-black text-slate-900 tracking-tight">Go Live</h2>
-                        <p className="text-sm text-slate-500 font-medium">Broadcast directly to the customer app Reels feed</p>
+                        <h2 className="text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
+                            <span className="relative flex h-4 w-4">
+                                <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isLive ? 'bg-red-400' : 'bg-slate-400'}`}></span>
+                                <span className={`relative inline-flex rounded-full h-4 w-4 ${isLive ? 'bg-red-500' : 'bg-slate-400'}`}></span>
+                            </span>
+                            {isLive ? '🔴 You are Live!' : 'Live Commerce Dashboard'}
+                        </h2>
+                        <p className="text-sm text-slate-500 font-medium mt-1">
+                            {isLive ? 'Customers can watch your stream now' : 'Broadcast your products directly to customers'}
+                        </p>
                     </div>
+
+                    {!isLive ? (
+                        <button
+                            onClick={startZegoLive}
+                            className="px-6 py-3 bg-red-500 text-white font-bold rounded-xl hover:bg-red-600 transition-all shadow-lg shadow-red-500/20 active:scale-[0.98]"
+                        >
+                            🔴 Start Live Stream
+                        </button>
+                    ) : (
+                        <button
+                            onClick={handleStopLive}
+                            className="px-6 py-3 bg-slate-900 text-white font-bold rounded-xl hover:bg-slate-800 transition-all active:scale-[0.98]"
+                        >
+                            End Stream
+                        </button>
+                    )}
                 </div>
 
-                <div className="flex gap-4 mb-6 border-b border-slate-200">
-                    <button 
-                        onClick={() => setActiveTab('youtube')}
-                        className={`pb-3 px-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'youtube' ? 'border-red-500 text-red-500' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <span className="flex items-center gap-2"><HiOutlineLink /> YouTube URL</span>
-                    </button>
-                    <button 
-                        onClick={() => { setActiveTab('camera'); startCamera(); }}
-                        className={`pb-3 px-2 text-sm font-bold border-b-2 transition-all ${activeTab === 'camera' ? 'border-red-500 text-red-500' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-                    >
-                        <span className="flex items-center gap-2"><HiVideoCamera /> Record Camera</span>
-                    </button>
-                </div>
-
-                {activeTab === 'youtube' ? (
-                    <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-4">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                            Live Stream URL (YouTube)
-                        </label>
-                    <input 
-                        type="text" 
-                        value={liveStreamUrl}
-                        onChange={(e) => setLiveStreamUrl(e.target.value)}
-                        placeholder="e.g., https://youtube.com/live/..." 
-                        className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-500 focus:ring-4 focus:ring-red-50 transition-all bg-white"
-                    />
-                    
-                    <div className="flex gap-3 pt-4">
-                        <button 
-                            onClick={handleStreamSubmit}
-                            disabled={isLoading || !liveStreamUrl}
-                            className="flex-1 px-6 py-3 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-all disabled:opacity-50 disabled:hover:bg-red-500 shadow-lg shadow-red-500/20 active:scale-[0.98]"
-                        >
-                            {isLoading ? "Publishing..." : "Go Live Now"}
-                        </button>
-                        
-                        <button 
-                            onClick={handleStopStream}
-                            disabled={isLoading}
-                            className="px-6 py-3 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition-all disabled:opacity-50 active:scale-[0.98]"
-                        >
-                            Stop Stream
-                        </button>
-                    </div>
-                </div>
-                ) : (
-                <div className="bg-slate-50 p-6 rounded-xl border border-slate-100 space-y-4 flex flex-col items-center">
-                    <div className="relative w-full max-w-lg aspect-video bg-black rounded-xl overflow-hidden border border-slate-200 shadow-sm flex items-center justify-center">
-                        {!recordedVideoUrl ? (
-                            <video 
-                                ref={videoRef} 
-                                autoPlay 
-                                muted 
-                                playsInline 
-                                className="w-full h-full object-cover"
-                            />
-                        ) : (
-                            <video 
-                                src={recordedVideoUrl} 
-                                controls 
-                                className="w-full h-full object-cover"
-                            />
-                        )}
-                        {isRecording && (
-                            <div className="absolute top-4 right-4 flex items-center gap-2 bg-black/50 px-3 py-1.5 rounded-full">
-                                <span className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse"></span>
-                                <span className="text-white text-xs font-bold">REC</span>
+                {/* Container ALWAYS visible — overlay shown on top when not live */}
+                <div className="bg-slate-900 rounded-2xl overflow-hidden relative" style={{ minHeight: '500px' }}>
+                    {/* Camera Off Overlay */}
+                    {!isLive && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center text-center z-10 bg-slate-900 rounded-2xl">
+                            <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <svg className="w-8 h-8 text-white/50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
                             </div>
-                        )}
-                    </div>
-                    
-                    <div className="flex gap-3 pt-2 w-full max-w-lg">
-                        {!recordedVideoUrl ? (
-                            !isRecording ? (
-                                <button 
-                                    onClick={startRecording}
-                                    className="flex-1 py-3 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20"
-                                >
-                                    <HiVideoCamera className="w-5 h-5" /> Start Recording
-                                </button>
-                            ) : (
-                                <button 
-                                    onClick={stopRecording}
-                                    className="flex-1 py-3 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-                                >
-                                    <HiStop className="w-5 h-5" /> Stop Recording
-                                </button>
-                            )
-                        ) : (
-                            <>
-                                <button 
-                                    onClick={() => { startCamera(); }}
-                                    className="px-6 py-3 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition-all"
-                                >
-                                    Retake
-                                </button>
-                                <button 
-                                    onClick={handleCameraUpload}
-                                    disabled={isLoading}
-                                    className="flex-1 py-3 bg-red-500 text-white text-sm font-bold rounded-xl hover:bg-red-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-                                >
-                                    {isLoading ? "Publishing..." : <><HiArrowUpTray className="w-5 h-5" /> Upload & Publish</>}
-                                </button>
-                            </>
-                        )}
-                    </div>
-                    
-                    <div className="w-full max-w-lg pt-4 flex gap-2 border-t border-slate-200 mt-4">
-                        <button 
-                            onClick={handleStopStream}
-                            disabled={isLoading}
-                            className="w-full py-3 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-200 transition-all disabled:opacity-50"
-                        >
-                            Stop Current Stream
-                        </button>
-                    </div>
-                </div>
-                )}
-                
-                <div className="mt-8 bg-blue-50/50 rounded-xl p-5 border border-blue-100">
-                    <h4 className="text-sm font-bold text-blue-900 mb-2 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
-                        How it works
-                    </h4>
-                    <p className="text-sm text-blue-800/80 leading-relaxed font-medium">
-                        When you paste a YouTube Live link and click "Go Live Now", your stream will instantly appear in the <strong>Reels</strong> section of the customer app. Users will see a "LIVE" badge and can watch your broadcast seamlessly. To remove your stream from the Reels feed, simply click "Stop Stream".
-                    </p>
+                            <p className="text-white font-medium">Camera is off.</p>
+                            <p className="text-white/50 text-sm mt-1">Click "Start Live Stream" to go live.</p>
+                        </div>
+                    )}
+                    {/* ZegoCloud mounts here — always in DOM and visible */}
+                    <div
+                        ref={containerRef}
+                        style={{ width: '100%', height: '500px' }}
+                    />
                 </div>
             </div>
         </div>

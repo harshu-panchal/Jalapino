@@ -199,17 +199,22 @@ export async function rejectSellerApplicationById({
 export async function bounceBackSellerApplicationById({
   sellerId,
   reviewedBy,
+  reason,
 }) {
+  const updatePayload = {
+    isVerified: false,
+    applicationStatus: "bounced_back",
+    reviewedAt: new Date(),
+    reviewedBy,
+  };
+
+  if (reason) {
+    updatePayload.rejectionReason = reason;
+  }
+
   const seller = await Seller.findByIdAndUpdate(
     sellerId,
-    {
-      $set: {
-        isVerified: false,
-        applicationStatus: "bounced_back",
-        reviewedAt: new Date(),
-        reviewedBy,
-      },
-    },
+    { $set: updatePayload },
     { new: true },
   );
 

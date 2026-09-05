@@ -287,6 +287,8 @@ export const updateSellerProfile = async (req, res) => {
     if (shopTimingsEnabled !== undefined) seller.shopTimingsEnabled = shopTimingsEnabled === 'true' || shopTimingsEnabled === true;
     if (shopOpeningTime !== undefined) seller.shopOpeningTime = shopOpeningTime;
     if (shopClosingTime !== undefined) seller.shopClosingTime = shopClosingTime;
+    if (req.body.advanceBookingBuffer !== undefined) seller.advanceBookingBuffer = Number(req.body.advanceBookingBuffer);
+    if (req.body.advanceBookingBufferUnit !== undefined) seller.advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
 
     if (serviceCoverage !== undefined) {
       if (typeof serviceCoverage === "string") {

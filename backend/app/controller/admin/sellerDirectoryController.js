@@ -248,6 +248,8 @@ export const updateSellerDetails = async (req, res) => {
     if (retailEnabled !== undefined) updateData.retailEnabled = retailEnabled;
     if (planMyEventEnabled !== undefined) updateData.planMyEventEnabled = planMyEventEnabled;
     if (eventDetailsEnabled !== undefined) updateData.eventDetailsEnabled = eventDetailsEnabled;
+    if (req.body.functionLocationEnabled !== undefined) updateData.functionLocationEnabled = req.body.functionLocationEnabled;
+    if (req.body.sellerLocationEnabled !== undefined) updateData.sellerLocationEnabled = req.body.sellerLocationEnabled;
     if (primaryContactEnabled !== undefined) updateData.primaryContactEnabled = primaryContactEnabled;
     if (coupleContactEnabled !== undefined) updateData.coupleContactEnabled = coupleContactEnabled;
     if (categoriesEnabled !== undefined) updateData.categoriesEnabled = categoriesEnabled;

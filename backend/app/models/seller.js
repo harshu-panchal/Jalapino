@@ -522,6 +522,14 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    functionLocationEnabled: {
+      type: Boolean,
+      default: false
+    },
+    sellerLocationEnabled: {
+      type: Boolean,
+      default: false
+    },
     shopTimingsEnabled: {
       type: Boolean,
       default: false
@@ -607,6 +615,12 @@ const sellerSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: "",
+    },
+    liveStreaming: {
+      isLive: { type: Boolean, default: false },
+      roomId: { type: String, default: null },
+      title: { type: String, default: null },
+      pinnedProduct: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null }
     },
     lastLogin: Date,
   },
