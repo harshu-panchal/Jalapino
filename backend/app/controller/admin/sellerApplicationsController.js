@@ -72,9 +72,11 @@ export const rejectSellerApplication = async (req, res) => {
 export const bounceBackSellerApplication = async (req, res) => {
   try {
     const { id } = req.params;
+    const { reason } = req.body;
     const seller = await bounceBackSellerApplicationById({
       sellerId: id,
       reviewedBy: req.user.id,
+      reason,
     });
 
     if (!seller) {

@@ -147,6 +147,8 @@ export function formatSellerApplication(seller) {
     physicalPaymentEnabled: seller.physicalPaymentEnabled || false,
     paymentQrCode: seller.paymentQrCode || "",
     reviewCategoriesEnabled: seller.reviewCategoriesEnabled || [],
+    functionLocationEnabled: seller.functionLocationEnabled ?? false,
+    sellerLocationEnabled: seller.sellerLocationEnabled ?? false,
     verificationScore: docs.length
       ? Math.min(100, 55 + docs.length * 12 + (seller.address ? 10 : 0))
       : 40,

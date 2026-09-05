@@ -187,6 +187,8 @@ const PendingSellers = () => {
                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                         showStandardDateTime: s.showStandardDateTime ?? false,
                         showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                        functionLocationEnabled: s.functionLocationEnabled ?? false,
+                        sellerLocationEnabled: s.sellerLocationEnabled ?? false,
                     });
                     setAdminRemark(s.adminRemark || '');
                     setAdminTerms(s.adminTerms || '');
@@ -303,10 +305,12 @@ const PendingSellers = () => {
     };
 
     const handleBounceBack = async (id) => {
-        if (window.confirm('Are you sure you want to bounce back this application for revision?')) {
+        const reason = window.prompt('Please provide the reason for bouncing back (this will be shown to the seller):');
+        if (reason !== null) {
             setIsProcessing(true);
             try {
-                await adminApi.bounceBackSeller(id, {});
+                // Pass reason in the payload to the backend
+                await adminApi.bounceBackSeller(id, { reason });
                 setIsReviewModalOpen(false);
                 setSearchParams({});
                 setViewingSeller(null);
@@ -442,6 +446,8 @@ const PendingSellers = () => {
                                                     reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                     showStandardDateTime: s.showStandardDateTime ?? false,
                                                     showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                                                    functionLocationEnabled: s.functionLocationEnabled ?? false,
+                                                    sellerLocationEnabled: s.sellerLocationEnabled ?? false,
                                                     demoTrialEnabled: s.demoTrialEnabled ?? false,
                                                     demoTrialDays: s.demoTrialDays || 15,
                                                     demoStartDate: s.demoStartDate,
@@ -522,7 +528,6 @@ const PendingSellers = () => {
                                                         addonCateringPrice: s.addonCateringPrice ?? 0,
                                                         physicalPaymentEnabled: s.physicalPaymentEnabled ?? false,
                                                         paymentQrCode: s.paymentQrCode ?? "",
-                                                        reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                     });
                                                     setAdminRemark(s.adminRemark || '');
                                                     setAdminTerms(s.adminTerms || '');
@@ -1008,6 +1013,50 @@ const PendingSellers = () => {
                                                                     } catch (err) {
                                                                         toast.error('Failed to update Advanced Date & Time setting');
                                                                         setPermissions(prev => ({ ...prev, showAdvancedDateTime: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {permissions.planMyEventEnabled && (
+                                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
+                                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <PermissionToggle
+                                                                label="Function Location"
+                                                                description="Allow function location collection"
+                                                                checked={!!permissions.functionLocationEnabled}
+                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, functionLocationEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { functionLocationEnabled: checked });
+                                                                        toast.success('Function Location setting updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, functionLocationEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update Function Location setting');
+                                                                        setPermissions(prev => ({ ...prev, functionLocationEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Seller Location"
+                                                                description="Show seller location option"
+                                                                checked={!!permissions.sellerLocationEnabled}
+                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, sellerLocationEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { sellerLocationEnabled: checked });
+                                                                        toast.success('Seller Location setting updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, sellerLocationEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update Seller Location setting');
+                                                                        setPermissions(prev => ({ ...prev, sellerLocationEnabled: !checked }));
                                                                     }
                                                                 }}
                                                             />

@@ -41,6 +41,7 @@ import appConfigRoute from "./appConfigRoutes.js";
 import sellerCalendarRoute from "./sellerCalendarRoutes.js";
 import liveKitchenRoute from "./liveKitchenRoutes.js";
 import videoSubscriptionRoute from "./videoSubscriptionRoutes.js";
+import liveStreamingRoute from "./liveStreamingRoutes.js";
 import express from "express";
 import { checkMaintenanceMode } from "../middleware/maintenanceMiddleware.js";
 
@@ -134,6 +135,9 @@ const setupRoutes = (app) => {
     router.use("/", venueVisitRoute);
     router.use("/", generalBookingRoute);
     router.use("/chats", chatRoute);
+    
+    // Add live streaming routes
+    router.use("/live", liveStreamingRoute);
 
     app.use("/api", router);
 }

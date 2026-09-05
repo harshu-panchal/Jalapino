@@ -52,6 +52,8 @@ const SellerProfile = () => {
     shopTimingsEnabled: false,
     shopOpeningTime: "09:00 AM",
     shopClosingTime: "09:00 PM",
+    advanceBookingBuffer: 0,
+    advanceBookingBufferUnit: "days",
   });
 
   const [newZoneName, setNewZoneName] = useState("");
@@ -93,6 +95,8 @@ const SellerProfile = () => {
         shopTimingsEnabled: data.shopTimingsEnabled ?? false,
         shopOpeningTime: data.shopOpeningTime || "09:00 AM",
         shopClosingTime: data.shopClosingTime || "09:00 PM",
+        advanceBookingBuffer: data.advanceBookingBuffer || 0,
+        advanceBookingBufferUnit: data.advanceBookingBufferUnit || "days",
       });
       setKeptBanners(data.banners || []);
     } catch (error) {
@@ -773,6 +777,30 @@ const SellerProfile = () => {
                         </div>
                     </div>
                 )}
+
+                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
+                    <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
+                        Advance Booking Buffer
+                        <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Minimum time before booking</span>
+                    </label>
+                    <div className="flex gap-4 w-full md:max-w-xs mt-2">
+                        <input type="number" min="0"
+                            value={formData.advanceBookingBuffer ?? 0}
+                            onChange={(e) => setFormData({ ...formData, advanceBookingBuffer: Number(e.target.value) })}
+                            disabled={!isEditing}
+                            className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                        />
+                        <select
+                            value={formData.advanceBookingBufferUnit || 'days'}
+                            onChange={(e) => setFormData({ ...formData, advanceBookingBufferUnit: e.target.value })}
+                            disabled={!isEditing}
+                            className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                        >
+                            <option value="days">Days</option>
+                            <option value="hours">Hours</option>
+                        </select>
+                    </div>
+                </div>
             </div>
           </Card>
 

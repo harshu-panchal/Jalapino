@@ -999,6 +999,48 @@ const SellerDetail = () => {
                                                     </div>
                                                 )}
 
+                                                {seller.planMyEventEnabled && (
+                                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
+                                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <PermissionToggle
+                                                                label="Function Location"
+                                                                description="Allow function location collection"
+                                                                checked={!!seller.functionLocationEnabled}
+                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, functionLocationEnabled: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { functionLocationEnabled: checked });
+                                                                        showToast('Function Location setting updated', 'success');
+                                                                    } catch (err) {
+                                                                        showToast('Failed to update Function Location setting', 'error');
+                                                                        setSeller(prev => ({ ...prev, functionLocationEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Seller Location"
+                                                                description="Show seller location option"
+                                                                checked={!!seller.sellerLocationEnabled}
+                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, sellerLocationEnabled: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { sellerLocationEnabled: checked });
+                                                                        showToast('Seller Location setting updated', 'success');
+                                                                    } catch (err) {
+                                                                        showToast('Failed to update Seller Location setting', 'error');
+                                                                        setSeller(prev => ({ ...prev, sellerLocationEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {/* Capacity Settings */}
                                                 <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                                                     <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">CAPACITY TYPE</h6>
