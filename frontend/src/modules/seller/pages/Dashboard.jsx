@@ -38,6 +38,7 @@ import { cn } from "@/lib/utils";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
 import { useSellerOrders } from "../context/SellerOrdersContext";
+import SellerModuleInfoCard from "../components/SellerModuleInfoCard";
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -239,11 +240,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="ds-section-spacing relative">
+    <div className="ds-section-spacing relative space-y-6">
       <PageHeader
         title="Dashboard"
         description="Welcome back! Here's what's happening with your store today."
       />
+
+      <SellerModuleInfoCard />
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

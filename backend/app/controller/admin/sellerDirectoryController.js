@@ -175,6 +175,7 @@ export const updateSellerDetails = async (req, res) => {
       eventDetailsEnabled,
       primaryContactEnabled,
       coupleContactEnabled,
+      noOfGuestsEnabled,
       categoriesEnabled,
       bookingSlotsEnabled,
       productsEnabled,
@@ -252,6 +253,7 @@ export const updateSellerDetails = async (req, res) => {
     if (req.body.sellerLocationEnabled !== undefined) updateData.sellerLocationEnabled = req.body.sellerLocationEnabled;
     if (primaryContactEnabled !== undefined) updateData.primaryContactEnabled = primaryContactEnabled;
     if (coupleContactEnabled !== undefined) updateData.coupleContactEnabled = coupleContactEnabled;
+    if (noOfGuestsEnabled !== undefined) updateData.noOfGuestsEnabled = noOfGuestsEnabled;
     if (categoriesEnabled !== undefined) updateData.categoriesEnabled = categoriesEnabled;
     if (bookingSlotsEnabled !== undefined) updateData.bookingSlotsEnabled = bookingSlotsEnabled;
     if (productsEnabled !== undefined) updateData.productsEnabled = productsEnabled;

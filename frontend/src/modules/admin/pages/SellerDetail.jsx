@@ -952,6 +952,23 @@ const SellerDetail = () => {
                                                                     }
                                                                 }}
                                                             />
+                                                            <PermissionToggle
+                                                                label="No of Guests"
+                                                                description="Allow collection of number of guests"
+                                                                checked={seller.noOfGuestsEnabled}
+                                                                activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, noOfGuestsEnabled: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { noOfGuestsEnabled: checked });
+                                                                        showToast('No of guests permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, noOfGuestsEnabled: !checked }));
+                                                                        showToast('Failed to update no of guests permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
                                                         </div>
                                                     </div>
                                                 )}
@@ -999,7 +1016,7 @@ const SellerDetail = () => {
                                                     </div>
                                                 )}
 
-                                                {seller.planMyEventEnabled && (
+                                                {seller.eventDetailsEnabled && (
                                                     <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
                                                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

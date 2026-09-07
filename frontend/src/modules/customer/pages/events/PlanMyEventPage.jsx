@@ -32,10 +32,11 @@ const getCategoryStyle = (name = '') => {
 };
 
 /* ── SellerCard with products ── */
-const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
+const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = [], isBlocked = false }) => {
     const [products, setProducts]       = useState([]);
     const [loadingProd, setLoadingProd] = useState(true);
     const [currentBanner, setCurrentBanner] = useState(0);
+    const [showBookingTip, setShowBookingTip] = useState(false);
 
     useEffect(() => {
         if (!seller.banners || seller.banners.length <= 1) return;
@@ -67,10 +68,14 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
 
     return (
         <motion.div
-            whileHover={{ y: -3, boxShadow: '0 8px 32px rgba(0,0,0,0.10)' }}
+            whileHover={{ y: isBlocked ? 0 : -3, boxShadow: isBlocked ? 'none' : '0 8px 32px rgba(0,0,0,0.10)' }}
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-            onClick={() => onSelect(seller)}
-            className="bg-white rounded-2xl border border-slate-200 shadow-sm cursor-pointer overflow-hidden flex flex-col"
+            onClick={() => !isBlocked && onSelect(seller)}
+            className={`bg-white rounded-2xl border shadow-sm flex flex-col overflow-hidden ${
+                isBlocked
+                    ? 'border-red-200 opacity-70 cursor-not-allowed'
+                    : 'border-slate-200 cursor-pointer'
+            }`}
         >
             {seller.banners && seller.banners.length > 0 && (
                 <div className="w-full h-32 relative overflow-hidden bg-slate-900 shrink-0">
@@ -184,6 +189,46 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect }) => {
                     View Details <ArrowForwardIosIcon sx={{ fontSize: 10 }} />
                 </span>
             </div>
+
+            {/* ── NOT AVAILABLE banner — shown when seller blocked this date ── */}
+            {isBlocked && (
+                <div className="w-full flex items-center gap-2 bg-red-50 border-t border-red-200 px-4 py-2.5">
+                    <span className="text-red-500 text-base">🚫</span>
+                    <span className="text-[11px] font-bold text-red-700">Not Available on this date</span>
+                    <span className="ml-auto text-[10px] text-red-400 font-medium">Seller unavailable</span>
+                </div>
+            )}
+
+            {/* ── Booking badge — shown when date selected & seller has bookings on that date ── */}
+            {!isBlocked && bookings.length > 0 && (
+                <div className="relative">
+                    <button
+                        onClick={e => { e.stopPropagation(); setShowBookingTip(v => !v); }}
+                        className="w-full flex items-center gap-2 bg-orange-50 border border-orange-200 rounded-b-2xl px-4 py-2 hover:bg-orange-100 transition-colors"
+                    >
+                        <span className="text-orange-600 text-base">📅</span>
+                        <span className="text-[11px] font-bold text-orange-700">
+                            {bookings.length} booking{bookings.length > 1 ? 's' : ''} on this date
+                        </span>
+                        <span className="ml-auto text-[10px] text-orange-500 font-bold">{showBookingTip ? '▲' : '▼'}</span>
+                    </button>
+                    {showBookingTip && (
+                        <div className="absolute bottom-full left-0 right-0 z-50 bg-white border border-orange-200 rounded-xl shadow-xl p-3 mb-1 space-y-2">
+                            <p className="text-[10px] font-black text-orange-700 uppercase tracking-wider mb-2">Existing Bookings</p>
+                            {bookings.map((b, i) => (
+                                <div key={i} className="flex flex-col gap-0.5 bg-orange-50 rounded-lg px-3 py-2 border border-orange-100">
+                                    <div className="flex items-center gap-2">
+                                        {b.time && <span className="text-[10px] font-bold text-slate-700">🕐 {b.time}</span>}
+                                        {b.eventType && <span className="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded">🎉 {b.eventType}</span>}
+                                        {b.guestCount && <span className="text-[10px] text-slate-500">👥 {b.guestCount} guests</span>}
+                                    </div>
+                                    {b.remark && <p className="text-[10px] text-slate-500 italic">📝 {b.remark}</p>}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </motion.div>
     );
 };
@@ -218,6 +263,7 @@ const PlanMyEventPage = () => {
         anniversaryDate: '',
         functionLocation: '',
         sellerLocation: '',
+        noOfGuests: '',
     });
     const [savingInfo, setSavingInfo] = useState(false);
     const [savedInfo,  setSavedInfo]  = useState(false);
@@ -238,6 +284,9 @@ const PlanMyEventPage = () => {
     /* — right panel sellers — */
     const [sellers,       setSellers]       = useState([]);
     const [loadingSellers, setLoadingSellers] = useState(false);
+
+    /* — seller bookings on selected date (seller-wise) — */
+    const [sellerBookings, setSellerBookings] = useState({}); // { sellerId: [...bookings] }
 
     /* — unified search (seller / product) — */
     const [globalSearch, setGlobalSearch] = useState('');
@@ -452,7 +501,35 @@ const PlanMyEventPage = () => {
         fetchSellers(activeCategory, filterDate, filterTime, eventInfo.functionLocation);
         // Reset detail view if category/filters change
         setSelectedSellerDetail(null);
+        // Reset booking data when filters change
+        setSellerBookings({});
     }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, fetchSellers]);
+
+    /* ── fetch booking counts for each seller when date is selected ── */
+    useEffect(() => {
+        if (!filterDate || sellers.length === 0) {
+            setSellerBookings({});
+            return;
+        }
+        const fetchBookings = async () => {
+            const results = {};
+            await Promise.all(
+                sellers.map(async (seller) => {
+                    try {
+                        const res = await axiosInstance.get(`/events/sellers/${seller._id}/booked-dates?date=${filterDate}`);
+                        results[seller._id] = {
+                            bookings: res.data?.result || [],
+                            isBlocked: res.data?.isBlocked || false,
+                        };
+                    } catch {
+                        results[seller._id] = { bookings: [], isBlocked: false };
+                    }
+                })
+            );
+            setSellerBookings(results);
+        };
+        fetchBookings();
+    }, [filterDate, sellers]);
 
     /* ── filtered sellers (by global search & smart filtering) ── */
     let smartFilteredSellers = sellers.filter(s => {
@@ -639,7 +716,7 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FEATURE CARDS: Subscribe & Live ─── */}
-                        {activeCategory && (
+                        {!activeCategory && !selectedSellerDetail && (
                             <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Blue Card: Live */}
@@ -649,7 +726,7 @@ const PlanMyEventPage = () => {
                                         <div className="w-7 h-7 bg-red-500 rounded-full flex items-center justify-center animate-pulse shadow-sm">
                                             <span className="text-white text-[9px] font-black">LIVE</span>
                                         </div>
-                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">LIVE {activeCategory.name}</h4>
+                                        <h4 className="text-white font-black text-xs uppercase tracking-wider">LIVE {activeCategory?.name || 'EVENTS'}</h4>
                                     </div>
                                     <div className="z-10 flex-1 flex flex-col justify-center">
                                         {liveStreams.filter(stream => {
@@ -681,7 +758,7 @@ const PlanMyEventPage = () => {
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-center">
                                                 <span className="text-white font-black text-xl md:text-2xl drop-shadow-md uppercase tracking-wider">LIVE</span>
-                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">No active streams for {activeCategory.name} right now</span>
+                                                <span className="text-blue-200 text-[10px] mt-1 max-w-[80%]">No active streams {activeCategory ? `for ${activeCategory.name}` : ''} right now</span>
                                             </div>
                                         )}
                                     </div>
@@ -713,7 +790,7 @@ const PlanMyEventPage = () => {
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-center">
                                                 <span className="text-white font-black text-lg md:text-xl drop-shadow-md leading-snug">REELS</span>
-                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Sellers for {activeCategory.name} will appear here</span>
+                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Sellers {activeCategory ? `for ${activeCategory.name}` : ''} will appear here</span>
                                             </div>
                                         )}
                                     </div>
@@ -723,8 +800,8 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FILTERS: Event Type + Date + Time ─── */}
-                        {/* Date/Time filter shown dynamically based on seller-level toggles from admin */}
-                        {(activeCategory && activeCategory.showDateFilters !== false && showAnyDateFilter) && (
+                        {/* Date/Time filter shown dynamically based on Category toggle from admin */}
+                        {(activeCategory && activeCategory.showDateFilters !== false) && (
                         <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                             <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                 {/* Event Type */}
@@ -913,6 +990,21 @@ const PlanMyEventPage = () => {
                                             />
                                         </div>
 
+                                        {/* No of Guests */}
+                                        {(activeCategory?.showNoOfGuestsBox || filteredSellers.some(s => s.noOfGuestsEnabled)) && (
+                                            <div className="flex flex-col gap-1">
+                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👥 No of Guests</label>
+                                                <input
+                                                    type="number"
+                                                    min="1"
+                                                    value={eventInfo.noOfGuests || ''}
+                                                    onChange={e => handleEventInfoChange('noOfGuests', e.target.value)}
+                                                    placeholder="e.g. 150"
+                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                />
+                                            </div>
+                                        )}
+
                                         {/* Function Location */}
                                         {filteredSellers.some(s => s.functionLocationEnabled) && (
                                             <div className="flex flex-col gap-1">
@@ -1022,6 +1114,8 @@ const PlanMyEventPage = () => {
                                                 activeCategory={activeCategory}
                                                 eventParams={{ date: filterDate, time: filterTime, eventType: selectedType }}
                                                 onSelect={handleSellerSelect}
+                                                bookings={sellerBookings[seller._id]?.bookings || []}
+                                                isBlocked={sellerBookings[seller._id]?.isBlocked || false}
                                             />
                                         ))}
                                     </motion.div>

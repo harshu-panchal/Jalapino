@@ -326,6 +326,10 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
+    noOfGuestsEnabled: {
+      type: Boolean,
+      default: false
+    },
     showStandardDateTime: {
       type: Boolean,
       default: false

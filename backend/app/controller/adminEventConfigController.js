@@ -74,10 +74,10 @@ export const getEventCategories = async (req, res) => {
 
 export const createEventCategory = async (req, res) => {
     try {
-        const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules } = req.body;
+        const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules, showDateFilters, showEventDetailsForm, showNoOfGuestsBox } = req.body;
 
         // 1. Create Category
-        const cat = await EventCategory.create({ name, icon, sortOrder, isActive, activePlugins });
+        const cat = await EventCategory.create({ name, icon, sortOrder, isActive, activePlugins, showDateFilters, showEventDetailsForm, showNoOfGuestsBox });
 
         // 2. Create associated form fields if provided
         if (fields && fields.length > 0) {
@@ -107,9 +107,9 @@ export const createEventCategory = async (req, res) => {
 export const updateEventCategory = async (req, res) => {
     try {
         const { id } = req.params;
-        const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules } = req.body;
+        const { name, icon, sortOrder, isActive, fields, activePlugins, businessRules, showDateFilters, showEventDetailsForm, showNoOfGuestsBox } = req.body;
 
-        const cat = await EventCategory.findByIdAndUpdate(id, { name, icon, sortOrder, isActive, activePlugins }, { new: true });
+        const cat = await EventCategory.findByIdAndUpdate(id, { name, icon, sortOrder, isActive, activePlugins, showDateFilters, showEventDetailsForm, showNoOfGuestsBox }, { new: true });
         if (!cat) return handleResponse(res, 404, 'Event category not found');
 
         // Update fields if provided

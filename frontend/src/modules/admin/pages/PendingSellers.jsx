@@ -132,6 +132,7 @@ const PendingSellers = () => {
                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                         primaryContactEnabled: s.primaryContactEnabled ?? true,
                         coupleContactEnabled: s.coupleContactEnabled ?? true,
+                        noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
                         categoriesEnabled: s.categoriesEnabled ?? true,
                         bookingSlotsEnabled: s.bookingSlotsEnabled ?? false,
                         productsEnabled: s.productsEnabled ?? true,
@@ -288,8 +289,9 @@ const PendingSellers = () => {
         if (window.confirm('Are you sure you want to reject this application?')) {
             setIsProcessing(true);
             try {
-                const reason = window.prompt('Optional rejection reason (leave blank if not needed):') || '';
-                await adminApi.rejectSeller(id, { reason });
+                const reasonPrompt = window.prompt('Optional rejection reason (leave blank if not needed):', adminRemark || '') || '';
+                const reason = reasonPrompt || adminRemark;
+                await adminApi.rejectSeller(id, { reason, adminRemark: reason, adminTerms });
                 setIsReviewModalOpen(false);
                 setSearchParams({});
                 setViewingSeller(null);
@@ -305,12 +307,12 @@ const PendingSellers = () => {
     };
 
     const handleBounceBack = async (id) => {
-        const reason = window.prompt('Please provide the reason for bouncing back (this will be shown to the seller):');
-        if (reason !== null) {
+        const reasonPrompt = window.prompt('Please provide the reason for bouncing back (this will be shown to the seller):', adminRemark || '');
+        if (reasonPrompt !== null) {
             setIsProcessing(true);
             try {
-                // Pass reason in the payload to the backend
-                await adminApi.bounceBackSeller(id, { reason });
+                const reason = reasonPrompt || adminRemark;
+                await adminApi.bounceBackSeller(id, { reason, adminRemark: reason, adminTerms });
                 setIsReviewModalOpen(false);
                 setSearchParams({});
                 setViewingSeller(null);
@@ -415,6 +417,7 @@ const PendingSellers = () => {
                                                     eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                                                     primaryContactEnabled: s.primaryContactEnabled ?? true,
                                                     coupleContactEnabled: s.coupleContactEnabled ?? true,
+                                                    noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
                                                     productsEnabled: s.productsEnabled ?? true,
                                                     stockEnabled: s.stockEnabled ?? true,
                                                     ordersEnabled: s.ordersEnabled ?? true,
@@ -491,6 +494,7 @@ const PendingSellers = () => {
                                                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                                                         primaryContactEnabled: s.primaryContactEnabled ?? true,
                                                         coupleContactEnabled: s.coupleContactEnabled ?? true,
+                                                        noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
                                                         productsEnabled: s.productsEnabled ?? true,
                                                         stockEnabled: s.stockEnabled ?? true,
                                                         ordersEnabled: s.ordersEnabled ?? true,
@@ -971,6 +975,24 @@ const PendingSellers = () => {
                                                                     }
                                                                 }}
                                                             />
+                                                            <PermissionToggle
+                                                                label="No of Guests"
+                                                                description="Allow collection of number of guests"
+                                                                checked={permissions.noOfGuestsEnabled}
+                                                                activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, noOfGuestsEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { noOfGuestsEnabled: checked });
+                                                                        toast.success('No of guests permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, noOfGuestsEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        toast.error('Failed to update no of guests permission');
+                                                                        setPermissions(prev => ({ ...prev, noOfGuestsEnabled: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
                                                         </div>
                                                     </div>
                                                 )}
@@ -1020,7 +1042,7 @@ const PendingSellers = () => {
                                                     </div>
                                                 )}
 
-                                                {permissions.planMyEventEnabled && (
+                                                {permissions.eventDetailsEnabled && (
                                                     <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
                                                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

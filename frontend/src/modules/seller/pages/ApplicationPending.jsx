@@ -88,18 +88,18 @@ const ApplicationPending = () => {
           ) : null}
 
           {/* Admin Remark / Platform Note */}
-          {user?.adminRemark ? (
+          {(location.state?.adminRemark || user?.adminRemark) ? (
             <div className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
               <span className="font-black uppercase tracking-widest text-[11px] text-amber-300">📋 Platform Note</span>
-              <p className="mt-1 font-medium whitespace-pre-wrap">{user.adminRemark}</p>
+              <p className="mt-1 font-medium whitespace-pre-wrap">{location.state?.adminRemark || user?.adminRemark}</p>
             </div>
           ) : null}
 
           {/* Admin Terms and Conditions */}
-          {user?.adminTerms ? (
+          {(location.state?.adminTerms || user?.adminTerms) ? (
             <div className="mt-4 rounded-2xl border border-indigo-400/25 bg-indigo-400/10 px-4 py-3 text-sm text-indigo-100">
               <span className="font-black uppercase tracking-widest text-[11px] text-indigo-300">📝 Terms & Conditions</span>
-              <p className="mt-1 font-medium whitespace-pre-wrap">{user.adminTerms}</p>
+              <p className="mt-1 font-medium whitespace-pre-wrap">{location.state?.adminTerms || user?.adminTerms}</p>
             </div>
           ) : null}
 

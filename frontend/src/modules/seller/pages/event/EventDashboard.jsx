@@ -10,6 +10,7 @@ import {
 } from 'react-icons/hi2';
 import { sellerEventApi } from '../../services/sellerEventApi';
 import CircularProgress from '@mui/material/CircularProgress';
+import SellerModuleInfoCard from '../../components/SellerModuleInfoCard';
 
 const EventDashboard = () => {
     const navigate = useNavigate();
@@ -69,6 +70,8 @@ const EventDashboard = () => {
                 <h1 className="text-2xl font-bold text-slate-800">Event Dashboard</h1>
                 <p className="text-sm text-slate-500 mt-1">Overview of your event management business.</p>
             </div>
+
+            <SellerModuleInfoCard />
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

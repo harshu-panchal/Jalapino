@@ -114,18 +114,44 @@ const SellerRoutes = () => {
   }, []);
 
   const isEventSeller = user?.isEventSeller === true || user?.planMyEventEnabled === true;
-  const hasRetailAccess = user?.retailEnabled !== false;
+  const isRetailEnabled = user?.retailEnabled !== false;
+
+  const canAccessProducts = (isRetailEnabled || user?.productsEnabled === true) && user?.productsEnabled !== false;
+  const canAccessStock = canAccessProducts && user?.stockEnabled !== false;
+  const canAccessOrders = (isRetailEnabled || user?.ordersEnabled === true) && user?.ordersEnabled !== false;
+  const canAccessWallet = user?.walletEnabled !== false;
+  const canAccessAnalytics = user?.analyticsEnabled !== false;
 
   let activeNavItems = [];
 
-  if (isEventSeller && hasRetailAccess) {
-    // Seller has both retail and event enabled. Combine them.
+  if (isEventSeller) {
     activeNavItems = [...eventNavItems];
-    const missingRetailItems = navItems.filter(item => !activeNavItems.some(active => active.label === item.label));
-    // Insert retail items like Products, Orders, etc. right after 'Go Live'
-    activeNavItems.splice(2, 0, ...missingRetailItems);
+    
+    // Dynamically insert enabled retail items into event seller nav menu
+    const extraItems = [];
+    if (canAccessProducts) extraItems.push(navItems.find(i => i.label === "Products"));
+    if (canAccessStock) extraItems.push(navItems.find(i => i.label === "Stock"));
+    if (canAccessOrders) {
+      extraItems.push(navItems.find(i => i.label === "Orders"));
+      extraItems.push(navItems.find(i => i.label === "Returns"));
+      extraItems.push(navItems.find(i => i.label === "Track Orders"));
+    }
+    if (canAccessAnalytics) extraItems.push(navItems.find(i => i.label === "Sales Reports"));
+    if (canAccessWallet) {
+      extraItems.push(navItems.find(i => i.label === "Money Request"));
+      extraItems.push(navItems.find(i => i.label === "Payment History"));
+      extraItems.push(navItems.find(i => i.label === "Earnings"));
+    }
+
+    const filteredExtra = extraItems.filter(Boolean).filter(item => !activeNavItems.some(active => active.label === item.label));
+    activeNavItems.splice(2, 0, ...filteredExtra);
   } else {
-    activeNavItems = isEventSeller ? [...eventNavItems] : [...navItems];
+    activeNavItems = [...navItems];
+    if (!canAccessProducts) activeNavItems = activeNavItems.filter(i => !['Products'].includes(i.label));
+    if (!canAccessStock) activeNavItems = activeNavItems.filter(i => !['Stock'].includes(i.label));
+    if (!canAccessOrders) activeNavItems = activeNavItems.filter(i => !['Orders', 'Returns', 'Track Orders'].includes(i.label));
+    if (!canAccessWallet) activeNavItems = activeNavItems.filter(i => !['Earnings', 'Money Request', 'Payment History'].includes(i.label));
+    if (!canAccessAnalytics) activeNavItems = activeNavItems.filter(i => !['Sales Reports'].includes(i.label));
   }
 
   if (user?.customerImageReviewEnabled !== true) {
@@ -144,42 +170,41 @@ const SellerRoutes = () => {
     activeNavItems = activeNavItems.filter(item => !['Physical Visits'].includes(item.label));
   }
 
-  if (hasRetailAccess) {
-    if (user?.productsEnabled === false) {
-      activeNavItems = activeNavItems.filter(item => !['Products'].includes(item.label));
-    }
-    if (user?.stockEnabled === false) {
-      activeNavItems = activeNavItems.filter(item => !['Stock'].includes(item.label));
-    }
-    if (user?.ordersEnabled === false) {
-      activeNavItems = activeNavItems.filter(item => !['Orders', 'Returns', 'Track Orders'].includes(item.label));
-    }
-    if (user?.walletEnabled === false) {
-      activeNavItems = activeNavItems.filter(item => !['Earnings', 'Money Request', 'Payment History'].includes(item.label));
-    }
-    if (user?.analyticsEnabled === false) {
-      activeNavItems = activeNavItems.filter(item => !['Sales Reports'].includes(item.label));
-    }
-  } else {
-    // If not retail, remove all retail-specific items just in case
-    activeNavItems = activeNavItems.filter(item => !['Products', 'Stock', 'Orders', 'Returns', 'Track Orders', 'Sales Reports', 'Money Request', 'Payment History', 'Earnings'].includes(item.label));
-  }
-
   return (
-    <DashboardLayout navItems={activeNavItems} title={isEventSeller && !hasRetailAccess ? "Event Management" : hasRetailAccess && !isEventSeller ? "Seller Panel" : "Seller & Event Dashboard"}>
+    <DashboardLayout navItems={activeNavItems} title={isEventSeller && !isRetailEnabled ? "Event Management" : isRetailEnabled && !isEventSeller ? "Seller Panel" : "Seller & Event Dashboard"}>
       <Routes>
-        <Route path="/" element={isEventSeller && !hasRetailAccess ? <EventDashboard /> : <Dashboard />} />
+        <Route path="/" element={isEventSeller && !isRetailEnabled ? <EventDashboard /> : <Dashboard />} />
         
-        {/* Retail Routes */}
-        {hasRetailAccess && (
+        {/* Product & Catalog Routes */}
+        {canAccessProducts && (
           <>
             <Route path="/products" element={<ProductManagement />} />
             <Route path="/products/add" element={<AddProduct />} />
-            <Route path="/inventory" element={<StockManagement />} />
+          </>
+        )}
+
+        {/* Stock & Inventory Routes */}
+        {canAccessStock && (
+          <Route path="/inventory" element={<StockManagement />} />
+        )}
+
+        {/* Orders Routes */}
+        {canAccessOrders && (
+          <>
             <Route path="/orders" element={<Orders />} />
             <Route path="/returns" element={<Returns />} />
             <Route path="/tracking" element={<DeliveryTracking />} />
-            <Route path="/analytics" element={<Analytics />} />
+          </>
+        )}
+
+        {/* Analytics Routes */}
+        {canAccessAnalytics && (
+          <Route path="/analytics" element={<Analytics />} />
+        )}
+
+        {/* Wallet & Financial Routes */}
+        {canAccessWallet && (
+          <>
             <Route path="/transactions" element={<Transactions />} />
             <Route path="/earnings" element={<Earnings />} />
             <Route path="/withdrawals" element={<Withdrawals />} />

@@ -31,6 +31,10 @@ const eventCategorySchema = new mongoose.Schema({
         type: Boolean,
         default: true
     },
+    showNoOfGuestsBox: {
+        type: Boolean,
+        default: false
+    },
     // Allows admin to sort categories
     sortOrder: {
         type: Number,

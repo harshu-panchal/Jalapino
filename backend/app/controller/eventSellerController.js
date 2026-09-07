@@ -198,3 +198,81 @@ export const getAreaSellers = async (req, res) => {
     });
   }
 };
+
+// Get booked dates for a specific seller (used by customer app)
+export const getSellerBookedDates = async (req, res) => {
+  try {
+    const { sellerId } = req.params;
+    const { date } = req.query; // optional: filter by specific date (YYYY-MM-DD)
+
+    if (!sellerId || !mongoose.Types.ObjectId.isValid(sellerId)) {
+      return res.status(400).json({ success: false, message: "Valid sellerId is required" });
+    }
+
+    const EventBooking = (await import('../models/event/EventBooking.js')).default;
+    const SellerCalendar = (await import('../models/event/SellerCalendar.js')).default;
+
+    // Check if seller has blocked this date
+    let isBlocked = false;
+    if (date) {
+      const calendarDoc = await SellerCalendar.findOne({ seller: new mongoose.Types.ObjectId(sellerId) }).lean();
+      if (calendarDoc && Array.isArray(calendarDoc.blockedDates)) {
+        isBlocked = calendarDoc.blockedDates.some(b => {
+          const blockedDateStr = (b.date || '').trim();
+          return blockedDateStr === date;
+        });
+      }
+    }
+
+    // Build query: bookings where this seller is assigned
+    const query = {
+      "services.seller": new mongoose.Types.ObjectId(sellerId),
+      "services": {
+        $elemMatch: {
+          seller: new mongoose.Types.ObjectId(sellerId),
+          status: { $in: ['ACCEPTED', 'PENDING_APPROVAL', 'COMPLETED'] }
+        }
+      }
+    };
+
+    // If specific date provided, filter for that day
+    if (date) {
+      const startOfDay = new Date(date);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(date);
+      endOfDay.setHours(23, 59, 59, 999);
+      query.eventDate = { $gte: startOfDay, $lte: endOfDay };
+    }
+
+    const bookings = await EventBooking.find(query)
+      .select('eventDate eventTime eventType guestCount services')
+      .lean();
+
+    // Format response - only show non-sensitive info to customer
+    const bookedDates = bookings.map(b => {
+      const sellerService = b.services.find(s => s.seller?.toString() === sellerId.toString());
+      return {
+        date: b.eventDate,
+        time: b.eventTime || null,
+        eventType: b.eventType || null,
+        guestCount: b.guestCount || null,
+        status: sellerService?.status || 'PENDING_APPROVAL',
+        remark: sellerService?.specialInstructions || null,
+      };
+    });
+
+    return res.status(200).json({
+      success: true,
+      result: bookedDates,
+      isBlocked,   // true if seller manually blocked this date
+    });
+  } catch (error) {
+    console.error("Error fetching seller booked dates:", error);
+    return res.status(500).json({
+      success: false,
+      message: error.message || "Failed to fetch booked dates",
+    });
+  }
+};
+
+

@@ -52,11 +52,13 @@ export const approveSellerApplication = async (req, res) => {
 export const rejectSellerApplication = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body || {};
+    const { reason, adminRemark, adminTerms } = req.body;
     const seller = await rejectSellerApplicationById({
       sellerId: id,
       reviewedBy: req.user.id,
       reason,
+      adminRemark,
+      adminTerms,
     });
 
     if (!seller) {
@@ -72,11 +74,13 @@ export const rejectSellerApplication = async (req, res) => {
 export const bounceBackSellerApplication = async (req, res) => {
   try {
     const { id } = req.params;
-    const { reason } = req.body;
+    const { reason, adminRemark, adminTerms } = req.body;
     const seller = await bounceBackSellerApplicationById({
       sellerId: id,
       reviewedBy: req.user.id,
       reason,
+      adminRemark,
+      adminTerms,
     });
 
     if (!seller) {

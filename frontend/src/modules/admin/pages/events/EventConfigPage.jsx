@@ -190,11 +190,12 @@ const EventConfigPage = () => {
                 activePlugins: cat.activePlugins || [],
                 businessRules: cat.businessRules || { ...defaultBusinessRules },
                 showDateFilters: cat.showDateFilters !== false,
-                showEventDetailsForm: cat.showEventDetailsForm !== false
+                showEventDetailsForm: cat.showEventDetailsForm !== false,
+                showNoOfGuestsBox: cat.showNoOfGuestsBox || false
             });
         } else {
             setEditingCat(null);
-            setCatForm({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules }, showDateFilters: true, showEventDetailsForm: true });
+            setCatForm({ name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules }, showDateFilters: true, showEventDetailsForm: true, showNoOfGuestsBox: false });
         }
         setCatModalOpen(true);
     };
@@ -539,6 +540,10 @@ const EventConfigPage = () => {
                             <FormControlLabel
                                 control={<Switch checked={catForm.showEventDetailsForm} onChange={e => setCatForm({...catForm, showEventDetailsForm: e.target.checked})} color="primary" />}
                                 label={<span className="font-medium text-slate-700">Show Event Details Form</span>}
+                            />
+                            <FormControlLabel
+                                control={<Switch checked={catForm.showNoOfGuestsBox} onChange={e => setCatForm({...catForm, showNoOfGuestsBox: e.target.checked})} color="primary" />}
+                                label={<span className="font-medium text-slate-700">Show No of Guests Box</span>}
                             />
                         </div>
                     </div>

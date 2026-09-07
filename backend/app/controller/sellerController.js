@@ -187,10 +187,37 @@ export const requestWithdrawal = async (req, res) => {
 
 export const getSellerProfile = async (req, res) => {
   try {
-    const seller = await Seller.findById(req.user.id);
+    let seller = await Seller.findById(req.user.id)
+      .populate('allowedRetailCategories', 'name icon type')
+      .populate('allowedEventCategories', 'name icon')
+      .populate('allowedWholesaleCategories', 'name icon type')
+      .lean();
+
     if (!seller) {
       return handleResponse(res, 404, "Seller not found");
     }
+
+    // Populate any unpopulated IDs in allowedEventCategories from EventCategory model
+    if (Array.isArray(seller.allowedEventCategories) && seller.allowedEventCategories.length > 0) {
+      const unpopulatedIds = seller.allowedEventCategories.filter(
+        c => typeof c === 'string' || (c && !c.name)
+      );
+      if (unpopulatedIds.length > 0) {
+        try {
+          const EventCategory = (await import('../models/EventCategory.js')).default;
+          const eventCats = await EventCategory.find({ _id: { $in: unpopulatedIds } }).select('name icon').lean();
+          const eventCatMap = new Map(eventCats.map(c => [c._id.toString(), c]));
+          seller.allowedEventCategories = seller.allowedEventCategories.map(c => {
+            if (c && typeof c === 'object' && c.name) return c;
+            const idStr = String(c);
+            return eventCatMap.get(idStr) || c;
+          });
+        } catch (err) {
+          console.error("Failed to populate EventCategory references:", err.message);
+        }
+      }
+    }
+
     return handleResponse(
       res,
       200,

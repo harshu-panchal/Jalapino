@@ -173,19 +173,23 @@ export async function rejectSellerApplicationById({
   sellerId,
   reviewedBy,
   reason,
+  adminRemark,
+  adminTerms,
 }) {
+  const updatePayload = {
+    isVerified: false,
+    isActive: false,
+    applicationStatus: "rejected",
+    reviewedAt: new Date(),
+    reviewedBy,
+    rejectionReason: reason || "",
+  };
+  if (adminRemark !== undefined) updatePayload.adminRemark = adminRemark;
+  if (adminTerms !== undefined) updatePayload.adminTerms = adminTerms;
+
   const seller = await Seller.findByIdAndUpdate(
     sellerId,
-    {
-      $set: {
-        isVerified: false,
-        isActive: false,
-        applicationStatus: "rejected",
-        reviewedAt: new Date(),
-        reviewedBy,
-        rejectionReason: reason || "",
-      },
-    },
+    { $set: updatePayload },
     { new: true },
   );
 
@@ -200,6 +204,8 @@ export async function bounceBackSellerApplicationById({
   sellerId,
   reviewedBy,
   reason,
+  adminRemark,
+  adminTerms,
 }) {
   const updatePayload = {
     isVerified: false,
@@ -211,6 +217,8 @@ export async function bounceBackSellerApplicationById({
   if (reason) {
     updatePayload.rejectionReason = reason;
   }
+  if (adminRemark !== undefined) updatePayload.adminRemark = adminRemark;
+  if (adminTerms !== undefined) updatePayload.adminTerms = adminTerms;
 
   const seller = await Seller.findByIdAndUpdate(
     sellerId,
