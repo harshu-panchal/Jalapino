@@ -716,7 +716,7 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FEATURE CARDS: Subscribe & Live ─── */}
-                        {!activeCategory && !selectedSellerDetail && (
+                        {activeCategory && (
                             <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Blue Card: Live */}
@@ -800,8 +800,8 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FILTERS: Event Type + Date + Time ─── */}
-                        {/* Date/Time filter shown dynamically based on Category toggle from admin */}
-                        {(activeCategory && activeCategory.showDateFilters !== false) && (
+                        {/* Date/Time filter shown dynamically based on seller-level toggles from admin */}
+                        {(activeCategory && activeCategory.showDateFilters !== false && showAnyDateFilter) && (
                         <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                             <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                 {/* Event Type */}

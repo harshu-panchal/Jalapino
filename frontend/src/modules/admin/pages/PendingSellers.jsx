@@ -1042,7 +1042,7 @@ const PendingSellers = () => {
                                                     </div>
                                                 )}
 
-                                                {permissions.eventDetailsEnabled && (
+                                                {(permissions.planMyEventEnabled || permissions.eventDetailsEnabled) && (
                                                     <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
                                                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
