@@ -715,8 +715,8 @@ const PlanMyEventPage = () => {
                             </div>
                         )}
 
-                        {/* ─── FEATURE CARDS: Subscribe & Live ─── */}
-                        {activeCategory && (
+                        {/* ─── FEATURE CARDS: Subscribe & Live (Shown ONLY on main Plan My Event home page) ─── */}
+                        {!activeCategory && !selectedSellerDetail && (
                             <div className="px-5 pt-2 pb-4 shrink-0 bg-slate-50">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {/* Blue Card: Live */}
@@ -790,7 +790,7 @@ const PlanMyEventPage = () => {
                                         ) : (
                                             <div className="flex flex-col items-center justify-center text-center">
                                                 <span className="text-white font-black text-lg md:text-xl drop-shadow-md leading-snug">REELS</span>
-                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Sellers {activeCategory ? `for ${activeCategory.name}` : ''} will appear here</span>
+                                                <span className="text-amber-100 text-[10px] mt-1 max-w-[80%]">Event sellers {activeCategory ? `for ${activeCategory.name}` : ''} will appear here</span>
                                             </div>
                                         )}
                                     </div>
@@ -800,8 +800,8 @@ const PlanMyEventPage = () => {
                         )}
 
                         {/* ─── FILTERS: Event Type + Date + Time ─── */}
-                        {/* Date/Time filter shown dynamically based on seller-level toggles from admin */}
-                        {(activeCategory && activeCategory.showDateFilters !== false && showAnyDateFilter) && (
+                        {/* Date/Time filter shown dynamically based on Category toggle from admin */}
+                        {(activeCategory && activeCategory.showDateFilters !== false) && (
                         <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                             <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                 {/* Event Type */}
