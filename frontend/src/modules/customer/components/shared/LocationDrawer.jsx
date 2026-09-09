@@ -131,11 +131,38 @@ const LocationDrawer = ({ isOpen, onClose }) => {
       Number.isFinite(address.location.lat) &&
       Number.isFinite(address.location.lng);
 
-    const apply = (coords) => {
+    // Extract city from address string (last meaningful part before state/pincode)
+    const extractCityFromAddress = (addrStr) => {
+      if (!addrStr) return currentLocation.city;
+      const parts = addrStr.split(',').map(p => p.trim()).filter(Boolean);
+      // Try to find city from common Indian address patterns
+      for (let i = parts.length - 1; i >= 0; i--) {
+        const part = parts[i];
+        // Skip country, pincode-only, state names
+        if (/^india$/i.test(part)) continue;
+        if (/^\d{6}$/.test(part)) continue;
+        if (/\d{6}/.test(part)) {
+          // e.g. "Bihar 800030" - extract state word
+          const word = part.replace(/\d+/g, '').trim();
+          if (word) return word;
+          continue;
+        }
+        return part;
+      }
+      return currentLocation.city;
+    };
+
+    const apply = (coords, extraInfo = {}) => {
       const newLoc = {
         name: address.address,
         time: "12-15 mins",
-        ...(coords ? { latitude: coords.lat, longitude: coords.lng } : {}),
+        city: extraInfo.city || extractCityFromAddress(address.address) || currentLocation.city,
+        state: extraInfo.state || currentLocation.state,
+        pincode: extraInfo.pincode || currentLocation.pincode,
+        ...(coords ? { latitude: coords.lat, longitude: coords.lng } : {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+        }),
       };
 
       // Persist so checkout/nearby sellers use the same chosen address coordinates.
@@ -144,7 +171,10 @@ const LocationDrawer = ({ isOpen, onClose }) => {
     };
 
     if (hasCoords) {
-      apply({ lat: address.location.lat, lng: address.location.lng });
+      apply(
+        { lat: address.location.lat, lng: address.location.lng },
+        { city: address.city, state: address.state, pincode: address.pincode }
+      );
       return;
     }
 
@@ -153,7 +183,7 @@ const LocationDrawer = ({ isOpen, onClose }) => {
     const cacheKey = `addr:${addrText}`;
     const cached = getCachedGeocode(cacheKey);
     if (cached?.location?.lat && cached?.location?.lng) {
-      apply(cached.location);
+      apply(cached.location, { city: cached.city, state: cached.state, pincode: cached.pincode });
       return;
     }
 
@@ -161,9 +191,12 @@ const LocationDrawer = ({ isOpen, onClose }) => {
       .geocodeAddress(addrText)
       .then((resp) => {
         const loc = resp.data?.result?.location;
+        const geocodeCity = resp.data?.result?.city;
+        const geocodeState = resp.data?.result?.state;
+        const geocodePincode = resp.data?.result?.pincode;
         if (loc && typeof loc.lat === "number" && typeof loc.lng === "number") {
-          setCachedGeocode(cacheKey, { location: { lat: loc.lat, lng: loc.lng } });
-          apply({ lat: loc.lat, lng: loc.lng });
+          setCachedGeocode(cacheKey, { location: { lat: loc.lat, lng: loc.lng }, city: geocodeCity, state: geocodeState, pincode: geocodePincode });
+          apply({ lat: loc.lat, lng: loc.lng }, { city: geocodeCity, state: geocodeState, pincode: geocodePincode });
           return;
         }
         apply(null);

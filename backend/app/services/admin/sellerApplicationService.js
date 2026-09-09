@@ -209,6 +209,8 @@ export async function bounceBackSellerApplicationById({
 }) {
   const updatePayload = {
     isVerified: false,
+    isActive: false,
+    sellerVerificationStatus: "pending",
     applicationStatus: "bounced_back",
     reviewedAt: new Date(),
     reviewedBy,

@@ -37,21 +37,53 @@ export const searchEventSellers = async (req, res) => {
       }
     }
 
-    // Apply location filtering if provided
     if (location) {
-      const parts = location.split(',').map(p => p.trim()).filter(Boolean);
-      const regexes = parts.map(p => new RegExp(p, "i"));
+      // Split location by comma and filter out noise: country name, 6-digit pincodes,
+      // pincode+state combos, very short tokens
+      const rawParts = location.split(',').map(p => p.trim()).filter(Boolean);
+      const meaningfulParts = rawParts.filter(p => {
+        if (/^india$/i.test(p)) return false;          // skip "India"
+        if (/^\d{6}$/.test(p)) return false;           // skip pure pincode
+        if (/^[a-z\s]+\s+\d{6}$/i.test(p)) return false; // skip "Bihar 800030"
+        if (p.length < 3) return false;                // skip very short
+        return true;
+      });
+
+      // Use only meaningful parts for regex — prefer city-level match
+      const searchParts = meaningfulParts.length > 0 ? meaningfulParts : rawParts;
+      const regexes = searchParts.map(p => new RegExp(p.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "i"));
+
       query.$and = [
         {
           $or: [
+            // Exact field matches
             { city: { $in: regexes } },
-            { "customZones.city": { $in: regexes } }
+            { address: { $in: regexes } },
+            { locality: { $in: regexes } },
+            { state: { $in: regexes } },
+            { "customZones.city": { $in: regexes } },
+            // Pan-India sellers serve everywhere
+            { serviceCoverage: "pan_india" }
           ]
         }
       ];
     }
 
+    console.log("DEBUG: searchEventSellers Query ->", JSON.stringify(query, null, 2));
+    
+    // ── DEBUG: ALL event sellers in DB (no filters) ──
+    const allEventSellers = await Seller.find({ isEventSeller: true })
+      .select('name shopName city state isEventSeller isActive isVerified sellerStatus sellerVerificationStatus isShopActive serviceCategories serviceCoverage')
+      .lean();
+    console.log("\n==== ALL EVENT SELLERS IN DB ====");
+    allEventSellers.forEach((s, i) => {
+      console.log(`[${i+1}] ${s.shopName || s.name} | city: ${s.city} | status: ${s.sellerStatus} | verified: ${s.sellerVerificationStatus} | isActive: ${s.isActive} | isVerified: ${s.isVerified} | categories: ${s.serviceCategories?.length || 0}`);
+    });
+    if (allEventSellers.length === 0) console.log("  ❌ NO EVENT SELLERS FOUND! isEventSeller:true wala koi seller DB mein nahi hai!");
+    console.log("================================\n");
+
     const sellers = await Seller.find(query).populate('serviceCategories').lean();
+    console.log(`DEBUG: Found ${sellers?.length || 0} sellers for this query`);
 
     if (!sellers || sellers.length === 0) {
       return res.status(200).json({
@@ -172,6 +204,9 @@ export const getAreaSellers = async (req, res) => {
         {
           $or: [
             { city: { $regex: new RegExp(city, "i") } },
+            { address: { $regex: new RegExp(city, "i") } },
+            { locality: { $regex: new RegExp(city, "i") } },
+            { state: { $regex: new RegExp(city, "i") } },
             { "customZones.city": { $regex: new RegExp(city, "i") } }
           ]
         }

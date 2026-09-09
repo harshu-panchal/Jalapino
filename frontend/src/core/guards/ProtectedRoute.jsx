@@ -44,6 +44,8 @@ const ProtectedRoute = ({ children }) => {
                         approvalRequired: true,
                         applicationStatus,
                         rejectionReason: user?.rejectionReason || '',
+                        adminRemark: user?.adminRemark || '',
+                        adminTerms: user?.adminTerms || '',
                     }}
                     replace
                 />

@@ -394,10 +394,23 @@ export const loginSeller = async (req, res) => {
             seller.isActive === true &&
             applicationStatus === "approved";
 
+        console.log("=== LOGIN SELLER DEBUG ===");
+        console.log("Email/Phone attempted:", email, phone);
+        console.log("Found seller ID:", seller._id);
+        console.log("seller.name:", seller.name);
+        console.log("seller.shopName:", seller.shopName);
+        console.log("seller.isVerified:", seller.isVerified);
+        console.log("seller.isActive:", seller.isActive);
+        console.log("seller.applicationStatus:", seller.applicationStatus);
+        console.log("Computed isApproved:", isApproved);
+        console.log("==========================");
+
         if (!isApproved) {
             const approvalMessage =
                 applicationStatus === "rejected"
                     ? "Your seller application was rejected. Please contact support."
+                    : applicationStatus === "bounced_back"
+                    ? "Your seller application requires revision. Please check admin notes."
                     : "Your seller account is pending admin approval.";
 
             return handleResponse(res, 403, approvalMessage, {
@@ -405,6 +418,9 @@ export const loginSeller = async (req, res) => {
                 isVerified: seller.isVerified === true,
                 isActive: seller.isActive === true,
                 rejectionReason: seller.rejectionReason || "",
+                adminRemark: seller.adminRemark || "",
+                adminTerms: seller.adminTerms || "",
+                advancePaymentPercentage: seller.advancePaymentPercentage || 0,
             });
         }
 

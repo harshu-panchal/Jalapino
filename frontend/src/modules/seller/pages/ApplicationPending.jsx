@@ -18,8 +18,18 @@ const ApplicationPending = () => {
     user?.applicationStatus ||
     (user?.isVerified ? "approved" : "pending");
   const rejectionReason = location.state?.rejectionReason || user?.rejectionReason || "";
+  const adminRemark = location.state?.adminRemark || user?.adminRemark || "";
+  const adminTerms = location.state?.adminTerms || user?.adminTerms || "";
 
-  if (!isLoading && isAuthenticated && role === "seller") {
+  if (isLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center bg-slate-950">
+        <div className="h-12 w-12 animate-spin rounded-full border-4 border-amber-400 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (isAuthenticated && role === "seller") {
     const isApproved =
       user?.isVerified === true &&
       user?.isActive === true &&
@@ -61,22 +71,28 @@ const ApplicationPending = () => {
               className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-widest ${
                 isRejected
                   ? "bg-rose-500/20 text-rose-200"
+                  : isBouncedBack
+                  ? "bg-amber-500/20 text-amber-200"
                   : "bg-amber-400/20 text-amber-100"
               }`}
             >
               {isNeedsAction ? <ShieldAlert className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
-              {isRejected ? "Application Rejected" : isBouncedBack ? "Revision Required" : "Application Pending"}
+              {isRejected ? "Application Rejected" : isBouncedBack ? "Application Bounced Back" : "Application Pending"}
             </div>
           </div>
 
           <h1 className="text-3xl md:text-4xl font-black text-white leading-tight">
-            {isNeedsAction
-              ? "Your seller application needs action."
+            {isBouncedBack
+              ? "Your seller application requires revision."
+              : isRejected
+              ? "Your seller application was rejected."
               : "Your seller application is under review."}
           </h1>
           <p className="mt-4 text-base md:text-lg text-slate-200/90 font-medium max-w-2xl">
-            {isNeedsAction
-              ? "You cannot access the seller dashboard yet. Please check the notes below and contact support to re-submit with the required details."
+            {isBouncedBack
+              ? "Admin has reviewed your application and sent it back for revision. Please review the admin remarks below to see what is pending or needs completion before approval."
+              : isRejected
+              ? "You cannot access the seller dashboard. Please check the rejection reason below and contact support."
               : "Dashboard access unlocks automatically once admin approves your account."}
           </p>
 
@@ -88,18 +104,22 @@ const ApplicationPending = () => {
           ) : null}
 
           {/* Admin Remark / Platform Note */}
-          {(location.state?.adminRemark || user?.adminRemark) ? (
+          {adminRemark ? (
             <div className="mt-4 rounded-2xl border border-amber-400/25 bg-amber-400/10 px-4 py-3 text-sm text-amber-100">
-              <span className="font-black uppercase tracking-widest text-[11px] text-amber-300">📋 Platform Note</span>
-              <p className="mt-1 font-medium whitespace-pre-wrap">{location.state?.adminRemark || user?.adminRemark}</p>
+              <span className="font-black uppercase tracking-widest text-[11px] text-amber-300">
+                📋 Admin Remarks (Action Needed)
+              </span>
+              <p className="mt-1 font-medium whitespace-pre-wrap">{adminRemark}</p>
             </div>
           ) : null}
 
           {/* Admin Terms and Conditions */}
-          {(location.state?.adminTerms || user?.adminTerms) ? (
+          {adminTerms ? (
             <div className="mt-4 rounded-2xl border border-indigo-400/25 bg-indigo-400/10 px-4 py-3 text-sm text-indigo-100">
-              <span className="font-black uppercase tracking-widest text-[11px] text-indigo-300">📝 Terms & Conditions</span>
-              <p className="mt-1 font-medium whitespace-pre-wrap">{location.state?.adminTerms || user?.adminTerms}</p>
+              <span className="font-black uppercase tracking-widest text-[11px] text-indigo-300">
+                📝 Terms & Conditions (Platform Dynamic Policy)
+              </span>
+              <p className="mt-1 font-medium whitespace-pre-wrap">{adminTerms}</p>
             </div>
           ) : null}
 

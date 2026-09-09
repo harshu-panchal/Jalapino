@@ -197,6 +197,15 @@ export const getSellerProfile = async (req, res) => {
       return handleResponse(res, 404, "Seller not found");
     }
 
+    console.log("=== GET SELLER PROFILE DEBUG ===");
+    console.log("Seller ID:", seller._id);
+    console.log("Name:", seller.name);
+    console.log("ShopName:", seller.shopName);
+    console.log("isVerified:", seller.isVerified);
+    console.log("isActive:", seller.isActive);
+    console.log("applicationStatus:", seller.applicationStatus);
+    console.log("================================");
+
     // Populate any unpopulated IDs in allowedEventCategories from EventCategory model
     if (Array.isArray(seller.allowedEventCategories) && seller.allowedEventCategories.length > 0) {
       const unpopulatedIds = seller.allowedEventCategories.filter(

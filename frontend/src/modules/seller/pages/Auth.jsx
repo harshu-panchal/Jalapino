@@ -751,12 +751,18 @@ const Auth = () => {
           error.response?.data?.result?.applicationStatus || "pending";
         const rejectionReason =
           error.response?.data?.result?.rejectionReason || "";
+        const adminRemark =
+          error.response?.data?.result?.adminRemark || "";
+        const adminTerms =
+          error.response?.data?.result?.adminTerms || "";
         navigate("/seller/pending-approval", {
           replace: true,
           state: {
             approvalRequired: true,
             applicationStatus,
             rejectionReason,
+            adminRemark,
+            adminTerms,
           },
         });
       }

@@ -313,14 +313,12 @@ const PlanMyEventPage = () => {
     const [banners,           setBanners]           = useState([]);
     const [currentBannerIdx,  setCurrentBannerIdx]  = useState(0);
 
-    /* ── auto-fill functionLocation from global location if empty ── */
-    const hasAutoFilledLocation = useRef(false);
+    /* ── sync functionLocation with global location ── */
     useEffect(() => {
-        if (currentLocation?.name && !eventInfo.functionLocation && !hasAutoFilledLocation.current) {
+        if (currentLocation?.name) {
             setEventInfo(prev => ({ ...prev, functionLocation: currentLocation.name }));
-            hasAutoFilledLocation.current = true;
         }
-    }, [currentLocation?.name, eventInfo.functionLocation]);
+    }, [currentLocation?.name]);
 
     /* ── initialize google maps autocomplete for function location ── */
     useEffect(() => {
@@ -498,12 +496,14 @@ const PlanMyEventPage = () => {
     }, []);
 
     useEffect(() => {
-        fetchSellers(activeCategory, filterDate, filterTime, eventInfo.functionLocation);
+        // Prioritize city-level search to prevent broad matches like "India" or "State"
+        const searchLoc = currentLocation?.city || eventInfo.functionLocation || currentLocation?.name;
+        fetchSellers(activeCategory, filterDate, filterTime, searchLoc);
         // Reset detail view if category/filters change
         setSelectedSellerDetail(null);
         // Reset booking data when filters change
         setSellerBookings({});
-    }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, fetchSellers]);
+    }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, currentLocation, fetchSellers]);
 
     /* ── fetch booking counts for each seller when date is selected ── */
     useEffect(() => {
