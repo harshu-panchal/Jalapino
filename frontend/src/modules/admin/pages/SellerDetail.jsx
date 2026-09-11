@@ -295,7 +295,7 @@ const SellerDetail = () => {
                                     : seller.status?.toUpperCase()}
                             </Badge>
                         </div>
-                        <p className="ds-description mt-1 text-slate-500 font-medium">Owned by {seller.ownerName} • {seller.category}</p>
+                        <p className="ds-description mt-1 text-slate-500 font-medium">Owned by {seller.ownerName} • {seller.isEventSeller ? (seller.eventCategory?.name || 'Event Seller') : (seller.category || '')}</p>
                     </div>
                 </div>
 
@@ -602,7 +602,7 @@ const SellerDetail = () => {
                                                 <div className="grid grid-cols-3 gap-4">
                                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</p>
-                                                        <p className="text-xs font-black text-slate-900 capitalize">{seller.category || (seller.isEventSeller ? 'Event Seller' : 'N/A')}</p>
+                                                        <p className="text-xs font-black text-slate-900 capitalize">{seller.isEventSeller ? (seller.eventCategory?.name || 'Event Seller') : (seller.category || 'N/A')}</p>
                                                     </div>
                                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Commission</p>
@@ -762,7 +762,7 @@ const SellerDetail = () => {
                                                 />
 
                                                 {/* Shop Operation Settings */}
-                                                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mb-4">
+                                                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mb-4 col-span-1 md:col-span-2">
                                                     <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
                                                         <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Shop Operation Settings</h5>
                                                         <p className="text-[10px] text-slate-500 font-medium">Control shop visibility, timings, and advance booking rules.</p>
@@ -933,7 +933,7 @@ const SellerDetail = () => {
 
                                                 {/* Event & Ticketing Options (Inside Event Details) */}
                                                 {seller.eventDetailsEnabled && (
-                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100 col-span-1 md:col-span-2">
                                                         <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contact & Ticketing Options</h6>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <PermissionToggle
@@ -993,7 +993,7 @@ const SellerDetail = () => {
 
                                                 {/* Date & Time Slot Settings */}
                                                 {seller.eventDetailsEnabled && (
-                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100 col-span-1 md:col-span-2">
                                                         <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DATE & TIME SLOT Setting</h6>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <PermissionToggle
@@ -1035,7 +1035,7 @@ const SellerDetail = () => {
                                                 )}
 
                                                 {seller.planMyEventEnabled && (
-                                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
+                                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4 col-span-1 md:col-span-2">
                                                         <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <PermissionToggle
@@ -1077,7 +1077,7 @@ const SellerDetail = () => {
                                                 )}
 
                                                 {/* Capacity Settings */}
-                                                <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100 col-span-1 md:col-span-2">
                                                     <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">CAPACITY TYPE</h6>
                                                     
                                                     <PermissionToggle

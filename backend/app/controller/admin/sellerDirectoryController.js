@@ -80,7 +80,7 @@ export const getSellerById = async (req, res) => {
     const SellerMetrics = await import("../../models/sellerMetrics.js").then((m) => m.default);
     const EventBooking = await import("../../models/event/EventBooking.js").then((m) => m.default);
     
-    const seller = await Seller.findById(id).lean();
+    const seller = await Seller.findById(id).populate('serviceCategories').lean();
     if (!seller) throw new Error("Seller not found");
 
     // Fetch Wallet Balance

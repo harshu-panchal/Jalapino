@@ -73,12 +73,15 @@ export const searchEventSellers = async (req, res) => {
 
     if (location) {
       // Split location by comma and filter out noise: country name, 6-digit pincodes,
-      // pincode+state combos, very short tokens
+      // pincode+state combos, very short tokens, and state names
       const rawParts = location.split(",").map((p) => p.trim()).filter(Boolean);
+      const states = ["andhra pradesh", "arunachal pradesh", "assam", "bihar", "chhattisgarh", "goa", "gujarat", "haryana", "himachal pradesh", "jharkhand", "karnataka", "kerala", "madhya pradesh", "maharashtra", "manipur", "meghalaya", "mizoram", "nagaland", "odisha", "punjab", "rajasthan", "sikkim", "tamil nadu", "telangana", "tripura", "uttar pradesh", "uttarakhand", "west bengal", "delhi", "jammu", "kashmir", "ladakh", "puducherry", "chandigarh"];
       const meaningfulParts = rawParts.filter((p) => {
+        const pl = p.toLowerCase();
         if (/^india$/i.test(p)) return false; // skip "India"
         if (/^\d{6}$/.test(p)) return false; // skip pure pincode
         if (/^[a-z\s]+\s+\d{6}$/i.test(p)) return false; // skip "Bihar 800030"
+        if (states.includes(pl)) return false; // skip state names
         if (p.length < 3) return false; // skip very short
         return true;
       });
@@ -87,17 +90,15 @@ export const searchEventSellers = async (req, res) => {
       const searchParts = meaningfulParts.length > 0 ? meaningfulParts : rawParts;
       const regexes = searchParts.map((p) => new RegExp(p.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "i"));
 
+      // Match strictly on city field only — address/locality text can contain
+      // other city names (e.g. "Near Bhopal Road, Indore") causing false matches
+      const cityRegexes = searchParts.map(
+        (p) => new RegExp(`^${p.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')}$`, 'i')
+      );
       query.$and.push({
         $or: [
-          // Exact field matches
-          { city: { $in: regexes } },
-          { address: { $in: regexes } },
-          { locality: { $in: regexes } },
-          { state: { $in: regexes } },
-          { pincode: { $in: regexes } },
-          { "customZones.city": { $in: regexes } },
-          // Pan-India sellers serve everywhere
-          { serviceCoverage: "pan_india" },
+          { city: { $in: cityRegexes } },
+          { "customZones.city": { $in: cityRegexes } },
         ],
       });
     }

@@ -496,8 +496,8 @@ const PlanMyEventPage = () => {
     }, []);
 
     useEffect(() => {
-        // Prioritize city-level search to prevent broad matches like "India" or "State"
-        const searchLoc = currentLocation?.city || eventInfo.functionLocation || currentLocation?.name;
+        // Prioritize function location if entered, then city-level search, then global location name
+        const searchLoc = eventInfo.functionLocation || currentLocation?.city || currentLocation?.name;
         fetchSellers(activeCategory, filterDate, filterTime, searchLoc);
         // Reset detail view if category/filters change
         setSelectedSellerDetail(null);
