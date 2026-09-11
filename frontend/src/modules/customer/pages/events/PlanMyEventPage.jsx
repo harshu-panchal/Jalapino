@@ -579,9 +579,10 @@ const PlanMyEventPage = () => {
         )
         : smartFilteredSellers;
 
-    // Seller-wise date/time toggle flags — dynamically driven from admin settings
-    const showStandardDateFilter = filteredSellers.some(s => s.showStandardDateTime);
-    const showAdvancedDateFilter  = filteredSellers.some(s => s.showAdvancedDateTime);
+    // Category-wise date/time toggle flags — dynamically driven from admin settings
+    const relevantCats = activeCategory ? [activeCategory] : categories;
+    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime);
+    const showAdvancedDateFilter  = relevantCats.some(c => c.showAdvancedDateTime);
     const showAnyDateFilter = showStandardDateFilter || showAdvancedDateFilter;
 
     const filteredCats = categories.filter(c =>
@@ -604,7 +605,7 @@ const PlanMyEventPage = () => {
                     setSelectedSellerDetail(null);
                 }}
             />
-            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
+            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden transition-[padding] duration-200 ease-out" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
             <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden w-full">
                 {/* ══════════════ LEFT SIDEBAR ══════════════ */}
                 <div className="w-full lg:w-72 xl:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col shrink-0 shadow-sm z-10 lg:max-h-full">
@@ -939,6 +940,7 @@ const PlanMyEventPage = () => {
                                     </div>
                                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                         {/* Name */}
+                                        {(eventInfo.bookingType === 'couple' ? relevantCats.some(c => c.coupleContactEnabled) : relevantCats.some(c => c.primaryContactEnabled)) && (
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
                                                 {eventInfo.bookingType === 'couple' ? '💑 Couple Names' : '👤 Primary Contact'}
@@ -951,9 +953,10 @@ const PlanMyEventPage = () => {
                                                 className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
                                             />
                                         </div>
+                                        )}
 
                                         {/* Gender (Only for Individual) */}
-                                        {eventInfo.bookingType === 'individual' && (
+                                        {(eventInfo.bookingType === 'individual' && relevantCats.some(c => c.primaryContactEnabled)) && (
                                             <div className="flex flex-col gap-1">
                                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">⚧ Gender</label>
                                                 <div className="flex gap-3 items-center h-[38px]">
@@ -977,6 +980,7 @@ const PlanMyEventPage = () => {
                                         )}
 
                                         {/* Date of Birth or Anniversary Date */}
+                                        {(eventInfo.bookingType === 'couple' ? relevantCats.some(c => c.coupleContactEnabled) : relevantCats.some(c => c.primaryContactEnabled)) && (
                                         <div className="flex flex-col gap-1">
                                             <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
                                                 {eventInfo.bookingType === 'couple' ? '💍 Anniversary / Marriage Date' : '🎂 Date of Birth'}
@@ -989,9 +993,10 @@ const PlanMyEventPage = () => {
                                                 className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400"
                                             />
                                         </div>
+                                        )}
 
                                         {/* No of Guests */}
-                                        {(activeCategory?.showNoOfGuestsBox || filteredSellers.some(s => s.noOfGuestsEnabled)) && (
+                                        {relevantCats.some(c => c.showNoOfGuestsBox || c.noOfGuestsEnabled) && (
                                             <div className="flex flex-col gap-1">
                                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👥 No of Guests</label>
                                                 <input
@@ -1006,7 +1011,7 @@ const PlanMyEventPage = () => {
                                         )}
 
                                         {/* Function Location */}
-                                        {filteredSellers.some(s => s.functionLocationEnabled) && (
+                                        {relevantCats.some(c => c.functionLocationEnabled) && (
                                             <div className="flex flex-col gap-1">
                                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
                                                 <input
@@ -1021,7 +1026,7 @@ const PlanMyEventPage = () => {
                                         )}
 
                                         {/* Seller Location */}
-                                        {filteredSellers.some(s => s.sellerLocationEnabled) && (
+                                        {relevantCats.some(c => c.sellerLocationEnabled) && (
                                             <div className="flex flex-col gap-1">
                                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Seller Location</label>
                                                 <input

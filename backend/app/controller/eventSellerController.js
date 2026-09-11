@@ -18,15 +18,49 @@ export const searchEventSellers = async (req, res) => {
 
     const categoryIds = categories.split(',').map(id => id.trim()).filter(Boolean);
 
-    // 1. Base query: active event sellers with the matching service categories
+    // Fetch category names for categoryIds to allow matching seller category/mainProducts by string
+    let catNames = [];
+    if (categoryIds.length > 0) {
+      try {
+        const EventCategory = (await import("../models/event/EventCategory.js")).default;
+        const matchedCats = await EventCategory.find({ _id: { $in: categoryIds } }).lean();
+        catNames = matchedCats.map((c) => c.name).filter(Boolean);
+      } catch (err) {
+        console.error("Error fetching EventCategory names:", err);
+      }
+    }
+
+    const catOrConditions = [
+      { serviceCategories: { $in: categoryIds } }
+    ];
+    catNames.forEach((name) => {
+      const reg = new RegExp(name.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "i");
+      catOrConditions.push({ category: reg });
+      catOrConditions.push({ mainProducts: reg });
+    });
+    // Add default fallbacks for general categories like Decoration / Balloon
+    catOrConditions.push({ category: /decoration|balloon/i });
+    catOrConditions.push({ mainProducts: /decoration|balloon/i });
+
+    // 1. Flexible query: active event sellers matching category & location
     const query = {
-      isEventSeller: true,
       isShopActive: { $ne: false },
       $or: [
-        { sellerStatus: 'active', sellerVerificationStatus: 'verified' },
-        { isActive: true, isVerified: true }
+        { sellerStatus: "active", sellerVerificationStatus: "verified" },
+        { isActive: true, isVerified: true },
       ],
-      serviceCategories: { $in: categoryIds },
+      $and: [
+        {
+          $or: [
+            { isEventSeller: true },
+            { planMyEventEnabled: true },
+            { eventDetailsEnabled: true },
+            { category: /decoration|event|catering|photography|venue|balloon/i },
+            { mainProducts: /decoration|event|catering|photography|venue|balloon/i },
+          ],
+        },
+        { $or: catOrConditions },
+      ],
     };
 
     // Apply guest count filter only if provided
@@ -40,33 +74,32 @@ export const searchEventSellers = async (req, res) => {
     if (location) {
       // Split location by comma and filter out noise: country name, 6-digit pincodes,
       // pincode+state combos, very short tokens
-      const rawParts = location.split(',').map(p => p.trim()).filter(Boolean);
-      const meaningfulParts = rawParts.filter(p => {
-        if (/^india$/i.test(p)) return false;          // skip "India"
-        if (/^\d{6}$/.test(p)) return false;           // skip pure pincode
+      const rawParts = location.split(",").map((p) => p.trim()).filter(Boolean);
+      const meaningfulParts = rawParts.filter((p) => {
+        if (/^india$/i.test(p)) return false; // skip "India"
+        if (/^\d{6}$/.test(p)) return false; // skip pure pincode
         if (/^[a-z\s]+\s+\d{6}$/i.test(p)) return false; // skip "Bihar 800030"
-        if (p.length < 3) return false;                // skip very short
+        if (p.length < 3) return false; // skip very short
         return true;
       });
 
       // Use only meaningful parts for regex — prefer city-level match
       const searchParts = meaningfulParts.length > 0 ? meaningfulParts : rawParts;
-      const regexes = searchParts.map(p => new RegExp(p.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&'), "i"));
+      const regexes = searchParts.map((p) => new RegExp(p.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "i"));
 
-      query.$and = [
-        {
-          $or: [
-            // Exact field matches
-            { city: { $in: regexes } },
-            { address: { $in: regexes } },
-            { locality: { $in: regexes } },
-            { state: { $in: regexes } },
-            { "customZones.city": { $in: regexes } },
-            // Pan-India sellers serve everywhere
-            { serviceCoverage: "pan_india" }
-          ]
-        }
-      ];
+      query.$and.push({
+        $or: [
+          // Exact field matches
+          { city: { $in: regexes } },
+          { address: { $in: regexes } },
+          { locality: { $in: regexes } },
+          { state: { $in: regexes } },
+          { pincode: { $in: regexes } },
+          { "customZones.city": { $in: regexes } },
+          // Pan-India sellers serve everywhere
+          { serviceCoverage: "pan_india" },
+        ],
+      });
     }
 
     console.log("DEBUG: searchEventSellers Query ->", JSON.stringify(query, null, 2));

@@ -272,7 +272,12 @@ export async function getActiveSellersData({
   limit,
   skip,
 }) {
-  const baseQuery = { isVerified: true, isActive: true };
+  const baseQuery = {
+    isVerified: true,
+    isActive: true,
+    sellerStatus: { $ne: "inactive" },
+    applicationStatus: { $nin: ["pending", "bounced_back", "rejected"] },
+  };
   const filters = [baseQuery];
 
   if (category && category !== "all") {

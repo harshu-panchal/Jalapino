@@ -39,7 +39,33 @@ const eventCategorySchema = new mongoose.Schema({
     sortOrder: {
         type: Number,
         default: 0
-    }
+    },
+    // Contact Options
+    primaryContactEnabled: { type: Boolean, default: false },
+    coupleContactEnabled: { type: Boolean, default: false },
+    noOfGuestsEnabled: { type: Boolean, default: false },
+    
+    // Date & Time Slot Settings
+    showStandardDateTime: { type: Boolean, default: false },
+    showAdvancedDateTime: { type: Boolean, default: false },
+    
+    // Location Options
+    functionLocationEnabled: { type: Boolean, default: false },
+    sellerLocationEnabled: { type: Boolean, default: false },
+    
+    // Customization & Quotation Engine Settings
+    quoteReferencePhotoUpload: { type: Boolean, default: false },
+    quoteColorCombination: { type: Boolean, default: false },
+    quoteCustomerNotes: { type: Boolean, default: false },
+    quoteSellerQuotation: { type: Boolean, default: false },
+    quoteQuoteRevision: { type: Boolean, default: false },
+    quoteCustomerApproval: { type: Boolean, default: false },
+    quoteAdvancePayment: { type: Boolean, default: false },
+    quoteFinalPayment: { type: Boolean, default: false },
+    
+    // Event & Ticketing Options
+    ticketSystemEnabled: { type: Boolean, default: false },
+    venueVisitsEnabled: { type: Boolean, default: false },
 }, {
     timestamps: true
 });

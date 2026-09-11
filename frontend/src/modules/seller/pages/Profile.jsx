@@ -29,6 +29,7 @@ const SellerProfile = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
+  const [termsAgreed, setTermsAgreed] = useState(false);
     const [formData, setFormData] = useState({
     name: "",
     shopName: "",
@@ -1222,19 +1223,65 @@ const SellerProfile = () => {
 
           {/* Admin Terms Card - only if terms exist */}
           {profile?.adminTerms && (
-            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-indigo-50 border border-indigo-100 mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="h-8 w-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 text-base">
-                  📝
+            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-indigo-50 border border-indigo-200 mb-4">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="h-8 w-8 rounded-xl bg-indigo-100 flex items-center justify-center text-indigo-700 text-base">
+                    📝
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-[3px] text-indigo-700">Platform Terms & Conditions</p>
+                    <p className="text-[10px] text-indigo-600 font-medium">Admin Policy Agreement</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-[3px] text-indigo-700">Terms & Conditions</p>
-                  <p className="text-[10px] text-indigo-600 font-medium">Platform Requirements</p>
-                </div>
+                {profile?.termsAccepted && profile?.termsAcceptedVersionText === profile?.adminTerms ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
+                    Accepted {profile?.termsAcceptedAt ? `on ${new Date(profile.termsAcceptedAt).toLocaleDateString()}` : ''}
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 border border-amber-300 animate-pulse">
+                    ⚠️ Acceptance Pending
+                  </span>
+                )}
               </div>
-              <p className="text-xs font-medium text-indigo-900 leading-relaxed whitespace-pre-wrap">
-                {profile.adminTerms}
-              </p>
+              <div className="p-4 bg-white/80 rounded-2xl border border-indigo-100 mb-3 max-h-48 overflow-y-auto">
+                <p className="text-xs font-medium text-indigo-950 leading-relaxed whitespace-pre-wrap">
+                  {profile.adminTerms}
+                </p>
+              </div>
+
+              {(!profile?.termsAccepted || profile?.termsAcceptedVersionText !== profile?.adminTerms) && (
+                <div className="mt-3 pt-3 border-t border-indigo-200/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={termsAgreed}
+                      onChange={(e) => setTermsAgreed(e.target.checked)}
+                      className="h-4 w-4 rounded border-indigo-300 text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="text-xs font-bold text-indigo-900">
+                      I have read and agree to these Terms & Conditions
+                    </span>
+                  </label>
+                  <Button
+                    type="button"
+                    disabled={!termsAgreed || isSaving}
+                    onClick={async () => {
+                      try {
+                        await sellerApi.acceptTerms();
+                        toast.success("Terms & Conditions accepted successfully!");
+                        fetchProfile();
+                      } catch (err) {
+                        toast.error(err.response?.data?.message || "Failed to accept terms");
+                      }
+                    }}
+                    className="w-full sm:w-auto px-5 py-2 rounded-xl text-xs font-black bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 transition-all shadow-sm"
+                  >
+                    Accept & Confirm
+                  </Button>
+                </div>
+              )}
             </Card>
           )}
 

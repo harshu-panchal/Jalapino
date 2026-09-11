@@ -20,6 +20,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const currentState = embeddedState || routerState || {};
     const { eventData, preferences, selectedCategories, selectedSeller } = currentState;
     const { user } = useAuth();
+    
+    // Derived from selected categories (category toggles from admin)
+    const relevantCats = selectedCategories && selectedCategories.length > 0 ? selectedCategories : [];
 
     const [products, setProducts] = useState([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -404,6 +407,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </div>
 
                             {/* Color Combination Option (Multiple Colors) */}
+                            {relevantCats.some(c => c.quoteColorCombination) && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
 
@@ -487,6 +491,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     </button>
                                 </div>
                             </div>
+                            )}
 
                             {/* Theme Selection Option */}
                             <div>
@@ -513,6 +518,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </div>
 
                             {/* Reference Photo Upload Option */}
+                            {relevantCats.some(c => c.quoteReferencePhotoUpload) && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
                                 <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all">
@@ -531,8 +537,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     </label>
                                 </div>
                             </div>
+                            )}
 
                             {/* Customer Notes Option */}
+                            {relevantCats.some(c => c.quoteCustomerNotes) && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
                                 <textarea
@@ -543,6 +551,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                 />
                             </div>
+                            )}
                         </div>
                     </div>
                     {/* Live Chat with Seller (Socket.io) */}
@@ -691,7 +700,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             <MainLocationHeader hideSearchBar={false} isAbsolute={false} />
-            <div className="flex-1 w-full overflow-y-auto transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 180px) - var(--header-shrink-offset, 0px))' }}>
+            <div id="main-scroll-container" className="flex-1 w-full overflow-y-auto transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 180px) - var(--header-shrink-offset, 0px))' }}>
                 {content}
             </div>
         </div>

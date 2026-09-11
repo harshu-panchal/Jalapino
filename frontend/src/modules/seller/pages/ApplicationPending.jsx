@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock3, ShieldAlert, Store } from "lucide-react";
+import { CheckCircle2, Clock3, ShieldAlert, Store, CheckCircle } from "lucide-react";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
+import { sellerApi } from "../services/sellerApi";
+import { toast } from "sonner";
 
 const ApplicationPending = () => {
   const location = useLocation();
@@ -20,6 +22,12 @@ const ApplicationPending = () => {
   const rejectionReason = location.state?.rejectionReason || user?.rejectionReason || "";
   const adminRemark = location.state?.adminRemark || user?.adminRemark || "";
   const adminTerms = location.state?.adminTerms || user?.adminTerms || "";
+
+  const [hasAcceptedTerms, setHasAcceptedTerms] = useState(
+    Boolean(user?.termsAccepted && user?.termsAcceptedVersionText === adminTerms)
+  );
+  const [termsAgreedCheckbox, setTermsAgreedCheckbox] = useState(false);
+  const [isSubmittingTerms, setIsSubmittingTerms] = useState(false);
 
   if (isLoading) {
     return (
@@ -115,11 +123,60 @@ const ApplicationPending = () => {
 
           {/* Admin Terms and Conditions */}
           {adminTerms ? (
-            <div className="mt-4 rounded-2xl border border-indigo-400/25 bg-indigo-400/10 px-4 py-3 text-sm text-indigo-100">
-              <span className="font-black uppercase tracking-widest text-[11px] text-indigo-300">
-                📝 Terms & Conditions (Platform Dynamic Policy)
-              </span>
-              <p className="mt-1 font-medium whitespace-pre-wrap">{adminTerms}</p>
+            <div className="mt-4 rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-5 text-sm text-indigo-100 shadow-lg">
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="font-black uppercase tracking-widest text-[11px] text-indigo-300 flex items-center gap-2">
+                  📝 Terms & Conditions (Platform Policy)
+                </span>
+                {hasAcceptedTerms ? (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Terms Accepted
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-black bg-amber-500/20 text-amber-300 border border-amber-400/30 animate-pulse">
+                    ⚠️ Acceptance Pending
+                  </span>
+                )}
+              </div>
+              <p className="mt-1 font-medium whitespace-pre-wrap text-indigo-100/90 leading-relaxed bg-black/20 p-3.5 rounded-xl border border-white/5 max-h-40 overflow-y-auto">
+                {adminTerms}
+              </p>
+
+              {!hasAcceptedTerms && (
+                <div className="mt-4 pt-3 border-t border-indigo-400/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={termsAgreedCheckbox}
+                      onChange={(e) => setTermsAgreedCheckbox(e.target.checked)}
+                      className="h-4 w-4 rounded border-indigo-400/50 bg-black/40 text-indigo-500 focus:ring-indigo-400"
+                    />
+                    <span className="text-xs font-bold text-indigo-200">
+                      I have read and agree to these Terms & Conditions
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    disabled={!termsAgreedCheckbox || isSubmittingTerms}
+                    onClick={async () => {
+                      setIsSubmittingTerms(true);
+                      try {
+                        await sellerApi.acceptTerms();
+                        setHasAcceptedTerms(true);
+                        toast.success("Terms & Conditions accepted successfully!");
+                      } catch (err) {
+                        toast.error(err.response?.data?.message || "Failed to accept terms");
+                      } finally {
+                        setIsSubmittingTerms(false);
+                      }
+                    }}
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl text-xs font-black bg-indigo-500 hover:bg-indigo-600 text-white disabled:opacity-40 transition-all shadow-md"
+                  >
+                    Accept & Confirm
+                  </button>
+                </div>
+              )}
             </div>
           ) : null}
 

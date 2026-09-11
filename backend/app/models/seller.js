@@ -588,6 +588,18 @@ const sellerSchema = new mongoose.Schema(
       trim: true,
       default: ''
     },
+    termsAccepted: {
+      type: Boolean,
+      default: false
+    },
+    termsAcceptedAt: {
+      type: Date
+    },
+    termsAcceptedVersionText: {
+      type: String,
+      trim: true,
+      default: ''
+    },
     advancePaymentPercentage: {
       type: Number,
       default: 0

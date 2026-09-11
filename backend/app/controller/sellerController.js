@@ -391,4 +391,31 @@ export const updateSellerProfile = async (req, res) => {
   }
 };
 
+/* ===============================
+   ACCEPT SELLER TERMS & CONDITIONS
+================================ */
+export const acceptSellerTerms = async (req, res) => {
+  try {
+    const sellerId = req.user.id;
+    const seller = await Seller.findById(sellerId);
+    if (!seller) {
+      return handleResponse(res, 404, "Seller not found");
+    }
+
+    seller.termsAccepted = true;
+    seller.termsAcceptedAt = new Date();
+    seller.termsAcceptedVersionText = seller.adminTerms || "";
+
+    await seller.save();
+
+    return handleResponse(res, 200, "Terms & Conditions accepted successfully", {
+      termsAccepted: seller.termsAccepted,
+      termsAcceptedAt: seller.termsAcceptedAt,
+      termsAcceptedVersionText: seller.termsAcceptedVersionText,
+    });
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
 

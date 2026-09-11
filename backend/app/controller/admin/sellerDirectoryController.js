@@ -312,6 +312,10 @@ export const updateSellerDetails = async (req, res) => {
     const existingSeller = await Seller.findById(id);
     if (!existingSeller) throw new Error("Seller not found");
 
+    if (adminTerms !== undefined && adminTerms !== existingSeller.adminTerms) {
+        updateData.termsAccepted = false;
+    }
+
     if (demoTrialDays !== undefined) updateData.demoTrialDays = Number(demoTrialDays);
     if (demoTrialEnabled !== undefined) {
         updateData.demoTrialEnabled = demoTrialEnabled;

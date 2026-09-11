@@ -135,7 +135,12 @@ const SellerDetail = () => {
                 totalOrders: data.stats?.totalOrders || 0,
                 totalRevenue: data.stats?.totalRevenue || 0,
                 rating: data.stats?.rating || 0,
-                status: data.applicationStatus === 'pending' ? 'pending' : (data.isVerified && data.isActive ? 'active' : (data.applicationStatus || 'inactive')),
+                status: data.applicationStatus === 'bounced_back' ? 'bounced_back'
+                    : data.applicationStatus === 'rejected' ? 'rejected'
+                    : data.applicationStatus === 'pending' ? 'pending'
+                    : (data.isVerified && data.isActive && data.sellerVerificationStatus === 'verified') ? 'active'
+                    : data.sellerVerificationStatus === 'pending' ? 'pending_verification'
+                    : (data.applicationStatus || 'inactive'),
                 productsEnabled: data.productsEnabled ?? true,
                 stockEnabled: data.stockEnabled ?? true,
                 ordersEnabled: data.ordersEnabled ?? true,
@@ -275,7 +280,20 @@ const SellerDetail = () => {
                     <div>
                         <div className="flex items-center gap-2">
                             <h1 className="ds-h1">{seller.shopName}</h1>
-                            <Badge variant="success" className="text-[10px] font-black uppercase tracking-widest">{seller.status}</Badge>
+                            <Badge
+                                variant={
+                                    seller.status === 'active' ? 'success'
+                                    : seller.status === 'bounced_back' ? 'warning'
+                                    : seller.status === 'rejected' ? 'destructive'
+                                    : seller.status === 'pending_verification' ? 'warning'
+                                    : 'secondary'
+                                }
+                                className="text-[10px] font-black uppercase tracking-widest"
+                            >
+                                {seller.status === 'pending_verification' ? 'PENDING VERIFICATION'
+                                    : seller.status === 'bounced_back' ? 'BOUNCED BACK'
+                                    : seller.status?.toUpperCase()}
+                            </Badge>
                         </div>
                         <p className="ds-description mt-1 text-slate-500 font-medium">Owned by {seller.ownerName} • {seller.category}</p>
                     </div>

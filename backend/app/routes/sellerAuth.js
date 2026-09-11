@@ -7,7 +7,7 @@ import {
     forgotPassword,
     resetPassword,
 } from "../controller/sellerAuthController.js";
-import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers } from "../controller/sellerController.js";
+import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers, acceptSellerTerms } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings } from "../controller/sellerStatsController.js";
 import { getSellerWalletSummaryController } from "../controller/adminFinanceController.js";
 import { saveFcmToken } from "../modules/notifications/notification.controller.js";
@@ -50,6 +50,7 @@ router.post("/login", loginSeller);
 router.post("/forgot-password", authRouteRateLimiter, forgotPassword);
 router.post("/reset-password", authRouteRateLimiter, resetPassword);
 router.post("/save-fcm-token", verifyToken, saveFcmToken);
+router.post("/accept-terms", verifyToken, allowRoles("seller"), acceptSellerTerms);
 router.get("/nearby", getNearbySellers);
 
 // Profile routes

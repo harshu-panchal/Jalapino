@@ -13,7 +13,7 @@ export async function getPendingSellerApplications({
   skip,
 }) {
   const normalizedStatus = String(status || "pending").trim().toLowerCase();
-  let baseStatusQuery = { isVerified: { $ne: true } };
+  let baseStatusQuery = {};
 
   if (normalizedStatus === "pending") {
     baseStatusQuery = {
@@ -24,9 +24,17 @@ export async function getPendingSellerApplications({
         { applicationStatus: null },
       ],
     };
-  } else if (normalizedStatus !== "all") {
+  } else if (normalizedStatus === "all") {
+    // pending + bounced_back dono dikhao (approved/rejected exclude)
     baseStatusQuery = {
-      isVerified: { $ne: true },
+      $or: [
+        { applicationStatus: "pending", isVerified: { $ne: true } },
+        { applicationStatus: { $exists: false }, isVerified: { $ne: true } },
+        { applicationStatus: "bounced_back" },
+      ],
+    };
+  } else {
+    baseStatusQuery = {
       applicationStatus: normalizedStatus,
     };
   }
@@ -99,7 +107,11 @@ export async function approveSellerApplicationById({ sellerId, reviewedBy, permi
   const updateData = {
     isVerified: true,
     isActive: true,
+    sellerStatus: "active",                     // active sellers list mein dikhao
+    sellerVerificationStatus: "verified",       // event seller search query match kare
     applicationStatus: "approved",
+    isEventSeller: true,                        // Plan My Event search results ke liye
+    planMyEventEnabled: true,
     reviewedAt: new Date(),
     reviewedBy,
     rejectionReason: null,
@@ -210,6 +222,7 @@ export async function bounceBackSellerApplicationById({
   const updatePayload = {
     isVerified: false,
     isActive: false,
+    sellerStatus: "inactive",           // bounce back pe active list se remove karo
     sellerVerificationStatus: "pending",
     applicationStatus: "bounced_back",
     reviewedAt: new Date(),

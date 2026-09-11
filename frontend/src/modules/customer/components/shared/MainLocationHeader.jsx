@@ -338,7 +338,9 @@ const MainLocationHeader = ({
 
   // Scroll visibility logic for Mode Switcher Cards
   const [isSwitcherVisible, setIsSwitcherVisible] = useState(true);
-  const [lastScrollY, setLastScrollY] = useState(0);
+  const isSwitcherVisibleRef = useRef(true);
+  const lastToggleTimeRef = useRef(0);
+  const lastScrollYRef = useRef(0);
 
   useEffect(() => {
     const handleScroll = (e) => {
@@ -346,27 +348,52 @@ const MainLocationHeader = ({
       let currentScrollY = 0;
 
       if (target === document || target === window) {
-        currentScrollY = window.scrollY;
-      } else if (target.id === 'main-scroll-container') {
+        currentScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      } else if (target && (target.id === 'main-scroll-container' || target.getAttribute?.('data-scroll-container') === 'true')) {
         currentScrollY = target.scrollTop;
       } else {
         return;
       }
 
-      if (currentScrollY < 50) {
-        setIsSwitcherVisible(true);
-      } else if (currentScrollY > lastScrollY + 10) {
-        setIsSwitcherVisible(false);
-      } else if (currentScrollY < lastScrollY - 10) {
-        setIsSwitcherVisible(true);
+      const now = Date.now();
+      const prevScrollY = lastScrollYRef.current;
+      const delta = currentScrollY - prevScrollY;
+      lastScrollYRef.current = currentScrollY;
+
+      // Lockout rapid toggling during transition animation (350ms cooldown)
+      if (now - lastToggleTimeRef.current < 350) {
+        return;
       }
 
-      setLastScrollY(currentScrollY);
+      if (currentScrollY < 60) {
+        if (!isSwitcherVisibleRef.current) {
+          isSwitcherVisibleRef.current = true;
+          lastToggleTimeRef.current = now;
+          setIsSwitcherVisible(true);
+        }
+      } else if (currentScrollY > 160 && delta > 20) {
+        if (isSwitcherVisibleRef.current) {
+          isSwitcherVisibleRef.current = false;
+          lastToggleTimeRef.current = now;
+          setIsSwitcherVisible(false);
+        }
+      } else if (delta < -45) {
+        if (!isSwitcherVisibleRef.current) {
+          isSwitcherVisibleRef.current = true;
+          lastToggleTimeRef.current = now;
+          setIsSwitcherVisible(true);
+        }
+      }
     };
 
     window.addEventListener('scroll', handleScroll, { passive: true, capture: true });
     return () => window.removeEventListener('scroll', handleScroll, { capture: true });
-  }, [lastScrollY]);
+  }, []);
+
+  // Sync isSwitcherVisibleRef whenever state changes
+  useEffect(() => {
+    isSwitcherVisibleRef.current = isSwitcherVisible;
+  }, [isSwitcherVisible]);
 
   // Update dynamic CSS variable for the banner sticky top and padding offset
   useEffect(() => {
@@ -376,11 +403,6 @@ const MainLocationHeader = ({
       document.documentElement.style.removeProperty('--dynamic-sticky-top');
       document.documentElement.style.removeProperty('--header-shrink-offset');
     };
-  }, [isSwitcherVisible]);
-
-  const isSwitcherVisibleRef = useRef(isSwitcherVisible);
-  useEffect(() => {
-    isSwitcherVisibleRef.current = isSwitcherVisible;
   }, [isSwitcherVisible]);
 
   const headerRef = useRef(null);

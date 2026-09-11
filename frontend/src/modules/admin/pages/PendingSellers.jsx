@@ -109,7 +109,7 @@ const PendingSellers = () => {
     const fetchPendingSellers = async () => {
         setIsLoading(true);
         try {
-            const response = await adminApi.getPendingSellers({ q: searchTerm || undefined });
+            const response = await adminApi.getPendingSellers({ q: searchTerm || undefined, status: 'all' });
             const payload = response.data.result || {};
             const items = Array.isArray(payload.items) ? payload.items : [];
             setPendingSellers(items);
@@ -570,21 +570,21 @@ const PendingSellers = () => {
                     <div className="fixed inset-0 z-[999] overflow-y-auto">
                         <div className="min-h-full flex items-center justify-center p-0 sm:p-4">
                             <motion.div
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  exit={{ opacity: 0 }}
-                                  className="fixed inset-0 bg-slate-900/80 backdrop-blur-md"
-                                  onClick={() => {
-                                      setIsReviewModalOpen(false);
-                                      setSearchParams({});
-                                  }}
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="fixed inset-0 bg-slate-900/80 backdrop-blur-md"
+                                onClick={() => {
+                                    setIsReviewModalOpen(false);
+                                    setSearchParams({});
+                                }}
                             />
-  
+
                             <motion.div
-                                  initial={{ opacity: 0, scale: 0.9, y: 30 }}
-                                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                                  exit={{ opacity: 0, scale: 0.9, y: 30 }}
-                                  className="w-full max-w-4xl relative z-10 bg-white rounded-none sm:rounded-2xl shadow-2xl overflow-y-auto h-screen sm:h-auto sm:max-h-[95vh]"
+                                initial={{ opacity: 0, scale: 0.9, y: 30 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 30 }}
+                                className="w-full max-w-4xl relative z-10 bg-white rounded-none sm:rounded-2xl shadow-2xl overflow-y-auto h-screen sm:h-auto sm:max-h-[95vh]"
                             >
                                 <div className="grid grid-cols-1 lg:grid-cols-12">
                                     {/* Sidebar Info */}
@@ -1086,6 +1086,51 @@ const PendingSellers = () => {
                                                     </div>
                                                 )}
 
+                                                {/* Ticketing & Venue Settings */}
+                                                {(permissions.eventDetailsEnabled || permissions.planMyEventEnabled) && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100 mt-4">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Ticketing & Venue Settings</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                            <PermissionToggle
+                                                                label="Ticket System"
+                                                                description="Allow ticketing system for events"
+                                                                checked={permissions.ticketSystemEnabled ?? true}
+                                                                activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, ticketSystemEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { ticketSystemEnabled: checked });
+                                                                        toast.success('Ticket system visibility updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ticketSystemEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, ticketSystemEnabled: !checked }));
+                                                                        toast.error('Failed to update ticket system visibility');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Venue Visits"
+                                                                description="Allow physical visit requests for venues"
+                                                                checked={permissions.venueVisitsEnabled ?? true}
+                                                                activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, venueVisitsEnabled: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { venueVisitsEnabled: checked });
+                                                                        toast.success('Venue visits visibility updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, venueVisitsEnabled: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, venueVisitsEnabled: !checked }));
+                                                                        toast.error('Failed to update venue visits visibility');
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
+
                                                 {/* Live Kitchen Sub-Permissions */}
                                                 {permissions.liveKitchenEnabled && (
                                                     <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
@@ -1242,22 +1287,22 @@ const PendingSellers = () => {
                                                                 }}
                                                             />
                                                             <PermissionToggle
-                                                                 label="Advance Payment"
-                                                                 description="Allow advance payment step"
-                                                                 checked={permissions.quoteAdvancePayment}
-                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                 onChange={async (e) => {
-                                                                     const checked = e.target.checked;
-                                                                     setPermissions(prev => ({ ...prev, quoteAdvancePayment: checked }));
-                                                                     try {
-                                                                         await adminApi.updateSeller(viewingSeller.id, { quoteAdvancePayment: checked });
-                                                                         toast.success('Advance payment permission updated');
-                                                                         setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteAdvancePayment: checked } : seller));
-                                                                     } catch (err) {
-                                                                         setPermissions(prev => ({ ...prev, quoteAdvancePayment: !checked }));
-                                                                     }
-                                                                 }}
-                                                             />
+                                                                label="Advance Payment"
+                                                                description="Allow advance payment step"
+                                                                checked={permissions.quoteAdvancePayment}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setPermissions(prev => ({ ...prev, quoteAdvancePayment: checked }));
+                                                                    try {
+                                                                        await adminApi.updateSeller(viewingSeller.id, { quoteAdvancePayment: checked });
+                                                                        toast.success('Advance payment permission updated');
+                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, quoteAdvancePayment: checked } : seller));
+                                                                    } catch (err) {
+                                                                        setPermissions(prev => ({ ...prev, quoteAdvancePayment: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
                                                             <PermissionToggle
                                                                 label="Final Payment"
                                                                 description="Allow final payment step"
@@ -1529,52 +1574,6 @@ const PendingSellers = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                    </div>
-                                                </div>
-
-                                                {/* Event & Ticketing Options */}
-                                                <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
-                                                    <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
-                                                        <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Event & Ticketing Options</h5>
-                                                        <p className="text-[10px] text-slate-500 font-medium">Configure event ticketing visibility for this seller.</p>
-                                                    </div>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                        <PermissionToggle
-                                                            label="Ticket System"
-                                                            description="Show ticketing options for Plan My Event"
-                                                            checked={permissions.ticketSystemEnabled ?? true}
-                                                            activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setPermissions(prev => ({ ...prev, ticketSystemEnabled: checked }));
-                                                                try {
-                                                                    await adminApi.updateSeller(viewingSeller.id, { ticketSystemEnabled: checked });
-                                                                    toast.success('Ticket system visibility updated');
-                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, ticketSystemEnabled: checked } : seller));
-                                                                } catch (err) {
-                                                                    setPermissions(prev => ({ ...prev, ticketSystemEnabled: !checked }));
-                                                                    toast.error('Failed to update ticket system visibility');
-                                                                }
-                                                            }}
-                                                        />
-                                                        <PermissionToggle
-                                                            label="Venue Visits"
-                                                            description="Allow physical visit requests for venues"
-                                                            checked={permissions.venueVisitsEnabled ?? true}
-                                                            activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setPermissions(prev => ({ ...prev, venueVisitsEnabled: checked }));
-                                                                try {
-                                                                    await adminApi.updateSeller(viewingSeller.id, { venueVisitsEnabled: checked });
-                                                                    toast.success('Venue visits visibility updated');
-                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, venueVisitsEnabled: checked } : seller));
-                                                                } catch (err) {
-                                                                    setPermissions(prev => ({ ...prev, venueVisitsEnabled: !checked }));
-                                                                    toast.error('Failed to update venue visits visibility');
-                                                                }
-                                                            }}
-                                                        />
                                                     </div>
                                                 </div>
 
@@ -1938,7 +1937,18 @@ const PendingSellers = () => {
                                                         />
                                                     </div>
                                                     <div>
-                                                        <label className="text-[11px] font-bold text-amber-900 mb-1 block uppercase">Terms & Conditions</label>
+                                                        <div className="flex items-center justify-between mb-1">
+                                                            <label className="text-[11px] font-bold text-amber-900 block uppercase">Terms & Conditions</label>
+                                                            {viewingSeller?.termsAccepted && viewingSeller?.termsAcceptedVersionText === adminTerms ? (
+                                                                <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
+                                                                    ✓ Accepted by Seller
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">
+                                                                    ⚠️ Acceptance Pending
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <textarea
                                                             value={adminTerms}
                                                             onChange={e => setAdminTerms(e.target.value)}
