@@ -163,6 +163,11 @@ const SellerDetail = () => {
                 acceptsCOD: data.acceptsCOD ?? true,
                 acceptsRazorpay: data.acceptsRazorpay ?? true,
                 ticketSystemEnabled: data.ticketSystemEnabled ?? true,
+                showStandardDateTime: data.showStandardDateTime ?? false,
+                showStandardDateTimeSlot: data.showStandardDateTimeSlot ?? false,
+                showAdvancedDateTime: data.showAdvancedDateTime ?? false,
+                showAdvancedDateTimeSlot: data.showAdvancedDateTimeSlot ?? false,
+                showMultipleDateTime: data.showMultipleDateTime ?? false,
                 addonDecorationEnabled: data.addonDecorationEnabled ?? false,
                 addonDecorationPrice: data.addonDecorationPrice ?? 0,
                 addonBridalEnabled: data.addonBridalEnabled ?? false,
@@ -1014,19 +1019,70 @@ const SellerDetail = () => {
                                                                 }}
                                                             />
                                                             <PermissionToggle
-                                                                label="Advanced Date Range & Time Slot"
-                                                                description="Advanced date range and multiple time slots"
-                                                                checked={seller.showAdvancedDateTime}
+                                                                label="Standard Date & Time Slot"
+                                                                description="Standard Date and Time Slot selection"
+                                                                checked={!!seller.showStandardDateTimeSlot}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, showStandardDateTimeSlot: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { showStandardDateTimeSlot: checked });
+                                                                        showToast('Standard Date & Time Slot setting updated', 'success');
+                                                                    } catch (err) {
+                                                                        showToast('Failed to update Date & Time Slot setting', 'error');
+                                                                        setSeller(prev => ({ ...prev, showStandardDateTimeSlot: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Advanced Date Range & Time"
+                                                                description="Advanced date range and time"
+                                                                checked={!!seller.showAdvancedDateTime}
                                                                 activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
                                                                 onChange={async (e) => {
                                                                     const checked = e.target.checked;
                                                                     setSeller(prev => ({ ...prev, showAdvancedDateTime: checked }));
                                                                     try {
                                                                         await adminUsersApi.updateSeller(seller.id, { showAdvancedDateTime: checked });
-                                                                        showToast('Advanced Date & Time setting updated', 'success');
+                                                                        showToast('Advanced Date Range & Time setting updated', 'success');
                                                                     } catch (err) {
-                                                                        showToast('Failed to update Advanced Date & Time setting', 'error');
+                                                                        showToast('Failed to update Advanced Date Range & Time setting', 'error');
                                                                         setSeller(prev => ({ ...prev, showAdvancedDateTime: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Advanced Date Range & Time Slot"
+                                                                description="Advanced date range and multiple time slots"
+                                                                checked={!!seller.showAdvancedDateTimeSlot}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, showAdvancedDateTimeSlot: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { showAdvancedDateTimeSlot: checked });
+                                                                        showToast('Advanced Date Range & Time Slot setting updated', 'success');
+                                                                    } catch (err) {
+                                                                        showToast('Failed to update Advanced Date Range & Time Slot setting', 'error');
+                                                                        setSeller(prev => ({ ...prev, showAdvancedDateTimeSlot: !checked }));
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Multiple Date & Time & Remarks"
+                                                                description="Multiple date & time selection with remarks"
+                                                                checked={!!seller.showMultipleDateTime}
+                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, showMultipleDateTime: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { showMultipleDateTime: checked });
+                                                                        showToast('Multiple Date & Time setting updated', 'success');
+                                                                    } catch (err) {
+                                                                        showToast('Failed to update Multiple Date & Time setting', 'error');
+                                                                        setSeller(prev => ({ ...prev, showMultipleDateTime: !checked }));
                                                                     }
                                                                 }}
                                                             />
@@ -1034,9 +1090,9 @@ const SellerDetail = () => {
                                                     </div>
                                                 )}
 
-                                                {seller.planMyEventEnabled && (
-                                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4 col-span-1 md:col-span-2">
-                                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
+                                                {seller.eventDetailsEnabled && (
+                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">LOCATION OPTIONS</h6>
                                                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <PermissionToggle
                                                                 label="Function Location"
