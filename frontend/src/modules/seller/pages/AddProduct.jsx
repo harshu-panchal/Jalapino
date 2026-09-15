@@ -34,6 +34,7 @@ const AddProduct = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [videoPayment, setVideoPayment] = useState(null); // { file, totalAmount, extraMB, razorpayOrder }
   const [videoUploading, setVideoUploading] = useState(false);
+  const [selectedModule, setSelectedModule] = useState("");
 
   const makeSku = (name, index = 1) => {
     const prefix =
@@ -151,7 +152,29 @@ const AddProduct = () => {
     fetchCats();
   }, []);
 
-  const categories = dbCategories;
+  const isCategoryMatchingModule = (cat, mod) => {
+    if (!mod) return true;
+    const mods = cat.applicableModules;
+    const selfMatch = !mods || mods.length === 0 || mods.includes(mod);
+    if (selfMatch) return true;
+    if (cat.children && Array.isArray(cat.children) && cat.children.length > 0) {
+      return cat.children.some((child) => isCategoryMatchingModule(child, mod));
+    }
+    return false;
+  };
+
+  const getFilteredList = (list, mod) => {
+    if (!list || !Array.isArray(list)) return [];
+    if (!mod) return list;
+    const filtered = list.filter((c) => isCategoryMatchingModule(c, mod));
+    return filtered.length > 0 ? filtered : list;
+  };
+
+  const filteredCategories = useMemo(() => {
+    return getFilteredList(dbCategories, selectedModule);
+  }, [dbCategories, selectedModule]);
+
+  const categories = filteredCategories;
 
   const handleSave = async () => {
     // Validate required fields
@@ -916,6 +939,25 @@ const AddProduct = () => {
 
           {modalTab === "category" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+              
+              <div className="space-y-1.5 flex flex-col mb-4">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    Target Module
+                  </label>
+                  <select
+                    value={selectedModule}
+                    onChange={(e) => {
+                      setSelectedModule(e.target.value);
+                      setFormData({ ...formData, header: "", category: "", subcategory: "" });
+                    }}
+                    className="w-full md:w-1/2 px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all">
+                    <option value="">All Categories</option>
+                    <option value="retail">Retail / Groceries</option>
+                    <option value="wholesale">Wholesale</option>
+                    <option value="plan_my_event">Plan My Event</option>
+                  </select>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5 flex flex-col">
                   <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
@@ -947,13 +989,14 @@ const AddProduct = () => {
                     disabled={!formData.header}
                     className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                     <option value="">Select Category</option>
-                    {categories
-                      .find((h) => (h._id || h.id) === formData.header)
-                      ?.children?.map((c) => (
-                        <option key={c._id || c.id} value={c._id || c.id}>
-                          {c.name}
-                        </option>
-                      ))}
+                    {getFilteredList(
+                      categories.find((h) => (h._id || h.id) === formData.header)?.children,
+                      selectedModule
+                    ).map((c) => (
+                      <option key={c._id || c.id} value={c._id || c.id}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -970,14 +1013,16 @@ const AddProduct = () => {
                     disabled={!formData.category}
                     className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                     <option value="">Select Sub-Category</option>
-                    {categories
-                      .find((h) => (h._id || h.id) === formData.header)
-                      ?.children?.find((c) => (c._id || c.id) === formData.category)
-                      ?.children?.map((sc) => (
-                        <option key={sc._id || sc.id} value={sc._id || sc.id}>
-                          {sc.name}
-                        </option>
-                      ))}
+                    {getFilteredList(
+                      categories
+                        .find((h) => (h._id || h.id) === formData.header)
+                        ?.children?.find((c) => (c._id || c.id) === formData.category)?.children,
+                      selectedModule
+                    ).map((sc) => (
+                      <option key={sc._id || sc.id} value={sc._id || sc.id}>
+                        {sc.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>

@@ -59,8 +59,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             setIsLoadingProducts(true);
             try {
                 // Fetch catalog products filtered by this seller
-                const response = await axiosInstance.get(`/products?sellerId=${selectedSeller._id}`);
-                setProducts(response.data?.result || response.data?.results || response.data?.data || []);
+                const response = await axiosInstance.get(`/products?sellerId=${selectedSeller._id}&module=plan_my_event`);
+                const responseData = response.data?.result || response.data?.results || response.data?.data || [];
+                setProducts(Array.isArray(responseData) ? responseData : (responseData.items || []));
             } catch (error) {
                 console.error("Failed to fetch seller products:", error);
             } finally {

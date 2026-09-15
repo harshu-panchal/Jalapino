@@ -204,6 +204,10 @@ const HeaderCategories = () => {
           data.append(key, formData[key] === "" ? "0" : String(formData[key]));
           return;
         }
+        if (key === "hsnId") {
+          if (formData[key]) data.append(key, formData[key]);
+          return;
+        }
         data.append(key, formData[key]);
       });
 

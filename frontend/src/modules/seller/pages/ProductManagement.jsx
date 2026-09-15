@@ -49,6 +49,7 @@ const ProductManagement = () => {
   const [summaryStats, setSummaryStats] = useState(null);
   const [videoPayment, setVideoPayment] = useState(null); // { file, totalAmount, extraMB, razorpayOrder }
   const [videoUploading, setVideoUploading] = useState(false);
+  const [selectedModule, setSelectedModule] = useState("");
 
   const fetchProducts = async (requestedPage = 1) => {
     setIsLoading(true);
@@ -119,7 +120,29 @@ const ProductManagement = () => {
     fetchCategories();
   }, []);
 
-  const categories = dbCategories;
+  const isCategoryMatchingModule = (cat, mod) => {
+    if (!mod) return true;
+    const mods = cat.applicableModules;
+    const selfMatch = !mods || mods.length === 0 || mods.includes(mod);
+    if (selfMatch) return true;
+    if (cat.children && Array.isArray(cat.children) && cat.children.length > 0) {
+      return cat.children.some((child) => isCategoryMatchingModule(child, mod));
+    }
+    return false;
+  };
+
+  const getFilteredList = (list, mod) => {
+    if (!list || !Array.isArray(list)) return [];
+    if (!mod) return list;
+    const filtered = list.filter((c) => isCategoryMatchingModule(c, mod));
+    return filtered.length > 0 ? filtered : list;
+  };
+
+  const filteredCategories = useMemo(() => {
+    return getFilteredList(dbCategories, selectedModule);
+  }, [dbCategories, selectedModule]);
+
+  const categories = filteredCategories;
 
   const [searchTerm, setSearchTerm] = useState(qFromUrl);
 
@@ -546,8 +569,41 @@ const ProductManagement = () => {
     }
   };
 
+  const findModuleForCategory = (catId, tree) => {
+    if (!catId || !tree || !tree.length) return "";
+    for (const h of tree) {
+      if (String(h._id || h.id) === String(catId)) {
+        if (h.applicableModules?.includes("plan_my_event")) return "plan_my_event";
+        if (h.applicableModules?.includes("wholesale")) return "wholesale";
+        if (h.applicableModules?.includes("retail")) return "retail";
+      }
+      if (h.children) {
+        for (const c of h.children) {
+          if (String(c._id || c.id) === String(catId)) {
+            if (c.applicableModules?.includes("plan_my_event")) return "plan_my_event";
+            if (c.applicableModules?.includes("wholesale")) return "wholesale";
+            if (c.applicableModules?.includes("retail")) return "retail";
+          }
+          if (c.children) {
+            for (const sc of c.children) {
+              if (String(sc._id || sc.id) === String(catId)) {
+                if (sc.applicableModules?.includes("plan_my_event")) return "plan_my_event";
+                if (sc.applicableModules?.includes("wholesale")) return "wholesale";
+                if (sc.applicableModules?.includes("retail")) return "retail";
+              }
+            }
+          }
+        }
+      }
+    }
+    return "";
+  };
+
   const openEditModal = (item = null) => {
     if (item) {
+      const catId = item.subcategoryId?._id || item.subcategoryId || item.categoryId?._id || item.categoryId || item.headerId?._id || item.headerId;
+      const detectedMod = findModuleForCategory(catId, dbCategories);
+      setSelectedModule(detectedMod || "");
       setFormData({
         name: item.name || "",
         slug: item.slug || "",
@@ -586,6 +642,7 @@ const ProductManagement = () => {
       });
       setEditingItem(item);
     } else {
+      setSelectedModule("");
       setFormData({
         name: "",
         slug: "",
@@ -1459,6 +1516,25 @@ const ProductManagement = () => {
                   {/* Additional tabs populated as needed */}
                   {modalTab === "category" && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+
+                      <div className="space-y-1.5 flex flex-col mb-4">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                            Target Module
+                          </label>
+                          <select
+                            value={selectedModule}
+                            onChange={(e) => {
+                              setSelectedModule(e.target.value);
+                              setFormData({ ...formData, header: "", category: "", subcategory: "" });
+                            }}
+                            className="w-full md:w-1/2 px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none cursor-pointer">
+                            <option value="">All Categories</option>
+                            <option value="retail">Retail / Groceries</option>
+                            <option value="wholesale">Wholesale</option>
+                            <option value="plan_my_event">Plan My Event</option>
+                          </select>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5 flex flex-col">
                           <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
@@ -1490,13 +1566,14 @@ const ProductManagement = () => {
                             disabled={!formData.header}
                             className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none cursor-pointer disabled:opacity-50">
                             <option value="">Select Category</option>
-                            {categories
-                              .find((h) => (h._id || h.id) === formData.header)
-                              ?.children?.map((c) => (
-                                <option key={c._id || c.id} value={c._id || c.id}>
-                                  {c.name}
-                                </option>
-                              ))}
+                            {getFilteredList(
+                              categories.find((h) => (h._id || h.id) === formData.header)?.children,
+                              selectedModule
+                            ).map((c) => (
+                              <option key={c._id || c.id} value={c._id || c.id}>
+                                {c.name}
+                              </option>
+                            ))}
                           </select>
                         </div>
                       </div>
@@ -1512,14 +1589,16 @@ const ProductManagement = () => {
                           disabled={!formData.category}
                           className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-bold outline-none cursor-pointer disabled:opacity-50">
                           <option value="">Select Sub-Category</option>
-                          {categories
-                            .find((h) => (h._id || h.id) === formData.header)
-                            ?.children?.find((c) => (c._id || c.id) === formData.category)
-                            ?.children?.map((sc) => (
-                              <option key={sc._id || sc.id} value={sc._id || sc.id}>
-                                {sc.name}
-                              </option>
-                            ))}
+                          {getFilteredList(
+                            categories
+                              .find((h) => (h._id || h.id) === formData.header)
+                              ?.children?.find((c) => (c._id || c.id) === formData.category)?.children,
+                            selectedModule
+                          ).map((sc) => (
+                            <option key={sc._id || sc.id} value={sc._id || sc.id}>
+                              {sc.name}
+                            </option>
+                          ))}
                         </select>
                       </div>
 

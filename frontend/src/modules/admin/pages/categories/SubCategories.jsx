@@ -193,11 +193,12 @@ const SubCategories = () => {
       const data = new FormData();
       data.append("type", "subcategory");
       Object.keys(formData).forEach((key) => {
-        if (key !== "type") {
-          if (key === "applicableModules" && Array.isArray(formData[key])) {
-            formData[key].forEach(val => data.append(key, val));
+        const val = formData[key];
+        if (key !== "type" && val !== undefined && val !== null && val !== "") {
+          if (key === "applicableModules" && Array.isArray(val)) {
+            val.forEach(v => data.append(key, v));
           } else {
-            data.append(key, formData[key]);
+            data.append(key, val);
           }
         }
       });

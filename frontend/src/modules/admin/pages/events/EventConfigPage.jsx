@@ -196,7 +196,10 @@ const EventConfigPage = () => {
                 coupleContactEnabled: cat.coupleContactEnabled || false,
                 noOfGuestsEnabled: cat.noOfGuestsEnabled || false,
                 showStandardDateTime: cat.showStandardDateTime || false,
+                showStandardDateTimeSlot: cat.showStandardDateTimeSlot || false,
                 showAdvancedDateTime: cat.showAdvancedDateTime || false,
+                showAdvancedDateTimeSlot: cat.showAdvancedDateTimeSlot || false,
+                showMultipleDateTime: cat.showMultipleDateTime || false,
                 functionLocationEnabled: cat.functionLocationEnabled || false,
                 sellerLocationEnabled: cat.sellerLocationEnabled || false,
                 quoteReferencePhotoUpload: cat.quoteReferencePhotoUpload || false,
@@ -215,7 +218,7 @@ const EventConfigPage = () => {
             setCatForm({ 
                 name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules }, showDateFilters: true, showEventDetailsForm: true, showNoOfGuestsBox: false,
                 primaryContactEnabled: false, coupleContactEnabled: false, noOfGuestsEnabled: false,
-                showStandardDateTime: false, showAdvancedDateTime: false,
+                showStandardDateTime: false, showStandardDateTimeSlot: false, showAdvancedDateTime: false, showAdvancedDateTimeSlot: false, showMultipleDateTime: false,
                 functionLocationEnabled: false, sellerLocationEnabled: false,
                 quoteReferencePhotoUpload: false, quoteColorCombination: false, quoteCustomerNotes: false, quoteSellerQuotation: false, quoteQuoteRevision: false, quoteCustomerApproval: false, quoteAdvancePayment: false, quoteFinalPayment: false,
                 ticketSystemEnabled: false, venueVisitsEnabled: false
@@ -572,6 +575,39 @@ const EventConfigPage = () => {
                         </div>
                     </div>
 
+                    {catForm.showEventDetailsForm && (
+                        <div className="border-t border-slate-200 pt-6 mt-6 mb-6 bg-slate-50 p-4 rounded-xl shadow-inner border border-purple-100">
+                            <h3 className="font-bold text-lg text-purple-800 mb-4">Service Category Toggles</h3>
+                            
+                            <h4 className="text-sm font-bold text-slate-700 mt-4 mb-2">Contact Options</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                <FormControlLabel control={<Switch checked={catForm.primaryContactEnabled} onChange={e => setCatForm({...catForm, primaryContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Primary Contact</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.coupleContactEnabled} onChange={e => setCatForm({...catForm, coupleContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Couple Contact</span>} />
+                            </div>
+
+                            <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Date & Time Slot Settings</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                <FormControlLabel control={<Switch checked={catForm.showStandardDateTime} onChange={e => setCatForm({...catForm, showStandardDateTime: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Standard Date & Time</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.showStandardDateTimeSlot} onChange={e => setCatForm({...catForm, showStandardDateTimeSlot: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Standard Date & Time Slot</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.showAdvancedDateTime} onChange={e => setCatForm({...catForm, showAdvancedDateTime: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Advanced Date Range & Time</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.showAdvancedDateTimeSlot} onChange={e => setCatForm({...catForm, showAdvancedDateTimeSlot: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Advanced Date Range & Time Slot</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.showMultipleDateTime} onChange={e => setCatForm({...catForm, showMultipleDateTime: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Multiple Date & Time & Remarks</span>} />
+                            </div>
+
+                            <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Location Options</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                <FormControlLabel control={<Switch checked={catForm.functionLocationEnabled} onChange={e => setCatForm({...catForm, functionLocationEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Function Location</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.sellerLocationEnabled} onChange={e => setCatForm({...catForm, sellerLocationEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Seller Location</span>} />
+                            </div>
+
+                            <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Event & Ticketing Options</h4>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                                <FormControlLabel control={<Switch checked={catForm.ticketSystemEnabled} onChange={e => setCatForm({...catForm, ticketSystemEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Ticket System</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.venueVisitsEnabled} onChange={e => setCatForm({...catForm, venueVisitsEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Venue Visits</span>} />
+                            </div>
+                        </div>
+                    )}
+
                     <div className="border-t border-slate-200 pt-6 mt-2 mb-6">
                         <h3 className="font-bold text-lg text-slate-800 mb-4">Platform Features (Plugins)</h3>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
@@ -636,46 +672,7 @@ const EventConfigPage = () => {
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-200 pt-6 mt-6 mb-6">
-                        <h3 className="font-bold text-lg text-slate-800 mb-4">Service Category Toggles</h3>
-                        
-                        <h4 className="text-sm font-bold text-slate-700 mt-4 mb-2">Contact Options</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            <FormControlLabel control={<Switch checked={catForm.primaryContactEnabled} onChange={e => setCatForm({...catForm, primaryContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Primary Contact</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.coupleContactEnabled} onChange={e => setCatForm({...catForm, coupleContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Couple Contact</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.noOfGuestsEnabled} onChange={e => setCatForm({...catForm, noOfGuestsEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">No of Guests</span>} />
-                        </div>
 
-                        <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Date & Time Slot Settings</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            <FormControlLabel control={<Switch checked={catForm.showStandardDateTime} onChange={e => setCatForm({...catForm, showStandardDateTime: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Standard Date & Time</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.showAdvancedDateTime} onChange={e => setCatForm({...catForm, showAdvancedDateTime: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Advanced Date & Time</span>} />
-                        </div>
-
-                        <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Location Options</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            <FormControlLabel control={<Switch checked={catForm.functionLocationEnabled} onChange={e => setCatForm({...catForm, functionLocationEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Function Location</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.sellerLocationEnabled} onChange={e => setCatForm({...catForm, sellerLocationEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Seller Location</span>} />
-                        </div>
-
-                        <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Customization & Quotation Engine</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            <FormControlLabel control={<Switch checked={catForm.quoteReferencePhotoUpload} onChange={e => setCatForm({...catForm, quoteReferencePhotoUpload: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Reference Photo Upload</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteColorCombination} onChange={e => setCatForm({...catForm, quoteColorCombination: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Color Combination</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteCustomerNotes} onChange={e => setCatForm({...catForm, quoteCustomerNotes: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Customer Notes</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteSellerQuotation} onChange={e => setCatForm({...catForm, quoteSellerQuotation: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Seller Quotation</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteQuoteRevision} onChange={e => setCatForm({...catForm, quoteQuoteRevision: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Quote Revision</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteCustomerApproval} onChange={e => setCatForm({...catForm, quoteCustomerApproval: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Customer Approval</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteAdvancePayment} onChange={e => setCatForm({...catForm, quoteAdvancePayment: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Advance Payment</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.quoteFinalPayment} onChange={e => setCatForm({...catForm, quoteFinalPayment: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Final Payment</span>} />
-                        </div>
-
-                        <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Event & Ticketing Options</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                            <FormControlLabel control={<Switch checked={catForm.ticketSystemEnabled} onChange={e => setCatForm({...catForm, ticketSystemEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Ticket System</span>} />
-                            <FormControlLabel control={<Switch checked={catForm.venueVisitsEnabled} onChange={e => setCatForm({...catForm, venueVisitsEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Venue Visits</span>} />
-                        </div>
-                    </div>
 
                     <div className="border-t border-slate-200 pt-6">
                         <div className="flex items-center justify-between mb-4">

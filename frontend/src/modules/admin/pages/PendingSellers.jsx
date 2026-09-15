@@ -97,6 +97,11 @@ const PendingSellers = () => {
         addonCateringEnabled: false,
         addonCateringPrice: 0,
         reviewCategoriesEnabled: [],
+        showStandardDateTime: false,
+        showStandardDateTimeSlot: false,
+        showAdvancedDateTime: false,
+        showAdvancedDateTimeSlot: false,
+        showMultipleDateTime: false,
     });
     const [allCategories, setAllCategories] = useState([]);
     const [eventCategories, setEventCategories] = useState([]);
@@ -140,8 +145,6 @@ const PendingSellers = () => {
                         ordersEnabled: s.ordersEnabled ?? true,
                         walletEnabled: s.walletEnabled ?? true,
                         analyticsEnabled: s.analyticsEnabled ?? true,
-                        showStandardDateTime: s.showStandardDateTime ?? false,
-                        showAdvancedDateTime: s.showAdvancedDateTime ?? false,
                         isShopActive: s.isShopActive ?? true,
                         shopTimingsEnabled: s.shopTimingsEnabled ?? false,
                         shopOpeningTime: s.shopOpeningTime || "10:30 AM",
@@ -187,7 +190,10 @@ const PendingSellers = () => {
                         paymentQrCode: s.paymentQrCode ?? "",
                         reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                         showStandardDateTime: s.showStandardDateTime ?? false,
+                        showStandardDateTimeSlot: s.showStandardDateTimeSlot ?? false,
                         showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                        showAdvancedDateTimeSlot: s.showAdvancedDateTimeSlot ?? false,
+                        showMultipleDateTime: s.showMultipleDateTime ?? false,
                         functionLocationEnabled: s.functionLocationEnabled ?? false,
                         sellerLocationEnabled: s.sellerLocationEnabled ?? false,
                     });
@@ -448,7 +454,10 @@ const PendingSellers = () => {
                                                     videoUploadEnabled: s.videoUploadEnabled ?? false,
                                                     reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
                                                     showStandardDateTime: s.showStandardDateTime ?? false,
+                                                    showStandardDateTimeSlot: s.showStandardDateTimeSlot ?? false,
                                                     showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                                                    showAdvancedDateTimeSlot: s.showAdvancedDateTimeSlot ?? false,
+                                                    showMultipleDateTime: s.showMultipleDateTime ?? false,
                                                     functionLocationEnabled: s.functionLocationEnabled ?? false,
                                                     sellerLocationEnabled: s.sellerLocationEnabled ?? false,
                                                     demoTrialEnabled: s.demoTrialEnabled ?? false,
@@ -532,6 +541,16 @@ const PendingSellers = () => {
                                                         addonCateringPrice: s.addonCateringPrice ?? 0,
                                                         physicalPaymentEnabled: s.physicalPaymentEnabled ?? false,
                                                         paymentQrCode: s.paymentQrCode ?? "",
+                                                        showStandardDateTime: s.showStandardDateTime ?? false,
+                                                        showStandardDateTimeSlot: s.showStandardDateTimeSlot ?? false,
+                                                        showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                                                        showAdvancedDateTimeSlot: s.showAdvancedDateTimeSlot ?? false,
+                                                        showMultipleDateTime: s.showMultipleDateTime ?? false,
+                                                        functionLocationEnabled: s.functionLocationEnabled ?? false,
+                                                        sellerLocationEnabled: s.sellerLocationEnabled ?? false,
+                                                        demoTrialEnabled: s.demoTrialEnabled ?? false,
+                                                        demoTrialDays: s.demoTrialDays || 15,
+                                                        demoStartDate: s.demoStartDate,
                                                     });
                                                     setAdminRemark(s.adminRemark || '');
                                                     setAdminTerms(s.adminTerms || '');
@@ -816,7 +835,212 @@ const PendingSellers = () => {
                                                             }
                                                         }}
                                                     />
+                                                </div>
 
+                                                {/* Event Options inserted here */}
+                                                {permissions.eventDetailsEnabled && (
+                                                    <div className="space-y-4 mb-4">
+                                                        <div className="flex flex-col gap-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100 mt-4">
+                                                            <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contact & Ticketing Options</h6>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <PermissionToggle
+                                                                    label="Primary Contact"
+                                                                    description="Allow primary contact details collection"
+                                                                    checked={permissions.primaryContactEnabled}
+                                                                    activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, primaryContactEnabled: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { primaryContactEnabled: checked });
+                                                                            toast.success('Primary contact permission updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, primaryContactEnabled: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update primary contact permission');
+                                                                            setPermissions(prev => ({ ...prev, primaryContactEnabled: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Couple Contact"
+                                                                    description="Allow couple details collection"
+                                                                    checked={permissions.coupleContactEnabled}
+                                                                    activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, coupleContactEnabled: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { coupleContactEnabled: checked });
+                                                                            toast.success('Couple contact permission updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, coupleContactEnabled: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update couple contact permission');
+                                                                            setPermissions(prev => ({ ...prev, coupleContactEnabled: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="No of Guests"
+                                                                    description="Allow collection of number of guests"
+                                                                    checked={permissions.noOfGuestsEnabled}
+                                                                    activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, noOfGuestsEnabled: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { noOfGuestsEnabled: checked });
+                                                                            toast.success('No of guests permission updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, noOfGuestsEnabled: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update no of guests permission');
+                                                                            setPermissions(prev => ({ ...prev, noOfGuestsEnabled: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-col gap-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                            <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DATE & TIME SLOT Setting</h6>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <PermissionToggle
+                                                                    label="Standard Date & Time"
+                                                                    description="Standard Date and Time selection"
+                                                                    checked={!!permissions.showStandardDateTime}
+                                                                    activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, showStandardDateTime: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { showStandardDateTime: checked });
+                                                                            toast.success('Standard Date & Time setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showStandardDateTime: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Date & Time setting');
+                                                                            setPermissions(prev => ({ ...prev, showStandardDateTime: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Standard Date & Time Slot"
+                                                                    description="Standard Date and Time Slot selection"
+                                                                    checked={!!permissions.showStandardDateTimeSlot}
+                                                                    activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, showStandardDateTimeSlot: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { showStandardDateTimeSlot: checked });
+                                                                            toast.success('Standard Date & Time Slot setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showStandardDateTimeSlot: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Date & Time Slot setting');
+                                                                            setPermissions(prev => ({ ...prev, showStandardDateTimeSlot: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Advanced Date Range & Time"
+                                                                    description="Advanced date range and time"
+                                                                    checked={!!permissions.showAdvancedDateTime}
+                                                                    activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, showAdvancedDateTime: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { showAdvancedDateTime: checked });
+                                                                            toast.success('Advanced Date Range & Time setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showAdvancedDateTime: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Advanced Date Range & Time setting');
+                                                                            setPermissions(prev => ({ ...prev, showAdvancedDateTime: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Advanced Date Range & Time Slot"
+                                                                    description="Advanced date range and multiple time slots"
+                                                                    checked={!!permissions.showAdvancedDateTimeSlot}
+                                                                    activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, showAdvancedDateTimeSlot: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { showAdvancedDateTimeSlot: checked });
+                                                                            toast.success('Advanced Date Range & Time Slot setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showAdvancedDateTimeSlot: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Advanced Date Range & Time Slot setting');
+                                                                            setPermissions(prev => ({ ...prev, showAdvancedDateTimeSlot: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Multiple Date & Time & Remarks"
+                                                                    description="Multiple date & time selection with remarks"
+                                                                    checked={!!permissions.showMultipleDateTime}
+                                                                    activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, showMultipleDateTime: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { showMultipleDateTime: checked });
+                                                                            toast.success('Multiple Date & Time setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showMultipleDateTime: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Multiple Date & Time setting');
+                                                                            setPermissions(prev => ({ ...prev, showMultipleDateTime: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="flex flex-col gap-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                            <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">LOCATION OPTIONS</h6>
+                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                <PermissionToggle
+                                                                    label="Function Location"
+                                                                    description="Allow function location collection"
+                                                                    checked={!!permissions.functionLocationEnabled}
+                                                                    activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, functionLocationEnabled: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { functionLocationEnabled: checked });
+                                                                            toast.success('Function Location setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, functionLocationEnabled: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Function Location setting');
+                                                                            setPermissions(prev => ({ ...prev, functionLocationEnabled: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Seller Location"
+                                                                    description="Show seller location option"
+                                                                    checked={!!permissions.sellerLocationEnabled}
+                                                                    activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, sellerLocationEnabled: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { sellerLocationEnabled: checked });
+                                                                            toast.success('Seller Location setting updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, sellerLocationEnabled: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update Seller Location setting');
+                                                                            setPermissions(prev => ({ ...prev, sellerLocationEnabled: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
                                                     <PermissionToggle
                                                         label="Brands & Ingredients"
                                                         description="Allow manual entry of product name, brand, and ingredients"
@@ -934,157 +1158,7 @@ const PendingSellers = () => {
                                                     />
                                                 </div>
 
-                                                {/* Event & Ticketing Options (Inside Event Details) */}
-                                                {permissions.eventDetailsEnabled && (
-                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Contact & Ticketing Options</h6>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <PermissionToggle
-                                                                label="Primary Contact"
-                                                                description="Allow primary contact details collection"
-                                                                checked={permissions.primaryContactEnabled}
-                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, primaryContactEnabled: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { primaryContactEnabled: checked });
-                                                                        toast.success('Primary contact permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, primaryContactEnabled: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update primary contact permission');
-                                                                        setPermissions(prev => ({ ...prev, primaryContactEnabled: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Couple Contact"
-                                                                description="Allow couple details collection"
-                                                                checked={permissions.coupleContactEnabled}
-                                                                activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, coupleContactEnabled: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { coupleContactEnabled: checked });
-                                                                        toast.success('Couple contact permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, coupleContactEnabled: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update couple contact permission');
-                                                                        setPermissions(prev => ({ ...prev, coupleContactEnabled: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="No of Guests"
-                                                                description="Allow collection of number of guests"
-                                                                checked={permissions.noOfGuestsEnabled}
-                                                                activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, noOfGuestsEnabled: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { noOfGuestsEnabled: checked });
-                                                                        toast.success('No of guests permission updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, noOfGuestsEnabled: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update no of guests permission');
-                                                                        setPermissions(prev => ({ ...prev, noOfGuestsEnabled: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {/* Date & Time Slot Settings */}
-                                                {permissions.eventDetailsEnabled && (
-                                                    <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">DATE & TIME SLOT Setting</h6>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <PermissionToggle
-                                                                label="Standard Date & Time"
-                                                                description="Standard Date and Time selection"
-                                                                checked={!!permissions.showStandardDateTime}
-                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, showStandardDateTime: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { showStandardDateTime: checked });
-                                                                        toast.success('Standard Date & Time setting updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showStandardDateTime: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update Date & Time setting');
-                                                                        setPermissions(prev => ({ ...prev, showStandardDateTime: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Advanced Date Range & Time Slot"
-                                                                description="Advanced date range and multiple time slots"
-                                                                checked={permissions.showAdvancedDateTime}
-                                                                activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, showAdvancedDateTime: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { showAdvancedDateTime: checked });
-                                                                        toast.success('Advanced Date & Time setting updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, showAdvancedDateTime: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update Advanced Date & Time setting');
-                                                                        setPermissions(prev => ({ ...prev, showAdvancedDateTime: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
-
-                                                {permissions.planMyEventEnabled && (
-                                                    <div className="bg-slate-50 border border-slate-100 p-4 rounded-xl mt-4">
-                                                        <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 border-b border-slate-200 pb-2">LOCATION OPTIONS</h4>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                            <PermissionToggle
-                                                                label="Function Location"
-                                                                description="Allow function location collection"
-                                                                checked={!!permissions.functionLocationEnabled}
-                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, functionLocationEnabled: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { functionLocationEnabled: checked });
-                                                                        toast.success('Function Location setting updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, functionLocationEnabled: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update Function Location setting');
-                                                                        setPermissions(prev => ({ ...prev, functionLocationEnabled: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                            <PermissionToggle
-                                                                label="Seller Location"
-                                                                description="Show seller location option"
-                                                                checked={!!permissions.sellerLocationEnabled}
-                                                                activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setPermissions(prev => ({ ...prev, sellerLocationEnabled: checked }));
-                                                                    try {
-                                                                        await adminApi.updateSeller(viewingSeller.id, { sellerLocationEnabled: checked });
-                                                                        toast.success('Seller Location setting updated');
-                                                                        setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, sellerLocationEnabled: checked } : seller));
-                                                                    } catch (err) {
-                                                                        toast.error('Failed to update Seller Location setting');
-                                                                        setPermissions(prev => ({ ...prev, sellerLocationEnabled: !checked }));
-                                                                    }
-                                                                }}
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                )}
+                                                {/* Event & Ticketing Options relocated above */}
 
                                                 {/* Ticketing & Venue Settings */}
                                                 {(permissions.eventDetailsEnabled || permissions.planMyEventEnabled) && (

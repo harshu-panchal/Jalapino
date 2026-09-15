@@ -82,6 +82,10 @@ const SellerProfile = () => {
         lng: data.location?.coordinates[0] || null,
         radius: data.serviceRadius || 5,
         address: data.address || "",
+        city: data.city || "",
+        state: data.state || "",
+        locality: data.locality || "",
+        pincode: data.pincode || "",
         serviceCoverage: data.serviceCoverage || ["hyperlocal"],
         customZones: data.customZones || [],
         advancePaymentPercentage: data.advancePaymentPercentage || 0,
@@ -114,6 +118,11 @@ const SellerProfile = () => {
       lng: location.lng,
       radius: location.radius,
       address: location.address,
+      // Also update city, state, locality, pincode from geocoded result
+      ...(location.city    && { city:     location.city }),
+      ...(location.state   && { state:    location.state }),
+      ...(location.locality  && { locality: location.locality }),
+      ...(location.pincode && { pincode:  location.pincode }),
     }));
   };
 
@@ -1300,6 +1309,39 @@ const SellerProfile = () => {
               <p className="text-xs font-medium text-emerald-900 leading-relaxed whitespace-pre-wrap">
                 You are required to collect a {profile.advancePaymentPercentage}% advance payment on your orders.
               </p>
+            </Card>
+          )}
+
+          {/* Date & Time Slot Settings — seller-wise, only show what admin enabled */}
+          {profile && (profile.showStandardDateTime || profile.showStandardDateTimeSlot || profile.showAdvancedDateTime || profile.showAdvancedDateTimeSlot || profile.showMultipleDateTime) && (
+            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-white border border-gray-100">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="h-8 w-8 rounded-xl bg-violet-100 flex items-center justify-center text-violet-700 text-base">
+                  📅
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[3px] text-violet-700">Date &amp; Time Settings</p>
+                  <p className="text-[10px] text-violet-500 font-medium">Enabled by admin for your account</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                {[
+                  { key: 'showStandardDateTime',     label: 'Standard Date & Time',          desc: 'Single date and time selection',              icon: '🗓️' },
+                  { key: 'showStandardDateTimeSlot', label: 'Standard Date & Time Slot',     desc: 'Single date with time slot selection',        icon: '⏰' },
+                  { key: 'showAdvancedDateTime',     label: 'Advanced Date Range & Time',    desc: 'Date range and time selection',               icon: '📆' },
+                  { key: 'showAdvancedDateTimeSlot', label: 'Advanced Date Range & Time Slot', desc: 'Date range with multiple time slots',       icon: '🕐' },
+                  { key: 'showMultipleDateTime',     label: 'Multiple Date & Time & Remarks', desc: 'Multiple date, time and remarks',            icon: '📝' },
+                ].filter(item => !!profile[item.key]).map(item => (
+                  <div key={item.key} className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
+                    <span className="text-lg">{item.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-violet-900 leading-tight">{item.label}</p>
+                      <p className="text-[10px] text-violet-500 font-medium">{item.desc}</p>
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-green-100 text-green-700">Active</span>
+                  </div>
+                ))}
+              </div>
             </Card>
           )}
 
