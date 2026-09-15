@@ -32,7 +32,10 @@ function buildNearbySellersKey(lat, lng) {
 export async function getNearbySellerIdsForCustomer(lat, lng) {
   const fetchFn = async () => {
     const sellers = await Seller.find({
-      isActive: true,
+      $or: [
+        { isActive: true },
+        { sellerStatus: "active" }
+      ],
       location: {
         $near: {
           $geometry: {

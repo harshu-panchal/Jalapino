@@ -124,7 +124,10 @@ const categorySchema = new mongoose.Schema(
     
     // Date & Time Slot Settings
     showStandardDateTime: { type: Boolean, default: false },
+    showStandardDateTimeSlot: { type: Boolean, default: false },
     showAdvancedDateTime: { type: Boolean, default: false },
+    showAdvancedDateTimeSlot: { type: Boolean, default: false },
+    showMultipleDateTime: { type: Boolean, default: false },
     
     // Location Options
     functionLocationEnabled: { type: Boolean, default: false },

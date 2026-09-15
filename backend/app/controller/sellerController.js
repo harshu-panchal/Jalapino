@@ -300,7 +300,13 @@ export const updateSellerProfile = async (req, res) => {
     if (address !== undefined) seller.address = address;
     if (locality !== undefined) seller.locality = locality;
     if (pincode !== undefined) seller.pincode = pincode;
-    if (city !== undefined) seller.city = city;
+    if (city !== undefined) {
+      seller.city = city;
+      // Also sync city into address object if it's an object (keeps display consistent)
+      if (seller.address && typeof seller.address === 'object') {
+        seller.address.city = city;
+      }
+    }
     if (state !== undefined) seller.state = state;
     if (advancePaymentPercentage !== undefined) seller.advancePaymentPercentage = Number(advancePaymentPercentage);
     if (req.body.minGuestCapacity !== undefined) seller.minGuestCapacity = Number(req.body.minGuestCapacity);

@@ -228,6 +228,7 @@ export const getProducts = async (req, res) => {
       lat,
       lng,
       hasVideo,
+      module,
     } = req.query;
     const enforceRadius = isCustomerVisibilityRequest(req);
 
@@ -257,8 +258,11 @@ export const getProducts = async (req, res) => {
 
     const requestedSellerIds = parseSellerIdFilters({ sellerId, sellerIds });
     const coords = parseCustomerCoordinates({ lat, lng });
-    const shouldApplyLocationFilter = enforceRadius || coords.valid;
-    if (enforceRadius && !coords.valid) {
+    const isSellerSpecificRequest = requestedSellerIds.length > 0;
+    
+    const shouldApplyLocationFilter = (enforceRadius && !isSellerSpecificRequest) || coords.valid;
+    
+    if (enforceRadius && !isSellerSpecificRequest && !coords.valid) {
       return handleResponse(
         res,
         400,
@@ -322,6 +326,28 @@ export const getProducts = async (req, res) => {
     if (featured !== undefined) query.isFeatured = featured === "true";
     if (hasVideo === "true") {
       query.videoUrl = { $exists: true, $ne: "" };
+    }
+
+    let requestedModule = module;
+    if (enforceRadius && !requestedModule) {
+      requestedModule = 'retail';
+    }
+
+    if (requestedModule) {
+      const Category = (await import("../models/category.js")).default;
+      const targetCategories = await Category.find({ applicableModules: requestedModule }).select('_id').lean();
+      const targetCatIds = targetCategories.map(c => String(c._id));
+      if (targetCatIds.length > 0) {
+        if (query.categoryId && query.categoryId.$in) {
+          query.categoryId.$in = query.categoryId.$in.filter(id => targetCatIds.includes(id));
+        } else if (query.categoryId) {
+          if (!targetCatIds.includes(String(query.categoryId))) query.categoryId = "000000000000000000000000";
+        } else {
+          query.categoryId = { $in: targetCatIds };
+        }
+      } else {
+        query.categoryId = "000000000000000000000000";
+      }
     }
 
     let finalQuery = { ...query };

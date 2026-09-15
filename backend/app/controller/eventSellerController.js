@@ -3,10 +3,11 @@ import Seller from "../models/seller.js";
 import SellerAvailability from "../models/event/SellerAvailability.js";
 import SellerReservation from "../models/event/SellerReservation.js";
 import SellerPackage from "../models/event/SellerPackage.js";
+import { getNearbySellerIdsForCustomer } from "../services/customerVisibilityService.js";
 
 export const searchEventSellers = async (req, res) => {
   try {
-    const { date, time, guestCount, location, categories, budget } = req.query;
+    const { date, time, guestCount, location, categories, budget, lat, lng } = req.query;
 
     if (!categories) {
       return res.status(400).json({
@@ -38,9 +39,8 @@ export const searchEventSellers = async (req, res) => {
       catOrConditions.push({ category: reg });
       catOrConditions.push({ mainProducts: reg });
     });
-    // Add default fallbacks for general categories like Decoration / Balloon
-    catOrConditions.push({ category: /decoration|balloon/i });
-    catOrConditions.push({ mainProducts: /decoration|balloon/i });
+    // NOTE: Removed hardcoded decoration|balloon fallbacks — they caused all event
+    // sellers to bleed into every category search regardless of selected category.
 
     // 1. Flexible query: active event sellers matching category & location
     const query = {
@@ -55,8 +55,6 @@ export const searchEventSellers = async (req, res) => {
             { isEventSeller: true },
             { planMyEventEnabled: true },
             { eventDetailsEnabled: true },
-            { category: /decoration|event|catering|photography|venue|balloon/i },
-            { mainProducts: /decoration|event|catering|photography|venue|balloon/i },
           ],
         },
         { $or: catOrConditions },
@@ -71,7 +69,12 @@ export const searchEventSellers = async (req, res) => {
       }
     }
 
-    if (location) {
+    if (lat && lng) {
+      const nearbySellerIds = await getNearbySellerIdsForCustomer(lat, lng);
+      query.$and.push({
+        _id: { $in: nearbySellerIds }
+      });
+    } else if (location) {
       // Split location by comma and filter out noise: country name, 6-digit pincodes,
       // pincode+state combos, very short tokens, and state names
       const rawParts = location.split(",").map((p) => p.trim()).filter(Boolean);
@@ -104,14 +107,16 @@ export const searchEventSellers = async (req, res) => {
     }
 
     console.log("DEBUG: searchEventSellers Query ->", JSON.stringify(query, null, 2));
-    
+
     // ── DEBUG: ALL event sellers in DB (no filters) ──
     const allEventSellers = await Seller.find({ isEventSeller: true })
-      .select('name shopName city state isEventSeller isActive isVerified sellerStatus sellerVerificationStatus isShopActive serviceCategories serviceCoverage')
+      .select('name shopName city state isEventSeller isActive isVerified sellerStatus sellerVerificationStatus isShopActive serviceCategories serviceCoverage category mainProducts')
+      .populate('serviceCategories', 'name')
       .lean();
     console.log("\n==== ALL EVENT SELLERS IN DB ====");
     allEventSellers.forEach((s, i) => {
-      console.log(`[${i+1}] ${s.shopName || s.name} | city: ${s.city} | status: ${s.sellerStatus} | verified: ${s.sellerVerificationStatus} | isActive: ${s.isActive} | isVerified: ${s.isVerified} | categories: ${s.serviceCategories?.length || 0}`);
+      const catNames = (s.serviceCategories || []).map(c => c?.name || c).join(', ');
+      console.log(`[${i + 1}] ${s.shopName || s.name} | city: ${s.city} | serviceCategories: [${catNames}] | category text: "${s.category}" | mainProducts text: "${s.mainProducts}"`);
     });
     if (allEventSellers.length === 0) console.log("  ❌ NO EVENT SELLERS FOUND! isEventSeller:true wala koi seller DB mein nahi hai!");
     console.log("================================\n");
@@ -148,7 +153,7 @@ export const searchEventSellers = async (req, res) => {
 
         // Check max capacity vs current booked capacity
         let bookedCapacity = availability ? availability.currentBookedCapacity : 0;
-        
+
         // Also check active reservations
         const activeReservations = await SellerReservation.find({
           sellerId: seller._id,
@@ -195,15 +200,15 @@ export const searchEventSellers = async (req, res) => {
 export const getSellerPackagesPublic = async (req, res) => {
   try {
     const { sellerId } = req.params;
-    
+
     // Fetch packages that are available
-    const packages = await SellerPackage.find({ 
+    const packages = await SellerPackage.find({
       seller: sellerId,
-      availability: true 
+      availability: true
     })
-    .populate('category', 'name activePlugins')
-    .populate('template', 'packageName includedFeatures optionalFeatures description images')
-    .lean();
+      .populate('category', 'name activePlugins')
+      .populate('template', 'packageName includedFeatures optionalFeatures description images')
+      .lean();
 
     return res.status(200).json({
       success: true,
@@ -231,7 +236,7 @@ export const getAreaSellers = async (req, res) => {
         { isActive: true, isVerified: true }
       ]
     };
-    
+
     // If a specific location/city is provided
     if (city) {
       query.$and = [
@@ -343,5 +348,3 @@ export const getSellerBookedDates = async (req, res) => {
     });
   }
 };
-
-

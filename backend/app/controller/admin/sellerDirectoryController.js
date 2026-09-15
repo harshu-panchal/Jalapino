@@ -224,7 +224,10 @@ export const updateSellerDetails = async (req, res) => {
     const ticketSystemEnabled = req.body.ticketSystemEnabled;
     const videoUploadEnabled = req.body.videoUploadEnabled;
     const showStandardDateTime = req.body.showStandardDateTime;
+    const showStandardDateTimeSlot = req.body.showStandardDateTimeSlot;
     const showAdvancedDateTime = req.body.showAdvancedDateTime;
+    const showAdvancedDateTimeSlot = req.body.showAdvancedDateTimeSlot;
+    const showMultipleDateTime = req.body.showMultipleDateTime;
     const isShopActive = req.body.isShopActive;
     const shopTimingsEnabled = req.body.shopTimingsEnabled;
     const shopOpeningTime = req.body.shopOpeningTime;
@@ -304,7 +307,10 @@ export const updateSellerDetails = async (req, res) => {
     if (addonCateringEnabled !== undefined) updateData.addonCateringEnabled = addonCateringEnabled;
     if (addonCateringPrice !== undefined) updateData.addonCateringPrice = Number(addonCateringPrice);
     if (showStandardDateTime !== undefined) updateData.showStandardDateTime = showStandardDateTime;
+    if (showStandardDateTimeSlot !== undefined) updateData.showStandardDateTimeSlot = showStandardDateTimeSlot;
     if (showAdvancedDateTime !== undefined) updateData.showAdvancedDateTime = showAdvancedDateTime;
+    if (showAdvancedDateTimeSlot !== undefined) updateData.showAdvancedDateTimeSlot = showAdvancedDateTimeSlot;
+    if (showMultipleDateTime !== undefined) updateData.showMultipleDateTime = showMultipleDateTime;
     if (physicalPaymentEnabled !== undefined) updateData.physicalPaymentEnabled = physicalPaymentEnabled;
     if (paymentQrCode !== undefined) updateData.paymentQrCode = paymentQrCode;
     if (ticketSystemEnabled !== undefined) updateData.ticketSystemEnabled = ticketSystemEnabled;

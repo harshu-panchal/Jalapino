@@ -334,7 +334,19 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    showStandardDateTimeSlot: {
+      type: Boolean,
+      default: false
+    },
     showAdvancedDateTime: {
+      type: Boolean,
+      default: false
+    },
+    showAdvancedDateTimeSlot: {
+      type: Boolean,
+      default: false
+    },
+    showMultipleDateTime: {
       type: Boolean,
       default: false
     },
@@ -518,14 +530,7 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: true
     },
-    showStandardDateTime: {
-      type: Boolean,
-      default: false
-    },
-    showAdvancedDateTime: {
-      type: Boolean,
-      default: false
-    },
+
     functionLocationEnabled: {
       type: Boolean,
       default: false
