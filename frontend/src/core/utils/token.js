@@ -1,22 +1,7 @@
-import * as jwtDecodeModule from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 const safeJwtDecode = (token) => {
-    if (typeof jwtDecodeModule.jwtDecode === 'function') {
-        return jwtDecodeModule.jwtDecode(token);
-    }
-    if (typeof jwtDecodeModule.default === 'function') {
-        return jwtDecodeModule.default(token);
-    }
-    if (jwtDecodeModule.default && typeof jwtDecodeModule.default.jwtDecode === 'function') {
-        return jwtDecodeModule.default.jwtDecode(token);
-    }
-
-    // Fallback: if it's already a function
-    if (typeof jwtDecodeModule === 'function') {
-        return jwtDecodeModule(token);
-    }
-
-    throw new Error('jwtDecode function not found in module');
+    return jwtDecode(token);
 };
 
 export const decodeToken = (token) => {
