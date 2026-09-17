@@ -1860,8 +1860,9 @@ const SellerDetail = () => {
                                     </div>
                                 </div>
                             </div>
-                        )}
-                    </Card>
+                        </div>
+                    )}
+                </Card>
                 </div>
 
                 {/* Sidebar Context */}
