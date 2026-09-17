@@ -284,6 +284,9 @@ const PlanMyEventPage = () => {
     const [filterTime, setFilterTime] = useState('');
     const [filterMultipleDates, setFilterMultipleDates] = useState([]);
     const [filterRemarks, setFilterRemarks] = useState('');
+    const [multiInputDate, setMultiInputDate] = useState('');
+    const [multiInputTime, setMultiInputTime] = useState('');
+    const [multiInputRemarks, setMultiInputRemarks] = useState('');
 
     /* — right panel sellers — */
     const [sellers, setSellers] = useState([]);
@@ -309,9 +312,10 @@ const PlanMyEventPage = () => {
             eventType: selectedType,
             date: filterDate,
             time: filterTime,
+            multipleEvents: filterMultipleDates,
         },
         preferences: {}
-    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime]);
+    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime, filterMultipleDates]);
 
     /* — banners — */
     const [banners, setBanners] = useState([]);
@@ -851,40 +855,83 @@ const PlanMyEventPage = () => {
                                             // Mode 5: Multiple Date & Time & Remarks
                                             <>
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Select Dates</label>
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Select Date</label>
                                                     <input
                                                         type="date"
                                                         min={new Date().toISOString().split('T')[0]}
+                                                        value={multiInputDate}
+                                                        onChange={e => setMultiInputDate(e.target.value)}
                                                         className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
-                                                        onChange={e => {
-                                                            const val = e.target.value;
-                                                            if (val && !filterMultipleDates.includes(val)) {
-                                                                setFilterMultipleDates(prev => [...prev, val]);
-                                                            }
-                                                            e.target.value = '';
-                                                        }}
                                                     />
-                                                    {filterMultipleDates.length > 0 && (
-                                                        <div className="flex flex-wrap gap-1 mt-1">
-                                                            {filterMultipleDates.map(d => (
-                                                                <span key={d} className="text-xs bg-amber-200 text-amber-800 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                                                                    {d}
-                                                                    <button onClick={() => setFilterMultipleDates(prev => prev.filter(x => x !== d))} className="text-red-500 font-black">×</button>
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    )}
+                                                </div>
+                                                <div className="flex flex-col gap-1 min-w-[140px]">
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time</label>
+                                                    <input
+                                                        type="time"
+                                                        value={multiInputTime}
+                                                        onChange={e => setMultiInputTime(e.target.value)}
+                                                        className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                                    />
                                                 </div>
                                                 <div className="flex flex-col gap-1 min-w-[200px]">
                                                     <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📝 Remarks</label>
                                                     <input
                                                         type="text"
-                                                        value={filterRemarks}
-                                                        onChange={e => setFilterRemarks(e.target.value)}
+                                                        value={multiInputRemarks}
+                                                        onChange={e => setMultiInputRemarks(e.target.value)}
                                                         placeholder="Add remarks..."
                                                         className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                                     />
                                                 </div>
+                                                <div className="flex items-end pb-1">
+                                                    <button 
+                                                        onClick={() => {
+                                                            if (selectedType && multiInputDate && multiInputTime) {
+                                                                const typeName = eventTypes.find(t => (t.value || t._id) === selectedType)?.name || selectedType;
+                                                                const newEvent = {
+                                                                    id: Date.now(),
+                                                                    typeId: selectedType,
+                                                                    typeName,
+                                                                    date: multiInputDate,
+                                                                    time: multiInputTime,
+                                                                    remarks: multiInputRemarks
+                                                                };
+                                                                setFilterMultipleDates(prev => [...prev, newEvent]);
+                                                                setMultiInputDate('');
+                                                                setMultiInputTime('');
+                                                                setMultiInputRemarks('');
+                                                            } else {
+                                                                alert("Please select Event Type, Date and Time.");
+                                                            }
+                                                        }}
+                                                        className="bg-amber-600 text-white text-xs font-bold px-4 py-2.5 rounded-xl shadow hover:bg-amber-700 transition-colors"
+                                                    >
+                                                        + Add Event
+                                                    </button>
+                                                </div>
+                                                {filterMultipleDates.length > 0 && (
+                                                    <div className="w-full mt-3 bg-white p-3 rounded-xl border border-amber-200">
+                                                        <h4 className="text-[11px] font-black text-amber-800 uppercase tracking-wider mb-2">Added Events</h4>
+                                                        <div className="flex flex-col gap-2">
+                                                            {filterMultipleDates.map((item, idx) => (
+                                                                <div key={item.id || idx} className="flex flex-wrap items-center justify-between gap-3 bg-amber-50 p-2 rounded-lg border border-amber-100">
+                                                                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700 items-center">
+                                                                        <span className="text-purple-700 font-bold bg-purple-100 px-2 py-1 rounded-md">🎉 {item.typeName || item.typeId}</span>
+                                                                        <span className="flex items-center gap-1">📅 {item.date}</span>
+                                                                        {item.time && <span className="flex items-center gap-1">🕐 {item.time}</span>}
+                                                                        {item.remarks && <span className="text-slate-500 font-normal italic flex items-center gap-1">📝 {item.remarks}</span>}
+                                                                    </div>
+                                                                    <button 
+                                                                        onClick={() => setFilterMultipleDates(prev => prev.filter(x => x.id !== item.id))} 
+                                                                        className="text-red-500 hover:bg-red-100 px-2 py-1 rounded font-black text-[10px] uppercase transition-colors"
+                                                                    >
+                                                                        ✕ Remove
+                                                                    </button>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </>
                                         )}
                                         {(dateMode === 'advancedSlot' || dateMode === 'advanced') && (
@@ -919,6 +966,17 @@ const PlanMyEventPage = () => {
                                                                 <option key={slot} value={slot}>{slot}</option>
                                                             ))}
                                                         </select>
+                                                    </div>
+                                                )}
+                                                {dateMode === 'advanced' && (
+                                                    <div className="flex flex-col gap-1 min-w-[180px]">
+                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time</label>
+                                                        <input
+                                                            type="time"
+                                                            value={filterTime}
+                                                            onChange={e => setFilterTime(e.target.value)}
+                                                            className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                                        />
                                                     </div>
                                                 )}
                                             </>
@@ -962,9 +1020,9 @@ const PlanMyEventPage = () => {
                                         )}
 
                                         {/* Clear filters */}
-                                        {(filterDate || filterEndDate || filterTime || filterMultipleDates.length > 0 || filterRemarks) && (
+                                        {(filterDate || filterEndDate || filterTime || filterMultipleDates.length > 0 || filterRemarks || multiInputDate || multiInputTime || multiInputRemarks) && (
                                             <button
-                                                onClick={() => { setFilterDate(''); setFilterEndDate(''); setFilterTime(''); setFilterMultipleDates([]); setFilterRemarks(''); }}
+                                                onClick={() => { setFilterDate(''); setFilterEndDate(''); setFilterTime(''); setFilterMultipleDates([]); setFilterRemarks(''); setMultiInputDate(''); setMultiInputTime(''); setMultiInputRemarks(''); }}
                                                 className="text-xs text-red-500 font-bold hover:underline self-end pb-2"
                                             >
                                                 ✕ Clear Filters

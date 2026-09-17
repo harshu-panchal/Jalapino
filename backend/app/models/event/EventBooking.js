@@ -42,8 +42,16 @@ const eventBookingSchema = new mongoose.Schema({
     eventType: { type: String, required: true },
     guestCount: { type: Number, required: true },
     budget: { type: Number },
-    eventDate: { type: Date, required: true },
-    eventTime: { type: String, required: true },
+    eventDate: { type: Date },
+    eventTime: { type: String },
+    multipleEvents: [{
+        id: String,
+        typeId: String,
+        typeName: String,
+        date: String,
+        time: String,
+        remarks: String
+    }],
     location: {
         address: String,
         coordinates: {

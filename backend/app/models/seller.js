@@ -560,6 +560,10 @@ const sellerSchema = new mongoose.Schema(
       enum: ['hours', 'days'],
       default: 'days'
     },
+    advanceBookingBufferTime: {
+      type: String,
+      default: "12:00 PM"
+    },
     demoTrialEnabled: {
       type: Boolean,
       default: false

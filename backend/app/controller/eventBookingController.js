@@ -21,7 +21,11 @@ export const createEventBooking = async (req, res) => {
         const globalSettings = await Setting.findOne({});
         
         // --- GASP BOOKING ENGINE: Booking Window Validation ---
-        const eventDateObj = new Date(eventData.date || Date.now());
+        let primaryDate = eventData.date;
+        if (!primaryDate && eventData.multipleEvents && eventData.multipleEvents.length > 0) {
+            primaryDate = eventData.multipleEvents[0].date;
+        }
+        const eventDateObj = new Date(primaryDate || Date.now());
         const eventDateStr = eventDateObj.toISOString().split('T')[0];
         const daysDifference = Math.ceil((eventDateObj.getTime() - Date.now()) / (1000 * 3600 * 24));
         const maxAdvanceDays = globalSettings?.bookingControl?.bookingWindowDays ?? 365;
@@ -116,8 +120,9 @@ export const createEventBooking = async (req, res) => {
             bookingId: bookingId,
             customer: customerId,
             eventType: eventData.eventType || 'Custom',
-            eventDate: new Date(eventData.date || Date.now()),
+            eventDate: new Date(primaryDate || Date.now()),
             eventTime: eventData.time || '10:00 AM',
+            multipleEvents: eventData.multipleEvents || [],
             location: {
                 address: eventData.location || 'Pending Address'
             },

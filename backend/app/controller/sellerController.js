@@ -272,9 +272,22 @@ export const updateSellerProfile = async (req, res) => {
                         else if (url.startsWith("http://host:7000")) url = url.replace("http://host:7000", reqDomain);
                     }
                     uploadedBanners.push(url);
+                } else {
+                    let url = await saveRawFile(file.buffer, "documents", file.originalname);
+                    const reqDomain = `${req.protocol}://${req.get("host")}`;
+                    const envDomain = process.env.API_DOMAIN || "http://localhost:7000";
+                    if (url.startsWith("/")) url = `${reqDomain}${url}`;
+                    if (url.includes("localhost") || url.includes("host:7000") || url.startsWith("http://10.0.2.2")) {
+                        if (url.startsWith(envDomain)) url = url.replace(envDomain, reqDomain);
+                        else if (url.startsWith("host:7000")) url = url.replace("host:7000", reqDomain);
+                        else if (url.startsWith("http://host:7000")) url = url.replace("http://host:7000", reqDomain);
+                    }
+                    
+                    if (!seller.documents) seller.documents = {};
+                    seller.documents[fieldName] = url;
                 }
             } catch (err) {
-                console.error("Failed to upload banner", err);
+                console.error("Failed to upload file", err);
             }
         }
     }

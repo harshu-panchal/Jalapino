@@ -747,14 +747,23 @@ const Auth = () => {
       }
     } catch (error) {
       if (isLogin && error.response?.status === 403) {
+        const result = error.response?.data?.result;
+        if (result?.token && result?.seller) {
+          login({
+            ...result.seller,
+            token: result.token,
+            role: "seller",
+          });
+        }
+        
         const applicationStatus =
-          error.response?.data?.result?.applicationStatus || "pending";
+          result?.applicationStatus || "pending";
         const rejectionReason =
-          error.response?.data?.result?.rejectionReason || "";
+          result?.rejectionReason || "";
         const adminRemark =
-          error.response?.data?.result?.adminRemark || "";
+          result?.adminRemark || "";
         const adminTerms =
-          error.response?.data?.result?.adminTerms || "";
+          result?.adminTerms || "";
         navigate("/seller/pending-approval", {
           replace: true,
           state: {
@@ -765,8 +774,9 @@ const Auth = () => {
             adminTerms,
           },
         });
+      } else {
+        toast.error(error.response?.data?.message || "Authentication failed");
       }
-      toast.error(error.response?.data?.message || "Authentication failed");
     } finally {
       setIsLoading(false);
     }

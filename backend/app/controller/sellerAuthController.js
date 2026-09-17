@@ -405,25 +405,6 @@ export const loginSeller = async (req, res) => {
         console.log("Computed isApproved:", isApproved);
         console.log("==========================");
 
-        if (!isApproved) {
-            const approvalMessage =
-                applicationStatus === "rejected"
-                    ? "Your seller application was rejected. Please contact support."
-                    : applicationStatus === "bounced_back"
-                    ? "Your seller application requires revision. Please check admin notes."
-                    : "Your seller account is pending admin approval.";
-
-            return handleResponse(res, 403, approvalMessage, {
-                applicationStatus,
-                isVerified: seller.isVerified === true,
-                isActive: seller.isActive === true,
-                rejectionReason: seller.rejectionReason || "",
-                adminRemark: seller.adminRemark || "",
-                adminTerms: seller.adminTerms || "",
-                advancePaymentPercentage: seller.advancePaymentPercentage || 0,
-            });
-        }
-
         seller.lastLogin = new Date();
         
         const { fcmToken, platform } = req.body || {};
@@ -438,6 +419,27 @@ export const loginSeller = async (req, res) => {
         await seller.save();
 
         const token = generateToken(seller);
+
+        if (!isApproved) {
+            const approvalMessage =
+                applicationStatus === "rejected"
+                    ? "Your seller application was rejected. Please contact support."
+                    : applicationStatus === "bounced_back"
+                    ? "Your seller application requires revision. Please check admin notes."
+                    : "Your seller account is pending admin approval.";
+
+            return handleResponse(res, 403, approvalMessage, {
+                token,
+                seller,
+                applicationStatus,
+                isVerified: seller.isVerified === true,
+                isActive: seller.isActive === true,
+                rejectionReason: seller.rejectionReason || "",
+                adminRemark: seller.adminRemark || "",
+                adminTerms: seller.adminTerms || "",
+                advancePaymentPercentage: seller.advancePaymentPercentage || 0,
+            });
+        }
 
         return handleResponse(res, 200, "Login successful", {
             token,

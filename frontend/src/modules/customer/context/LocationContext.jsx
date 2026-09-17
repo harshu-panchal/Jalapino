@@ -59,6 +59,11 @@ export const LocationProvider = ({ children }) => {
     if (currentCityName.includes("singapore") && (currentCityState.includes("madhya pradesh") || (currentLocation?.name || "").toLowerCase().includes("indore"))) {
       currentCityName = "indore";
     }
+    
+    // Normalize Mhow / Dr. Ambedkar Nagar
+    if ((currentCityName.includes("mhow") || currentCityName.includes("ambedkar nagar")) && currentCityState.includes("madhya pradesh")) {
+      currentCityName = "mhow";
+    }
 
     const cityConfig = citiesConfig.find(c => {
       let dbCity = c.cityName?.trim()?.toLowerCase() || "";

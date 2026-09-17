@@ -319,7 +319,7 @@ export const getSellerBookedDates = async (req, res) => {
     }
 
     const bookings = await EventBooking.find(query)
-      .select('eventDate eventTime eventType guestCount services')
+      .select('eventDate eventTime eventType guestCount services multipleEvents')
       .lean();
 
     // Format response - only show non-sensitive info to customer
@@ -332,6 +332,7 @@ export const getSellerBookedDates = async (req, res) => {
         guestCount: b.guestCount || null,
         status: sellerService?.status || 'PENDING_APPROVAL',
         remark: sellerService?.specialInstructions || null,
+        multipleEvents: b.multipleEvents || []
       };
     });
 

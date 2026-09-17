@@ -30,7 +30,7 @@ const PrivacyPolicy = () => {
         </div>
       </div>
 
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-4xl mx-auto px-6 md:px-12 py-8 space-y-8"
@@ -73,7 +73,7 @@ const PrivacyPolicy = () => {
             You can update your business profile, adjust inventory, and manage operational settings through your Seller Dashboard. If you wish to close your store, you can request account deletion, after which your public store profile will be removed.
           </p>
         </div>
-        
+
         <p className="text-center text-xs font-bold text-slate-400 mt-12 uppercase tracking-widest">
           Last Updated: {new Date().toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
         </p>

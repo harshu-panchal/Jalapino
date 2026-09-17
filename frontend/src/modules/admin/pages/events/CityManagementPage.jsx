@@ -63,7 +63,10 @@ const CityManagementPage = () => {
 
             const cityMatch = allCities.find(c => c.name.toLowerCase() === typedCity);
             
-            if (!cityMatch) {
+            // Allow certain valid cities that might be missing or spelled differently in the library
+            const allowedCustomCities = ['mhow'];
+            
+            if (!cityMatch && !allowedCustomCities.includes(typedCity)) {
                 validationErrors.cityName = "Please enter a valid city name for the given state";
             }
         }
@@ -120,7 +123,7 @@ const CityManagementPage = () => {
     return (
         <div className="p-6 bg-slate-50 min-h-screen">
             <div className="flex items-center gap-4 mb-6">
-                <button onClick={() => navigate(-1)} className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-100">
+                <button onClick={() => navigate('/admin/events/config')} className="p-2 bg-white rounded-full shadow-sm hover:bg-slate-100">
                     <ArrowBackIcon />
                 </button>
                 <div>

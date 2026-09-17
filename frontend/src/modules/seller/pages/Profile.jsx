@@ -102,6 +102,7 @@ const SellerProfile = () => {
         shopClosingTime: data.shopClosingTime || "09:00 PM",
         advanceBookingBuffer: data.advanceBookingBuffer || 0,
         advanceBookingBufferUnit: data.advanceBookingBufferUnit || "days",
+        advanceBookingBufferTime: data.advanceBookingBufferTime || "12:00",
       });
       setKeptBanners(data.banners || []);
     } catch (error) {
@@ -809,6 +810,13 @@ const SellerProfile = () => {
                             <option value="days">Days</option>
                             <option value="hours">Hours</option>
                         </select>
+                        <input
+                            type="time"
+                            value={formData.advanceBookingBufferTime || "12:00"}
+                            onChange={(e) => setFormData({ ...formData, advanceBookingBufferTime: e.target.value })}
+                            disabled={!isEditing}
+                            className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                        />
                     </div>
                 </div>
             </div>

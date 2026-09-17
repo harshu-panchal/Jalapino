@@ -774,7 +774,7 @@ const SellerDetail = () => {
                                                     </div>
                                                     <div className="grid grid-cols-1 gap-4">
                                                         <PermissionToggle
-                                                            label="Seller Shop Off & On"
+                                                            label="Master Shop Visibility"
                                                             description="If OFF, shop will not be visible on Customer App"
                                                             checked={seller.isShopActive ?? true}
                                                             activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
@@ -792,7 +792,7 @@ const SellerDetail = () => {
                                                         />
 
                                                         <PermissionToggle
-                                                            label="Seller Shop Timing"
+                                                            label="Strict Operating Hours"
                                                             description="Enable to enforce strict shop opening/closing hours"
                                                             checked={seller.shopTimingsEnabled ?? false}
                                                             activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
@@ -873,6 +873,18 @@ const SellerDetail = () => {
                                                                     <option value="days">Days</option>
                                                                     <option value="hours">Hours</option>
                                                                 </select>
+                                                                <input
+                                                                    type="time"
+                                                                    value={seller.advanceBookingBufferTime || "12:00"}
+                                                                    onChange={async (e) => {
+                                                                        const val = e.target.value;
+                                                                        setSeller(prev => ({ ...prev, advanceBookingBufferTime: val }));
+                                                                        try {
+                                                                            await adminUsersApi.updateSeller(seller.id, { advanceBookingBufferTime: val });
+                                                                        } catch (err) { showToast("Failed to update time", "error"); }
+                                                                    }}
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white"
+                                                                />
                                                             </div>
                                                         </div>
 
@@ -1283,6 +1295,48 @@ const SellerDetail = () => {
                                                     }}
                                                 />
 
+                                                {/* Live Kitchen Sub-Permissions Inline */}
+                                                {seller.liveKitchenEnabled && (
+                                                    <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex flex-col gap-4 mb-2 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Kitchen Settings</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                            <PermissionToggle
+                                                                label="Add to Cart"
+                                                                description="Allow customers to add items to cart directly from live"
+                                                                checked={seller.liveAddToCartEnabled}
+                                                                activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, liveAddToCartEnabled: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { liveAddToCartEnabled: checked });
+                                                                        showToast('Live Add to Cart permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, liveAddToCartEnabled: !checked }));
+                                                                        showToast('Failed to update live Add to Cart permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Services"
+                                                                description="Allow booking services from live"
+                                                                checked={seller.liveServicesEnabled}
+                                                                activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, liveServicesEnabled: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { liveServicesEnabled: checked });
+                                                                        showToast('Live Services permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, liveServicesEnabled: !checked }));
+                                                                        showToast('Failed to update live Services permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
 
                                                 <PermissionToggle
@@ -1320,6 +1374,151 @@ const SellerDetail = () => {
                                                         }
                                                     }}
                                                 />
+
+                                                {/* Customization & Quotation Engine Sub-Permissions Inline */}
+                                                {seller.customizationEngineEnabled && (
+                                                    <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex flex-col gap-4 mb-2 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
+                                                        <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Settings</h6>
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                            <PermissionToggle
+                                                                label="Reference Photo Upload"
+                                                                description="Allow upload of reference photos"
+                                                                checked={seller.quoteReferencePhotoUpload}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteReferencePhotoUpload: checked });
+                                                                        showToast('Reference photo upload permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
+                                                                        showToast('Failed to update reference photo upload permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Color Combination"
+                                                                description="Allow selecting color combinations"
+                                                                checked={seller.quoteColorCombination}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteColorCombination: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteColorCombination: checked });
+                                                                        showToast('Color combination permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteColorCombination: !checked }));
+                                                                        showToast('Failed to update color combination permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Customer & Seller Chat"
+                                                                description="Allow chat for plan my event"
+                                                                checked={seller.quoteCustomerNotes}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteCustomerNotes: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteCustomerNotes: checked });
+                                                                        showToast('Customer notes permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteCustomerNotes: !checked }));
+                                                                        showToast('Failed to update customer notes permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Seller Quotation"
+                                                                description="Allow seller to send quotations"
+                                                                checked={seller.quoteSellerQuotation}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteSellerQuotation: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteSellerQuotation: checked });
+                                                                        showToast('Seller quotation permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteSellerQuotation: !checked }));
+                                                                        showToast('Failed to update seller quotation permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Quote Revision"
+                                                                description="Allow revisions to quotation"
+                                                                checked={seller.quoteQuoteRevision}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteQuoteRevision: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteQuoteRevision: checked });
+                                                                        showToast('Quote revision permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteQuoteRevision: !checked }));
+                                                                        showToast('Failed to update quote revision permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Customer Approval"
+                                                                description="Allow customer approval step"
+                                                                checked={seller.quoteCustomerApproval}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteCustomerApproval: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteCustomerApproval: checked });
+                                                                        showToast('Customer approval permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteCustomerApproval: !checked }));
+                                                                        showToast('Failed to update customer approval permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Advance Payment"
+                                                                description="Allow advance payment step"
+                                                                checked={seller.quoteAdvancePayment}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteAdvancePayment: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteAdvancePayment: checked });
+                                                                        showToast('Advance payment permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteAdvancePayment: !checked }));
+                                                                        showToast('Failed to update advance payment permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Final Payment"
+                                                                description="Allow final payment step"
+                                                                checked={seller.quoteFinalPayment}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, quoteFinalPayment: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { quoteFinalPayment: checked });
+                                                                        showToast('Final payment permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, quoteFinalPayment: !checked }));
+                                                                        showToast('Failed to update final payment permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                )}
 
                                                 <PermissionToggle
                                                     label="Customer Image Review"
@@ -1538,188 +1737,9 @@ const SellerDetail = () => {
                                                     )}
                                                 </div>
                                             </div>
-                                            {/* Live Kitchen Sub-Permissions */}
-                                            {seller.liveKitchenEnabled && (
-                                                <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
-                                                    <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Live Kitchen Settings</h6>
-                                                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                                                        <PermissionToggle
-                                                            label="Add to Cart"
-                                                            description="Allow customers to add items to cart directly from live"
-                                                            checked={seller.liveAddToCartEnabled}
-                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, liveAddToCartEnabled: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { liveAddToCartEnabled: checked });
-                                                                    showToast('Live Add to Cart permission updated', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, liveAddToCartEnabled: !checked }));
-                                                                    showToast('Failed to update live Add to Cart permission', 'error');
-                                                                }
-                                                            }}
-                                                        />
-                                                        <PermissionToggle
-                                                            label="Services"
-                                                            description="Allow booking services from live"
-                                                            checked={seller.liveServicesEnabled}
-                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, liveServicesEnabled: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { liveServicesEnabled: checked });
-                                                                    showToast('Live Services permission updated', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, liveServicesEnabled: !checked }));
-                                                                    showToast('Failed to update live Services permission', 'error');
-                                                                }
-                                                            }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            )}
 
-                                            {/* Customization & Quotation Engine Sub-Permissions */}
-                                        {seller.customizationEngineEnabled && (
-                                            <div className="mb-8">
-                                                <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Customization & Quotation Settings</h5>
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-6 rounded-xl border border-slate-200">
-                                                    <PermissionToggle
-                                                        label="Reference Photo Upload"
-                                                        description="Allow upload of reference photos"
-                                                        checked={seller.quoteReferencePhotoUpload}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteReferencePhotoUpload: checked });
-                                                                showToast('Reference photo upload permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
-                                                                showToast('Failed to update reference photo upload permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
 
-                                                    <PermissionToggle
-                                                        label="Color Combination"
-                                                        description="Allow selecting color combinations"
-                                                        checked={seller.quoteColorCombination}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteColorCombination: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteColorCombination: checked });
-                                                                showToast('Color combination permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteColorCombination: !checked }));
-                                                                showToast('Failed to update color combination permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
 
-                                                    <PermissionToggle
-                                                        label="Customer & Seller Chat"
-                                                        description="Allow chat for plan my event"
-                                                        checked={seller.quoteCustomerNotes}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteCustomerNotes: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteCustomerNotes: checked });
-                                                                showToast('Customer notes permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteCustomerNotes: !checked }));
-                                                                showToast('Failed to update customer notes permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                    <PermissionToggle
-                                                        label="Seller Quotation"
-                                                        description="Allow seller to send quotations"
-                                                        checked={seller.quoteSellerQuotation}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteSellerQuotation: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteSellerQuotation: checked });
-                                                                showToast('Seller quotation permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteSellerQuotation: !checked }));
-                                                                showToast('Failed to update seller quotation permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                    <PermissionToggle
-                                                        label="Quote Revision"
-                                                        description="Allow revisions to quotation"
-                                                        checked={seller.quoteQuoteRevision}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteQuoteRevision: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteQuoteRevision: checked });
-                                                                showToast('Quote revision permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteQuoteRevision: !checked }));
-                                                                showToast('Failed to update quote revision permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                    <PermissionToggle
-                                                        label="Customer Approval"
-                                                        description="Allow customer approval step"
-                                                        checked={seller.quoteCustomerApproval}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteCustomerApproval: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteCustomerApproval: checked });
-                                                                showToast('Customer approval permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteCustomerApproval: !checked }));
-                                                                showToast('Failed to update customer approval permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                    <PermissionToggle
-                                                        label="Advance Payment"
-                                                        description="Allow advance payment step"
-                                                        checked={seller.quoteAdvancePayment}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteAdvancePayment: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteAdvancePayment: checked });
-                                                                showToast('Advance payment permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteAdvancePayment: !checked }));
-                                                                showToast('Failed to update advance payment permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                    <PermissionToggle
-                                                        label="Final Payment"
-                                                        description="Allow final payment step"
-                                                        checked={seller.quoteFinalPayment}
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, quoteFinalPayment: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { quoteFinalPayment: checked });
-                                                                showToast('Final payment permission updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, quoteFinalPayment: !checked }));
-                                                                showToast('Failed to update final payment permission', 'error');
-                                                            }
-                                                        }}
-                                                    />
-                                                </div>
-                                            </div>
-                                        )}
-                                        </div>
 
                                         <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
                                             <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
