@@ -62,10 +62,6 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
                 const responseData = res.data?.results || res.data?.result || res.data?.data || [];
                 const itemsArray = Array.isArray(responseData) ? responseData : (responseData.items || []);
                 if (!cancelled) setProducts(itemsArray.slice(0, 4));
-                const res = await axiosInstance.get(`/products?sellerId=${seller._id}&limit=4&module=plan_my_event`);
-                const responseData = res.data?.results || res.data?.result || res.data?.data || [];
-                const itemsArray = Array.isArray(responseData) ? responseData : (responseData.items || []);
-                if (!cancelled) setProducts(itemsArray.slice(0, 4));
             } catch {
                 if (!cancelled) setProducts([]);
             } finally {
