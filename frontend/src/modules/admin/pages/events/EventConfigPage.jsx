@@ -194,6 +194,7 @@ const EventConfigPage = () => {
                 showNoOfGuestsBox: cat.showNoOfGuestsBox || false,
                 primaryContactEnabled: cat.primaryContactEnabled || false,
                 coupleContactEnabled: cat.coupleContactEnabled || false,
+                corporateContactEnabled: cat.corporateContactEnabled || false,
                 noOfGuestsEnabled: cat.noOfGuestsEnabled || false,
                 showStandardDateTime: cat.showStandardDateTime || false,
                 showStandardDateTimeSlot: cat.showStandardDateTimeSlot || false,
@@ -217,7 +218,7 @@ const EventConfigPage = () => {
             setEditingCat(null);
             setCatForm({ 
                 name: '', icon: '', sortOrder: 1, isActive: true, fields: [], activePlugins: [], businessRules: { ...defaultBusinessRules }, showDateFilters: true, showEventDetailsForm: true, showNoOfGuestsBox: false,
-                primaryContactEnabled: false, coupleContactEnabled: false, noOfGuestsEnabled: false,
+                primaryContactEnabled: false, coupleContactEnabled: false, corporateContactEnabled: false, noOfGuestsEnabled: false,
                 showStandardDateTime: false, showStandardDateTimeSlot: false, showAdvancedDateTime: false, showAdvancedDateTimeSlot: false, showMultipleDateTime: false,
                 functionLocationEnabled: false, sellerLocationEnabled: false,
                 quoteReferencePhotoUpload: false, quoteColorCombination: false, quoteCustomerNotes: false, quoteSellerQuotation: false, quoteQuoteRevision: false, quoteCustomerApproval: false, quoteAdvancePayment: false, quoteFinalPayment: false,
@@ -583,6 +584,7 @@ const EventConfigPage = () => {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                                 <FormControlLabel control={<Switch checked={catForm.primaryContactEnabled} onChange={e => setCatForm({...catForm, primaryContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Primary Contact</span>} />
                                 <FormControlLabel control={<Switch checked={catForm.coupleContactEnabled} onChange={e => setCatForm({...catForm, coupleContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Couple Contact</span>} />
+                                <FormControlLabel control={<Switch checked={catForm.corporateContactEnabled} onChange={e => setCatForm({...catForm, corporateContactEnabled: e.target.checked})} color="primary" />} label={<span className="text-sm font-medium">Corporate Contact</span>} />
                             </div>
 
                             <h4 className="text-sm font-bold text-slate-700 mt-6 mb-2">Date & Time Slot Settings</h4>

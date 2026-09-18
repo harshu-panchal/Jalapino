@@ -77,7 +77,7 @@ export const createEventCategory = async (req, res) => {
         const { 
             name, icon, sortOrder, isActive, fields, activePlugins, businessRules, 
             showDateFilters, showEventDetailsForm, showNoOfGuestsBox,
-            primaryContactEnabled, coupleContactEnabled, noOfGuestsEnabled,
+            primaryContactEnabled, coupleContactEnabled, corporateContactEnabled, noOfGuestsEnabled,
             showStandardDateTime, showStandardDateTimeSlot, showAdvancedDateTime, showAdvancedDateTimeSlot, showMultipleDateTime,
             functionLocationEnabled, sellerLocationEnabled,
             quoteReferencePhotoUpload, quoteColorCombination, quoteCustomerNotes, quoteSellerQuotation, quoteQuoteRevision, quoteCustomerApproval, quoteAdvancePayment, quoteFinalPayment,
@@ -87,7 +87,7 @@ export const createEventCategory = async (req, res) => {
         // 1. Create Category
         const cat = await EventCategory.create({ 
             name, icon, sortOrder, isActive, activePlugins, showDateFilters, showEventDetailsForm, showNoOfGuestsBox,
-            primaryContactEnabled, coupleContactEnabled, noOfGuestsEnabled,
+            primaryContactEnabled, coupleContactEnabled, corporateContactEnabled, noOfGuestsEnabled,
             showStandardDateTime, showStandardDateTimeSlot, showAdvancedDateTime, showAdvancedDateTimeSlot, showMultipleDateTime,
             functionLocationEnabled, sellerLocationEnabled,
             quoteReferencePhotoUpload, quoteColorCombination, quoteCustomerNotes, quoteSellerQuotation, quoteQuoteRevision, quoteCustomerApproval, quoteAdvancePayment, quoteFinalPayment,
@@ -125,7 +125,7 @@ export const updateEventCategory = async (req, res) => {
         const { 
             name, icon, sortOrder, isActive, fields, activePlugins, businessRules, 
             showDateFilters, showEventDetailsForm, showNoOfGuestsBox,
-            primaryContactEnabled, coupleContactEnabled, noOfGuestsEnabled,
+            primaryContactEnabled, coupleContactEnabled, corporateContactEnabled, noOfGuestsEnabled,
             showStandardDateTime, showStandardDateTimeSlot, showAdvancedDateTime, showAdvancedDateTimeSlot, showMultipleDateTime,
             functionLocationEnabled, sellerLocationEnabled,
             quoteReferencePhotoUpload, quoteColorCombination, quoteCustomerNotes, quoteSellerQuotation, quoteQuoteRevision, quoteCustomerApproval, quoteAdvancePayment, quoteFinalPayment,
@@ -134,7 +134,7 @@ export const updateEventCategory = async (req, res) => {
 
         const cat = await EventCategory.findByIdAndUpdate(id, { 
             name, icon, sortOrder, isActive, activePlugins, showDateFilters, showEventDetailsForm, showNoOfGuestsBox,
-            primaryContactEnabled, coupleContactEnabled, noOfGuestsEnabled,
+            primaryContactEnabled, coupleContactEnabled, corporateContactEnabled, noOfGuestsEnabled,
             showStandardDateTime, showStandardDateTimeSlot, showAdvancedDateTime, showAdvancedDateTimeSlot, showMultipleDateTime,
             functionLocationEnabled, sellerLocationEnabled,
             quoteReferencePhotoUpload, quoteColorCombination, quoteCustomerNotes, quoteSellerQuotation, quoteQuoteRevision, quoteCustomerApproval, quoteAdvancePayment, quoteFinalPayment,

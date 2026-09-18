@@ -61,6 +61,7 @@ const PendingSellers = () => {
         eventDetailsEnabled: false,
         primaryContactEnabled: true,
         coupleContactEnabled: true,
+        corporateContactEnabled: true,
         categoriesEnabled: true,
         bookingSlotsEnabled: false,
         productsEnabled: true,
@@ -137,6 +138,7 @@ const PendingSellers = () => {
                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                         primaryContactEnabled: s.primaryContactEnabled ?? true,
                         coupleContactEnabled: s.coupleContactEnabled ?? true,
+                        corporateContactEnabled: s.corporateContactEnabled ?? true,
                         noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
                         categoriesEnabled: s.categoriesEnabled ?? true,
                         bookingSlotsEnabled: s.bookingSlotsEnabled ?? false,
@@ -423,6 +425,7 @@ const PendingSellers = () => {
                                                     eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                                                     primaryContactEnabled: s.primaryContactEnabled ?? true,
                                                     coupleContactEnabled: s.coupleContactEnabled ?? true,
+                                                    corporateContactEnabled: s.corporateContactEnabled ?? true,
                                                     noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
                                                     productsEnabled: s.productsEnabled ?? true,
                                                     stockEnabled: s.stockEnabled ?? true,
@@ -503,6 +506,7 @@ const PendingSellers = () => {
                                                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
                                                         primaryContactEnabled: s.primaryContactEnabled ?? true,
                                                         coupleContactEnabled: s.coupleContactEnabled ?? true,
+                                                        corporateContactEnabled: s.corporateContactEnabled ?? true,
                                                         noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
                                                         productsEnabled: s.productsEnabled ?? true,
                                                         stockEnabled: s.stockEnabled ?? true,
@@ -876,6 +880,24 @@ const PendingSellers = () => {
                                                                         } catch (err) {
                                                                             toast.error('Failed to update couple contact permission');
                                                                             setPermissions(prev => ({ ...prev, coupleContactEnabled: !checked }));
+                                                                        }
+                                                                    }}
+                                                                />
+                                                                <PermissionToggle
+                                                                    label="Corporate Contact"
+                                                                    description="Allow corporate details collection"
+                                                                    checked={permissions.corporateContactEnabled}
+                                                                    activeColor="bg-purple-500" hoverColor="group-hover:text-purple-600"
+                                                                    onChange={async (e) => {
+                                                                        const checked = e.target.checked;
+                                                                        setPermissions(prev => ({ ...prev, corporateContactEnabled: checked }));
+                                                                        try {
+                                                                            await adminApi.updateSeller(viewingSeller.id, { corporateContactEnabled: checked });
+                                                                            toast.success('Corporate contact permission updated');
+                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, corporateContactEnabled: checked } : seller));
+                                                                        } catch (err) {
+                                                                            toast.error('Failed to update corporate contact permission');
+                                                                            setPermissions(prev => ({ ...prev, corporateContactEnabled: !checked }));
                                                                         }
                                                                     }}
                                                                 />

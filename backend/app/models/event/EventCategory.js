@@ -43,6 +43,7 @@ const eventCategorySchema = new mongoose.Schema({
     // Contact Options
     primaryContactEnabled: { type: Boolean, default: false },
     coupleContactEnabled: { type: Boolean, default: false },
+    corporateContactEnabled: { type: Boolean, default: false },
     noOfGuestsEnabled: { type: Boolean, default: false },
     
     // Date & Time Slot Settings

@@ -988,6 +988,23 @@ const SellerDetail = () => {
                                                                 }}
                                                             />
                                                             <PermissionToggle
+                                                                label="Corporate Contact"
+                                                                description="Allow corporate details collection"
+                                                                checked={seller.corporateContactEnabled}
+                                                                activeColor="bg-purple-500" hoverColor="group-hover:text-purple-600"
+                                                                onChange={async (e) => {
+                                                                    const checked = e.target.checked;
+                                                                    setSeller(prev => ({ ...prev, corporateContactEnabled: checked }));
+                                                                    try {
+                                                                        await adminUsersApi.updateSeller(seller.id, { corporateContactEnabled: checked });
+                                                                        showToast('Corporate contact permission updated', 'success');
+                                                                    } catch (err) {
+                                                                        setSeller(prev => ({ ...prev, corporateContactEnabled: !checked }));
+                                                                        showToast('Failed to update corporate contact permission', 'error');
+                                                                    }
+                                                                }}
+                                                            />
+                                                            <PermissionToggle
                                                                 label="No of Guests"
                                                                 description="Allow collection of number of guests"
                                                                 checked={seller.noOfGuestsEnabled}

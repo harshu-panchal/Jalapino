@@ -133,6 +133,9 @@ export async function approveSellerApplicationById({ sellerId, reviewedBy, permi
     if (typeof permissions.coupleContactEnabled === 'boolean') {
       updateData.coupleContactEnabled = permissions.coupleContactEnabled;
     }
+    if (typeof permissions.corporateContactEnabled === 'boolean') {
+      updateData.corporateContactEnabled = permissions.corporateContactEnabled;
+    }
     if (typeof permissions.liveKitchenEnabled === 'boolean') {
       updateData.liveKitchenEnabled = permissions.liveKitchenEnabled;
     }
