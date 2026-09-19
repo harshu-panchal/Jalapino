@@ -42,7 +42,9 @@ import {
     deleteAdmin,
     getSellerById,
     updateSellerType,
-    updateSellerDetails
+    updateSellerDetails,
+    reuploadSellerDocument,
+    approveSellerDocument
 } from "../controller/adminController.js";
 import {
     exportAdminFinanceStatementController,
@@ -60,8 +62,10 @@ import {
     authRouteRateLimiter,
     createContentLengthGuard,
 } from "../middleware/securityMiddlewares.js";
+import multer from "multer";
 
 const router = express.Router();
+const upload = multer({ storage: multer.memoryStorage() });
 
 const smallAdminPayload = createContentLengthGuard(
     parseInt(process.env.ADMIN_AUTH_MAX_PAYLOAD_BYTES || "20480", 10),
@@ -204,6 +208,8 @@ router.put("/sellers/:id", verifyToken, allowRoles("admin"), requireAdminRole("s
 router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerApplication);
 router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), rejectSellerApplication);
 router.put("/sellers/bounce-back/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), bounceBackSellerApplication);
+router.put("/sellers/:id/documents/reupload", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), upload.single("document"), reuploadSellerDocument);
+router.put("/sellers/:id/documents/:documentKey/approve", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerDocument);
 
 router.get(
     "/delivery-partners",

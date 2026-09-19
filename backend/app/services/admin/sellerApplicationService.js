@@ -118,56 +118,13 @@ export async function approveSellerApplicationById({ sellerId, reviewedBy, permi
   };
 
   if (permissions) {
-    if (typeof permissions.retailEnabled === 'boolean') {
-      updateData.retailEnabled = permissions.retailEnabled;
-    }
-    if (typeof permissions.planMyEventEnabled === 'boolean') {
-      updateData.planMyEventEnabled = permissions.planMyEventEnabled;
-    }
-    if (typeof permissions.eventDetailsEnabled === 'boolean') {
-      updateData.eventDetailsEnabled = permissions.eventDetailsEnabled;
-    }
-    if (typeof permissions.primaryContactEnabled === 'boolean') {
-      updateData.primaryContactEnabled = permissions.primaryContactEnabled;
-    }
-    if (typeof permissions.coupleContactEnabled === 'boolean') {
-      updateData.coupleContactEnabled = permissions.coupleContactEnabled;
-    }
-    if (typeof permissions.corporateContactEnabled === 'boolean') {
-      updateData.corporateContactEnabled = permissions.corporateContactEnabled;
-    }
-    if (typeof permissions.liveKitchenEnabled === 'boolean') {
-      updateData.liveKitchenEnabled = permissions.liveKitchenEnabled;
-    }
-    if (typeof permissions.liveAddToCartEnabled === 'boolean') {
-      updateData.liveAddToCartEnabled = permissions.liveAddToCartEnabled;
-    }
-    if (typeof permissions.liveServicesEnabled === 'boolean') {
-      updateData.liveServicesEnabled = permissions.liveServicesEnabled;
-    }
-    if (typeof permissions.productsEnabled === 'boolean') {
-      updateData.productsEnabled = permissions.productsEnabled;
-    }
-    if (typeof permissions.stockEnabled === 'boolean') {
-      updateData.stockEnabled = permissions.stockEnabled;
-    }
-    if (typeof permissions.ordersEnabled === 'boolean') {
-      updateData.ordersEnabled = permissions.ordersEnabled;
-    }
-    if (typeof permissions.walletEnabled === 'boolean') {
-      updateData.walletEnabled = permissions.walletEnabled;
-    }
-    if (typeof permissions.analyticsEnabled === 'boolean') {
-      updateData.analyticsEnabled = permissions.analyticsEnabled;
-    }
-    if (typeof permissions.wholesaleEnabled === 'boolean') {
-      updateData.wholesaleEnabled = permissions.wholesaleEnabled;
-    }
-    if (permissions.allowedRetailCategories) {
-      updateData.allowedRetailCategories = permissions.allowedRetailCategories;
-    }
-    if (permissions.allowedWholesaleCategories) {
-      updateData.allowedWholesaleCategories = permissions.allowedWholesaleCategories;
+    for (const [key, value] of Object.entries(permissions)) {
+      if (typeof value === 'boolean') {
+        updateData[key] = value;
+      } else if (Array.isArray(value) || typeof value === 'number' || typeof value === 'string') {
+        // Also save arrays like allowedRetailCategories and numbers/strings like advancePaymentPercentage
+        updateData[key] = value;
+      }
     }
   }
 

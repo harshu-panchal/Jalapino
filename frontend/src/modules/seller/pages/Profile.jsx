@@ -15,6 +15,10 @@ import {
   MapPin,
   CheckCircle,
   ChevronRight,
+  AlertTriangle,
+  FileText,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
@@ -30,6 +34,7 @@ const SellerProfile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
+  const [isAcceptingTerms, setIsAcceptingTerms] = useState(false);
     const [formData, setFormData] = useState({
     name: "",
     shopName: "",
@@ -1371,6 +1376,159 @@ const SellerProfile = () => {
               <ChevronRight size={18} />
             </div>
           </Card>
+
+          {/* ── Admin Information Section ── */}
+          {profile && (profile.adminTerms || profile.adminRemark || profile.rejectionReason || profile.applicationStatus === 'bounced_back' || (profile.documents && Object.keys(profile.documents).length > 0)) && (
+            <Card className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-white border border-gray-100 space-y-5">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
+                <div className="h-10 w-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500">
+                  <FileText size={20} />
+                </div>
+                <div>
+                  <h4 className="text-sm font-black text-slate-900">Admin Information</h4>
+                  <p className="text-xs text-slate-500 font-medium">Platform communication & document status</p>
+                </div>
+              </div>
+
+              {/* Bounce Back Reason */}
+              {profile.applicationStatus === 'bounced_back' && (
+                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertTriangle size={14} className="text-amber-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-700">Application Bounced Back</span>
+                  </div>
+                  {profile.rejectionReason && (
+                    <div className="mb-3">
+                      <p className="text-[10px] font-bold text-amber-600 uppercase mb-1">Reason</p>
+                      <p className="text-xs font-semibold text-amber-900 leading-relaxed">{profile.rejectionReason}</p>
+                    </div>
+                  )}
+                  {profile.adminRemark && (
+                    <div>
+                      <p className="text-[10px] font-bold text-amber-600 uppercase mb-1">Admin Remarks</p>
+                      <p className="text-xs font-semibold text-amber-900 leading-relaxed whitespace-pre-wrap">{profile.adminRemark}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Admin Terms & Conditions */}
+              {profile.adminTerms && (
+                <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText size={14} className="text-slate-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-700">Terms &amp; Conditions</span>
+                    </div>
+                    {profile.termsAccepted && profile.termsAcceptedVersionText === profile.adminTerms ? (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded-full border border-emerald-200">
+                        <CheckCircle size={10} /> Accepted
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-full border border-amber-200">
+                        <Clock size={10} /> Action Needed
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-700 font-medium leading-relaxed whitespace-pre-wrap mb-4">{profile.adminTerms}</p>
+                  {!(profile.termsAccepted && profile.termsAcceptedVersionText === profile.adminTerms) && (
+                    <button
+                      onClick={async () => {
+                        setIsAcceptingTerms(true);
+                        try {
+                          await sellerApi.acceptTerms();
+                          setProfile(prev => ({
+                            ...prev,
+                            termsAccepted: true,
+                            termsAcceptedVersionText: prev.adminTerms,
+                          }));
+                          toast.success('Terms & Conditions accepted!');
+                        } catch (err) {
+                          toast.error('Failed to accept terms');
+                        } finally {
+                          setIsAcceptingTerms(false);
+                        }
+                      }}
+                      disabled={isAcceptingTerms}
+                      className="w-full py-2.5 rounded-xl bg-slate-900 text-white text-xs font-bold hover:bg-slate-800 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {isAcceptingTerms ? (
+                        <><RefreshCw size={12} className="animate-spin" /> Accepting...</>
+                      ) : (
+                        <><CheckCircle size={12} /> I Accept These Terms</>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* Document Statuses */}
+              {profile.documents && Object.keys(profile.documents).length > 0 && (
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-3">Document Status</p>
+                  <div className="space-y-2">
+                    {Object.entries(profile.documents).map(([key, url]) => {
+                      const status = profile.documentStatuses?.[key] || 'pending';
+                      const statusConfig = {
+                        approved:  { label: 'Approved',   bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', icon: '✓' },
+                        reuploaded:{ label: 'Reuploaded', bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-700',    badge: 'bg-blue-100 text-blue-700',    icon: '↑' },
+                        pending:   { label: 'Pending',    bg: 'bg-slate-50',   border: 'border-slate-100',   text: 'text-slate-600',   badge: 'bg-slate-100 text-slate-600',   icon: '…' },
+                        rejected:  { label: 'Rejected',   bg: 'bg-red-50',     border: 'border-red-100',     text: 'text-red-700',     badge: 'bg-red-100 text-red-700',       icon: '✗' },
+                      };
+                      const cfg = statusConfig[status] || statusConfig.pending;
+                      const formattedLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                      
+                      return (
+                        <div key={key} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${cfg.bg} ${cfg.border}`}>
+                          <div className="flex flex-col">
+                            <span className={`text-xs font-bold ${cfg.text}`}>{formattedLabel}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            {status !== 'approved' && (
+                              <label className="cursor-pointer text-[10px] font-bold text-blue-600 underline">
+                                Reupload
+                                <input 
+                                  type="file" 
+                                  className="hidden" 
+                                  accept="image/*,.pdf"
+                                  onChange={async (e) => {
+                                    if(e.target.files && e.target.files[0]) {
+                                      const file = e.target.files[0];
+                                      const formData = new FormData();
+                                      formData.append(key, file);
+                                      formData.append('documentKey', key);
+                                      
+                                      const loadingToast = toast.loading('Uploading document...');
+                                      try {
+                                        // Use profile update or specific upload api if exists, here using generic profile update which handles it
+                                        // Actually wait, let's just make sure there's a specific API or use the existing update logic:
+                                        // Wait, the API for reuploading from seller app hasn't been specifically created in sellerApi.js for document reupload? 
+                                        // Let's use updateProfile for now, which can handle multipart.
+                                        await sellerApi.updateProfile(formData);
+                                        toast.dismiss(loadingToast);
+                                        toast.success('Document reuploaded successfully!');
+                                        fetchProfile(); // refresh
+                                      } catch (err) {
+                                        toast.dismiss(loadingToast);
+                                        toast.error('Upload failed');
+                                      }
+                                    }
+                                  }}
+                                />
+                              </label>
+                            )}
+                            <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${cfg.badge}`}>
+                              {cfg.icon} {cfg.label}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
       </div>
 

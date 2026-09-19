@@ -6,20 +6,38 @@ import Product from "../../models/product.js";
 
 const DASHBOARD_CATEGORY_COLORS = ["#4f46e5", "#10b981", "#f59e0b", "#ef4444"];
 
-export async function getAdminDashboardStats() {
+export async function getAdminDashboardStats(module = "all") {
+  const sellerQuery = {};
+  const orderQuery = {};
+  const activeSellerQuery = { isVerified: true };
+
+  if (module === "retail") {
+    sellerQuery.retailEnabled = true;
+    activeSellerQuery.retailEnabled = true;
+    orderQuery.moduleType = "retail";
+  } else if (module === "wholesale") {
+    sellerQuery.wholesaleEnabled = true;
+    activeSellerQuery.wholesaleEnabled = true;
+    orderQuery.moduleType = "wholesale";
+  } else if (module === "plan_my_event") {
+    sellerQuery.$or = [{ planMyEventEnabled: true }, { isEventSeller: true }];
+    activeSellerQuery.$or = [{ planMyEventEnabled: true }, { isEventSeller: true }];
+    orderQuery.moduleType = "plan_my_event";
+  }
+
   const [totalCustomers, totalSellers, totalRiders, totalOrders] =
     await Promise.all([
       User.countDocuments({ role: "user" }),
-      Seller.countDocuments(),
+      Seller.countDocuments(sellerQuery),
       Delivery.countDocuments(),
-      Order.countDocuments(),
+      Order.countDocuments(orderQuery),
     ]);
 
   const totalUsers = totalCustomers;
-  const activeSellers = await Seller.countDocuments({ isVerified: true });
+  const activeSellers = await Seller.countDocuments(activeSellerQuery);
 
   const revenueData = await Order.aggregate([
-    { $match: { status: "delivered" } },
+    { $match: { status: "delivered", ...orderQuery } },
     { $group: { _id: null, total: { $sum: "$pricing.total" } } },
   ]);
   const totalRevenue = revenueData[0]?.total || 0;
@@ -28,7 +46,7 @@ export async function getAdminDashboardStats() {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
   const historyAggregation = await Order.aggregate([
-    { $match: { createdAt: { $gte: thirtyDaysAgo }, status: "delivered" } },
+    { $match: { createdAt: { $gte: thirtyDaysAgo }, status: "delivered", ...orderQuery } },
     {
       $group: {
         _id: {
@@ -56,7 +74,7 @@ export async function getAdminDashboardStats() {
     });
   }
 
-  const recentOrders = await Order.find()
+  const recentOrders = await Order.find(orderQuery)
     .sort({ createdAt: -1 })
     .limit(5)
     .populate("customer", "name");
@@ -77,6 +95,7 @@ export async function getAdminDashboardStats() {
   ]);
 
   const topProducts = await Order.aggregate([
+    { $match: orderQuery },
     { $unwind: "$items" },
     {
       $group: {

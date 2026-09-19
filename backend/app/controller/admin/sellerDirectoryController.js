@@ -42,7 +42,7 @@ export const getSellerLocations = async (req, res) => {
 
 export const getActiveSellers = async (req, res) => {
   try {
-    const { q = "", category = "all", sort = "recent" } = req.query;
+    const { q = "", category = "all", sort = "recent", module = "all" } = req.query;
     const { page, limit, skip } = getPagination(req, {
       defaultLimit: 20,
       maxLimit: 100,
@@ -51,6 +51,7 @@ export const getActiveSellers = async (req, res) => {
     const data = await getActiveSellersData({
       q,
       category,
+      module,
       sort,
       page,
       limit,

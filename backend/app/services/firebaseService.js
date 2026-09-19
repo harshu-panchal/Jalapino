@@ -1,4 +1,5 @@
-import { getFirebaseRealtimeDb } from "../config/firebaseAdmin.js";
+import { getFirebaseRealtimeDb, getFirebaseAdminApp } from "../config/firebaseAdmin.js";
+import admin from "firebase-admin";
 
 /**
  * RTDB paths — customer reads `deliveryLocations/{orderId}/{deliveryBoyId}`.
@@ -191,6 +192,34 @@ export const getRoutePolyline = async (orderId) => {
  * Fire-and-forget at the call site; the function itself swallows errors so
  * a Firebase blip never blocks an order-state transition.
  */
+
+export const sendPushNotification = async (tokens, title, body, data = {}) => {
+  if (!tokens || tokens.length === 0) return { skipped: true, reason: 'No tokens' };
+  
+  try {
+    const app = getFirebaseAdminApp();
+    if (!app) return { skipped: true, reason: 'Firebase not initialized' };
+    
+    const message = {
+      notification: {
+        title,
+        body
+      },
+      data: {
+        ...data,
+        click_action: 'FLUTTER_NOTIFICATION_CLICK' // often needed for flutter foreground click
+      },
+      tokens
+    };
+    
+    const response = await admin.messaging(app).sendEachForMulticast(message);
+    return { successCount: response.successCount, failureCount: response.failureCount };
+  } catch (err) {
+    console.error("sendPushNotification error:", err.message);
+    return null;
+  }
+};
+
 export const clearOrderTracking = async (orderId) => {
   if (!orderId) return { orderId, skipped: true };
   try {

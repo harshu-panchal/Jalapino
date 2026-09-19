@@ -105,6 +105,7 @@ const ActiveSellers = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [moduleFilter, setModuleFilter] = useState("all");
   const [sortBy, setSortBy] = useState("recent");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -128,7 +129,7 @@ const ActiveSellers = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [categoryFilter, sortBy, pageSize]);
+  }, [categoryFilter, moduleFilter, sortBy, pageSize]);
 
   useEffect(() => {
     const currentSeq = ++requestSeq.current;
@@ -141,6 +142,7 @@ const ActiveSellers = () => {
         const response = await adminApi.getActiveSellers({
           q: debouncedSearch || undefined,
           category: categoryFilter !== "all" ? categoryFilter : undefined,
+          module: moduleFilter !== "all" ? moduleFilter : undefined,
           sort: sortBy,
           page,
           limit: pageSize,
@@ -182,7 +184,7 @@ const ActiveSellers = () => {
     };
 
     loadSellers();
-  }, [debouncedSearch, categoryFilter, sortBy, page, pageSize, refreshTick]);
+  }, [debouncedSearch, categoryFilter, moduleFilter, sortBy, page, pageSize, refreshTick]);
 
   const summaryCards = useMemo(
     () => [
@@ -323,6 +325,17 @@ const ActiveSellers = () => {
                   {category}
                 </option>
               ))}
+            </select>
+
+            <select
+              value={moduleFilter}
+              onChange={(event) => setModuleFilter(event.target.value)}
+              className="px-4 py-3 bg-white ring-1 ring-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            >
+              <option value="all">All Modules</option>
+              <option value="retail">Retail Store</option>
+              <option value="wholesale">Wholesale</option>
+              <option value="plan_my_event">Plan My Event</option>
             </select>
 
             <select

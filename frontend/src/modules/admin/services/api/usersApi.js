@@ -5,7 +5,7 @@ import axiosInstance from '@core/api/axios';
  * Per-domain split (P4.5).
  */
 export const adminUsersApi = {
-    getStats: () => axiosInstance.get('/admin/stats'),
+    getStats: (params) => axiosInstance.get('/admin/stats', { params }),
     getReports: () => axiosInstance.get('/admin/reports'),
 
     getUsers: (params) => axiosInstance.get('/admin/users', { params }),
@@ -28,6 +28,12 @@ export const adminUsersApi = {
     bounceBackSeller: (id, data) =>
         axiosInstance.put(`/admin/sellers/bounce-back/${id}`, data),
     getSellerBookings: (id) => axiosInstance.get(`/admin/sellers/${id}/bookings`),
+    reuploadSellerDocument: (id, formData) =>
+        axiosInstance.put(`/admin/sellers/${id}/documents/reupload`, formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        }),
+    approveSellerDocument: (id, documentKey, status = 'approved') =>
+        axiosInstance.put(`/admin/sellers/${id}/documents/${documentKey}/approve`, { status }),
 };
 
 export default adminUsersApi;

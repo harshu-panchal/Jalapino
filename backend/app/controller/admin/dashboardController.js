@@ -3,7 +3,8 @@ import { getAdminDashboardStats } from "../../services/admin/dashboardService.js
 
 export const getAdminStats = async (req, res) => {
   try {
-    const stats = await getAdminDashboardStats();
+    const { module = "all" } = req.query;
+    const stats = await getAdminDashboardStats(module);
     return handleResponse(res, 200, "Admin stats fetched successfully", stats);
   } catch (error) {
     return handleResponse(res, 500, error.message);

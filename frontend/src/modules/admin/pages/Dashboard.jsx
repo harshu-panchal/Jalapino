@@ -36,10 +36,12 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [lastUpdatedAt, setLastUpdatedAt] = useState(null);
 
+    const [moduleFilter, setModuleFilter] = useState("all");
+
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await adminApi.getStats();
+                const res = await adminApi.getStats({ module: moduleFilter });
                 if (res.data.success) {
                     setStatsData(res.data.result);
                     setLastUpdatedAt(new Date());
@@ -52,7 +54,7 @@ const AdminDashboard = () => {
             }
         };
         fetchStats();
-    }, []);
+    }, [moduleFilter]);
 
     if (loading) {
         return (
@@ -138,11 +140,21 @@ const AdminDashboard = () => {
                 title="Dashboard"
                 description="Overview of your platform's performance."
                 actions={
-                    <>
-                        <Badge variant="outline" className="ds-badge ds-badge-gray">
+                    <div className="flex items-center gap-3">
+                        <select
+                            value={moduleFilter}
+                            onChange={(e) => setModuleFilter(e.target.value)}
+                            className="px-3 py-1.5 bg-white ring-1 ring-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none cursor-pointer"
+                        >
+                            <option value="all">All Modules</option>
+                            <option value="retail">Retail Store</option>
+                            <option value="wholesale">Wholesale</option>
+                            <option value="plan_my_event">Plan My Event</option>
+                        </select>
+                        <Badge variant="outline" className="ds-badge ds-badge-gray hidden sm:inline-flex">
                             {formatLastUpdated(lastUpdatedAt)}
                         </Badge>
-                    </>
+                    </div>
                 }
             />
 

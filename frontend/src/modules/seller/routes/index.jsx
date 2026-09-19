@@ -4,6 +4,8 @@ import DashboardLayout from "@shared/layout/DashboardLayout";
 import { setActiveRole, ROLES } from "@core/auth/activeRoleStore";
 import { useAuth } from "@core/context/AuthContext";
 import { HiOutlineCalendar, HiOutlineClipboardDocumentList } from "react-icons/hi2";
+import { requestNotificationPermission } from "../../../utils/firebase";
+import { sellerApi } from "../services/sellerApi";
 import Orders from "../pages/Orders";
 import {
   HiOutlineSquares2X2,
@@ -111,6 +113,21 @@ const SellerRoutes = () => {
 
   useEffect(() => {
     setActiveRole(ROLES.SELLER);
+    
+    // Request notification permission and save token to backend
+    const setupNotifications = async () => {
+      try {
+        const token = await requestNotificationPermission();
+        if (token) {
+          await sellerApi.saveFcmToken({ fcmToken: token, platform: 'web' });
+          console.log("FCM token saved successfully.");
+        }
+      } catch (err) {
+        console.error("Failed to setup notifications:", err);
+      }
+    };
+    
+    setupNotifications();
   }, []);
 
   const isEventSeller = user?.isEventSeller === true || user?.planMyEventEnabled === true;

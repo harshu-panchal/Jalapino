@@ -267,6 +267,7 @@ export async function getSellerLocationsData({
 export async function getActiveSellersData({
   q = "",
   category = "all",
+  module = "all",
   sort = "recent",
   page,
   limit,
@@ -284,6 +285,16 @@ export async function getActiveSellersData({
     filters.push({
       category: new RegExp(`^${escapeRegExp(category)}$`, "i"),
     });
+  }
+
+  if (module && module !== "all") {
+    if (module === "retail") {
+      filters.push({ retailEnabled: true });
+    } else if (module === "wholesale") {
+      filters.push({ wholesaleEnabled: true });
+    } else if (module === "plan_my_event") {
+      filters.push({ $or: [{ planMyEventEnabled: true }, { isEventSeller: true }] });
+    }
   }
 
   const search = String(q || "").trim();

@@ -1104,7 +1104,13 @@ const PlanMyEventPage = () => {
                                                         <input
                                                             type="tel"
                                                             value={eventInfo.corporateMobile}
-                                                            onChange={e => handleEventInfoChange('corporateMobile', e.target.value)}
+                                                            onChange={e => {
+                                                                const val = e.target.value.replace(/\D/g, '');
+                                                                if (val.length <= 10) {
+                                                                    handleEventInfoChange('corporateMobile', val);
+                                                                }
+                                                            }}
+                                                            maxLength="10"
                                                             placeholder="10-digit mobile number"
                                                             className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
                                                         />
@@ -1309,4 +1315,3 @@ const PlanMyEventPage = () => {
 };
 
 export default PlanMyEventPage;
-

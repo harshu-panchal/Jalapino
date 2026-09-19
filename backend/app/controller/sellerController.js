@@ -191,6 +191,7 @@ export const getSellerProfile = async (req, res) => {
       .populate('allowedRetailCategories', 'name icon type')
       .populate('allowedEventCategories', 'name icon')
       .populate('allowedWholesaleCategories', 'name icon type')
+      .populate('serviceCategories', 'name icon type')
       .lean();
 
     if (!seller) {
@@ -224,6 +225,19 @@ export const getSellerProfile = async (req, res) => {
         } catch (err) {
           console.error("Failed to populate EventCategory references:", err.message);
         }
+      }
+    }
+
+    // Populate category if it's an ObjectId
+    if (seller.category && mongoose.Types.ObjectId.isValid(seller.category)) {
+      try {
+        const Category = (await import('../models/category.js')).default;
+        const cat = await Category.findById(seller.category).select('name icon').lean();
+        if (cat && cat.name) {
+          seller.category = cat.name;
+        }
+      } catch (err) {
+        console.error("Failed to populate category:", err.message);
       }
     }
 
@@ -285,6 +299,9 @@ export const updateSellerProfile = async (req, res) => {
                     
                     if (!seller.documents) seller.documents = {};
                     seller.documents[fieldName] = url;
+                    
+                    if (!seller.documentStatuses) seller.documentStatuses = new Map();
+                    seller.documentStatuses.set(fieldName, 'reuploaded');
                 }
             } catch (err) {
                 console.error("Failed to upload file", err);

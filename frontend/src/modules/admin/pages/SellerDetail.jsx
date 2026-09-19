@@ -809,38 +809,7 @@ const SellerDetail = () => {
                                                             }}
                                                         />
 
-                                                        {seller.shopTimingsEnabled && (
-                                                            <div className="flex items-center gap-4 pl-4 border-l-2 border-fuchsia-200 ml-2">
-                                                                <div className="flex flex-col gap-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Opening Time</label>
-                                                                    <input type="time"
-                                                                        value={(seller.shopOpeningTime || "10:30 AM").replace(/ (AM|PM)/, "")}
-                                                                        onChange={async (e) => {
-                                                                            const val = e.target.value;
-                                                                            setSeller(prev => ({ ...prev, shopOpeningTime: val }));
-                                                                            try {
-                                                                                await adminUsersApi.updateSeller(seller.id, { shopOpeningTime: val });
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Closing Time</label>
-                                                                    <input type="time"
-                                                                        value={(seller.shopClosingTime || "10:40 PM").replace(/ (AM|PM)/, "")}
-                                                                        onChange={async (e) => {
-                                                                            const val = e.target.value;
-                                                                            setSeller(prev => ({ ...prev, shopClosingTime: val }));
-                                                                            try {
-                                                                                await adminUsersApi.updateSeller(seller.id, { shopClosingTime: val });
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        )}
+
 
                                                         <div className="flex flex-col gap-2 mt-2">
                                                             <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
@@ -874,8 +843,11 @@ const SellerDetail = () => {
                                                                     <option value="hours">Hours</option>
                                                                 </select>
                                                                 <input
-                                                                    type="time"
-                                                                    value={seller.advanceBookingBufferTime || "12:00"}
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="23"
+                                                                    placeholder="Hrs"
+                                                                    value={seller.advanceBookingBufferTime || "12"}
                                                                     onChange={async (e) => {
                                                                         const val = e.target.value;
                                                                         setSeller(prev => ({ ...prev, advanceBookingBufferTime: val }));
@@ -883,7 +855,7 @@ const SellerDetail = () => {
                                                                             await adminUsersApi.updateSeller(seller.id, { advanceBookingBufferTime: val });
                                                                         } catch (err) { showToast("Failed to update time", "error"); }
                                                                     }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-20"
                                                                 />
                                                             </div>
                                                         </div>

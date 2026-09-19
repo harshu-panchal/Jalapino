@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Card from '@shared/components/ui/Card';
 import Badge from '@shared/components/ui/Badge';
@@ -17,7 +17,9 @@ import {
     HiOutlineClock,
     HiOutlineXMark,
     HiOutlineArrowPath,
-    HiOutlineArrowTopRightOnSquare
+    HiOutlineArrowTopRightOnSquare,
+    HiOutlineCamera,
+    HiOutlineDocumentPlus
 } from 'react-icons/hi2';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -275,6 +277,107 @@ const PendingSellers = () => {
             fileType: 'unknown'
         }));
     }, [viewingSeller]);
+
+    const fileInputRef = useRef(null);
+    const cameraInputRef = useRef(null);
+    const [reuploadingDocKey, setReuploadingDocKey] = useState(null);
+    const [documentStatuses, setDocumentStatuses] = useState({});
+    const [activeDocAction, setActiveDocAction] = useState(null);
+
+    useEffect(() => {
+        if (viewingSeller && viewingSeller.documentFiles) {
+            const statuses = {};
+            viewingSeller.documentFiles.forEach(doc => {
+                if (doc.status) statuses[doc.key] = doc.status;
+            });
+            setDocumentStatuses(statuses);
+        }
+    }, [viewingSeller]);
+
+    const handleApproveDocument = async (docKey) => {
+        try {
+            await adminApi.approveSellerDocument(viewingSeller.id, docKey, 'approved');
+            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'approved' }));
+            toast.success('Document approved successfully');
+        } catch (error) {
+            console.error('Error approving document:', error);
+            toast.error('Failed to approve document');
+        }
+    };
+
+    const triggerReupload = (docKey) => {
+        setActiveDocAction(docKey);
+    };
+
+    const uploadFileToServer = async (file, docKey) => {
+        const formData = new FormData();
+        formData.append('document', file);
+        formData.append('documentKey', docKey);
+
+        try {
+            const response = await adminApi.reuploadSellerDocument(viewingSeller.id, formData);
+            
+            // Update viewing seller state to refresh image URL
+            setViewingSeller(prev => {
+                if (!prev) return prev;
+                const newDocumentFiles = prev.documentFiles.map(doc => {
+                    if (doc.key === docKey) {
+                        return { ...doc, url: response.data.data.url, isViewable: true, status: 'reuploaded' };
+                    }
+                    return doc;
+                });
+                return { ...prev, documentFiles: newDocumentFiles };
+            });
+            
+            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'reuploaded' }));
+            toast.success('Document reuploaded successfully');
+        } catch (error) {
+            console.error('Error reuploading document:', error);
+            toast.error('Failed to reupload document');
+        } finally {
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+            if (cameraInputRef.current) {
+                cameraInputRef.current.value = '';
+            }
+            setReuploadingDocKey(null);
+        }
+    };
+
+    const handleReuploadDocument = async (event) => {
+        const file = event.target.files?.[0];
+        if (!file || !reuploadingDocKey || !viewingSeller) return;
+        await uploadFileToServer(file, reuploadingDocKey);
+    };
+
+    const handleCameraCapture = async (docKey) => {
+        setActiveDocAction(null);
+        try {
+            if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+                const result = await window.flutter_inappwebview.callHandler('openCamera');
+                if (result && result.success && result.base64) {
+                    const byteCharacters = atob(result.base64);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const file = new File([byteArray], result.fileName || `camera_${docKey}_${Date.now()}.jpg`, { type: result.mimeType || 'image/jpeg' });
+                    await uploadFileToServer(file, docKey);
+                } else {
+                    toast.error("Failed to capture photo.");
+                }
+            } else {
+                // Web browser fallback: use camera input with capture attribute
+                setReuploadingDocKey(docKey);
+                cameraInputRef.current?.click();
+            }
+        } catch (e) {
+            console.error(e);
+            toast.error("Error opening camera.");
+        }
+    };
 
     const handleApprove = async (id) => {
         setIsProcessing(true);
@@ -684,6 +787,21 @@ const PendingSellers = () => {
                                         </button>
 
                                         <div className="ds-section-spacing">
+                                            <input 
+                                                type="file" 
+                                                ref={fileInputRef} 
+                                                className="hidden" 
+                                                onChange={handleReuploadDocument}
+                                                accept="image/*,.pdf" 
+                                            />
+                                            <input 
+                                                type="file" 
+                                                ref={cameraInputRef} 
+                                                className="hidden" 
+                                                onChange={handleReuploadDocument}
+                                                accept="image/*" 
+                                                capture="environment"
+                                            />
                                             <div>
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <HiOutlineDocumentText className="h-5 w-5 text-brand-500" />
@@ -733,6 +851,29 @@ const PendingSellers = () => {
                                                                     <HiOutlineXMark className="h-3.5 w-3.5" />
                                                                 </div>
                                                             )}
+                                                        </div>
+                                                        <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-slate-100">
+                                                            {documentStatuses[doc.key] === 'approved' ? (
+                                                                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-100">
+                                                                    <HiOutlineCheckCircle className="w-3.5 h-3.5" /> APPROVED
+                                                                </span>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => handleApproveDocument(doc.key)}
+                                                                    className="px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-100 border border-emerald-100 transition-colors"
+                                                                >
+                                                                    Approve
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => triggerReupload(doc.key)}
+                                                                className="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-600 text-[10px] font-bold uppercase tracking-wider hover:bg-brand-100 border border-brand-100 transition-colors"
+                                                                disabled={reuploadingDocKey === doc.key}
+                                                            >
+                                                                {reuploadingDocKey === doc.key ? 'Uploading...' : 'Reupload'}
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 )) : (
@@ -1562,40 +1703,7 @@ const PendingSellers = () => {
                                                             }}
                                                         />
 
-                                                        {permissions.shopTimingsEnabled && (
-                                                            <div className="flex items-center gap-4 pl-4 border-l-2 border-fuchsia-200 ml-2">
-                                                                <div className="flex flex-col gap-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Opening Time</label>
-                                                                    <input type="time"
-                                                                        value={(permissions.shopOpeningTime || "10:30 AM").replace(/ (AM|PM)/, "")}
-                                                                        onChange={async (e) => {
-                                                                            const val = e.target.value;
-                                                                            setPermissions(prev => ({ ...prev, shopOpeningTime: val }));
-                                                                            try {
-                                                                                await adminApi.updateSeller(viewingSeller.id, { shopOpeningTime: val });
-                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopOpeningTime: val } : seller));
-                                                                            } catch (err) { toast.error("Failed to update"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Closing Time</label>
-                                                                    <input type="time"
-                                                                        value={(permissions.shopClosingTime || "10:40 PM").replace(/ (AM|PM)/, "")}
-                                                                        onChange={async (e) => {
-                                                                            const val = e.target.value;
-                                                                            setPermissions(prev => ({ ...prev, shopClosingTime: val }));
-                                                                            try {
-                                                                                await adminApi.updateSeller(viewingSeller.id, { shopClosingTime: val });
-                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopClosingTime: val } : seller));
-                                                                            } catch (err) { toast.error("Failed to update"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        )}
+
 
                                                         <div className="flex flex-col gap-2 mt-2">
                                                             <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
@@ -1631,8 +1739,11 @@ const PendingSellers = () => {
                                                                     <option value="hours">Hours</option>
                                                                 </select>
                                                                 <input
-                                                                    type="time"
-                                                                    value={permissions.advanceBookingBufferTime || "12:00"}
+                                                                    type="number"
+                                                                    min="0"
+                                                                    max="23"
+                                                                    placeholder="Hrs"
+                                                                    value={permissions.advanceBookingBufferTime || "12"}
                                                                     onChange={async (e) => {
                                                                         const val = e.target.value;
                                                                         setPermissions(prev => ({ ...prev, advanceBookingBufferTime: val }));
@@ -1641,7 +1752,7 @@ const PendingSellers = () => {
                                                                             setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBufferTime: val } : seller));
                                                                         } catch (err) { toast.error("Failed to update time"); }
                                                                     }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-20"
                                                                 />
                                                             </div>
                                                         </div>
@@ -1772,42 +1883,6 @@ const PendingSellers = () => {
 
                                                         {permissions.planMyEventEnabled && (
                                                             <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
-                                                                <div>
-                                                                    <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Plan My Event Categories (Standard)</h6>
-                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                        {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (cat.applicableModules || []).includes('plan_my_event')).map(cat => {
-                                                                            const isChecked = (permissions.allowedEventCategories || []).includes(cat._id);
-                                                                            return (
-                                                                                <label key={cat._id} className={cn(
-                                                                                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
-                                                                                    isChecked
-                                                                                        ? "border-purple-600/20 bg-purple-50/30 text-slate-900"
-                                                                                        : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
-                                                                                )}>
-                                                                                    <input
-                                                                                        type="checkbox"
-                                                                                        checked={isChecked}
-                                                                                        onChange={async (e) => {
-                                                                                            const checked = e.target.checked;
-                                                                                            const current = permissions.allowedEventCategories || [];
-                                                                                            const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
-                                                                                            setPermissions(prev => ({ ...prev, allowedEventCategories: next }));
-                                                                                            try {
-                                                                                                await adminApi.updateSeller(viewingSeller.id, { allowedEventCategories: next });
-                                                                                                toast.success(`${cat.name} updated in Event Categories`);
-                                                                                            } catch (err) {
-                                                                                                toast.error('Failed to update categories');
-                                                                                            }
-                                                                                        }}
-                                                                                        className="rounded text-purple-600 focus:ring-purple-600/20 h-4.5 w-4.5"
-                                                                                    />
-                                                                                    <span>{cat.name}</span>
-                                                                                </label>
-                                                                            );
-                                                                        })}
-                                                                    </div>
-                                                                </div>
-
                                                                 <div>
                                                                     <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Event Service Categories (Event Commerce)</h6>
                                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
@@ -2134,6 +2209,59 @@ const PendingSellers = () => {
                             </motion.div>
                         </div>
                     </div>
+                )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+                {activeDocAction && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center p-4"
+                        onClick={() => setActiveDocAction(null)}
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            onClick={(e) => e.stopPropagation()}
+                            className="w-full max-w-sm overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl"
+                        >
+                            <div className="p-4 border-b text-center border-slate-100">
+                                <h3 className="font-bold text-slate-800">Select Upload Option</h3>
+                            </div>
+                            <div className="p-2 space-y-2">
+                                <button
+                                    type="button"
+                                    onClick={() => handleCameraCapture(activeDocAction)}
+                                    className="w-full p-4 flex items-center justify-center gap-3 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl font-bold transition-colors"
+                                >
+                                    <HiOutlineCamera className="w-5 h-5" />
+                                    Take Photo
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setReuploadingDocKey(activeDocAction);
+                                        fileInputRef.current?.click();
+                                        setActiveDocAction(null);
+                                    }}
+                                    className="w-full p-4 flex items-center justify-center gap-3 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+                                >
+                                    <HiOutlineDocumentPlus className="w-5 h-5" />
+                                    Upload from Gallery
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setActiveDocAction(null)}
+                                    className="w-full p-4 mt-2 flex items-center justify-center gap-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
                 )}
             </AnimatePresence>
         </div>

@@ -91,6 +91,18 @@ const sellerSchema = new mongoose.Schema(
       other: { type: String, trim: true },
     },
 
+    documentStatuses: {
+      type: Map,
+      of: String,
+      default: {},
+    },
+
+    documentExpiries: {
+      type: Map,
+      of: Date,
+      default: {},
+    },
+
     banners: [{
       type: String,
       trim: true,
@@ -100,6 +112,13 @@ const sellerSchema = new mongoose.Schema(
       type: String,
       default: "seller",
     },
+
+    fcmTokens: [{
+      type: String,
+    }],
+    
+    fcmtoken: { type: String },
+    fcmtokenMobile: { type: String },
 
     isVerified: {
       type: Boolean,

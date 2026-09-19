@@ -193,59 +193,8 @@ const ApplicationPending = () => {
             </div>
           ) : null}
 
-          {/* Document Resubmission for Bounced Back */}
-          {isBouncedBack ? (
-            <div className="mt-4 rounded-2xl border border-blue-400/30 bg-blue-500/10 p-5 text-sm shadow-lg">
-              <span className="font-black uppercase tracking-widest text-[11px] text-blue-300 flex items-center gap-2 mb-3">
-                📎 Upload Missing/Updated Documents
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-blue-200 mb-1">ID Proof (PAN/Aadhar)</label>
-                  <input
-                    type="file"
-                    onChange={(e) => setResubmitDocs(prev => ({ ...prev, idProof: e.target.files[0] }))}
-                    className="block w-full text-xs text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-500/20 file:text-blue-200 hover:file:bg-blue-500/30 cursor-pointer"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-blue-200 mb-1">GST/Other Document</label>
-                  <input
-                    type="file"
-                    onChange={(e) => setResubmitDocs(prev => ({ ...prev, gstCertificate: e.target.files[0] }))}
-                    className="block w-full text-xs text-slate-300 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-500/20 file:text-blue-200 hover:file:bg-blue-500/30 cursor-pointer"
-                  />
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  disabled={(!resubmitDocs.idProof && !resubmitDocs.gstCertificate && !resubmitDocs.other) || isUploadingDocs}
-                  onClick={async () => {
-                    setIsUploadingDocs(true);
-                    try {
-                      const formData = new FormData();
-                      if (resubmitDocs.idProof) formData.append('idProof', resubmitDocs.idProof);
-                      if (resubmitDocs.gstCertificate) formData.append('gstCertificate', resubmitDocs.gstCertificate);
-                      if (resubmitDocs.other) formData.append('other', resubmitDocs.other);
-                      
-                      await sellerApi.updateProfile(formData);
-                      toast.success("Documents uploaded successfully!");
-                      setResubmitDocs({ idProof: null, gstCertificate: null, other: null });
-                      // Note: We don't change applicationStatus locally yet, admin needs to review.
-                    } catch (err) {
-                      toast.error("Failed to upload documents");
-                    } finally {
-                      setIsUploadingDocs(false);
-                    }
-                  }}
-                  className="px-5 py-2.5 rounded-xl text-xs font-black bg-blue-500 hover:bg-blue-600 text-white disabled:opacity-40 transition-all shadow-md"
-                >
-                  {isUploadingDocs ? "Uploading..." : "Upload Documents"}
-                </button>
-              </div>
-            </div>
-          ) : null}
+
+
 
           {!isNeedsAction ? (
             <div className="mt-6 rounded-2xl border border-brand-400/30 bg-brand-500/10 px-4 py-3 text-sm text-brand-200 flex items-start gap-3">

@@ -28,7 +28,7 @@ export function formatSellerDocuments(documents) {
     .map(([key]) => getSellerDocumentLabel(key));
 }
 
-export function formatSellerDocumentFiles(documents) {
+export function formatSellerDocumentFiles(documents, documentStatuses) {
   if (!documents || typeof documents !== "object") {
     return [];
   }
@@ -51,13 +51,14 @@ export function formatSellerDocumentFiles(documents) {
           : normalizedValue,
         isViewable: isUrl,
         fileType: lowerValue.includes(".pdf") ? "pdf" : "image",
+        status: (documentStatuses && documentStatuses.get && documentStatuses.get(key)) || (documentStatuses && documentStatuses[key]) || "pending",
       };
     });
 }
 
 export function formatSellerApplication(seller) {
   const docs = formatSellerDocuments(seller.documents);
-  const documentFiles = formatSellerDocumentFiles(seller.documents);
+  const documentFiles = formatSellerDocumentFiles(seller.documents, seller.documentStatuses);
   const createdAt = seller.createdAt ? new Date(seller.createdAt) : new Date();
   const missingInfo = !seller.address || docs.length < 3;
 

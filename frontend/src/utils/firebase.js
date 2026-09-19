@@ -1,24 +1,24 @@
 // Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApp, getApps } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBKSYYuaaEElPtw3XMOWAgCm_N6QqS0-n4",
-  authDomain: "jalapino-a9ea3.firebaseapp.com",
-  projectId: "jalapino-a9ea3",
-  storageBucket: "jalapino-a9ea3.firebasestorage.app",
-  messagingSenderId: "489934865244",
-  appId: "1:489934865244:web:f8de525d63213f35c4f799",
-  measurementId: "G-VSGJ9RJ5MQ"
+    apiKey: "AIzaSyBKSYYuaaEElPtw3XMOWAgCm_N6QqS0-n4",
+    authDomain: "jalapino-a9ea3.firebaseapp.com",
+    projectId: "jalapino-a9ea3",
+    storageBucket: "jalapino-a9ea3.firebasestorage.app",
+    messagingSenderId: "489934865244",
+    appId: "1:489934865244:web:f8de525d63213f35c4f799",
+    measurementId: "G-VSGJ9RJ5MQ"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 let analytics;
 if (typeof window !== "undefined") {
-  analytics = getAnalytics(app);
+    analytics = getAnalytics(app);
 }
 
 let messaging = null;
@@ -43,8 +43,8 @@ export const requestNotificationPermission = async () => {
         if (permission === 'granted') {
             const messaging = getFirebaseMessaging();
             if (messaging) {
-                const token = await getToken(messaging, { 
-                    vapidKey: 'BAiQVkeWur1OSAbhfHE2E5yonqh3_5KP6xqFl7XIeK_vsLNA7IuG8IOduBOiQKAHPqI-1etp6PDPm457l4-WYE4' 
+                const token = await getToken(messaging, {
+                    vapidKey: 'BAiQVkeWur1OSAbhfHE2E5yonqh3_5KP6xqFl7XIeK_vsLNA7IuG8IOduBOiQKAHPqI-1etp6PDPm457l4-WYE4'
                 });
                 return token;
             }

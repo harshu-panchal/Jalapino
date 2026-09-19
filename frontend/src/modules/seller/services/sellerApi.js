@@ -56,6 +56,7 @@ export const sellerApi = {
     getNotifications: () => axiosInstance.get('/notifications'),
     markNotificationRead: (id) => axiosInstance.put(`/notifications/${id}/read`),
     markAllNotificationsRead: () => axiosInstance.put('/notifications/mark-all-read'),
+    saveFcmToken: (data) => axiosInstance.post('/seller/save-fcm-token', data),
 
     // Money Requests
     requestWithdrawal: (data) => axiosInstance.post('/seller/request-withdrawal', data),
