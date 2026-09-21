@@ -120,6 +120,8 @@ export function formatSellerApplication(seller) {
     serviceCategories: seller.serviceCategories || [],
     adminRemark: seller.adminRemark || '',
     adminTerms: seller.adminTerms || '',
+    termsAccepted: seller.termsAccepted || false,
+    termsAcceptedVersionText: seller.termsAcceptedVersionText || '',
     advancePaymentPercentage: seller.advancePaymentPercentage || 0,
     allowCustomProductEntry: seller.allowCustomProductEntry || false,
     liveKitchenEnabled: seller.liveKitchenEnabled || false,

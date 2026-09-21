@@ -41,15 +41,44 @@ export const getEventTypes = async (req, res) => {
 // Get all active event categories with their preference forms and business rules
 export const getEventCategories = async (req, res) => {
     try {
-        // Sort alphabetically A-Z by name
-        const categories = await EventCategory.find({ isActive: true }).sort({ name: 1 }).lean();
+        // 1. Fetch legacy Event Categories
+        const legacyCategories = await EventCategory.find({ isActive: true }).lean();
+
+        // 2. Fetch general Categories that are marked for 'plan_my_event'
+        const Category = (await import('../models/category.js')).default;
+        const generalCategories = await Category.find({ 
+            status: "active", 
+            applicableModules: "plan_my_event" 
+        }).lean();
+
+        // Map general categories to match legacy format
+        const mappedGeneral = generalCategories.map(cat => ({
+            ...cat,
+            isActive: true,
+            // Fallback for icons if needed
+            icon: cat.icon || cat.image || ''
+        }));
+
+        // Combine and sort alphabetically A-Z by name
+        let categories = [...legacyCategories, ...mappedGeneral];
+        
+        // Remove duplicates by ID (just in case) and name
+        const uniqueNames = new Set();
+        categories = categories.filter(c => {
+            if (uniqueNames.has(c.name)) return false;
+            uniqueNames.add(c.name);
+            return true;
+        });
+        
+        categories.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+
         const forms = await PreferenceForm.find({ isActive: true }).lean();
         const businessRules = await CategoryBusinessRule.find().lean();
 
         // Attach forms and rules to their respective categories
         const categoriesWithForms = categories.map(cat => {
-            const form = forms.find(f => f.category.toString() === cat._id.toString());
-            const rules = businessRules.find(r => r.category.toString() === cat._id.toString());
+            const form = forms.find(f => f.category && f.category.toString() === cat._id.toString());
+            const rules = businessRules.find(r => r.category && r.category.toString() === cat._id.toString());
             return {
                 ...cat,
                 fields: form ? form.fields : [],

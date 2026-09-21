@@ -120,16 +120,8 @@ const SellerModuleInfoCard = () => {
     }
   });
 
-  // Service Categories
-  serviceCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
-      categorizedBadges.push({
-        module: 'Services',
-        name,
-        badgeStyle: 'bg-amber-50 text-amber-700 border-amber-200',
-      });
-    }
-  });
+  // Service Categories are intentionally hidden from UI as per user request
+  // (We no longer iterate over serviceCatNames to push them into categorizedBadges)
 
   // Modules Badges
   const modules = [

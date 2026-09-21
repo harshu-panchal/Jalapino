@@ -279,22 +279,24 @@ export async function getActiveSellersData({
     sellerStatus: { $ne: "inactive" },
     applicationStatus: { $nin: ["pending", "bounced_back", "rejected"] },
   };
-  const filters = [baseQuery];
+
+  const moduleQuery = { ...baseQuery };
+  if (module && module !== "all") {
+    if (module === "retail") {
+      moduleQuery.retailEnabled = true;
+    } else if (module === "wholesale") {
+      moduleQuery.wholesaleEnabled = true;
+    } else if (module === "plan_my_event") {
+      moduleQuery.$or = [{ planMyEventEnabled: true }, { isEventSeller: true }];
+    }
+  }
+
+  const filters = [moduleQuery];
 
   if (category && category !== "all") {
     filters.push({
       category: new RegExp(`^${escapeRegExp(category)}$`, "i"),
     });
-  }
-
-  if (module && module !== "all") {
-    if (module === "retail") {
-      filters.push({ retailEnabled: true });
-    } else if (module === "wholesale") {
-      filters.push({ wholesaleEnabled: true });
-    } else if (module === "plan_my_event") {
-      filters.push({ $or: [{ planMyEventEnabled: true }, { isEventSeller: true }] });
-    }
   }
 
   const search = String(q || "").trim();
@@ -312,12 +314,12 @@ export async function getActiveSellersData({
     });
   }
 
-  const query = filters.length > 1 ? { $and: filters } : baseQuery;
+  const query = filters.length > 1 ? { $and: filters } : moduleQuery;
 
   const [sellers, totalActiveCount, allActiveSellers] = await Promise.all([
     Seller.find(query).lean(),
-    Seller.countDocuments(baseQuery),
-    Seller.find(baseQuery)
+    Seller.countDocuments(moduleQuery),
+    Seller.find(moduleQuery)
       .select("_id createdAt category")
       .lean(),
   ]);

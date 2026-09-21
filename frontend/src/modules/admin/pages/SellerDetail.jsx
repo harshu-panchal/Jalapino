@@ -605,9 +605,21 @@ const SellerDetail = () => {
                                                     </div>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
-                                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                    <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 min-w-0">
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Category</p>
-                                                        <p className="text-xs font-black text-slate-900 capitalize">{seller.isEventSeller ? (seller.eventCategory?.name || 'Event Seller') : (seller.category || 'N/A')}</p>
+                                                        <p className="text-xs font-black text-slate-900 capitalize truncate" title={(() => {
+                                                            const cats = [];
+                                                            if (seller.category && String(seller.category).toLowerCase() !== 'n/a') cats.push(seller.category);
+                                                            if (seller.serviceCategories?.length) cats.push(...seller.serviceCategories.map(c => c.name || 'Unknown'));
+                                                            return cats.join(', ') || (seller.isEventSeller ? 'Event Seller' : 'N/A');
+                                                        })()}>
+                                                            {(() => {
+                                                                const cats = [];
+                                                                if (seller.category && String(seller.category).toLowerCase() !== 'n/a') cats.push(seller.category);
+                                                                if (seller.serviceCategories?.length) cats.push(...seller.serviceCategories.map(c => c.name || 'Unknown'));
+                                                                return cats.join(', ') || (seller.isEventSeller ? 'Event Seller' : 'N/A');
+                                                            })()}
+                                                        </p>
                                                     </div>
                                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
                                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Commission</p>
@@ -816,7 +828,7 @@ const SellerDetail = () => {
                                                                 Advance Booking Buffer
                                                                 <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Minimum time before booking</span>
                                                             </label>
-                                                            <div className="flex gap-2 w-full max-w-xs">
+                                                            <div className="flex flex-wrap gap-2 w-full">
                                                                 <input type="number" min="0"
                                                                     value={seller.advanceBookingBuffer ?? 0}
                                                                     onChange={async (e) => {
@@ -826,7 +838,7 @@ const SellerDetail = () => {
                                                                             await adminUsersApi.updateSeller(seller.id, { advanceBookingBuffer: val });
                                                                         } catch (err) { showToast("Failed to update", "error"); }
                                                                     }}
-                                                                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                    className="flex-1 min-w-[60px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
                                                                 />
                                                                 <select
                                                                     value={seller.advanceBookingBufferUnit || 'days'}
@@ -855,7 +867,7 @@ const SellerDetail = () => {
                                                                             await adminUsersApi.updateSeller(seller.id, { advanceBookingBufferTime: val });
                                                                         } catch (err) { showToast("Failed to update time", "error"); }
                                                                     }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-20"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-16"
                                                                 />
                                                             </div>
                                                         </div>
@@ -1094,7 +1106,7 @@ const SellerDetail = () => {
                                                 {seller.eventDetailsEnabled && (
                                                     <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                                                         <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">LOCATION OPTIONS</h6>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                        <div className="grid grid-cols-1 gap-4">
                                                             <PermissionToggle
                                                                 label="Function Location"
                                                                 description="Allow function location collection"
@@ -1368,7 +1380,7 @@ const SellerDetail = () => {
                                                 {seller.customizationEngineEnabled && (
                                                     <div className="col-span-1 sm:col-span-2 lg:col-span-2 flex flex-col gap-4 mb-2 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100">
                                                         <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Customization & Quotation Settings</h6>
-                                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                             <PermissionToggle
                                                                 label="Reference Photo Upload"
                                                                 description="Allow upload of reference photos"

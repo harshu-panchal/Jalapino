@@ -277,12 +277,198 @@ const PendingSellers = () => {
             fileType: 'unknown'
         }));
     }, [viewingSeller]);
+    
+    /*
+        if (viewingSeller && viewingSeller.documentFiles) {
+            const statuses = {};
+            viewingSeller.documentFiles.forEach(doc => {
+                if (doc.status) statuses[doc.key] = doc.status;
+            });
+            setDocumentStatuses(statuses);
+        }
+    }, [viewingSeller]);
 
-    const fileInputRef = useRef(null);
-    const cameraInputRef = useRef(null);
-    const [reuploadingDocKey, setReuploadingDocKey] = useState(null);
+    const handleApproveDocument = async (docKey) => {
+        try {
+            await adminApi.approveSellerDocument(viewingSeller.id, docKey, 'approved');
+            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'approved' }));
+            toast.success('Document approved successfully');
+        } catch (error) {
+    });
+    const [allCategories, setAllCategories] = useState([]);
+    const [eventCategories, setEventCategories] = useState([]);
+    const [isProcessing, setIsProcessing] = useState(false);
+    const [adminRemark, setAdminRemark] = useState('');
+    const [adminTerms, setAdminTerms] = useState('');
+    const [advancePaymentPercentage, setAdvancePaymentPercentage] = useState(0);
+    const [isSavingRemark, setIsSavingRemark] = useState(false);
+
+    const fetchPendingSellers = async () => {
+        setIsLoading(true);
+        try {
+            const response = await adminApi.getPendingSellers({ q: searchTerm || undefined, status: 'all' });
+            const payload = response.data.result || {};
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            setPendingSellers(items);
+            setSummaryStats({
+                totalApplications: payload.stats?.totalApplications ?? items.length,
+                receivedToday: payload.stats?.receivedToday ?? 0,
+                missingInfo: payload.stats?.missingInfo ?? items.filter((s) => (s.documents || []).length < 3).length,
+                avgReviewTimeHours: payload.stats?.avgReviewTimeHours ?? 24
+            });
+
+            // Check if we need to open a specific review modal from URL
+            const reviewId = searchParams.get('review');
+            if (reviewId) {
+                const s = items.find(s => s.id === reviewId);
+                if (s) {
+                    setViewingSeller(s);
+                    setPermissions({
+                        retailEnabled: s.retailEnabled ?? true,
+                        planMyEventEnabled: s.planMyEventEnabled ?? false,
+                        eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                        primaryContactEnabled: s.primaryContactEnabled ?? true,
+                        coupleContactEnabled: s.coupleContactEnabled ?? true,
+                        corporateContactEnabled: s.corporateContactEnabled ?? true,
+                        noOfGuestsEnabled: s.noOfGuestsEnabled ?? false,
+                        categoriesEnabled: s.categoriesEnabled ?? true,
+                        bookingSlotsEnabled: s.bookingSlotsEnabled ?? false,
+                        productsEnabled: s.productsEnabled ?? true,
+                        stockEnabled: s.stockEnabled ?? true,
+                        ordersEnabled: s.ordersEnabled ?? true,
+                        walletEnabled: s.walletEnabled ?? true,
+                        analyticsEnabled: s.analyticsEnabled ?? true,
+                        isShopActive: s.isShopActive ?? true,
+                        shopTimingsEnabled: s.shopTimingsEnabled ?? false,
+                        shopOpeningTime: s.shopOpeningTime || "10:30 AM",
+                        shopClosingTime: s.shopClosingTime || "10:40 PM",
+                        advanceBookingBuffer: s.advanceBookingBuffer || 0,
+                        advanceBookingBufferUnit: s.advanceBookingBufferUnit || "days",
+                        wholesaleEnabled: s.wholesaleEnabled ?? false,
+                        allowedRetailCategories: s.allowedRetailCategories || [],
+                        allowedWholesaleCategories: s.allowedWholesaleCategories || [],
+                        allowedEventCategories: s.allowedEventCategories || [],
+                        serviceCategories: s.serviceCategories || [],
+                        allowCustomProductEntry: s.allowCustomProductEntry ?? false,
+                        liveKitchenEnabled: s.liveKitchenEnabled ?? false,
+                        liveAddToCartEnabled: s.liveAddToCartEnabled ?? false,
+                        liveServicesEnabled: s.liveServicesEnabled ?? false,
+                        customizationEngineEnabled: s.customizationEngineEnabled ?? false,
+                        quoteReferencePhotoUpload: s.quoteReferencePhotoUpload ?? false,
+                        demoTrialEnabled: s.demoTrialEnabled ?? false,
+                        demoTrialDays: s.demoTrialDays || 15,
+                        demoStartDate: s.demoStartDate,
+                        quoteThemeSelection: s.quoteThemeSelection ?? false,
+                        quoteColorCombination: s.quoteColorCombination ?? false,
+                        quoteBudgetSelection: s.quoteBudgetSelection ?? false,
+                        quoteCustomerNotes: s.quoteCustomerNotes ?? false,
+                        quoteSellerQuotation: s.quoteSellerQuotation ?? false,
+                        quoteQuoteRevision: s.quoteQuoteRevision ?? false,
+                        quoteCustomerApproval: s.quoteCustomerApproval ?? false,
+                        quoteAdvancePayment: s.quoteAdvancePayment ?? false,
+                        quoteFinalPayment: s.quoteFinalPayment ?? false,
+                        acceptsCOD: s.acceptsCOD ?? true,
+                        acceptsRazorpay: s.acceptsRazorpay ?? true,
+                        ticketSystemEnabled: s.ticketSystemEnabled ?? true,
+                        customerImageReviewEnabled: s.customerImageReviewEnabled ?? false,
+                        advanceBookingEnabled: s.advanceBookingEnabled ?? false,
+                        videoUploadEnabled: s.videoUploadEnabled ?? false,
+                        addonDecorationEnabled: s.addonDecorationEnabled ?? false,
+                        addonDecorationPrice: s.addonDecorationPrice ?? 0,
+                        addonBridalEnabled: s.addonBridalEnabled ?? false,
+                        addonBridalPrice: s.addonBridalPrice ?? 0,
+                        addonCateringEnabled: s.addonCateringEnabled ?? false,
+                        addonCateringPrice: s.addonCateringPrice ?? 0,
+                        physicalPaymentEnabled: s.physicalPaymentEnabled ?? false,
+                        paymentQrCode: s.paymentQrCode ?? "",
+                        reviewCategoriesEnabled: s.reviewCategoriesEnabled || [],
+                        showStandardDateTime: s.showStandardDateTime ?? false,
+                        showStandardDateTimeSlot: s.showStandardDateTimeSlot ?? false,
+                        showAdvancedDateTime: s.showAdvancedDateTime ?? false,
+                        showAdvancedDateTimeSlot: s.showAdvancedDateTimeSlot ?? false,
+                        showMultipleDateTime: s.showMultipleDateTime ?? false,
+                        functionLocationEnabled: s.functionLocationEnabled ?? false,
+                        sellerLocationEnabled: s.sellerLocationEnabled ?? false,
+                    });
+                    setAdminRemark(s.adminRemark || '');
+                    setAdminTerms(s.adminTerms || '');
+                    setAdvancePaymentPercentage(s.advancePaymentPercentage || 0);
+                    setIsReviewModalOpen(true);
+                } else {
+                    setSearchParams({});
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch pending sellers', error);
+            toast.error(error.response?.data?.message || 'Failed to load seller applications');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchPendingSellers();
+        const loadCategories = async () => {
+            try {
+                const res = await adminApi.getCategories();
+                if (res.data?.success || res.data) {
+                    const payload = res.data?.result;
+                    const results = res.data?.results;
+                    const allCats = Array.isArray(results)
+                        ? results
+                        : Array.isArray(payload)
+                            ? payload
+                            : Array.isArray(payload?.items)
+                                ? payload.items
+                                : [];
+                    setAllCategories(allCats);
+                }
+                const evCats = await adminEventConfigApi.getEventCategories();
+                if (Array.isArray(evCats)) {
+                    setEventCategories(evCats);
+                }
+            } catch (err) {
+                console.error("Failed to load categories:", err);
+            }
+        };
+        loadCategories();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    const stats = useMemo(() => ({
+        total: summaryStats.totalApplications,
+        today: summaryStats.receivedToday,
+        urgent: summaryStats.missingInfo
+    }), [summaryStats]);
+
+    const filteredSellers = useMemo(() => {
+        return pendingSellers.filter(s =>
+            String(s.shopName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            String(s.ownerName || '').toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [pendingSellers, searchTerm]);
+
+    const reviewDocuments = useMemo(() => {
+        if (!viewingSeller) {
+            return [];
+        }
+
+        if (Array.isArray(viewingSeller.documentFiles) && viewingSeller.documentFiles.length) {
+            return viewingSeller.documentFiles;
+        }
+
+        return (viewingSeller.documents || []).map((label, index) => ({
+            key: `legacy-${index}`,
+            label,
+            url: '',
+            fileName: label,
+            isViewable: false,
+            fileType: 'unknown'
+        }));
+    }, [viewingSeller]);
+    */
+
     const [documentStatuses, setDocumentStatuses] = useState({});
-    const [activeDocAction, setActiveDocAction] = useState(null);
 
     useEffect(() => {
         if (viewingSeller && viewingSeller.documentFiles) {
@@ -305,79 +491,18 @@ const PendingSellers = () => {
         }
     };
 
-    const triggerReupload = (docKey) => {
-        setActiveDocAction(docKey);
-    };
-
-    const uploadFileToServer = async (file, docKey) => {
-        const formData = new FormData();
-        formData.append('document', file);
-        formData.append('documentKey', docKey);
-
+    const triggerReupload = async (docKey) => {
         try {
-            const response = await adminApi.reuploadSellerDocument(viewingSeller.id, formData);
-            
-            // Update viewing seller state to refresh image URL
-            setViewingSeller(prev => {
-                if (!prev) return prev;
-                const newDocumentFiles = prev.documentFiles.map(doc => {
-                    if (doc.key === docKey) {
-                        return { ...doc, url: response.data.data.url, isViewable: true, status: 'reuploaded' };
-                    }
-                    return doc;
-                });
-                return { ...prev, documentFiles: newDocumentFiles };
-            });
-            
-            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'reuploaded' }));
-            toast.success('Document reuploaded successfully');
+            await adminApi.approveSellerDocument(viewingSeller.id, docKey, 'pending_reupload');
+            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'pending_reupload' }));
+            toast.success('Document marked for reupload');
         } catch (error) {
-            console.error('Error reuploading document:', error);
-            toast.error('Failed to reupload document');
-        } finally {
-            if (fileInputRef.current) {
-                fileInputRef.current.value = '';
-            }
-            if (cameraInputRef.current) {
-                cameraInputRef.current.value = '';
-            }
-            setReuploadingDocKey(null);
+            console.error('Error marking document for reupload:', error);
+            toast.error('Failed to mark document for reupload');
         }
     };
 
-    const handleReuploadDocument = async (event) => {
-        const file = event.target.files?.[0];
-        if (!file || !reuploadingDocKey || !viewingSeller) return;
-        await uploadFileToServer(file, reuploadingDocKey);
-    };
-
-    const handleCameraCapture = async (docKey) => {
-        setActiveDocAction(null);
-        try {
-            if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
-                const result = await window.flutter_inappwebview.callHandler('openCamera');
-                if (result && result.success && result.base64) {
-                    const byteCharacters = atob(result.base64);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const file = new File([byteArray], result.fileName || `camera_${docKey}_${Date.now()}.jpg`, { type: result.mimeType || 'image/jpeg' });
-                    await uploadFileToServer(file, docKey);
-                } else {
-                    toast.error("Failed to capture photo.");
-                }
-            } else {
-                // Web browser fallback: use camera input with capture attribute
-                setReuploadingDocKey(docKey);
-                cameraInputRef.current?.click();
-            }
-        } catch (e) {
-            console.error(e);
-            toast.error("Error opening camera.");
-        }
-    };
+    // Camera and file reuploading logic removed for admin side as they just mark for reupload
 
     const handleApprove = async (id) => {
         setIsProcessing(true);
@@ -787,21 +912,7 @@ const PendingSellers = () => {
                                         </button>
 
                                         <div className="ds-section-spacing">
-                                            <input 
-                                                type="file" 
-                                                ref={fileInputRef} 
-                                                className="hidden" 
-                                                onChange={handleReuploadDocument}
-                                                accept="image/*,.pdf" 
-                                            />
-                                            <input 
-                                                type="file" 
-                                                ref={cameraInputRef} 
-                                                className="hidden" 
-                                                onChange={handleReuploadDocument}
-                                                accept="image/*" 
-                                                capture="environment"
-                                            />
+                                            {/* File inputs removed from admin review */}
                                             <div>
                                                 <div className="flex items-center gap-2 mb-2">
                                                     <HiOutlineDocumentText className="h-5 w-5 text-brand-500" />
@@ -870,9 +981,9 @@ const PendingSellers = () => {
                                                                 type="button"
                                                                 onClick={() => triggerReupload(doc.key)}
                                                                 className="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-600 text-[10px] font-bold uppercase tracking-wider hover:bg-brand-100 border border-brand-100 transition-colors"
-                                                                disabled={reuploadingDocKey === doc.key}
+                                                                disabled={documentStatuses[doc.key] === 'pending_reupload'}
                                                             >
-                                                                {reuploadingDocKey === doc.key ? 'Uploading...' : 'Reupload'}
+                                                                {documentStatuses[doc.key] === 'pending_reupload' ? 'Marked' : 'Reupload'}
                                                             </button>
                                                         </div>
                                                     </div>
@@ -2213,56 +2324,7 @@ const PendingSellers = () => {
             </AnimatePresence>
 
             <AnimatePresence>
-                {activeDocAction && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center p-4"
-                        onClick={() => setActiveDocAction(null)}
-                    >
-                        <motion.div
-                            initial={{ y: "100%" }}
-                            animate={{ y: 0 }}
-                            exit={{ y: "100%" }}
-                            onClick={(e) => e.stopPropagation()}
-                            className="w-full max-w-sm overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl"
-                        >
-                            <div className="p-4 border-b text-center border-slate-100">
-                                <h3 className="font-bold text-slate-800">Select Upload Option</h3>
-                            </div>
-                            <div className="p-2 space-y-2">
-                                <button
-                                    type="button"
-                                    onClick={() => handleCameraCapture(activeDocAction)}
-                                    className="w-full p-4 flex items-center justify-center gap-3 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl font-bold transition-colors"
-                                >
-                                    <HiOutlineCamera className="w-5 h-5" />
-                                    Take Photo
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setReuploadingDocKey(activeDocAction);
-                                        fileInputRef.current?.click();
-                                        setActiveDocAction(null);
-                                    }}
-                                    className="w-full p-4 flex items-center justify-center gap-3 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold transition-colors"
-                                >
-                                    <HiOutlineDocumentPlus className="w-5 h-5" />
-                                    Upload from Gallery
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setActiveDocAction(null)}
-                                    className="w-full p-4 mt-2 flex items-center justify-center gap-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
+                {/* ActiveDocAction Modal removed from admin side */}
             </AnimatePresence>
         </div>
     );

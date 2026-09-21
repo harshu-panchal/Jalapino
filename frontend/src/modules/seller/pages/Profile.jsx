@@ -19,6 +19,8 @@ import {
   FileText,
   Clock,
   RefreshCw,
+  Camera,
+  Upload,
 } from "lucide-react";
 import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
@@ -68,6 +70,8 @@ const SellerProfile = () => {
   const [editingZoneIndex, setEditingZoneIndex] = useState(null);
   const [uploadedBanners, setUploadedBanners] = useState([]);
   const [keptBanners, setKeptBanners] = useState([]);
+  const [activeDocAction, setActiveDocAction] = useState(null);
+  const fileInputRefs = React.useRef({});
 
   useEffect(() => {
     fetchProfile();
@@ -114,6 +118,49 @@ const SellerProfile = () => {
       toast.error("Failed to fetch profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const uploadReuploadDocument = async (file, docKey) => {
+    const formData = new FormData();
+    formData.append(docKey, file);
+    formData.append('documentKey', docKey);
+    const loadingToast = toast.loading('Uploading document...');
+    try {
+      await sellerApi.updateProfile(formData);
+      toast.dismiss(loadingToast);
+      toast.success('Document reuploaded successfully!');
+      fetchProfile();
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Failed to reupload document');
+    }
+  };
+
+  const handleCameraCapture = async (docKey) => {
+    setActiveDocAction(null);
+    try {
+      if (window.flutter_inappwebview && window.flutter_inappwebview.callHandler) {
+        const result = await window.flutter_inappwebview.callHandler('openCamera');
+        if (result && result.success && result.base64) {
+          const byteCharacters = atob(result.base64);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const file = new File([byteArray], result.fileName || `camera_${docKey}_${Date.now()}.jpg`, { type: result.mimeType || 'image/jpeg' });
+          await uploadReuploadDocument(file, docKey);
+        } else {
+          toast.error("Failed to capture photo.");
+        }
+      } else {
+        // Web browser fallback: if no flutter, just use the file input's capture attribute if we wanted to
+        toast.error("Camera not supported on this device. Please use gallery upload.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Error opening camera.");
     }
   };
 
@@ -1474,6 +1521,7 @@ const SellerProfile = () => {
                         reuploaded:{ label: 'Reuploaded', bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-700',    badge: 'bg-blue-100 text-blue-700',    icon: '↑' },
                         pending:   { label: 'Pending',    bg: 'bg-slate-50',   border: 'border-slate-100',   text: 'text-slate-600',   badge: 'bg-slate-100 text-slate-600',   icon: '…' },
                         rejected:  { label: 'Rejected',   bg: 'bg-red-50',     border: 'border-red-100',     text: 'text-red-700',     badge: 'bg-red-100 text-red-700',       icon: '✗' },
+                        pending_reupload: { label: 'Action Required', bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', badge: 'bg-rose-100 text-rose-700', icon: '⚠' },
                       };
                       const cfg = statusConfig[status] || statusConfig.pending;
                       const formattedLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
@@ -1484,34 +1532,17 @@ const SellerProfile = () => {
                             <span className={`text-xs font-bold ${cfg.text}`}>{formattedLabel}</span>
                           </div>
                           <div className="flex items-center gap-3">
-                            {status !== 'approved' && (
-                              <label className="cursor-pointer text-[10px] font-bold text-blue-600 underline">
+                            {(status === 'pending_reupload' || status === 'rejected') && (
+                              <label className="cursor-pointer text-[10px] font-bold text-blue-600 underline" onClick={(e) => { e.preventDefault(); setActiveDocAction(key); }}>
                                 Reupload
                                 <input 
                                   type="file" 
                                   className="hidden" 
                                   accept="image/*,.pdf"
+                                  ref={(el) => fileInputRefs.current[key] = el}
                                   onChange={async (e) => {
                                     if(e.target.files && e.target.files[0]) {
-                                      const file = e.target.files[0];
-                                      const formData = new FormData();
-                                      formData.append(key, file);
-                                      formData.append('documentKey', key);
-                                      
-                                      const loadingToast = toast.loading('Uploading document...');
-                                      try {
-                                        // Use profile update or specific upload api if exists, here using generic profile update which handles it
-                                        // Actually wait, let's just make sure there's a specific API or use the existing update logic:
-                                        // Wait, the API for reuploading from seller app hasn't been specifically created in sellerApi.js for document reupload? 
-                                        // Let's use updateProfile for now, which can handle multipart.
-                                        await sellerApi.updateProfile(formData);
-                                        toast.dismiss(loadingToast);
-                                        toast.success('Document reuploaded successfully!');
-                                        fetchProfile(); // refresh
-                                      } catch (err) {
-                                        toast.dismiss(loadingToast);
-                                        toast.error('Upload failed');
-                                      }
+                                      await uploadReuploadDocument(e.target.files[0], key);
                                     }
                                   }}
                                 />
@@ -1531,7 +1562,6 @@ const SellerProfile = () => {
           )}
         </div>
       </div>
-
       {isMapOpen && (
         <MapPicker
           isOpen={isMapOpen}
@@ -1542,6 +1572,57 @@ const SellerProfile = () => {
           }
           initialRadius={formData.radius}
         />
+      )}
+
+      {/* Document Upload Modal (Camera/File) */}
+      {activeDocAction && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center p-4"
+          onClick={() => setActiveDocAction(null)}
+        >
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm overflow-hidden rounded-t-2xl sm:rounded-2xl bg-white shadow-2xl"
+          >
+            <div className="p-4 border-b text-center border-slate-100">
+              <h3 className="font-bold text-slate-800">Select Upload Option</h3>
+            </div>
+            <div className="p-2 space-y-2">
+              <button
+                type="button"
+                onClick={() => handleCameraCapture(activeDocAction)}
+                className="w-full p-4 flex items-center justify-center gap-3 text-brand-600 bg-brand-50 hover:bg-brand-100 rounded-xl font-bold transition-colors"
+              >
+                <Camera className="w-5 h-5" />
+                Take Photo
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  fileInputRefs.current[activeDocAction]?.click();
+                  setActiveDocAction(null);
+                }}
+                className="w-full p-4 flex items-center justify-center gap-3 text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-xl font-bold transition-colors"
+              >
+                <Upload className="w-5 h-5" />
+                Upload from Gallery
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveDocAction(null)}
+                className="w-full p-4 mt-2 flex items-center justify-center gap-3 text-red-500 hover:bg-red-50 rounded-xl font-bold transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </motion.div>
+        </motion.div>
       )}
     </div>
   );

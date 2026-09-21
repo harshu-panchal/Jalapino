@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { adminApi } from "../services/adminApi";
-
+import { adminEventConfigApi } from "../services/adminEventConfigApi";
 const SORT_OPTIONS = [
   { value: "recent", label: "Newest first" },
   { value: "oldest", label: "Oldest first" },
@@ -102,6 +102,8 @@ const ActiveSellers = () => {
   const [sellers, setSellers] = useState([]);
   const [stats, setStats] = useState(emptyStats);
   const [categories, setCategories] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [eventCategories, setEventCategories] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
@@ -117,6 +119,33 @@ const ActiveSellers = () => {
   const [refreshTick, setRefreshTick] = useState(0);
   const [selectedSeller, setSelectedSeller] = useState(null);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const res = await adminApi.getCategories();
+        if (res.data?.success || res.data) {
+          const payload = res.data?.result;
+          const results = res.data?.results;
+          const allCats = Array.isArray(results)
+            ? results
+            : Array.isArray(payload)
+            ? payload
+            : Array.isArray(payload?.items)
+            ? payload.items
+            : [];
+          setAllCategories(allCats);
+        }
+        const evCats = await adminEventConfigApi.getEventCategories();
+        if (Array.isArray(evCats)) {
+          setEventCategories(evCats);
+        }
+      } catch (err) {
+        console.error("Failed to load global categories:", err);
+      }
+    };
+    loadCategories();
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -185,6 +214,33 @@ const ActiveSellers = () => {
 
     loadSellers();
   }, [debouncedSearch, categoryFilter, moduleFilter, sortBy, page, pageSize, refreshTick]);
+
+  const computedCategories = useMemo(() => {
+    if (moduleFilter === "plan_my_event") {
+      return eventCategories.map((c) => c.name).sort((a, b) => a.localeCompare(b));
+    } else if (moduleFilter === "retail") {
+      return allCategories
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "retail"))
+        .map((c) => c.name)
+        .sort((a, b) => a.localeCompare(b));
+    } else if (moduleFilter === "wholesale") {
+      return allCategories
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "wholesale"))
+        .map((c) => c.name)
+        .sort((a, b) => a.localeCompare(b));
+    } else {
+      // "All Modules"
+      const retail = allCategories
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "retail"))
+        .map((c) => c.name);
+      const wholesale = allCategories
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "wholesale"))
+        .map((c) => c.name);
+      const events = eventCategories.map((c) => c.name);
+      const allGlobal = [...new Set([...retail, ...wholesale, ...events, ...categories])].sort((a, b) => a.localeCompare(b));
+      return allGlobal.length > 0 ? allGlobal : categories;
+    }
+  }, [moduleFilter, allCategories, eventCategories, categories]);
 
   const summaryCards = useMemo(
     () => [
@@ -315,19 +371,6 @@ const ActiveSellers = () => {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto">
             <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="px-4 py-3 bg-white ring-1 ring-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
-            >
-              <option value="all">All categories</option>
-              {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-
-            <select
               value={moduleFilter}
               onChange={(event) => setModuleFilter(event.target.value)}
               className="px-4 py-3 bg-white ring-1 ring-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
@@ -336,6 +379,19 @@ const ActiveSellers = () => {
               <option value="retail">Retail Store</option>
               <option value="wholesale">Wholesale</option>
               <option value="plan_my_event">Plan My Event</option>
+            </select>
+
+            <select
+              value={categoryFilter}
+              onChange={(event) => setCategoryFilter(event.target.value)}
+              className="px-4 py-3 bg-white ring-1 ring-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none cursor-pointer"
+            >
+              <option value="all">All categories</option>
+              {computedCategories.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
             </select>
 
             <select
