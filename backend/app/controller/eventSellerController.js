@@ -71,6 +71,9 @@ export const searchEventSellers = async (req, res) => {
 
     if (lat && lng) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(lat, lng);
+      console.log("==== DEBUG: nearbySellerIds returned by getNearbySellerIdsForCustomer ====");
+      console.log(nearbySellerIds);
+      console.log("==========================================================================");
       query.$and.push({
         _id: { $in: nearbySellerIds }
       });

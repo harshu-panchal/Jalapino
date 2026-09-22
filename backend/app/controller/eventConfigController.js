@@ -48,7 +48,8 @@ export const getEventCategories = async (req, res) => {
         const Category = (await import('../models/category.js')).default;
         const generalCategories = await Category.find({ 
             status: "active", 
-            applicableModules: "plan_my_event" 
+            applicableModules: "plan_my_event",
+            type: { $ne: "header" }
         }).lean();
 
         // Map general categories to match legacy format

@@ -430,7 +430,10 @@ export const loginSeller = async (req, res) => {
 
             return handleResponse(res, 403, approvalMessage, {
                 token,
-                seller,
+                seller: {
+                    ...seller.toObject(),
+                    documentStatuses: seller.documentStatuses ? Object.fromEntries(seller.documentStatuses) : {}
+                },
                 applicationStatus,
                 isVerified: seller.isVerified === true,
                 isActive: seller.isActive === true,
@@ -487,28 +490,112 @@ export const forgotPassword = async (req, res) => {
 ================================ */
 export const resetPassword = async (req, res) => {
     try {
-        const { token, newPassword } = req.body;
-        
-        if (!token || !newPassword) {
-            return handleResponse(res, 400, "Token and new password are required");
-        }
+        const { resetToken, newPassword } = req.body;
+
+        const hashedToken = crypto
+            .createHash("sha256")
+            .update(resetToken)
+            .digest("hex");
 
         const seller = await Seller.findOne({
-            resetPasswordToken: token,
-            resetPasswordExpires: { $gt: Date.now() }
-        }).select('+password');
+            resetPasswordToken: hashedToken,
+            resetPasswordExpire: { $gt: Date.now() },
+        });
 
         if (!seller) {
-            return handleResponse(res, 400, "Password reset token is invalid or has expired.");
+            return handleResponse(res, 400, "Invalid or expired token");
         }
 
         seller.password = newPassword;
         seller.resetPasswordToken = undefined;
-        seller.resetPasswordExpires = undefined;
-        
+        seller.resetPasswordExpire = undefined;
+
         await seller.save();
 
-        return handleResponse(res, 200, "Password has been reset successfully. You can now log in.");
+        return handleResponse(res, 200, "Password reset successful");
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+export const reuploadSellerDocuments = async (req, res) => {
+    try {
+        const seller = await Seller.findById(req.userId);
+        if (!seller) {
+            return handleResponse(res, 404, "Seller not found");
+        }
+
+        const documentFiles = req.files || [];
+        if (!documentFiles.length) {
+            return handleResponse(res, 400, "No files uploaded");
+        }
+
+        let updatedCount = 0;
+
+        for (const file of documentFiles) {
+            try {
+                const docKey = file.fieldname; // 'panCard', 'aadharFront', etc.
+                
+                // Only process if it's currently marked for reupload
+                if (seller.documentStatuses?.get(docKey) === 'pending_reupload') {
+                    let url = await saveRawFile(file.buffer, "docs", file.originalname);
+                    
+                    const reqDomain = `${req.protocol}://${req.get("host")}`;
+                    const envDomain = process.env.API_DOMAIN || "http://localhost:7000";
+                    
+                    if (url.startsWith("/")) {
+                        url = `${reqDomain}${url}`;
+                    }
+                    if (url.includes("localhost") || url.includes("host:7000") || url.startsWith("http://10.0.2.2")) {
+                        if (url.startsWith(envDomain)) {
+                            url = url.replace(envDomain, reqDomain);
+                        } else if (url.startsWith("host:7000")) {
+                            url = url.replace("host:7000", reqDomain);
+                        } else if (url.startsWith("http://host:7000")) {
+                            url = url.replace("http://host:7000", reqDomain);
+                        }
+                    }
+
+                    // Find and update the document entry in seller.documentFiles
+                    if (Array.isArray(seller.documentFiles)) {
+                        const docIndex = seller.documentFiles.findIndex(d => d.key === docKey);
+                        if (docIndex !== -1) {
+                            seller.documentFiles[docIndex].url = url;
+                        } else {
+                            // If missing (unlikely), add it
+                            const label = SELLER_DOCUMENT_FIELDS[docKey] || docKey;
+                            seller.documentFiles.push({
+                                key: docKey,
+                                label: label,
+                                url: url,
+                                fileName: file.originalname,
+                                isViewable: true,
+                                fileType: file.originalname.toLowerCase().endsWith('.pdf') ? 'pdf' : 'image'
+                            });
+                        }
+                    }
+
+                    // Reset the document status so it's pending admin review again
+                    seller.documentStatuses.delete(docKey);
+                    updatedCount++;
+                }
+            } catch (err) {
+                console.error("Failed to reupload specific document", err);
+            }
+        }
+
+        if (updatedCount > 0) {
+            // Set the overall application back to pending
+            seller.applicationStatus = "pending";
+            await seller.save();
+            return handleResponse(res, 200, "Documents reuploaded successfully", { 
+                updatedCount,
+                applicationStatus: seller.applicationStatus 
+            });
+        } else {
+            return handleResponse(res, 400, "No valid documents were reuploaded");
+        }
+
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

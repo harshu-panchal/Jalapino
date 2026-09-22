@@ -37,7 +37,9 @@ const SellerProfile = () => {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [termsAgreed, setTermsAgreed] = useState(false);
   const [isAcceptingTerms, setIsAcceptingTerms] = useState(false);
-    const [formData, setFormData] = useState({
+  const [resubmitDocs, setResubmitDocs] = useState({});
+  const [isUploadingDocs, setIsUploadingDocs] = useState(false);
+  const [formData, setFormData] = useState({
     name: "",
     shopName: "",
     phone: "",
@@ -118,6 +120,40 @@ const SellerProfile = () => {
       toast.error("Failed to fetch profile");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const docsRequiringReupload = profile?.documentFiles?.filter(
+    (doc) => profile?.documentStatuses?.[doc.key] === "pending_reupload"
+  ) || [];
+
+  const handleFileChange = (key, file) => {
+    setResubmitDocs(prev => ({ ...prev, [key]: file }));
+  };
+
+  const handleReuploadSubmit = async () => {
+    if (Object.keys(resubmitDocs).length === 0) {
+      toast.error("Please select at least one file to upload");
+      return;
+    }
+    
+    setIsUploadingDocs(true);
+    try {
+      const formData = new FormData();
+      Object.entries(resubmitDocs).forEach(([key, file]) => {
+        if (file) {
+          formData.append(key, file);
+        }
+      });
+      
+      const res = await sellerApi.reuploadDocuments(formData);
+      toast.success(res.data?.message || "Documents reuploaded successfully!");
+      setResubmitDocs({});
+      fetchProfile();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reupload documents");
+    } finally {
+      setIsUploadingDocs(false);
     }
   };
 
@@ -1506,6 +1542,75 @@ const SellerProfile = () => {
                       )}
                     </button>
                   )}
+                </div>
+              )}
+
+              {/* Document Reupload Section */}
+              {docsRequiringReupload.length > 0 && (
+                <div className="bg-rose-50/50 rounded-2xl p-5 border border-rose-100">
+                  <div className="flex items-center gap-2 mb-4">
+                    <AlertTriangle size={16} className="text-rose-500" />
+                    <h5 className="text-xs font-black uppercase tracking-widest text-rose-700">Documents Require Re-upload</h5>
+                  </div>
+                  <div className="space-y-4">
+                    {docsRequiringReupload.map((doc) => (
+                      <div key={doc.key} className="bg-white p-4 rounded-xl border border-rose-100/50 shadow-sm">
+                        <p className="text-sm font-bold text-slate-800 mb-3">{doc.label}</p>
+                        
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          {/* Camera Option */}
+                          <div className="flex-1 relative">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              capture="environment"
+                              onChange={(e) => handleFileChange(doc.key, e.target.files[0])}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              title="Take Photo"
+                            />
+                            <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition-colors pointer-events-none">
+                              <Camera size={14} /> Open Camera
+                            </div>
+                          </div>
+
+                          {/* File Gallery Option */}
+                          <div className="flex-1 relative">
+                            <input
+                              type="file"
+                              accept="image/*,.pdf"
+                              onChange={(e) => handleFileChange(doc.key, e.target.files[0])}
+                              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                              title="Choose File"
+                            />
+                            <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition-colors pointer-events-none">
+                              <Upload size={14} /> Choose File
+                            </div>
+                          </div>
+                        </div>
+
+                        {resubmitDocs[doc.key] && (
+                          <div className="mt-3 text-[11px] font-semibold text-emerald-600 flex items-center gap-1 bg-emerald-50 p-2 rounded-lg border border-emerald-100">
+                            <CheckCircle size={12} /> Selected: {resubmitDocs[doc.key].name}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-5 flex justify-end">
+                    <button
+                      type="button"
+                      disabled={isUploadingDocs || Object.keys(resubmitDocs).length === 0}
+                      onClick={handleReuploadSubmit}
+                      className="px-6 py-2.5 rounded-xl text-sm font-black bg-rose-500 hover:bg-rose-600 text-white disabled:opacity-50 transition-all shadow-md flex items-center gap-2"
+                    >
+                      {isUploadingDocs ? (
+                        <><RefreshCw size={14} className="animate-spin" /> Uploading...</>
+                      ) : (
+                        "Submit Documents"
+                      )}
+                    </button>
+                  </div>
                 </div>
               )}
 

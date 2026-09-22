@@ -46,6 +46,7 @@ export const sellerApi = {
     getWalletSummary: () => axiosInstance.get('/seller/wallet/summary'),
     getProfile: () => axiosInstance.get('/seller/profile'),
     updateProfile: (data) => axiosInstance.put('/seller/profile', data),
+    reuploadDocuments: (formData) => axiosInstance.put('/seller/documents/reupload', formData, { headers: { "Content-Type": "multipart/form-data" } }),
     acceptTerms: () => axiosInstance.post('/seller/accept-terms'),
 
     // Stock

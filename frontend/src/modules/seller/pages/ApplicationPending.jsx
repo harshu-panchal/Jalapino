@@ -29,8 +29,44 @@ const ApplicationPending = () => {
   const [termsAgreedCheckbox, setTermsAgreedCheckbox] = useState(false);
   const [isSubmittingTerms, setIsSubmittingTerms] = useState(false);
 
-  const [resubmitDocs, setResubmitDocs] = useState({ idProof: null, gstCertificate: null, other: null });
+  const [resubmitDocs, setResubmitDocs] = useState({});
   const [isUploadingDocs, setIsUploadingDocs] = useState(false);
+
+  const docsRequiringReupload = user?.documentFiles?.filter(
+    (doc) => user?.documentStatuses?.[doc.key] === "pending_reupload"
+  ) || [];
+
+  const handleFileChange = (key, file) => {
+    setResubmitDocs(prev => ({ ...prev, [key]: file }));
+  };
+
+  const handleReuploadSubmit = async () => {
+    if (Object.keys(resubmitDocs).length === 0) {
+      toast.error("Please select at least one file to upload");
+      return;
+    }
+    
+    setIsUploadingDocs(true);
+    try {
+      const formData = new FormData();
+      Object.entries(resubmitDocs).forEach(([key, file]) => {
+        if (file) {
+          formData.append(key, file);
+        }
+      });
+      
+      const res = await sellerApi.reuploadDocuments(formData);
+      toast.success(res.data?.message || "Documents reuploaded successfully!");
+      // Reset state or trigger reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reupload documents");
+    } finally {
+      setIsUploadingDocs(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -182,6 +218,53 @@ const ApplicationPending = () => {
               )}
             </div>
           ) : null}
+
+          {/* Document Reupload Section */}
+          {docsRequiringReupload.length > 0 && (
+            <div className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-500/10 p-5 text-sm shadow-lg">
+              <div className="flex items-center gap-3 mb-4">
+                <ShieldAlert className="h-5 w-5 text-rose-400" />
+                <span className="font-black uppercase tracking-widest text-[13px] text-rose-300">
+                  Documents Require Re-upload
+                </span>
+              </div>
+              <div className="space-y-4">
+                {docsRequiringReupload.map((doc) => (
+                  <div key={doc.key} className="bg-black/20 p-4 rounded-xl border border-white/5">
+                    <p className="text-white font-medium mb-2">{doc.label}</p>
+                    <input
+                      type="file"
+                      accept="image/*,.pdf"
+                      onChange={(e) => handleFileChange(doc.key, e.target.files[0])}
+                      className="block w-full text-sm text-slate-300
+                        file:mr-4 file:py-2 file:px-4
+                        file:rounded-full file:border-0
+                        file:text-xs file:font-bold
+                        file:bg-rose-500/20 file:text-rose-200
+                        hover:file:bg-rose-500/30 transition-colors"
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  disabled={isUploadingDocs || Object.keys(resubmitDocs).length === 0}
+                  onClick={handleReuploadSubmit}
+                  className="px-6 py-2.5 rounded-xl text-sm font-black bg-rose-500 hover:bg-rose-600 text-white disabled:opacity-50 transition-all shadow-md flex items-center gap-2"
+                >
+                  {isUploadingDocs ? (
+                    <>
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    "Submit Documents"
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Advance Payment Percentage */}
           {user?.advancePaymentPercentage > 0 ? (

@@ -6,6 +6,7 @@ import {
     verifySellerSignupOtp,
     forgotPassword,
     resetPassword,
+    reuploadSellerDocuments,
 } from "../controller/sellerAuthController.js";
 import { getSellerProfile, updateSellerProfile, requestWithdrawal, getNearbySellers, acceptSellerTerms } from "../controller/sellerController.js";
 import { getSellerStats, getSellerEarnings } from "../controller/sellerStatsController.js";
@@ -54,6 +55,14 @@ router.post("/accept-terms", verifyToken, allowRoles("seller"), acceptSellerTerm
 router.get("/nearby", getNearbySellers);
 
 // Profile routes
+router.put(
+    "/documents/reupload",
+    verifyToken,
+    allowRoles("seller"),
+    upload.any(),
+    reuploadSellerDocuments
+);
+
 router.get(
     "/profile",
     verifyToken,

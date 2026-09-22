@@ -25,6 +25,9 @@ const CategoryHierarchy = () => {
   // Selection State for Miller Columns
   const [selectedHeader, setSelectedHeader] = useState(null);
   const [selectedLevel2, setSelectedLevel2] = useState(null);
+  
+  // Module Filter State
+  const [activeModule, setActiveModule] = useState('all');
 
   // Stats
   const stats = useMemo(() => {
@@ -64,27 +67,38 @@ const CategoryHierarchy = () => {
 
   // Filter Logic
   const filteredHeaders = useMemo(() => {
-    if (!searchTerm) return categories.filter((c) => c.type === "header");
+    let headers = categories.filter((c) => c.type === "header");
 
-    // If searching, we want to show path to matches
-    // But for Miller columns, simple filtering of top level might be confusing
-    // So we'll just filter the current list being viewed
-    return categories.filter(
-      (c) =>
-        c.type === "header" &&
-        c.name.toLowerCase().includes(searchTerm.toLowerCase()),
-    );
-  }, [categories, searchTerm]);
+    if (activeModule !== 'all') {
+      headers = headers.filter(c => (c.applicableModules || ['retail']).includes(activeModule));
+    }
+
+    if (searchTerm) {
+      headers = headers.filter((c) =>
+        c.name.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    return headers;
+  }, [categories, searchTerm, activeModule]);
 
   const activeLevel2 = useMemo(() => {
     if (!selectedHeader) return [];
-    return selectedHeader.children || [];
-  }, [selectedHeader]);
+    let children = selectedHeader.children || [];
+    if (activeModule !== 'all') {
+      children = children.filter(c => (c.applicableModules || ['retail']).includes(activeModule));
+    }
+    return children;
+  }, [selectedHeader, activeModule]);
 
   const activeSubs = useMemo(() => {
     if (!selectedLevel2) return [];
-    return selectedLevel2.children || [];
-  }, [selectedLevel2]);
+    let children = selectedLevel2.children || [];
+    if (activeModule !== 'all') {
+      children = children.filter(c => (c.applicableModules || ['retail']).includes(activeModule));
+    }
+    return children;
+  }, [selectedLevel2, activeModule]);
 
   // Handle Selection
   const handleHeaderSelect = (header) => {
@@ -174,38 +188,48 @@ const CategoryHierarchy = () => {
   return (
     <div className="h-[calc(100vh-100px)] flex flex-col gap-4 animate-in fade-in duration-500">
       {/* Top Bar */}
-      <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
-        <div>
-          <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
-            <Layers className="w-6 h-6 text-brand-600" />
-            Category Hierarchy Explorer
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">
-            Visual overview of your catalog structure ({stats.total} items)
-          </p>
-        </div>
+      <div className="flex flex-col gap-4 bg-white p-4 rounded-2xl border border-gray-100 shadow-sm shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+              <Layers className="w-6 h-6 text-brand-600" />
+              Category Hierarchy Explorer
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              Visual overview of your catalog structure ({stats.total} items)
+            </p>
+          </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-xl">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-brand-500"></span>
-              <span>
-                Headers: <b>{stats.headers}</b>
-              </span>
+          <div className="flex flex-wrap items-center gap-4 md:gap-6">
+            {/* Module Filter */}
+            <div className="flex flex-wrap items-center gap-1 bg-gray-50 p-1 rounded-xl border border-gray-100">
+                <button onClick={() => { setActiveModule('all'); setSelectedHeader(null); setSelectedLevel2(null); }} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeModule === 'all' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>All Modules</button>
+                <button onClick={() => { setActiveModule('retail'); setSelectedHeader(null); setSelectedLevel2(null); }} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeModule === 'retail' ? 'bg-blue-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Retail</button>
+                <button onClick={() => { setActiveModule('wholesale'); setSelectedHeader(null); setSelectedLevel2(null); }} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeModule === 'wholesale' ? 'bg-purple-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Wholesale</button>
+                <button onClick={() => { setActiveModule('plan_my_event'); setSelectedHeader(null); setSelectedLevel2(null); }} className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${activeModule === 'plan_my_event' ? 'bg-fuchsia-500 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Plan My Event</button>
             </div>
-            <div className="w-px h-4 bg-gray-300"></div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-purple-500"></span>
-              <span>
-                Level 2: <b>{stats.l2}</b>
-              </span>
-            </div>
-            <div className="w-px h-4 bg-gray-300"></div>
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-brand-500"></span>
-              <span>
-                Subcategories: <b>{stats.subs}</b>
-              </span>
+
+            <div className="flex items-center gap-4 text-sm text-gray-500 bg-gray-50 px-4 py-2 rounded-xl border border-gray-100 hidden lg:flex">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-500"></span>
+                <span>
+                  Headers: <b>{stats.headers}</b>
+                </span>
+              </div>
+              <div className="w-px h-4 bg-gray-300"></div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                <span>
+                  Level 2: <b>{stats.l2}</b>
+                </span>
+              </div>
+              <div className="w-px h-4 bg-gray-300"></div>
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-brand-500"></span>
+                <span>
+                  Subcategories: <b>{stats.subs}</b>
+                </span>
+              </div>
             </div>
           </div>
         </div>

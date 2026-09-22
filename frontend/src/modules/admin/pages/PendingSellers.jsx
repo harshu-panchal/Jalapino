@@ -482,12 +482,12 @@ const PendingSellers = () => {
 
     const handleApproveDocument = async (docKey) => {
         try {
-            await adminApi.approveSellerDocument(viewingSeller.id, docKey, 'approved');
-            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'approved' }));
-            toast.success('Document approved successfully');
+            await adminApi.approveSellerDocument(viewingSeller.id, docKey, 'verified');
+            setDocumentStatuses(prev => ({ ...prev, [docKey]: 'verified' }));
+            toast.success('Document verified successfully');
         } catch (error) {
-            console.error('Error approving document:', error);
-            toast.error('Failed to approve document');
+            console.error('Error verifying document:', error);
+            toast.error('Failed to verify document');
         }
     };
 
@@ -499,6 +499,21 @@ const PendingSellers = () => {
         } catch (error) {
             console.error('Error marking document for reupload:', error);
             toast.error('Failed to mark document for reupload');
+        }
+    };
+
+    const resetDocumentStatus = async (docKey) => {
+        try {
+            await adminApi.approveSellerDocument(viewingSeller.id, docKey, 'pending');
+            setDocumentStatuses(prev => {
+                const newStatuses = { ...prev };
+                delete newStatuses[docKey]; // Remove status to revert to pending state UI
+                return newStatuses;
+            });
+            toast.success('Document status reset to pending');
+        } catch (error) {
+            console.error('Error resetting document status:', error);
+            toast.error('Failed to reset document status');
         }
     };
 
@@ -964,10 +979,15 @@ const PendingSellers = () => {
                                                             )}
                                                         </div>
                                                         <div className="flex items-center justify-end gap-2 pt-3 mt-3 border-t border-slate-100">
-                                                            {documentStatuses[doc.key] === 'approved' ? (
-                                                                <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-100">
-                                                                    <HiOutlineCheckCircle className="w-3.5 h-3.5" /> APPROVED
-                                                                </span>
+                                                            {documentStatuses[doc.key] === 'verified' || documentStatuses[doc.key] === 'approved' ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => resetDocumentStatus(doc.key)}
+                                                                    title="Click to reset status"
+                                                                    className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 bg-emerald-50 px-2 py-1.5 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors cursor-pointer"
+                                                                >
+                                                                    <HiOutlineCheckCircle className="w-3.5 h-3.5" /> VERIFIED
+                                                                </button>
                                                             ) : (
                                                                 <button
                                                                     type="button"
@@ -977,14 +997,25 @@ const PendingSellers = () => {
                                                                     Approve
                                                                 </button>
                                                             )}
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => triggerReupload(doc.key)}
-                                                                className="px-3 py-1.5 rounded-lg bg-brand-50 text-brand-600 text-[10px] font-bold uppercase tracking-wider hover:bg-brand-100 border border-brand-100 transition-colors"
-                                                                disabled={documentStatuses[doc.key] === 'pending_reupload'}
-                                                            >
-                                                                {documentStatuses[doc.key] === 'pending_reupload' ? 'Marked' : 'Reupload'}
-                                                            </button>
+
+                                                            {documentStatuses[doc.key] === 'pending_reupload' ? (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => resetDocumentStatus(doc.key)}
+                                                                    title="Click to reset status"
+                                                                    className="text-[10px] font-bold text-rose-600 flex items-center gap-1 bg-rose-50 px-2 py-1.5 rounded-lg border border-rose-100 hover:bg-rose-100 transition-colors cursor-pointer"
+                                                                >
+                                                                    <HiOutlineXCircle className="w-3.5 h-3.5" /> REUPLOAD REQUESTED
+                                                                </button>
+                                                            ) : (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => triggerReupload(doc.key)}
+                                                                    className="px-3 py-1.5 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-bold uppercase tracking-wider hover:bg-rose-100 border border-rose-100 transition-colors"
+                                                                >
+                                                                    Ask for Reupload
+                                                                </button>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 )) : (
