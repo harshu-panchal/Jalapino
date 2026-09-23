@@ -156,7 +156,7 @@ const productSchema = new mongoose.Schema(
         }],
         deliveryCoverage: [{
             type: String,
-            enum: ["hyperlocal", "pan_india", "zone_wise"],
+            enum: ["hyperlocal", "pan_india", "zone_wise", "none", "self_delivery", "jalapino_rider"],
             default: "hyperlocal",
         }],
         countryOfOrigin: {
@@ -170,6 +170,48 @@ const productSchema = new mongoose.Schema(
             default: "",
         },
         // --- Food Transparency Engine ---
+        paymentMode: {
+            type: String,
+            enum: ["full", "advance", "milestone"],
+            default: "full"
+        },
+        remainingPaymentTiming: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        decorationUploadTime: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        minOrderQty: {
+            type: Number,
+            default: 1,
+        },
+        maxOrderQty: {
+            type: Number,
+            default: null,
+        },
+        advanceOrderSetting: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        cancellationPolicy: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        ticketingSystem: {
+            type: String,
+            trim: true,
+            default: "",
+        },
+        hasExtraDetails: {
+            type: Boolean,
+            default: false,
+        },
         ingredients: {
             type: String,
             trim: true,

@@ -594,21 +594,23 @@ const PlanMyEventPage = () => {
         });
     }
 
-    if (eventInfo.bookingType === 'couple') {
-        smartFilteredSellers = smartFilteredSellers.filter(s => {
-            const cat = s.serviceCategories?.find(c => c._id === activeCategory?._id) || activeCategory;
-            return cat?.coupleContactEnabled ? true : s.coupleContactEnabled !== false;
-        });
-    } else if (eventInfo.bookingType === 'corporate') {
-        smartFilteredSellers = smartFilteredSellers.filter(s => {
-            const cat = s.serviceCategories?.find(c => c._id === activeCategory?._id) || activeCategory;
-            return cat?.corporateContactEnabled ? true : s.corporateContactEnabled !== false;
-        });
-    } else {
-        smartFilteredSellers = smartFilteredSellers.filter(s => {
-            const cat = s.serviceCategories?.find(c => c._id === activeCategory?._id) || activeCategory;
-            return cat?.primaryContactEnabled ? true : s.primaryContactEnabled !== false;
-        });
+    if (activeCategory && activeCategory.showEventDetailsForm !== false) {
+        if (eventInfo.bookingType === 'couple') {
+            smartFilteredSellers = smartFilteredSellers.filter(s => {
+                const cat = s.serviceCategories?.find(c => c._id === activeCategory?._id) || activeCategory;
+                return cat?.coupleContactEnabled ? true : s.coupleContactEnabled !== false;
+            });
+        } else if (eventInfo.bookingType === 'corporate') {
+            smartFilteredSellers = smartFilteredSellers.filter(s => {
+                const cat = s.serviceCategories?.find(c => c._id === activeCategory?._id) || activeCategory;
+                return cat?.corporateContactEnabled ? true : s.corporateContactEnabled !== false;
+            });
+        } else {
+            smartFilteredSellers = smartFilteredSellers.filter(s => {
+                const cat = s.serviceCategories?.find(c => c._id === activeCategory?._id) || activeCategory;
+                return cat?.primaryContactEnabled ? true : s.primaryContactEnabled !== false;
+            });
+        }
     }
 
     const filteredSellers = globalSearch.trim()

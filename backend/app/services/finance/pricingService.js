@@ -594,12 +594,30 @@ export async function generateOrderPaymentBreakdown({
   if (sellerIds.length > 0) {
     const SellerModel = (await import("../../models/seller.js")).default;
     const sellerInfo = await SellerModel.findById(sellerIds[0]).select("advancePaymentPercentage").lean();
-    if (sellerInfo && sellerInfo.advancePaymentPercentage > 0) {
-      const advanceRequired = roundCurrency(grandTotal * (sellerInfo.advancePaymentPercentage / 100));
+
+    // Check if any product in cart has paymentMode "advance" or "milestone"
+    const productIds = normalizedItems.map((item) => item.productId);
+    const ProductModel = (await import("../../models/product.js")).default;
+    const cartProducts = await ProductModel.find({ _id: { $in: productIds } }).select("paymentMode").lean();
+    const hasAdvanceProduct = cartProducts.some(
+      (p) => p.paymentMode === "advance" || p.paymentMode === "milestone"
+    );
+
+    // Use seller's advancePaymentPercentage if set, otherwise default to 30% for advance products
+    const effectiveAdvancePercent =
+      sellerInfo?.advancePaymentPercentage > 0
+        ? sellerInfo.advancePaymentPercentage
+        : hasAdvanceProduct
+        ? 30
+        : 0;
+
+    if (effectiveAdvancePercent > 0) {
+      const advanceRequired = roundCurrency(grandTotal * (effectiveAdvancePercent / 100));
       breakdownResult.advanceAmountRequired = advanceRequired;
       breakdownResult.remainingAmountCOD = roundCurrency(grandTotal - advanceRequired);
     }
   }
+
   
   return breakdownResult;
 }

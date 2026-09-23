@@ -247,6 +247,15 @@ const ProductManagement = () => {
     shelfLife: "",
     countryOfOrigin: "",
     fssaiLicense: "",
+    hasExtraDetails: false,
+    paymentMode: "full",
+    remainingPaymentTiming: "",
+    decorationUploadTime: "",
+    minOrderQty: 1,
+    maxOrderQty: "",
+    advanceOrderSetting: "",
+    cancellationPolicy: "",
+    ticketingSystem: "",
     hsnId: "",
     colors: [],
     ingredients: "",
@@ -627,6 +636,15 @@ const ProductManagement = () => {
         shelfLife: item.shelfLife || "",
         countryOfOrigin: item.countryOfOrigin || "",
         fssaiLicense: item.fssaiLicense || "",
+        hasExtraDetails: item.hasExtraDetails || false,
+        paymentMode: item.paymentMode || "full",
+        remainingPaymentTiming: item.remainingPaymentTiming || "",
+        decorationUploadTime: item.decorationUploadTime || "",
+        minOrderQty: item.minOrderQty || 1,
+        maxOrderQty: item.maxOrderQty || "",
+        advanceOrderSetting: item.advanceOrderSetting || "",
+        cancellationPolicy: item.cancellationPolicy || "",
+        ticketingSystem: item.ticketingSystem || "",
         colors: item.colors || [],
         deliveryCoverage: item.deliveryCoverage || user?.serviceCoverage || ["hyperlocal"],
         variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
@@ -1261,6 +1279,114 @@ const ProductManagement = () => {
                         />
                       </div>
 
+                      {/* Payment Mode */}
+                      <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
+                          Payment Mode
+                        </label>
+                        <div className="flex flex-col gap-3 mt-1">
+                          {[
+                            { id: "full", label: "Full Payment" },
+                            { id: "advance", label: "Advance Payment" },
+                            { id: "milestone", label: "Milestone Payment Structure (Advanced Payment System)" },
+                          ].map((mode) => (
+                            <label key={mode.id} className="flex items-center gap-3 cursor-pointer select-none">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
+                                formData.paymentMode === mode.id ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-white"
+                              }`}>
+                                {formData.paymentMode === mode.id && <div className="w-2.5 h-2.5 bg-brand-500 rounded-full" />}
+                              </div>
+                              <input
+                                type="radio"
+                                name="paymentMode"
+                                value={mode.id}
+                                checked={formData.paymentMode === mode.id}
+                                onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
+                                className="sr-only"
+                              />
+                              <span className="text-sm font-semibold text-slate-700">{mode.label}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Advanced Order & Payment Settings */}
+                      <div className="space-y-4 p-4 bg-white border border-slate-200 rounded-xl">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700">Advanced Order & Payment Settings</h4>
+                          <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Configure advanced options for this product.</p>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-1.5 flex flex-col">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Remaining Payment Timing</label>
+                            <input
+                              value={formData.remainingPaymentTiming}
+                              onChange={(e) => setFormData({ ...formData, remainingPaymentTiming: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                              placeholder="e.g. 2 days before event"
+                            />
+                          </div>
+                          <div className="space-y-1.5 flex flex-col">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Decoration Color Option Upload Time</label>
+                            <input
+                              value={formData.decorationUploadTime}
+                              onChange={(e) => setFormData({ ...formData, decorationUploadTime: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                              placeholder="e.g. Upload within 24 hrs"
+                            />
+                          </div>
+                          <div className="space-y-1.5 flex flex-col">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Minimum Order Qty</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={formData.minOrderQty}
+                              onChange={(e) => setFormData({ ...formData, minOrderQty: parseInt(e.target.value) || 1 })}
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                            />
+                          </div>
+                          <div className="space-y-1.5 flex flex-col">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Maximum Order Qty (Optional)</label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={formData.maxOrderQty}
+                              onChange={(e) => setFormData({ ...formData, maxOrderQty: parseInt(e.target.value) || "" })}
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                              placeholder="e.g. 100"
+                            />
+                          </div>
+                          <div className="space-y-1.5 flex flex-col">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Advance Order Setting</label>
+                            <input
+                              value={formData.advanceOrderSetting}
+                              onChange={(e) => setFormData({ ...formData, advanceOrderSetting: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                              placeholder="e.g. Order 48 hrs prior"
+                            />
+                          </div>
+                          <div className="space-y-1.5 flex flex-col">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Ticketing system & Price updation</label>
+                            <input
+                              value={formData.ticketingSystem}
+                              onChange={(e) => setFormData({ ...formData, ticketingSystem: e.target.value })}
+                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                              placeholder="e.g. Enable updates"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5 flex flex-col mt-4">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Cancellation & Refund Process</label>
+                          <textarea
+                            value={formData.cancellationPolicy}
+                            onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold min-h-[80px] outline-none transition-all focus:ring-2 focus:ring-brand-500 resize-none"
+                            placeholder="Describe cancellation timings and refund percentages..."
+                          />
+                        </div>
+                      </div>
+
                       {/* Delivery Availability */}
                       <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
                         <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
@@ -1271,11 +1397,14 @@ const ProductManagement = () => {
                         </p>
                         <div className="flex flex-wrap gap-4">
                           {[
-                            { id: "hyperlocal", label: "Hyperlocal (Near Shop)" },
-                            { id: "pan_india", label: "Pan India" },
-                            { id: "zone_wise", label: "Zone-wise" },
+                            { id: "self_delivery", label: "Self Delivery" },
+                            { id: "hyperlocal", label: "Hyperlocal service delivery" },
+                            { id: "pan_india", label: "Pan India (Courier Delivery)" },
+                            { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
+                            { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
                           ].map((option) => {
-                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || (option.id === "hyperlocal");
+                            const alwaysAllowed = ["hyperlocal", "none", "self_delivery", "jalapino_rider", "pan_india"];
+                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
                             
                             if (!isAllowedBySeller) return null;
 
@@ -1400,8 +1529,27 @@ const ProductManagement = () => {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-1.5 flex flex-col">
+                      {/* Extra Details Toggle */}
+                      <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
+                          <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
+                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={formData.hasExtraDetails}
+                            onChange={(e) => setFormData({ ...formData, hasExtraDetails: e.target.checked })}
+                          />
+                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                        </label>
+                      </div>
+
+                      {formData.hasExtraDetails && (
+                        <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-1.5 flex flex-col">
                           <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
                             Brand Name
                           </label>
@@ -1511,6 +1659,8 @@ const ProductManagement = () => {
                           />
                         </div>
                       </div>
+                    </div>
+                    )}
                     </div>
                   )}
                   {/* Additional tabs populated as needed */}

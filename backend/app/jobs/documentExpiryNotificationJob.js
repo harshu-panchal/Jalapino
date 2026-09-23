@@ -53,9 +53,17 @@ export function getDocumentExpiryNotificationJobHandler() {
             const docName = key.replace(/([A-Z])/g, ' $1').trim().toUpperCase();
 
             let title, body;
+            let needsSave = false;
+            
             if (daysUntilExpiry <= 0) {
               title = `⚠️ ${docName} Expired`;
               body = `Your uploaded ${docName} has expired on ${date.toLocaleDateString('en-IN')}. Please renew and upload immediately.`;
+              
+              if (!seller.documentStatuses) {
+                seller.documentStatuses = new Map();
+              }
+              seller.documentStatuses.set(key, 'pending_reupload');
+              needsSave = true;
             } else if (daysUntilExpiry === 1) {
               title = `🚨 ${docName} Expires Tomorrow!`;
               body = `Your uploaded ${docName} expires tomorrow (${date.toLocaleDateString('en-IN')}). Upload the renewed document now.`;
@@ -82,6 +90,10 @@ export function getDocumentExpiryNotificationJobHandler() {
                     type: "document_expiry",
                   },
                 });
+            }
+            
+            if (needsSave) {
+              await seller.save();
             }
             sentCount++;
         }

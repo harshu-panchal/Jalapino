@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
-import { CheckCircle2, Clock3, ShieldAlert, Store, CheckCircle } from "lucide-react";
+import { CheckCircle2, Clock3, ShieldAlert, Store, CheckCircle, Camera, Upload } from "lucide-react";
 import { useAuth } from "@core/context/AuthContext";
 import { useSettings } from "@core/context/SettingsContext";
 import { sellerApi } from "../services/sellerApi";
@@ -32,9 +32,24 @@ const ApplicationPending = () => {
   const [resubmitDocs, setResubmitDocs] = useState({});
   const [isUploadingDocs, setIsUploadingDocs] = useState(false);
 
-  const docsRequiringReupload = user?.documentFiles?.filter(
-    (doc) => user?.documentStatuses?.[doc.key] === "pending_reupload"
-  ) || [];
+  const REQUIRED_DOCUMENT_CONFIG = {
+    tradeLicense: "Trade License",
+    gstCertificate: "GST Certificate",
+    idProof: "ID Proof",
+    aadharCardFront: "Aadhar Card (Front)",
+    aadharCardBack: "Aadhar Card (Back)",
+    panCard: "PAN Card",
+    businessRegistration: "Business Registration",
+    fssaiLicense: "FSSAI License",
+    other: "Other Documents"
+  };
+
+  const docsRequiringReupload = Object.entries(user?.documentStatuses || {})
+    .filter(([key, status]) => status === "pending_reupload")
+    .map(([key]) => ({
+      key,
+      label: REQUIRED_DOCUMENT_CONFIG[key] || key
+    }));
 
   const handleFileChange = (key, file) => {
     setResubmitDocs(prev => ({ ...prev, [key]: file }));
@@ -232,17 +247,43 @@ const ApplicationPending = () => {
                 {docsRequiringReupload.map((doc) => (
                   <div key={doc.key} className="bg-black/20 p-4 rounded-xl border border-white/5">
                     <p className="text-white font-medium mb-2">{doc.label}</p>
-                    <input
-                      type="file"
-                      accept="image/*,.pdf"
-                      onChange={(e) => handleFileChange(doc.key, e.target.files[0])}
-                      className="block w-full text-sm text-slate-300
-                        file:mr-4 file:py-2 file:px-4
-                        file:rounded-full file:border-0
-                        file:text-xs file:font-bold
-                        file:bg-rose-500/20 file:text-rose-200
-                        hover:file:bg-rose-500/30 transition-colors"
-                    />
+                    
+                    <div className="flex flex-col sm:flex-row gap-3">
+                      {/* Camera Option */}
+                      <div className="flex-1 relative">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          onChange={(e) => handleFileChange(doc.key, e.target.files[0])}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          title="Take Photo"
+                        />
+                        <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition-colors pointer-events-none">
+                          <Camera size={14} /> Open Camera
+                        </div>
+                      </div>
+
+                      {/* File Gallery Option */}
+                      <div className="flex-1 relative">
+                        <input
+                          type="file"
+                          accept="image/*,.pdf"
+                          onChange={(e) => handleFileChange(doc.key, e.target.files[0])}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                          title="Choose File"
+                        />
+                        <div className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-slate-50 border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-100 transition-colors pointer-events-none">
+                          <Upload size={14} /> Choose File
+                        </div>
+                      </div>
+                    </div>
+
+                    {resubmitDocs[doc.key] && (
+                      <div className="mt-3 text-[11px] font-semibold text-emerald-600 flex items-center gap-1 bg-emerald-50 p-2 rounded-lg border border-emerald-100 w-fit">
+                        <CheckCircle size={12} /> Selected: {resubmitDocs[doc.key].name}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

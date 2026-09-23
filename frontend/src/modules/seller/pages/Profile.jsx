@@ -1635,6 +1635,13 @@ const SellerProfile = () => {
                         <div key={key} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${cfg.bg} ${cfg.border}`}>
                           <div className="flex flex-col">
                             <span className={`text-xs font-bold ${cfg.text}`}>{formattedLabel}</span>
+                            {profile.documentExpiries?.[key] && (
+                              <span className={`text-[9px] font-semibold mt-0.5 ${
+                                new Date(profile.documentExpiries[key]) < new Date() ? 'text-rose-500' : 'text-slate-400'
+                              }`}>
+                                Expires: {new Date(profile.documentExpiries[key]).toLocaleDateString('en-IN')}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-3">
                             {(status === 'pending_reupload' || status === 'rejected') && (

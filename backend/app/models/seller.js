@@ -190,7 +190,7 @@ const sellerSchema = new mongoose.Schema(
     },
     serviceCoverage: {
       type: [String],
-      enum: ["hyperlocal", "pan_india", "zone_wise"],
+      enum: ["hyperlocal", "pan_india", "zone_wise", "none", "self_delivery", "jalapino_rider"],
       default: ["hyperlocal"],
     },
     customZones: [

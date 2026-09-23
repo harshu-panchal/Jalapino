@@ -41,35 +41,8 @@ export const getEventTypes = async (req, res) => {
 // Get all active event categories with their preference forms and business rules
 export const getEventCategories = async (req, res) => {
     try {
-        // 1. Fetch legacy Event Categories
-        const legacyCategories = await EventCategory.find({ isActive: true }).lean();
-
-        // 2. Fetch general Categories that are marked for 'plan_my_event'
-        const Category = (await import('../models/category.js')).default;
-        const generalCategories = await Category.find({ 
-            status: "active", 
-            applicableModules: "plan_my_event",
-            type: { $ne: "header" }
-        }).lean();
-
-        // Map general categories to match legacy format
-        const mappedGeneral = generalCategories.map(cat => ({
-            ...cat,
-            isActive: true,
-            // Fallback for icons if needed
-            icon: cat.icon || cat.image || ''
-        }));
-
-        // Combine and sort alphabetically A-Z by name
-        let categories = [...legacyCategories, ...mappedGeneral];
-        
-        // Remove duplicates by ID (just in case) and name
-        const uniqueNames = new Set();
-        categories = categories.filter(c => {
-            if (uniqueNames.has(c.name)) return false;
-            uniqueNames.add(c.name);
-            return true;
-        });
+        // 1. Fetch legacy Event Categories (Service Categories)
+        const categories = await EventCategory.find({ isActive: true }).lean();
         
         categories.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 

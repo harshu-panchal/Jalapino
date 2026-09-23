@@ -557,6 +557,10 @@ export const reuploadSellerDocuments = async (req, res) => {
                     }
 
                     // Find and update the document entry in seller.documentFiles
+                    if (!seller.documents) {
+                        seller.documents = {};
+                    }
+                    seller.documents[docKey] = url;
                     if (Array.isArray(seller.documentFiles)) {
                         const docIndex = seller.documentFiles.findIndex(d => d.key === docKey);
                         if (docIndex !== -1) {
