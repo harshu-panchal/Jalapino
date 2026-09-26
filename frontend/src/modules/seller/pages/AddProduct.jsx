@@ -210,10 +210,10 @@ const AddProduct = () => {
     if (dbCategories && Array.isArray(dbCategories)) {
       extractModules(dbCategories);
     }
-    
+
     const availableModules = Array.from(modules);
     availableModules.sort();
-    
+
     return availableModules.map(mod => {
       if (mod === 'retail') return { value: mod, label: 'Retail / Groceries' };
       if (mod === 'wholesale') return { value: mod, label: 'Wholesale' };
@@ -270,7 +270,7 @@ const AddProduct = () => {
       data.append("shelfLife", formData.shelfLife || "");
       data.append("countryOfOrigin", formData.countryOfOrigin || "");
       data.append("fssaiLicense", formData.fssaiLicense || "");
-      
+
       data.append("hasBrandName", formData.hasBrandName);
       data.append("hasIngredients", formData.hasIngredients);
       data.append("hasShelfLife", formData.hasShelfLife);
@@ -294,7 +294,7 @@ const AddProduct = () => {
       // Variants and Tickets
       data.append("variants", JSON.stringify(formData.variants));
       data.append("tickets", JSON.stringify(formData.tickets || []));
-      
+
       // Delivery Coverage & Colors
       data.append("deliveryCoverage", JSON.stringify(formData.deliveryCoverage));
       data.append("colors", JSON.stringify(formData.colors));
@@ -364,7 +364,7 @@ const AddProduct = () => {
     try {
       const uploadData = new FormData();
       uploadData.append('video', file);
-      
+
       if (paymentParams.paymentMethod) {
         uploadData.append('paymentMethod', paymentParams.paymentMethod);
       }
@@ -379,7 +379,7 @@ const AddProduct = () => {
       }
 
       const uploadRes = await sellerApi.uploadVideo(uploadData);
-      
+
       if (uploadRes.data.success) {
         toast.success('Video uploaded successfully!', { id: uploadToast });
         setFormData({ ...formData, videoUrl: uploadRes.data.videoUrl });
@@ -397,13 +397,13 @@ const AddProduct = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const fileSizeMB = file.size / (1024 * 1024);
-      
+
       const checkToast = toast.loading('Checking storage limits...');
-      
+
       try {
         const intentRes = await sellerApi.checkVideoUploadIntent({ fileSizeMB });
         toast.dismiss(checkToast);
-        
+
         const { requiresPayment, totalAmount, mbToCharge, razorpayOrder } = intentRes.data;
 
         if (requiresPayment) {
@@ -563,11 +563,10 @@ const AddProduct = () => {
                       }),
                     }));
                   }}
-                  className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${
-                    !user?.allowCustomProductEntry
+                  className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${!user?.allowCustomProductEntry
                       ? "bg-slate-200 cursor-not-allowed text-slate-500"
                       : "bg-slate-100"
-                  }`}
+                    }`}
                   placeholder={!user?.allowCustomProductEntry ? "Contact Admin to allow custom entry" : "e.g. Premium Basmati Rice"}
                 />
               </div>
@@ -599,7 +598,7 @@ const AddProduct = () => {
                       Delivery
                     </label>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.isDelivery} onChange={(e) => setFormData({...formData, isDelivery: e.target.checked})} />
+                      <input type="checkbox" className="sr-only peer" checked={formData.isDelivery} onChange={(e) => setFormData({ ...formData, isDelivery: e.target.checked })} />
                       <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
                     </label>
                   </div>
@@ -608,7 +607,7 @@ const AddProduct = () => {
                       Service
                     </label>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.isService} onChange={(e) => setFormData({...formData, isService: e.target.checked})} />
+                      <input type="checkbox" className="sr-only peer" checked={formData.isService} onChange={(e) => setFormData({ ...formData, isService: e.target.checked })} />
                       <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
                     </label>
                   </div>
@@ -617,7 +616,7 @@ const AddProduct = () => {
                       Rental
                     </label>
                     <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.isRental} onChange={(e) => setFormData({...formData, isRental: e.target.checked})} />
+                      <input type="checkbox" className="sr-only peer" checked={formData.isRental} onChange={(e) => setFormData({ ...formData, isRental: e.target.checked })} />
                       <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
                     </label>
                   </div>
@@ -733,14 +732,13 @@ const AddProduct = () => {
                     { id: "advance", label: "Advance Payment" },
                     { id: "milestone", label: "Milestone Payment Structure (Advanced Payment System)" },
                   ].map((mode) => (
-                    <div 
-                      key={mode.id} 
+                    <div
+                      key={mode.id}
                       className="flex items-center gap-3 cursor-pointer select-none"
                       onClick={() => setFormData({ ...formData, paymentMode: mode.id })}
                     >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                        formData.paymentMode === mode.id ? "border-primary bg-primary/10" : "border-slate-300 bg-white"
-                      }`}>
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${formData.paymentMode === mode.id ? "border-primary bg-primary/10" : "border-slate-300 bg-white"
+                        }`}>
                         {formData.paymentMode === mode.id && <div className="w-2.5 h-2.5 bg-primary rounded-full" />}
                       </div>
                       <span className="text-sm font-semibold text-slate-700">{mode.label}</span>
@@ -755,7 +753,7 @@ const AddProduct = () => {
                   <h4 className="text-sm font-bold text-slate-700">Advanced Order & Payment Settings</h4>
                   <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Configure advanced options for this product.</p>
                 </div>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5 flex flex-col">
                     <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Remaining Payment Timing</label>
@@ -818,7 +816,7 @@ const AddProduct = () => {
               </div>
 
               {/* Extra Details Toggle */}
-              <div 
+              <div
                 className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-brand-300 transition-colors"
                 onClick={() => setShowDetailedInfo(!showDetailedInfo)}
               >
@@ -826,148 +824,147 @@ const AddProduct = () => {
                   <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
                   <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
                 </div>
-                <button
-                  type="button"
-                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 transition-transform ${showDetailedInfo ? 'rotate-180' : ''}`}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="6 9 12 15 18 9"></polyline>
-                  </svg>
-                </button>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={formData.hasExtraDetails}
+                    onChange={(e) => setFormData({ ...formData, hasExtraDetails: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
+                </label>
               </div>
 
-              {showDetailedInfo && (
+              {formData.hasExtraDetails && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5 flex flex-col">
-                  <div className="flex justify-between items-center w-full">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                      Brand Name
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.hasBrandName} onChange={(e) => setFormData({...formData, hasBrandName: e.target.checked})} />
-                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                    </label>
+                    <div className="space-y-1.5 flex flex-col">
+                      <div className="flex justify-between items-center w-full">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          Brand Name
+                        </label>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" checked={formData.hasBrandName} onChange={(e) => setFormData({ ...formData, hasBrandName: e.target.checked })} />
+                          <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                        </label>
+                      </div>
+                      {formData.hasBrandName && (
+                        <input
+                          value={formData.brand}
+                          disabled={!user?.allowCustomProductEntry}
+                          onChange={(e) =>
+                            setFormData({ ...formData, brand: e.target.value })
+                          }
+                          className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${!user?.allowCustomProductEntry
+                              ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                              : "bg-slate-100"
+                            }`}
+                          placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-1.5 flex flex-col">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Product Code
+                      </label>
+                      <input
+                        value={formData.sku}
+                        onChange={(e) =>
+                          setFormData({ ...formData, sku: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-mono font-bold outline-none ring-primary/5 focus:ring-2 transition-all"
+                        placeholder="AUTO-GENERATED"
+                      />
+                    </div>
                   </div>
-                  {formData.hasBrandName && (
-                  <input
-                    value={formData.brand}
-                    disabled={!user?.allowCustomProductEntry}
-                    onChange={(e) =>
-                      setFormData({ ...formData, brand: e.target.value })
-                    }
-                    className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${
-                      !user?.allowCustomProductEntry
-                        ? "bg-slate-200 cursor-not-allowed text-slate-500"
-                        : "bg-slate-100"
-                    }`}
-                    placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
-                  />
-                  )}
-                </div>
-                <div className="space-y-1.5 flex flex-col">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    Product Code
-                  </label>
-                  <input
-                    value={formData.sku}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sku: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-mono font-bold outline-none ring-primary/5 focus:ring-2 transition-all"
-                    placeholder="AUTO-GENERATED"
-                  />
-                </div>
-              </div>
 
-              <div className="space-y-1.5 flex flex-col">
-                <div className="flex justify-between items-center w-full">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    Ingredients
-                  </label>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" className="sr-only peer" checked={formData.hasIngredients} onChange={(e) => setFormData({...formData, hasIngredients: e.target.checked})} />
-                    <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                  </label>
-                </div>
-                {formData.hasIngredients && (
-                <textarea
-                  value={formData.ingredients}
-                  disabled={!user?.allowCustomProductEntry}
-                  onChange={(e) =>
-                    setFormData({ ...formData, ingredients: e.target.value })
-                  }
-                  onWheel={(e) => e.stopPropagation()}
-                  onTouchMove={(e) => e.stopPropagation()}
-                  className={`w-full px-4 py-3 border-none rounded-2xl text-sm font-semibold min-h-[100px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none ${
-                    !user?.allowCustomProductEntry
-                      ? "bg-slate-200 cursor-not-allowed text-slate-500"
-                      : "bg-slate-100"
-                  }`}
-                  placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
-                />
-                )}
-              </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <div className="flex justify-between items-center w-full">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Ingredients
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={formData.hasIngredients} onChange={(e) => setFormData({ ...formData, hasIngredients: e.target.checked })} />
+                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
+                    </div>
+                    {formData.hasIngredients && (
+                      <textarea
+                        value={formData.ingredients}
+                        disabled={!user?.allowCustomProductEntry}
+                        onChange={(e) =>
+                          setFormData({ ...formData, ingredients: e.target.value })
+                        }
+                        onWheel={(e) => e.stopPropagation()}
+                        onTouchMove={(e) => e.stopPropagation()}
+                        className={`w-full px-4 py-3 border-none rounded-2xl text-sm font-semibold min-h-[100px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none ${!user?.allowCustomProductEntry
+                            ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                            : "bg-slate-100"
+                          }`}
+                        placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
+                      />
+                    )}
+                  </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-1.5 flex flex-col">
-                  <div className="flex justify-between items-center w-full">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                      Shelf Life
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.hasShelfLife} onChange={(e) => setFormData({...formData, hasShelfLife: e.target.checked})} />
-                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                    </label>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="space-y-1.5 flex flex-col">
+                      <div className="flex justify-between items-center w-full">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          Shelf Life
+                        </label>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" checked={formData.hasShelfLife} onChange={(e) => setFormData({ ...formData, hasShelfLife: e.target.checked })} />
+                          <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                        </label>
+                      </div>
+                      {formData.hasShelfLife && (
+                        <input
+                          value={formData.shelfLife}
+                          onChange={(e) =>
+                            setFormData({ ...formData, shelfLife: e.target.value })
+                          }
+                          className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                          placeholder="e.g. 3 Days"
+                        />
+                      )}
+                    </div>
+                    <div className="space-y-1.5 flex flex-col">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Country of Origin
+                      </label>
+                      <input
+                        value={formData.countryOfOrigin}
+                        onChange={(e) =>
+                          setFormData({ ...formData, countryOfOrigin: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                        placeholder="e.g. India"
+                      />
+                    </div>
+                    <div className="space-y-1.5 flex flex-col">
+                      <div className="flex justify-between items-center w-full">
+                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                          FSSAI License
+                        </label>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input type="checkbox" className="sr-only peer" checked={formData.hasFssaiLicense} onChange={(e) => setFormData({ ...formData, hasFssaiLicense: e.target.checked })} />
+                          <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                        </label>
+                      </div>
+                      {formData.hasFssaiLicense && (
+                        <input
+                          value={formData.fssaiLicense}
+                          onChange={(e) =>
+                            setFormData({ ...formData, fssaiLicense: e.target.value })
+                          }
+                          className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                          placeholder="e.g. 1001234567890"
+                        />
+                      )}
+                    </div>
                   </div>
-                  {formData.hasShelfLife && (
-                  <input
-                    value={formData.shelfLife}
-                    onChange={(e) =>
-                      setFormData({ ...formData, shelfLife: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                    placeholder="e.g. 3 Days"
-                  />
-                  )}
                 </div>
-                <div className="space-y-1.5 flex flex-col">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    Country of Origin
-                  </label>
-                  <input
-                    value={formData.countryOfOrigin}
-                    onChange={(e) =>
-                      setFormData({ ...formData, countryOfOrigin: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                    placeholder="e.g. India"
-                  />
-                </div>
-                <div className="space-y-1.5 flex flex-col">
-                  <div className="flex justify-between items-center w-full">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                      FSSAI License
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.hasFssaiLicense} onChange={(e) => setFormData({...formData, hasFssaiLicense: e.target.checked})} />
-                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                    </label>
-                  </div>
-                  {formData.hasFssaiLicense && (
-                  <input
-                    value={formData.fssaiLicense}
-                    onChange={(e) =>
-                      setFormData({ ...formData, fssaiLicense: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                    placeholder="e.g. 1001234567890"
-                  />
-                  )}
-                </div>
-              </div>
-            </div>
-            )}
+              )}
 
               {/* Colors Section */}
               <div className="space-y-1.5 flex flex-col">
@@ -984,17 +981,16 @@ const AddProduct = () => {
                           type="button"
                           onClick={() => {
                             setFormData((prev) => {
-                              const nextColors = isSelected 
+                              const nextColors = isSelected
                                 ? prev.colors.filter(c => c !== color)
                                 : [...prev.colors, color];
                               return { ...prev, colors: nextColors };
                             });
                           }}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                            isSelected 
-                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm" 
+                          className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${isSelected
+                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm"
                               : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                          }`}
+                            }`}
                         >
                           {color}
                         </button>
@@ -1002,14 +998,14 @@ const AddProduct = () => {
                     })}
                   </div>
                   <div className="flex gap-2 items-center">
-                    <input 
-                      type="color" 
+                    <input
+                      type="color"
                       id="visualColorPicker"
                       className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
                       defaultValue="#000000"
                     />
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       id="customColorInput"
                       placeholder="Type custom color or select hex..."
                       onKeyDown={(e) => {
@@ -1024,7 +1020,7 @@ const AddProduct = () => {
                       }}
                       className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
                     />
-                    <button 
+                    <button
                       type="button"
                       onClick={() => {
                         const input = document.getElementById("customColorInput");
@@ -1239,7 +1235,7 @@ const AddProduct = () => {
               </div>
             </div>
           )}
-          
+
           {user?.ticketSystemEnabled && modalTab === "tickets" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
               <div className="flex items-center justify-between pb-4 border-b border-slate-100">
@@ -1360,23 +1356,23 @@ const AddProduct = () => {
 
           {modalTab === "category" && (
             <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
-              
+
               <div className="space-y-1.5 flex flex-col mb-4">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    Target Module
-                  </label>
-                  <select
-                    value={selectedModule}
-                    onChange={(e) => {
-                      setSelectedModule(e.target.value);
-                      setFormData({ ...formData, header: "", category: "", subcategory: "" });
-                    }}
-                    className="w-full md:w-1/2 px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all">
-                    <option value="">All Categories</option>
-                    {dynamicModules.map((mod) => (
-                      <option key={mod.value} value={mod.value}>{mod.label}</option>
-                    ))}
-                  </select>
+                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                  Target Module
+                </label>
+                <select
+                  value={selectedModule}
+                  onChange={(e) => {
+                    setSelectedModule(e.target.value);
+                    setFormData({ ...formData, header: "", category: "", subcategory: "" });
+                  }}
+                  className="w-full md:w-1/2 px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all">
+                  <option value="">All Categories</option>
+                  {dynamicModules.map((mod) => (
+                    <option key={mod.value} value={mod.value}>{mod.label}</option>
+                  ))}
+                </select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1544,17 +1540,16 @@ const AddProduct = () => {
                           type="button"
                           onClick={() => {
                             setFormData((prev) => {
-                              const next = isSelected 
+                              const next = isSelected
                                 ? prev.facilities.filter(f => f !== facility)
                                 : [...prev.facilities, facility];
                               return { ...prev, facilities: next };
                             });
                           }}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${
-                            isSelected 
-                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm" 
+                          className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${isSelected
+                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm"
                               : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                          }`}
+                            }`}
                         >
                           {facility}
                         </button>
@@ -1643,43 +1638,43 @@ const AddProduct = () => {
               </div>
 
               {/* Product Video Section */}
-                <div className="space-y-3 pt-6 border-t border-slate-100">
-                  <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    Product Video (Direct Upload)
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    <div className="relative w-full border-2 border-dashed border-slate-200 rounded-lg bg-slate-50 p-6 flex flex-col items-center justify-center hover:border-brand-400 transition-colors">
-                      <input
-                        type="file"
-                        accept="video/*"
-                        onChange={handleVideoUpload}
-                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                      />
-                      <HiOutlineFilm className="h-8 w-8 text-slate-400 mb-2" />
-                      <p className="text-sm font-semibold text-slate-700">Click or drag a video file to upload</p>
-                      <p className="text-xs text-slate-500 mt-1">Storage limits apply. Extra MBs will be charged.</p>
-                    </div>
-                    
-                    {formData.videoUrl && (
-                      <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg flex items-center justify-between">
-                        <div className="flex items-center gap-2 text-brand-700 text-sm font-semibold">
-                          <HiOutlineFilm className="h-5 w-5" />
-                          <span>Video successfully uploaded</span>
-                        </div>
-                        <button 
-                          type="button" 
-                          onClick={() => setFormData({ ...formData, videoUrl: "" })}
-                          className="text-rose-500 hover:text-rose-700 font-bold text-xs uppercase tracking-wider"
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    )}
-                    <p className="text-[11px] text-slate-500 font-medium leading-relaxed ml-1 mt-2">
-                      Upload a short video (30-50 seconds) recorded in portrait orientation showcasing the product. This uses your active Video Subscription storage.
-                    </p>
+              <div className="space-y-3 pt-6 border-t border-slate-100">
+                <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                  Product Video (Direct Upload)
+                </label>
+                <div className="flex flex-col gap-2">
+                  <div className="relative w-full border-2 border-dashed border-slate-200 rounded-lg bg-slate-50 p-6 flex flex-col items-center justify-center hover:border-brand-400 transition-colors">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      onChange={handleVideoUpload}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                    />
+                    <HiOutlineFilm className="h-8 w-8 text-slate-400 mb-2" />
+                    <p className="text-sm font-semibold text-slate-700">Click or drag a video file to upload</p>
+                    <p className="text-xs text-slate-500 mt-1">Storage limits apply. Extra MBs will be charged.</p>
                   </div>
+
+                  {formData.videoUrl && (
+                    <div className="mt-4 p-3 bg-brand-50 border border-brand-100 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-brand-700 text-sm font-semibold">
+                        <HiOutlineFilm className="h-5 w-5" />
+                        <span>Video successfully uploaded</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, videoUrl: "" })}
+                        className="text-rose-500 hover:text-rose-700 font-bold text-xs uppercase tracking-wider"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed ml-1 mt-2">
+                    Upload a short video (30-50 seconds) recorded in portrait orientation showcasing the product. This uses your active Video Subscription storage.
+                  </p>
                 </div>
+              </div>
 
               <p className="text-xs text-slate-600 font-medium italic text-center pt-4 border-t border-slate-50">
                 Quick Tip: Using WebP format at 800x800px makes your store load
@@ -1735,7 +1730,7 @@ const AddProduct = () => {
                   <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Pending</span>
                 </button>
               </div>
-              
+
               {videoUploading && (
                 <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">Uploading and processing video...</p>
               )}
