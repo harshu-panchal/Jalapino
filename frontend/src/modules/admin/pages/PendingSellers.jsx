@@ -1899,6 +1899,76 @@ const PendingSellers = () => {
                                                             </div>
                                                         </div>
 
+                                                        {/* Shop Closed Dates / Holidays */}
+                                                        <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-200">
+                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                                                Shop Closed Dates / Holidays
+                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Select dates when shop is closed</span>
+                                                            </label>
+                                                            <div className="flex flex-col gap-3">
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="date" 
+                                                                        id={`holiday-input-${viewingSeller.id}`}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                    />
+                                                                    <button 
+                                                                        onClick={async () => {
+                                                                            const input = document.getElementById(`holiday-input-${viewingSeller.id}`);
+                                                                            if (!input.value) return;
+                                                                            const dateVal = input.value;
+                                                                            const currentDates = permissions.shopClosedDates || [];
+                                                                            if (currentDates.includes(dateVal)) {
+                                                                                toast.error("Date already added");
+                                                                                return;
+                                                                            }
+                                                                            const newDates = [...currentDates, dateVal].sort();
+                                                                            setPermissions(prev => ({ ...prev, shopClosedDates: newDates }));
+                                                                            try {
+                                                                                await adminApi.updateSeller(viewingSeller.id, { shopClosedDates: newDates });
+                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopClosedDates: newDates } : seller));
+                                                                                input.value = '';
+                                                                                toast.success("Holiday added successfully");
+                                                                            } catch (err) {
+                                                                                setPermissions(prev => ({ ...prev, shopClosedDates: currentDates }));
+                                                                                toast.error("Failed to add holiday");
+                                                                            }
+                                                                        }}
+                                                                        className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-fuchsia-700 transition-colors"
+                                                                    >
+                                                                        Add Date
+                                                                    </button>
+                                                                </div>
+                                                                {(permissions.shopClosedDates || []).length > 0 && (
+                                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                                        {(permissions.shopClosedDates || []).map((date, idx) => (
+                                                                            <div key={idx} className="flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1 rounded-full text-xs font-medium">
+                                                                                <span>{new Date(date).toLocaleDateString('en-GB')}</span>
+                                                                                <button 
+                                                                                    onClick={async () => {
+                                                                                        const currentDates = permissions.shopClosedDates || [];
+                                                                                        const newDates = currentDates.filter(d => d !== date);
+                                                                                        setPermissions(prev => ({ ...prev, shopClosedDates: newDates }));
+                                                                                        try {
+                                                                                            await adminApi.updateSeller(viewingSeller.id, { shopClosedDates: newDates });
+                                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopClosedDates: newDates } : seller));
+                                                                                            toast.success("Holiday removed");
+                                                                                        } catch (err) {
+                                                                                            setPermissions(prev => ({ ...prev, shopClosedDates: currentDates }));
+                                                                                            toast.error("Failed to remove holiday");
+                                                                                        }
+                                                                                    }}
+                                                                                    className="ml-1 hover:text-rose-900 focus:outline-none"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
                                                         <div className="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
                                                             <PermissionToggle
                                                                 label="Enable Demo Trial"
@@ -1951,7 +2021,7 @@ const PendingSellers = () => {
                                                             <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
                                                                 <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Retail Categories</h6>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                    {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
+                                                                    {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('retail'))).map(cat => {
                                                                         const isChecked = (permissions.allowedRetailCategories || []).includes(cat._id);
                                                                         return (
                                                                             <label key={cat._id} className={cn(
@@ -1989,7 +2059,7 @@ const PendingSellers = () => {
                                                             <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
                                                                 <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Wholesale Categories</h6>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                    {allCategories.filter(cat => cat.type === 'category' || cat.type === 'header').map(cat => {
+                                                                    {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('wholesale'))).map(cat => {
                                                                         const isChecked = (permissions.allowedWholesaleCategories || []).includes(cat._id);
                                                                         return (
                                                                             <label key={cat._id} className={cn(

@@ -136,7 +136,7 @@ const SellerProfile = () => {
       toast.error("Please select at least one file to upload");
       return;
     }
-    
+
     setIsUploadingDocs(true);
     try {
       const formData = new FormData();
@@ -145,7 +145,7 @@ const SellerProfile = () => {
           formData.append(key, file);
         }
       });
-      
+
       const res = await sellerApi.reuploadDocuments(formData);
       toast.success(res.data?.message || "Documents reuploaded successfully!");
       setResubmitDocs({});
@@ -208,10 +208,10 @@ const SellerProfile = () => {
       radius: location.radius,
       address: location.address,
       // Also update city, state, locality, pincode from geocoded result
-      ...(location.city    && { city:     location.city }),
-      ...(location.state   && { state:    location.state }),
-      ...(location.locality  && { locality: location.locality }),
-      ...(location.pincode && { pincode:  location.pincode }),
+      ...(location.city && { city: location.city }),
+      ...(location.state && { state: location.state }),
+      ...(location.locality && { locality: location.locality }),
+      ...(location.pincode && { pincode: location.pincode }),
     }));
   };
 
@@ -251,7 +251,7 @@ const SellerProfile = () => {
   const handleCoverageToggle = (coverageType) => {
     setFormData((prev) => {
       let updatedCoverage = getCleanCoverage(prev.serviceCoverage);
-      
+
       if (coverageType === "all") {
         if (updatedCoverage.includes("all")) {
           updatedCoverage = [];
@@ -265,7 +265,7 @@ const SellerProfile = () => {
           updatedCoverage = [...updatedCoverage.filter(t => t !== "all"), coverageType];
         }
       }
-      
+
       return {
         ...prev,
         serviceCoverage: updatedCoverage,
@@ -372,18 +372,18 @@ const SellerProfile = () => {
         shopTimingsEnabled: String(formData.shopTimingsEnabled),
         paymentQrCode: formData.paymentQrCode,
       }).forEach(([key, value]) => {
-          if (value !== null && value !== undefined && value !== "") {
-              if (key === "serviceCoverage" || key === "customZones") {
-                  payload.append(key, JSON.stringify(value));
-              } else {
-                  payload.append(key, value);
-              }
+        if (value !== null && value !== undefined && value !== "") {
+          if (key === "serviceCoverage" || key === "customZones") {
+            payload.append(key, JSON.stringify(value));
+          } else {
+            payload.append(key, value);
           }
+        }
       });
-      
+
       payload.append("keptBanners", JSON.stringify(keptBanners));
       uploadedBanners.forEach(file => {
-          payload.append("banners", file);
+        payload.append("banners", file);
       });
 
       await sellerApi.updateProfile(payload);
@@ -771,142 +771,148 @@ const SellerProfile = () => {
               </h3>
 
             </div>
-            
+
             <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-800">Seller Shop Off & On</h4>
-                        <p className="text-xs text-slate-500 mt-1">If OFF, shop will not be visible on Customer App</p>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+              <div className="hidden">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Seller Shop Off & On</h4>
+                  <p className="text-xs text-slate-500 mt-1">If OFF, shop will not be visible on Customer App</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={formData.isShopActive}
+                    disabled={!isEditing}
+                    onChange={(e) => setFormData({ ...formData, isShopActive: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-fuchsia-600"></div>
+                </label>
+              </div>
+
+              <div className="hidden">
+                <div>
+                  <h4 className="text-sm font-bold text-slate-800">Seller Shop Timing</h4>
+                  <p className="text-xs text-slate-500 mt-1">Enable to enforce strict shop opening/closing hours</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={formData.shopTimingsEnabled}
+                    disabled={!isEditing}
+                    onChange={(e) => setFormData({ ...formData, shopTimingsEnabled: e.target.checked })}
+                  />
+                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-fuchsia-600"></div>
+                </label>
+              </div>
+
+              {formData.shopTimingsEnabled && (
+                <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                  <div className="mb-4">
+                    <h4 className="text-sm font-bold text-slate-800">Strict Operating Hours</h4>
+                    <p className="text-[10px] text-fuchsia-600 font-bold uppercase tracking-wider mt-1">Enabled by Admin</p>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200 mt-2">
+                    <div className="space-y-3">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                        Opening Time
+                      </label>
                       <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={formData.isShopActive}
+                        type="time"
+                        value={
+                          (() => {
+                            if (!formData.shopOpeningTime) return "";
+                            // Convert "09:00 AM" to "09:00" for input type="time"
+                            const [time, modifier] = formData.shopOpeningTime.split(' ');
+                            if (!modifier) return time;
+                            let [hours, minutes] = time.split(':');
+                            hours = parseInt(hours, 10);
+                            if (hours === 12 && modifier.toUpperCase() === 'AM') hours = 0;
+                            else if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                            return `${hours.toString().padStart(2, '0')}:${minutes}`;
+                          })()
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return setFormData({ ...formData, shopOpeningTime: "" });
+                          let [hours, minutes] = val.split(':');
+                          hours = parseInt(hours, 10);
+                          const ampm = hours >= 12 ? 'PM' : 'AM';
+                          hours = hours % 12;
+                          hours = hours ? hours : 12; // the hour '0' should be '12'
+                          setFormData({ ...formData, shopOpeningTime: `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}` });
+                        }}
                         disabled={!isEditing}
-                        onChange={(e) => setFormData({ ...formData, isShopActive: e.target.checked })}
+                        className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-fuchsia-600"></div>
-                    </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-                    <div>
-                        <h4 className="text-sm font-bold text-slate-800">Seller Shop Timing</h4>
-                        <p className="text-xs text-slate-500 mt-1">Enable to enforce strict shop opening/closing hours</p>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
+                    <div className="space-y-3">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                        Closing Time
+                      </label>
                       <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={formData.shopTimingsEnabled}
+                        type="time"
+                        value={
+                          (() => {
+                            if (!formData.shopClosingTime) return "";
+                            const [time, modifier] = formData.shopClosingTime.split(' ');
+                            if (!modifier) return time;
+                            let [hours, minutes] = time.split(':');
+                            hours = parseInt(hours, 10);
+                            if (hours === 12 && modifier.toUpperCase() === 'AM') hours = 0;
+                            else if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+                            return `${hours.toString().padStart(2, '0')}:${minutes}`;
+                          })()
+                        }
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (!val) return setFormData({ ...formData, shopClosingTime: "" });
+                          let [hours, minutes] = val.split(':');
+                          hours = parseInt(hours, 10);
+                          const ampm = hours >= 12 ? 'PM' : 'AM';
+                          hours = hours % 12;
+                          hours = hours ? hours : 12; // the hour '0' should be '12'
+                          setFormData({ ...formData, shopClosingTime: `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}` });
+                        }}
                         disabled={!isEditing}
-                        onChange={(e) => setFormData({ ...formData, shopTimingsEnabled: e.target.checked })}
+                        className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
                       />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-fuchsia-600"></div>
-                    </label>
-                </div>
-
-                {formData.shopTimingsEnabled && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 mt-4">
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
-                                Opening Time
-                            </label>
-                            <input
-                                type="time"
-                                value={
-                                    (() => {
-                                        if (!formData.shopOpeningTime) return "";
-                                        // Convert "09:00 AM" to "09:00" for input type="time"
-                                        const [time, modifier] = formData.shopOpeningTime.split(' ');
-                                        if (!modifier) return time;
-                                        let [hours, minutes] = time.split(':');
-                                        hours = parseInt(hours, 10);
-                                        if (hours === 12 && modifier.toUpperCase() === 'AM') hours = 0;
-                                        else if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
-                                        return `${hours.toString().padStart(2, '0')}:${minutes}`;
-                                    })()
-                                }
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (!val) return setFormData({ ...formData, shopOpeningTime: "" });
-                                    let [hours, minutes] = val.split(':');
-                                    hours = parseInt(hours, 10);
-                                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                                    hours = hours % 12;
-                                    hours = hours ? hours : 12; // the hour '0' should be '12'
-                                    setFormData({ ...formData, shopOpeningTime: `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}` });
-                                }}
-                                disabled={!isEditing}
-                                className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
-                            />
-                        </div>
-                        <div className="space-y-3">
-                            <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
-                                Closing Time
-                            </label>
-                            <input
-                                type="time"
-                                value={
-                                    (() => {
-                                        if (!formData.shopClosingTime) return "";
-                                        const [time, modifier] = formData.shopClosingTime.split(' ');
-                                        if (!modifier) return time;
-                                        let [hours, minutes] = time.split(':');
-                                        hours = parseInt(hours, 10);
-                                        if (hours === 12 && modifier.toUpperCase() === 'AM') hours = 0;
-                                        else if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
-                                        return `${hours.toString().padStart(2, '0')}:${minutes}`;
-                                    })()
-                                }
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (!val) return setFormData({ ...formData, shopClosingTime: "" });
-                                    let [hours, minutes] = val.split(':');
-                                    hours = parseInt(hours, 10);
-                                    const ampm = hours >= 12 ? 'PM' : 'AM';
-                                    hours = hours % 12;
-                                    hours = hours ? hours : 12; // the hour '0' should be '12'
-                                    setFormData({ ...formData, shopClosingTime: `${hours.toString().padStart(2, '0')}:${minutes} ${ampm}` });
-                                }}
-                                disabled={!isEditing}
-                                className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
-                            />
-                        </div>
                     </div>
-                )}
-
-                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
-                    <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
-                        Advance Booking Buffer
-                        <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Minimum time before booking</span>
-                    </label>
-                    <div className="flex gap-4 w-full md:max-w-xs mt-2">
-                        <input type="number" min="0"
-                            value={formData.advanceBookingBuffer ?? 0}
-                            onChange={(e) => setFormData({ ...formData, advanceBookingBuffer: Number(e.target.value) })}
-                            disabled={!isEditing}
-                            className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
-                        />
-                        <select
-                            value={formData.advanceBookingBufferUnit || 'days'}
-                            onChange={(e) => setFormData({ ...formData, advanceBookingBufferUnit: e.target.value })}
-                            disabled={!isEditing}
-                            className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
-                        >
-                            <option value="days">Days</option>
-                            <option value="hours">Hours</option>
-                        </select>
-                        <input
-                            type="time"
-                            value={formData.advanceBookingBufferTime || "12:00"}
-                            onChange={(e) => setFormData({ ...formData, advanceBookingBufferTime: e.target.value })}
-                            disabled={!isEditing}
-                            className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
-                        />
-                    </div>
+                  </div>
                 </div>
+              )}
+
+              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
+                <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
+                  Advance Booking Buffer
+                  <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Minimum time before booking</span>
+                </label>
+                <div className="flex gap-4 w-full md:max-w-xs mt-2">
+                  <input type="number" min="0"
+                    value={formData.advanceBookingBuffer ?? 0}
+                    onChange={(e) => setFormData({ ...formData, advanceBookingBuffer: Number(e.target.value) })}
+                    disabled={!isEditing}
+                    className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                  />
+                  <select
+                    value={formData.advanceBookingBufferUnit || 'days'}
+                    onChange={(e) => setFormData({ ...formData, advanceBookingBufferUnit: e.target.value })}
+                    disabled={!isEditing}
+                    className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                  >
+                    <option value="days">Days</option>
+                    <option value="hours">Hours</option>
+                  </select>
+                  <input
+                    type="time"
+                    value={formData.advanceBookingBufferTime || "12:00"}
+                    onChange={(e) => setFormData({ ...formData, advanceBookingBufferTime: e.target.value })}
+                    disabled={!isEditing}
+                    className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                  />
+                </div>
+              </div>
             </div>
           </Card>
 
@@ -932,7 +938,7 @@ const SellerProfile = () => {
                 <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                   Service Coverage Type
                 </label>
-                
+
                 {isEditing ? (
                   <>
                     <div className="grid grid-cols-2 gap-3 mb-4">
@@ -942,25 +948,23 @@ const SellerProfile = () => {
                         { id: "zone_wise", label: "Zone-wise" },
                         { id: "all", label: "All Coverage Options" },
                       ].map((option) => {
-                          const isSelected = getCleanCoverage(formData.serviceCoverage).includes(option.id);
+                        const isSelected = getCleanCoverage(formData.serviceCoverage).includes(option.id);
 
                         return (
                           <button
                             key={option.id}
                             type="button"
                             onClick={() => handleCoverageToggle(option.id)}
-                            className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${
-                              isSelected
-                                ? "border-brand-500 bg-brand-50/50 text-brand-900 shadow-sm"
-                                : "border-slate-100 bg-slate-50 hover:border-slate-200 text-slate-600"
-                            }`}
+                            className={`flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left ${isSelected
+                              ? "border-brand-500 bg-brand-50/50 text-brand-900 shadow-sm"
+                              : "border-slate-100 bg-slate-50 hover:border-slate-200 text-slate-600"
+                              }`}
                           >
                             <div
-                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${
-                                isSelected
-                                  ? "bg-brand-600 border-brand-600 text-white"
-                                  : "border-slate-300 bg-white"
-                              }`}
+                              className={`w-4 h-4 rounded-md border flex items-center justify-center transition-colors ${isSelected
+                                ? "bg-brand-600 border-brand-600 text-white"
+                                : "border-slate-300 bg-white"
+                                }`}
                             >
                               {isSelected && (
                                 <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="4">
@@ -1208,7 +1212,7 @@ const SellerProfile = () => {
               <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">
                 Upload up to 5 banners to display on your storefront
               </p>
-              
+
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                 {/* Kept Banners */}
                 {keptBanners.map((url, idx) => (
@@ -1422,11 +1426,11 @@ const SellerProfile = () => {
               </div>
               <div className="grid grid-cols-1 gap-2">
                 {[
-                  { key: 'showStandardDateTime',     label: 'Standard Date & Time',          desc: 'Single date and time selection',              icon: '🗓️' },
-                  { key: 'showStandardDateTimeSlot', label: 'Standard Date & Time Slot',     desc: 'Single date with time slot selection',        icon: '⏰' },
-                  { key: 'showAdvancedDateTime',     label: 'Advanced Date Range & Time',    desc: 'Date range and time selection',               icon: '📆' },
-                  { key: 'showAdvancedDateTimeSlot', label: 'Advanced Date Range & Time Slot', desc: 'Date range with multiple time slots',       icon: '🕐' },
-                  { key: 'showMultipleDateTime',     label: 'Multiple Date & Time & Remarks', desc: 'Multiple date, time and remarks',            icon: '📝' },
+                  { key: 'showStandardDateTime', label: 'Standard Date & Time', desc: 'Single date and time selection', icon: '🗓️' },
+                  { key: 'showStandardDateTimeSlot', label: 'Standard Date & Time Slot', desc: 'Single date with time slot selection', icon: '⏰' },
+                  { key: 'showAdvancedDateTime', label: 'Advanced Date Range & Time', desc: 'Date range and time selection', icon: '📆' },
+                  { key: 'showAdvancedDateTimeSlot', label: 'Advanced Date Range & Time Slot', desc: 'Date range with multiple time slots', icon: '🕐' },
+                  { key: 'showMultipleDateTime', label: 'Multiple Date & Time & Remarks', desc: 'Multiple date, time and remarks', icon: '📝' },
                 ].filter(item => !!profile[item.key]).map(item => (
                   <div key={item.key} className="flex items-center gap-3 p-3 bg-violet-50 rounded-xl border border-violet-100">
                     <span className="text-lg">{item.icon}</span>
@@ -1442,7 +1446,7 @@ const SellerProfile = () => {
           )}
 
           {/* Privacy Policy Link Card */}
-          <Card 
+          <Card
             onClick={() => navigate('/seller/privacy-policy')}
             className="p-6 border-none shadow-[0_20px_50px_rgba(0,0,0,0.05)] rounded-[28px] bg-white border border-gray-100 hover:border-brand-300 hover:shadow-lg transition-all cursor-pointer group flex items-center justify-between"
           >
@@ -1556,7 +1560,7 @@ const SellerProfile = () => {
                     {docsRequiringReupload.map((doc) => (
                       <div key={doc.key} className="bg-white p-4 rounded-xl border border-rose-100/50 shadow-sm">
                         <p className="text-sm font-bold text-slate-800 mb-3">{doc.label}</p>
-                        
+
                         <div className="flex flex-col sm:flex-row gap-3">
                           {/* Camera Option */}
                           <div className="flex-1 relative">
@@ -1596,7 +1600,7 @@ const SellerProfile = () => {
                       </div>
                     ))}
                   </div>
-                  
+
                   <div className="mt-5 flex justify-end">
                     <button
                       type="button"
@@ -1622,23 +1626,22 @@ const SellerProfile = () => {
                     {Object.entries(profile.documents).map(([key, url]) => {
                       const status = profile.documentStatuses?.[key] || 'pending';
                       const statusConfig = {
-                        approved:  { label: 'Approved',   bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', icon: '✓' },
-                        reuploaded:{ label: 'Reuploaded', bg: 'bg-blue-50',    border: 'border-blue-100',    text: 'text-blue-700',    badge: 'bg-blue-100 text-blue-700',    icon: '↑' },
-                        pending:   { label: 'Pending',    bg: 'bg-slate-50',   border: 'border-slate-100',   text: 'text-slate-600',   badge: 'bg-slate-100 text-slate-600',   icon: '…' },
-                        rejected:  { label: 'Rejected',   bg: 'bg-red-50',     border: 'border-red-100',     text: 'text-red-700',     badge: 'bg-red-100 text-red-700',       icon: '✗' },
+                        approved: { label: 'Approved', bg: 'bg-emerald-50', border: 'border-emerald-100', text: 'text-emerald-700', badge: 'bg-emerald-100 text-emerald-700', icon: '✓' },
+                        reuploaded: { label: 'Reuploaded', bg: 'bg-blue-50', border: 'border-blue-100', text: 'text-blue-700', badge: 'bg-blue-100 text-blue-700', icon: '↑' },
+                        pending: { label: 'Pending', bg: 'bg-slate-50', border: 'border-slate-100', text: 'text-slate-600', badge: 'bg-slate-100 text-slate-600', icon: '…' },
+                        rejected: { label: 'Rejected', bg: 'bg-red-50', border: 'border-red-100', text: 'text-red-700', badge: 'bg-red-100 text-red-700', icon: '✗' },
                         pending_reupload: { label: 'Action Required', bg: 'bg-rose-50', border: 'border-rose-100', text: 'text-rose-700', badge: 'bg-rose-100 text-rose-700', icon: '⚠' },
                       };
                       const cfg = statusConfig[status] || statusConfig.pending;
                       const formattedLabel = key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-                      
+
                       return (
                         <div key={key} className={`flex items-center justify-between px-3 py-2.5 rounded-xl border ${cfg.bg} ${cfg.border}`}>
                           <div className="flex flex-col">
                             <span className={`text-xs font-bold ${cfg.text}`}>{formattedLabel}</span>
                             {profile.documentExpiries?.[key] && (
-                              <span className={`text-[9px] font-semibold mt-0.5 ${
-                                new Date(profile.documentExpiries[key]) < new Date() ? 'text-rose-500' : 'text-slate-400'
-                              }`}>
+                              <span className={`text-[9px] font-semibold mt-0.5 ${new Date(profile.documentExpiries[key]) < new Date() ? 'text-rose-500' : 'text-slate-400'
+                                }`}>
                                 Expires: {new Date(profile.documentExpiries[key]).toLocaleDateString('en-IN')}
                               </span>
                             )}
@@ -1647,13 +1650,13 @@ const SellerProfile = () => {
                             {(status === 'pending_reupload' || status === 'rejected') && (
                               <label className="cursor-pointer text-[10px] font-bold text-blue-600 underline" onClick={(e) => { e.preventDefault(); setActiveDocAction(key); }}>
                                 Reupload
-                                <input 
-                                  type="file" 
-                                  className="hidden" 
+                                <input
+                                  type="file"
+                                  className="hidden"
                                   accept="image/*,.pdf"
                                   ref={(el) => fileInputRefs.current[key] = el}
                                   onChange={async (e) => {
-                                    if(e.target.files && e.target.files[0]) {
+                                    if (e.target.files && e.target.files[0]) {
                                       await uploadReuploadDocument(e.target.files[0], key);
                                     }
                                   }}

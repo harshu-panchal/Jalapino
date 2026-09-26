@@ -78,12 +78,36 @@ const SellerModuleInfoCard = () => {
 
   // Primary Category
   if (primaryCategory) {
+    let moduleLabel = 'Other';
+    let badgeStyle = 'bg-gray-50 text-gray-700 border-gray-200';
+
+    if (retailCatNames.some(c => c.toLowerCase() === primaryCategory.toLowerCase())) {
+        moduleLabel = 'Retail';
+        badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+    } else if (eventCatNames.some(c => c.toLowerCase() === primaryCategory.toLowerCase())) {
+        moduleLabel = 'Plan My Event';
+        badgeStyle = 'bg-purple-50 text-purple-700 border-purple-200';
+    } else if (wholesaleCatNames.some(c => c.toLowerCase() === primaryCategory.toLowerCase())) {
+        moduleLabel = 'Wholesale';
+        badgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
+    } else {
+        // Fallback: Check which modules are active
+        if (seller.retailEnabled && !seller.planMyEventEnabled && !seller.wholesaleEnabled) {
+            moduleLabel = 'Retail';
+            badgeStyle = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        } else if (seller.planMyEventEnabled || seller.isEventSeller) {
+            moduleLabel = 'Plan My Event';
+            badgeStyle = 'bg-purple-50 text-purple-700 border-purple-200';
+        } else if (seller.wholesaleEnabled) {
+            moduleLabel = 'Wholesale';
+            badgeStyle = 'bg-blue-50 text-blue-700 border-blue-200';
+        }
+    }
+
     categorizedBadges.push({
-      module: isEventSeller ? 'Plan My Event' : 'Retail',
+      module: moduleLabel,
       name: primaryCategory,
-      badgeStyle: isEventSeller
-        ? 'bg-purple-50 text-purple-700 border-purple-200'
-        : 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      badgeStyle
     });
   }
 
@@ -135,7 +159,7 @@ const SellerModuleInfoCard = () => {
     {
       key: 'retail',
       label: 'Retail Store',
-      enabled: seller.retailEnabled !== false,
+      enabled: Boolean(seller.retailEnabled),
       icon: HiOutlineBuildingStorefront,
       activeBg: 'bg-emerald-100 text-emerald-800 border-emerald-200',
     },
@@ -275,6 +299,26 @@ const SellerModuleInfoCard = () => {
           })}
         </div>
       </div>
+
+      {/* Seller Specific Configured Features */}
+      {isEventSeller && (seller.primaryContactEnabled || seller.coupleContactEnabled || seller.corporateContactEnabled || seller.standardDateEnabled || seller.advancedDateEnabled) && (
+        <div className="space-y-1.5 mt-4 pt-4 border-t border-slate-100">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500 block">
+            Custom Event Settings & Form Fields
+          </span>
+          <div className="flex flex-wrap gap-2 pt-0.5">
+            {seller.primaryContactEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200">👤 Primary Contact</span>}
+            {seller.coupleContactEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-pink-50 text-pink-700 border border-pink-200">💑 Couple Contact</span>}
+            {seller.corporateContactEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-50 text-purple-700 border border-purple-200">🏢 Corporate Contact</span>}
+            {seller.noOfGuestsEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200">👥 No of Guests</span>}
+            {seller.standardDateEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-200">📅 Standard Date</span>}
+            {seller.advancedDateEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200">📅 Advanced Date</span>}
+            {seller.functionLocationEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">📍 Function Location</span>}
+            {seller.sellerLocationEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-cyan-50 text-cyan-700 border border-cyan-200">🏪 Seller Location</span>}
+            {seller.eventDetailsEnabled && <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">📝 Event Details Form</span>}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

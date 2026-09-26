@@ -23,6 +23,7 @@ import {
   HiOutlineSquaresPlus,
   HiOutlineFilm,
   HiOutlineTruck,
+  HiOutlineTicket,
 } from "react-icons/hi2";
 import Modal from "@shared/components/ui/Modal";
 import { cn } from "@/lib/utils";
@@ -247,7 +248,15 @@ const ProductManagement = () => {
     shelfLife: "",
     countryOfOrigin: "",
     fssaiLicense: "",
+    hasBrandName: false,
+    hasIngredients: false,
+    hasShelfLife: false,
+    hasFssaiLicense: false,
+    hasFssaiLicense: false,
     hasExtraDetails: false,
+    isDelivery: false,
+    isService: false,
+    isRental: false,
     paymentMode: "full",
     remainingPaymentTiming: "",
     decorationUploadTime: "",
@@ -256,6 +265,7 @@ const ProductManagement = () => {
     advanceOrderSetting: "",
     cancellationPolicy: "",
     ticketingSystem: "",
+    tickets: [],
     hsnId: "",
     colors: [],
     ingredients: "",
@@ -499,7 +509,12 @@ const ProductManagement = () => {
       data.append("shelfLife", formData.shelfLife || "");
       data.append("countryOfOrigin", formData.countryOfOrigin || "");
       data.append("fssaiLicense", formData.fssaiLicense || "");
+      data.append("hasBrandName", formData.hasBrandName);
+      data.append("hasIngredients", formData.hasIngredients);
+      data.append("hasShelfLife", formData.hasShelfLife);
+      data.append("hasFssaiLicense", formData.hasFssaiLicense);
       data.append("variants", JSON.stringify(formData.variants));
+      data.append("tickets", JSON.stringify(formData.tickets || []));
 
       if (formData.mainImageFile) {
         data.append("mainImage", formData.mainImageFile);
@@ -510,6 +525,18 @@ const ProductManagement = () => {
 
       data.append("deliveryCoverage", JSON.stringify(formData.deliveryCoverage));
       data.append("colors", JSON.stringify(formData.colors));
+
+      data.append("isDelivery", formData.isDelivery);
+      data.append("isService", formData.isService);
+      data.append("isRental", formData.isRental);
+      data.append("paymentMode", formData.paymentMode || "full");
+      data.append("remainingPaymentTiming", formData.remainingPaymentTiming || "");
+      data.append("decorationUploadTime", formData.decorationUploadTime || "");
+      data.append("minOrderQty", formData.minOrderQty || 1);
+      data.append("maxOrderQty", formData.maxOrderQty || "");
+      data.append("advanceOrderSetting", formData.advanceOrderSetting || "");
+      data.append("cancellationPolicy", formData.cancellationPolicy || "");
+      data.append("ticketingSystem", formData.ticketingSystem || "");
 
       if (editingItem) {
         const response = await sellerApi.updateProduct(editingItem._id || editingItem.id, data);
@@ -636,7 +663,14 @@ const ProductManagement = () => {
         shelfLife: item.shelfLife || "",
         countryOfOrigin: item.countryOfOrigin || "",
         fssaiLicense: item.fssaiLicense || "",
+        hasBrandName: item.hasBrandName || false,
+        hasIngredients: item.hasIngredients || false,
+        hasShelfLife: item.hasShelfLife || false,
+        hasFssaiLicense: item.hasFssaiLicense || false,
         hasExtraDetails: item.hasExtraDetails || false,
+        isDelivery: item.isDelivery || false,
+        isService: item.isService || false,
+        isRental: item.isRental || false,
         paymentMode: item.paymentMode || "full",
         remainingPaymentTiming: item.remainingPaymentTiming || "",
         decorationUploadTime: item.decorationUploadTime || "",
@@ -645,6 +679,7 @@ const ProductManagement = () => {
         advanceOrderSetting: item.advanceOrderSetting || "",
         cancellationPolicy: item.cancellationPolicy || "",
         ticketingSystem: item.ticketingSystem || "",
+        tickets: item.tickets || [],
         colors: item.colors || [],
         deliveryCoverage: item.deliveryCoverage || user?.serviceCoverage || ["hyperlocal"],
         variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
@@ -1163,6 +1198,7 @@ const ProductManagement = () => {
                       icon: HiOutlineFolderOpen,
                     },
                     { id: "media", label: "Photos", icon: HiOutlinePhoto },
+                    ...(user?.ticketSystemEnabled ? [{ id: "tickets", label: "Tickets", icon: HiOutlineTicket }] : []),
                   ].map((tab) => (
                     <button
                       key={tab.id}
@@ -1279,6 +1315,141 @@ const ProductManagement = () => {
                         />
                       </div>
 
+                      {/* Listing Type Toggles */}
+                      <div className="space-y-4 p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-700">Listing Type</h4>
+                          <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select all applicable types for this item.</p>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                              Delivery
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={formData.isDelivery} onChange={(e) => setFormData({...formData, isDelivery: e.target.checked})} />
+                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                          </div>
+                          <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                              Service
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={formData.isService} onChange={(e) => setFormData({...formData, isService: e.target.checked})} />
+                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                          </div>
+                          <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                              Rental
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={formData.isRental} onChange={(e) => setFormData({...formData, isRental: e.target.checked})} />
+                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Conditional Delivery Availability Blocks */}
+                      {(formData.isDelivery || formData.isService || formData.isRental) && (
+                        <div className="space-y-4 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                          {formData.isDelivery && (
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Courier/Delivery Type (Delivery)
+                              </p>
+                              <div className="flex flex-wrap gap-4">
+                                {[
+                                  { id: "self_delivery", label: "Self Delivery" },
+                                  { id: "hyperlocal", label: "Hyperlocal service delivery" },
+                                  { id: "pan_india", label: "Pan India (Courier Delivery)" },
+                                  { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
+                                  { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
+                                ].map((option) => {
+                                  const alwaysAllowed = ["none", "self_delivery", "jalapino_rider"];
+                                  const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
+                                  if (!isAllowedBySeller) return null;
+                                  const isSelected = formData.deliveryCoverage.includes(option.id);
+                                  return (
+                                    <label key={`delivery_${option.id}`} className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                                      <input
+                                        type="checkbox"
+                                        checked={isSelected}
+                                        onChange={() => {
+                                          setFormData((prev) => {
+                                            const current = prev.deliveryCoverage;
+                                            const next = current.includes(option.id) ? current.filter((c) => c !== option.id) : [...current, option.id];
+                                            return { ...prev, deliveryCoverage: next };
+                                          });
+                                        }}
+                                        className="w-4 h-4 accent-brand-500 cursor-pointer"
+                                      />
+                                      <span className="text-sm font-semibold text-slate-700">{option.label}</span>
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {formData.isService && (
+                            <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Service Delivery Option
+                              </p>
+                              <div className="flex flex-wrap gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.deliveryCoverage.includes("self_delivery")}
+                                    onChange={() => {
+                                      setFormData((prev) => {
+                                        const current = prev.deliveryCoverage;
+                                        const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
+                                        return { ...prev, deliveryCoverage: next };
+                                      });
+                                    }}
+                                    className="w-4 h-4 accent-brand-500 cursor-pointer"
+                                  />
+                                  <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
+                                </label>
+                              </div>
+                            </div>
+                          )}
+
+                          {formData.isRental && (
+                            <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
+                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                                Rental Delivery Option
+                              </p>
+                              <div className="flex flex-wrap gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                                  <input
+                                    type="checkbox"
+                                    checked={formData.deliveryCoverage.includes("self_delivery")}
+                                    onChange={() => {
+                                      setFormData((prev) => {
+                                        const current = prev.deliveryCoverage;
+                                        const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
+                                        return { ...prev, deliveryCoverage: next };
+                                      });
+                                    }}
+                                    className="w-4 h-4 accent-brand-500 cursor-pointer"
+                                  />
+                                  <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
+                                </label>
+                              </div>
+                            </div>
+                          )}
+
+                          {formData.deliveryCoverage.length === 0 && (
+                            <p className="text-xs text-red-500 font-semibold mt-1">Please select at least one delivery option.</p>
+                          )}
+                        </div>
+                      )}
+
                       {/* Payment Mode */}
                       <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
                         <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
@@ -1290,22 +1461,18 @@ const ProductManagement = () => {
                             { id: "advance", label: "Advance Payment" },
                             { id: "milestone", label: "Milestone Payment Structure (Advanced Payment System)" },
                           ].map((mode) => (
-                            <label key={mode.id} className="flex items-center gap-3 cursor-pointer select-none">
+                            <div 
+                              key={mode.id} 
+                              className="flex items-center gap-3 cursor-pointer select-none"
+                              onClick={() => setFormData({ ...formData, paymentMode: mode.id })}
+                            >
                               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${
-                                formData.paymentMode === mode.id ? "border-brand-500 bg-brand-50" : "border-slate-300 bg-white"
+                                formData.paymentMode === mode.id ? "border-primary bg-primary/10" : "border-slate-300 bg-white"
                               }`}>
-                                {formData.paymentMode === mode.id && <div className="w-2.5 h-2.5 bg-brand-500 rounded-full" />}
+                                {formData.paymentMode === mode.id && <div className="w-2.5 h-2.5 bg-primary rounded-full" />}
                               </div>
-                              <input
-                                type="radio"
-                                name="paymentMode"
-                                value={mode.id}
-                                checked={formData.paymentMode === mode.id}
-                                onChange={(e) => setFormData({ ...formData, paymentMode: e.target.value })}
-                                className="sr-only"
-                              />
                               <span className="text-sm font-semibold text-slate-700">{mode.label}</span>
-                            </label>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -1366,15 +1533,6 @@ const ProductManagement = () => {
                               placeholder="e.g. Order 48 hrs prior"
                             />
                           </div>
-                          <div className="space-y-1.5 flex flex-col">
-                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Ticketing system & Price updation</label>
-                            <input
-                              value={formData.ticketingSystem}
-                              onChange={(e) => setFormData({ ...formData, ticketingSystem: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                              placeholder="e.g. Enable updates"
-                            />
-                          </div>
                         </div>
                         <div className="space-y-1.5 flex flex-col mt-4">
                           <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Cancellation & Refund Process</label>
@@ -1385,58 +1543,6 @@ const ProductManagement = () => {
                             placeholder="Describe cancellation timings and refund percentages..."
                           />
                         </div>
-                      </div>
-
-                      {/* Delivery Availability */}
-                      <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
-                          Delivery Availability
-                        </label>
-                        <p className="text-xs text-slate-500 font-medium mb-2">
-                          Select where you can deliver this specific product. Options are based on your shop's settings.
-                        </p>
-                        <div className="flex flex-wrap gap-4">
-                          {[
-                            { id: "self_delivery", label: "Self Delivery" },
-                            { id: "hyperlocal", label: "Hyperlocal service delivery" },
-                            { id: "pan_india", label: "Pan India (Courier Delivery)" },
-                            { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
-                            { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
-                          ].map((option) => {
-                            const alwaysAllowed = ["hyperlocal", "none", "self_delivery", "jalapino_rider", "pan_india"];
-                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
-                            
-                            if (!isAllowedBySeller) return null;
-
-                            const isSelected = formData.deliveryCoverage.includes(option.id);
-
-                            return (
-                              <label
-                                key={option.id}
-                                className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors"
-                              >
-                                <input
-                                  type="checkbox"
-                                  checked={isSelected}
-                                  onChange={() => {
-                                    setFormData((prev) => {
-                                      const current = prev.deliveryCoverage;
-                                      const next = current.includes(option.id)
-                                        ? current.filter((c) => c !== option.id)
-                                        : [...current, option.id];
-                                      return { ...prev, deliveryCoverage: next };
-                                    });
-                                  }}
-                                  className="w-4 h-4 accent-brand-500 cursor-pointer"
-                                />
-                                <span className="text-sm font-semibold text-slate-700">{option.label}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                        {formData.deliveryCoverage.length === 0 && (
-                          <p className="text-xs text-red-500 font-semibold mt-1">Please select at least one delivery option.</p>
-                        )}
                       </div>
 
                       {/* Colors Section */}
@@ -1535,24 +1641,23 @@ const ProductManagement = () => {
                           <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
                           <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={formData.hasExtraDetails}
-                            onChange={(e) => setFormData({ ...formData, hasExtraDetails: e.target.checked })}
-                          />
-                          <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
-                        </label>
+
                       </div>
 
-                      {formData.hasExtraDetails && (
+                      {user?.allowCustomProductEntry && (
                         <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1.5 flex flex-col">
-                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                            Brand Name
-                          </label>
+                          <div className="flex justify-between items-center w-full">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                              Brand Name
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={formData.hasBrandName} onChange={(e) => setFormData({...formData, hasBrandName: e.target.checked})} />
+                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                          </div>
+                          {formData.hasBrandName && (
                           <input
                             value={formData.brand}
                             disabled={!user?.allowCustomProductEntry}
@@ -1569,6 +1674,7 @@ const ProductManagement = () => {
                             }`}
                             placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
                           />
+                          )}
                         </div>
                         <div className="space-y-1.5 flex flex-col">
                           <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
@@ -1586,9 +1692,16 @@ const ProductManagement = () => {
                       </div>
 
                       <div className="space-y-1.5 flex flex-col">
-                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                          Ingredients
-                        </label>
+                        <div className="flex justify-between items-center w-full">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                            Ingredients
+                          </label>
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" className="sr-only peer" checked={formData.hasIngredients} onChange={(e) => setFormData({...formData, hasIngredients: e.target.checked})} />
+                            <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                          </label>
+                        </div>
+                        {formData.hasIngredients && (
                         <textarea
                           value={formData.ingredients}
                           disabled={!user?.allowCustomProductEntry}
@@ -1607,13 +1720,21 @@ const ProductManagement = () => {
                           }`}
                           placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
                         />
+                        )}
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <div className="space-y-1.5 flex flex-col">
-                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                            Shelf Life
-                          </label>
+                          <div className="flex justify-between items-center w-full">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                              Shelf Life
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={formData.hasShelfLife} onChange={(e) => setFormData({...formData, hasShelfLife: e.target.checked})} />
+                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                          </div>
+                          {formData.hasShelfLife && (
                           <input
                             value={formData.shelfLife}
                             onChange={(e) =>
@@ -1625,6 +1746,7 @@ const ProductManagement = () => {
                             className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
                             placeholder="e.g. 3 Days"
                           />
+                          )}
                         </div>
                         <div className="space-y-1.5 flex flex-col">
                           <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
@@ -1643,9 +1765,16 @@ const ProductManagement = () => {
                           />
                         </div>
                         <div className="space-y-1.5 flex flex-col">
-                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                            FSSAI License
-                          </label>
+                          <div className="flex justify-between items-center w-full">
+                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                              FSSAI License
+                            </label>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                              <input type="checkbox" className="sr-only peer" checked={formData.hasFssaiLicense} onChange={(e) => setFormData({...formData, hasFssaiLicense: e.target.checked})} />
+                              <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                            </label>
+                          </div>
+                          {formData.hasFssaiLicense && (
                           <input
                             value={formData.fssaiLicense}
                             onChange={(e) =>
@@ -1657,12 +1786,131 @@ const ProductManagement = () => {
                             className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-xl text-sm font-semibold outline-none ring-primary/5 focus:ring-2"
                             placeholder="e.g. 1001234567890"
                           />
+                          )}
                         </div>
                       </div>
                     </div>
                     )}
                     </div>
                   )}
+                  {user?.ticketSystemEnabled && modalTab === "tickets" && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+                      <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+                        <div>
+                          <h3 className="text-base font-bold text-slate-800">Tickets</h3>
+                          <p className="text-xs font-semibold text-slate-500">
+                            Add different ticket types and capacities.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFormData({
+                              ...formData,
+                              tickets: [
+                                ...(formData.tickets || []),
+                                {
+                                  id: Date.now(),
+                                  name: "",
+                                  price: "",
+                                  salePrice: "",
+                                  capacity: "",
+                                },
+                              ],
+                            })
+                          }
+                          className="flex items-center space-x-2 px-3 py-1.5 bg-brand-50 text-brand-600 rounded-md text-xs font-bold hover:bg-brand-100 transition-colors">
+                          <HiOutlinePlus className="h-4 w-4" />
+                          <span>Add Ticket</span>
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {(formData.tickets || []).map((ticket, index) => (
+                          <div
+                            key={ticket.id || index}
+                            className="grid grid-cols-10 items-end gap-3 p-4 bg-slate-50 rounded-xl border border-slate-100 relative group">
+                            <div className="col-span-10 md:col-span-3 space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+                                Ticket Name
+                              </label>
+                              <input
+                                value={ticket.name}
+                                onChange={(e) => {
+                                  const newTickets = [...formData.tickets];
+                                  newTickets[index].name = e.target.value;
+                                  setFormData({ ...formData, tickets: newTickets });
+                                }}
+                                placeholder="e.g. VIP, General..."
+                                className="w-full px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10"
+                              />
+                            </div>
+                            <div className="col-span-5 md:col-span-2 space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+                                Price
+                              </label>
+                              <input
+                                type="number"
+                                value={ticket.price}
+                                onChange={(e) => {
+                                  const newTickets = [...formData.tickets];
+                                  newTickets[index].price = e.target.value;
+                                  setFormData({ ...formData, tickets: newTickets });
+                                }}
+                                placeholder="500"
+                                className="w-full px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10"
+                              />
+                            </div>
+                            <div className="col-span-5 md:col-span-2 space-y-1">
+                              <label className="text-[10px] font-bold text-brand-500 uppercase tracking-widest ml-1">
+                                Sale Price
+                              </label>
+                              <input
+                                type="number"
+                                value={ticket.salePrice}
+                                onChange={(e) => {
+                                  const newTickets = [...formData.tickets];
+                                  newTickets[index].salePrice = e.target.value;
+                                  setFormData({ ...formData, tickets: newTickets });
+                                }}
+                                placeholder="450"
+                                className="w-full px-3 py-2 bg-brand-50 ring-1 ring-brand-100 border-none rounded-xl text-xs font-bold text-brand-700 outline-none focus:ring-2 focus:ring-brand-200"
+                              />
+                            </div>
+                            <div className="col-span-9 md:col-span-2 space-y-1">
+                              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+                                Capacity
+                              </label>
+                              <input
+                                type="number"
+                                value={ticket.capacity}
+                                onChange={(e) => {
+                                  const newTickets = [...formData.tickets];
+                                  newTickets[index].capacity = e.target.value;
+                                  setFormData({ ...formData, tickets: newTickets });
+                                }}
+                                placeholder="100"
+                                className="w-full px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10"
+                              />
+                            </div>
+                            <div className="col-span-1 flex justify-end pb-1">
+                              <button
+                                onClick={() => {
+                                  setFormData((prev) => {
+                                    const remaining = prev.tickets.filter((_, idx) => idx !== index);
+                                    return { ...prev, tickets: remaining };
+                                  });
+                                }}
+                                className="p-2 text-slate-300 hover:text-rose-500 transition-colors">
+                                <HiOutlineTrash className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Additional tabs populated as needed */}
                   {modalTab === "category" && (
                     <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">

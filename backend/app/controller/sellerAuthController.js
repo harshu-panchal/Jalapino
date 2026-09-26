@@ -520,7 +520,7 @@ export const resetPassword = async (req, res) => {
 
 export const reuploadSellerDocuments = async (req, res) => {
     try {
-        const seller = await Seller.findById(req.userId);
+        const seller = await Seller.findById(req.user.id);
         if (!seller) {
             return handleResponse(res, 404, "Seller not found");
         }
@@ -561,6 +561,7 @@ export const reuploadSellerDocuments = async (req, res) => {
                         seller.documents = {};
                     }
                     seller.documents[docKey] = url;
+                    seller.markModified('documents');
                     if (Array.isArray(seller.documentFiles)) {
                         const docIndex = seller.documentFiles.findIndex(d => d.key === docKey);
                         if (docIndex !== -1) {
@@ -581,6 +582,8 @@ export const reuploadSellerDocuments = async (req, res) => {
 
                     // Reset the document status so it's pending admin review again
                     seller.documentStatuses.delete(docKey);
+                    seller.markModified('documentStatuses');
+                    seller.markModified('documentFiles');
                     updatedCount++;
                 }
             } catch (err) {
