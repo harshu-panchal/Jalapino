@@ -205,6 +205,33 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    planMyEventEnabled: { type: Boolean, default: false },
+    retailEnabled: { type: Boolean, default: false },
+    wholesaleEnabled: { type: Boolean, default: false },
+    productsEnabled: { type: Boolean, default: true },
+    ordersEnabled: { type: Boolean, default: true },
+    stockEnabled: { type: Boolean, default: true },
+    walletEnabled: { type: Boolean, default: true },
+    analyticsEnabled: { type: Boolean, default: true },
+    allowedEventCategories: [{ type: String }],
+    allowedRetailCategories: [{ type: String }],
+    allowedWholesaleCategories: [{ type: String }],
+    // Contact Options
+    primaryContactEnabled: { type: Boolean, default: false },
+    coupleContactEnabled: { type: Boolean, default: false },
+    corporateContactEnabled: { type: Boolean, default: false },
+    noOfGuestsEnabled: { type: Boolean, default: false },
+    // Date & Time Slot Settings
+    standardDateEnabled: { type: Boolean, default: false },
+    standardDateTimeSlotEnabled: { type: Boolean, default: false },
+    advancedDateEnabled: { type: Boolean, default: false },
+    advancedDateTimeSlotEnabled: { type: Boolean, default: false },
+    multipleDateRemarksEnabled: { type: Boolean, default: false },
+    // Location Options
+    functionLocationEnabled: { type: Boolean, default: false },
+    sellerLocationEnabled: { type: Boolean, default: false },
+    // Customization
+    eventDetailsEnabled: { type: Boolean, default: false },
     hasProductAccess: {
       type: Boolean,
       default: true
@@ -591,6 +618,9 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    shopClosedDates: [{
+      type: String // YYYY-MM-DD format
+    }],
     demoTrialDays: {
       type: Number,
       default: 15

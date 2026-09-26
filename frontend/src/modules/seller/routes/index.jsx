@@ -131,7 +131,7 @@ const SellerRoutes = () => {
   }, []);
 
   const isEventSeller = user?.isEventSeller === true || user?.planMyEventEnabled === true;
-  const isRetailEnabled = user?.retailEnabled !== false;
+  const isRetailEnabled = Boolean(user?.retailEnabled);
 
   const canAccessProducts = (isRetailEnabled || user?.productsEnabled === true) && user?.productsEnabled !== false;
   const canAccessStock = canAccessProducts && user?.stockEnabled !== false;

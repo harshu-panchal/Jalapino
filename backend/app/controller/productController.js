@@ -786,6 +786,15 @@ export const createProduct = async (req, res) => {
       }
     }
 
+    // Handle tickets if string
+    if (typeof productData.tickets === "string") {
+      try {
+        productData.tickets = JSON.parse(productData.tickets);
+      } catch (e) {
+        productData.tickets = [];
+      }
+    }
+
     if (Array.isArray(productData.variants)) {
       productData.variants = productData.variants.map((variant, idx) => ({
         ...variant,
@@ -966,6 +975,14 @@ export const updateProduct = async (req, res) => {
         productData.variants = JSON.parse(productData.variants);
       } catch (e) {
         // keep existing if invalid?
+      }
+    }
+
+    if (typeof productData.tickets === "string") {
+      try {
+        productData.tickets = JSON.parse(productData.tickets);
+      } catch (e) {
+        // keep existing
       }
     }
 

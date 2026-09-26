@@ -131,6 +131,14 @@ const productSchema = new mongoose.Schema(
                 sku: String,
             }
         ],
+        tickets: [
+            {
+                name: String,
+                price: Number,
+                salePrice: Number,
+                capacity: Number,
+            }
+        ],
         isFeatured: {
             type: Boolean,
             default: false,
@@ -159,6 +167,18 @@ const productSchema = new mongoose.Schema(
             enum: ["hyperlocal", "pan_india", "zone_wise", "none", "self_delivery", "jalapino_rider"],
             default: "hyperlocal",
         }],
+        isDelivery: {
+            type: Boolean,
+            default: false
+        },
+        isService: {
+            type: Boolean,
+            default: false
+        },
+        isRental: {
+            type: Boolean,
+            default: false
+        },
         countryOfOrigin: {
             type: String,
             trim: true,
@@ -209,6 +229,22 @@ const productSchema = new mongoose.Schema(
             default: "",
         },
         hasExtraDetails: {
+            type: Boolean,
+            default: false,
+        },
+        hasBrandName: {
+            type: Boolean,
+            default: false,
+        },
+        hasIngredients: {
+            type: Boolean,
+            default: false,
+        },
+        hasShelfLife: {
+            type: Boolean,
+            default: false,
+        },
+        hasFssaiLicense: {
             type: Boolean,
             default: false,
         },

@@ -872,6 +872,74 @@ const SellerDetail = () => {
                                                             </div>
                                                         </div>
 
+                                                        {/* Shop Closed Dates / Holidays */}
+                                                        <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-200">
+                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
+                                                                Shop Closed Dates / Holidays
+                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Select dates when shop is closed</span>
+                                                            </label>
+                                                            <div className="flex flex-col gap-3">
+                                                                <div className="flex gap-2">
+                                                                    <input 
+                                                                        type="date" 
+                                                                        id={`holiday-input-${seller.id}`}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                    />
+                                                                    <button 
+                                                                        onClick={async () => {
+                                                                            const input = document.getElementById(`holiday-input-${seller.id}`);
+                                                                            if (!input.value) return;
+                                                                            const dateVal = input.value;
+                                                                            const currentDates = seller.shopClosedDates || [];
+                                                                            if (currentDates.includes(dateVal)) {
+                                                                                showToast("Date already added", "error");
+                                                                                return;
+                                                                            }
+                                                                            const newDates = [...currentDates, dateVal].sort();
+                                                                            setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
+                                                                            try {
+                                                                                await adminUsersApi.updateSeller(seller.id, { shopClosedDates: newDates });
+                                                                                input.value = '';
+                                                                                showToast("Holiday added successfully", "success");
+                                                                            } catch (err) {
+                                                                                setSeller(prev => ({ ...prev, shopClosedDates: currentDates }));
+                                                                                showToast("Failed to add holiday", "error");
+                                                                            }
+                                                                        }}
+                                                                        className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-fuchsia-700 transition-colors"
+                                                                    >
+                                                                        Add Date
+                                                                    </button>
+                                                                </div>
+                                                                {(seller.shopClosedDates || []).length > 0 && (
+                                                                    <div className="flex flex-wrap gap-2 mt-1">
+                                                                        {(seller.shopClosedDates || []).map((date, idx) => (
+                                                                            <div key={idx} className="flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1 rounded-full text-xs font-medium">
+                                                                                <span>{new Date(date).toLocaleDateString('en-GB')}</span>
+                                                                                <button 
+                                                                                    onClick={async () => {
+                                                                                        const currentDates = seller.shopClosedDates || [];
+                                                                                        const newDates = currentDates.filter(d => d !== date);
+                                                                                        setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
+                                                                                        try {
+                                                                                            await adminUsersApi.updateSeller(seller.id, { shopClosedDates: newDates });
+                                                                                            showToast("Holiday removed", "success");
+                                                                                        } catch (err) {
+                                                                                            setSeller(prev => ({ ...prev, shopClosedDates: currentDates }));
+                                                                                            showToast("Failed to remove holiday", "error");
+                                                                                        }
+                                                                                    }}
+                                                                                    className="ml-1 hover:text-rose-900 focus:outline-none"
+                                                                                >
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                                                </button>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+
                                                         <div className="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
                                                             <PermissionToggle
                                                                 label="Enable Demo Trial"

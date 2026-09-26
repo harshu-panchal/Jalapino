@@ -622,11 +622,11 @@ const PlanMyEventPage = () => {
 
     // Category-wise date/time toggle flags — dynamically driven from admin settings
     const relevantCats = activeCategory ? [activeCategory] : categories;
-    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime);
-    const showStandardDateSlotFilter = relevantCats.some(c => c.showStandardDateTimeSlot);
-    const showAdvancedDateFilter = relevantCats.some(c => c.showAdvancedDateTime);
-    const showAdvancedDateSlotFilter = relevantCats.some(c => c.showAdvancedDateTimeSlot);
-    const showMultipleDateFilter = relevantCats.some(c => c.showMultipleDateTime);
+    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime) || filteredSellers.some(s => s.standardDateEnabled);
+    const showStandardDateSlotFilter = relevantCats.some(c => c.showStandardDateTimeSlot) || filteredSellers.some(s => s.standardDateTimeSlotEnabled);
+    const showAdvancedDateFilter = relevantCats.some(c => c.showAdvancedDateTime) || filteredSellers.some(s => s.advancedDateEnabled);
+    const showAdvancedDateSlotFilter = relevantCats.some(c => c.showAdvancedDateTimeSlot) || filteredSellers.some(s => s.advancedDateTimeSlotEnabled);
+    const showMultipleDateFilter = relevantCats.some(c => c.showMultipleDateTime) || filteredSellers.some(s => s.multipleDateRemarksEnabled);
     const showAnyDateFilter = showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter;
 
     // Priority for rendering: Multiple > AdvancedSlot > Advanced > StandardSlot > Standard
@@ -1083,7 +1083,7 @@ const PlanMyEventPage = () => {
                                             </div>
                                         </div>
                                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                                            {(eventInfo.bookingType === 'corporate' ? relevantCats.some(c => c.corporateContactEnabled) : eventInfo.bookingType === 'couple' ? relevantCats.some(c => c.coupleContactEnabled) : relevantCats.some(c => c.primaryContactEnabled)) && (
+                                            {(eventInfo.bookingType === 'corporate' ? (relevantCats.some(c => c.corporateContactEnabled) || filteredSellers.some(s => s.corporateContactEnabled)) : eventInfo.bookingType === 'couple' ? (relevantCats.some(c => c.coupleContactEnabled) || filteredSellers.some(s => s.coupleContactEnabled)) : (relevantCats.some(c => c.primaryContactEnabled) || filteredSellers.some(s => s.primaryContactEnabled))) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
                                                         {eventInfo.bookingType === 'corporate' ? '🏢 Company Name' : eventInfo.bookingType === 'couple' ? '💑 Couple Names' : '👤 Primary Contact'}
@@ -1098,7 +1098,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                             )}
 
-                                            {eventInfo.bookingType === 'corporate' && relevantCats.some(c => c.corporateContactEnabled) && (
+                                            {eventInfo.bookingType === 'corporate' && (relevantCats.some(c => c.corporateContactEnabled) || filteredSellers.some(s => s.corporateContactEnabled)) && (
                                                 <>
                                                     <div className="flex flex-col gap-1">
                                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👤 Contact Person</label>
@@ -1139,7 +1139,7 @@ const PlanMyEventPage = () => {
                                                 </>
                                             )}
 
-                                            {eventInfo.bookingType === 'individual' && relevantCats.some(c => c.primaryContactEnabled) && (
+                                            {eventInfo.bookingType === 'individual' && (relevantCats.some(c => c.primaryContactEnabled) || filteredSellers.some(s => s.primaryContactEnabled)) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">⚧ Gender</label>
                                                     <div className="flex gap-2 h-[38px] items-center">
@@ -1173,7 +1173,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                             )}
 
-                                            {(eventInfo.bookingType === 'couple' ? relevantCats.some(c => c.coupleContactEnabled) : eventInfo.bookingType === 'individual' ? relevantCats.some(c => c.primaryContactEnabled) : false) && (
+                                            {(eventInfo.bookingType === 'couple' ? (relevantCats.some(c => c.coupleContactEnabled) || filteredSellers.some(s => s.coupleContactEnabled)) : eventInfo.bookingType === 'individual' ? (relevantCats.some(c => c.primaryContactEnabled) || filteredSellers.some(s => s.primaryContactEnabled)) : false) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
                                                         {eventInfo.bookingType === 'couple' ? '💍 Anniversary Date' : '🎂 Date of Birth'}
@@ -1188,7 +1188,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                             )}
 
-                                            {relevantCats.some(c => c.showNoOfGuestsBox || c.noOfGuestsEnabled) && (
+                                            {(relevantCats.some(c => c.showNoOfGuestsBox || c.noOfGuestsEnabled) || filteredSellers.some(s => s.noOfGuestsEnabled)) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👥 No of Guests</label>
                                                     <input
@@ -1202,7 +1202,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                             )}
 
-                                            {relevantCats.some(c => c.functionLocationEnabled) && (
+                                            {(relevantCats.some(c => c.functionLocationEnabled) || filteredSellers.some(s => s.functionLocationEnabled)) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
                                                     <input
@@ -1216,7 +1216,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                             )}
 
-                                            {relevantCats.some(c => c.sellerLocationEnabled) && (
+                                            {(relevantCats.some(c => c.sellerLocationEnabled) || filteredSellers.some(s => s.sellerLocationEnabled)) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Seller Location</label>
                                                     <input
