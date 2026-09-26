@@ -33,6 +33,7 @@ const AddProduct = () => {
   console.log("Seller Profile in AddProduct:", user);
   const [modalTab, setModalTab] = useState("general");
   const [isSaving, setIsSaving] = useState(false);
+  const [showDetailedInfo, setShowDetailedInfo] = useState(false);
   const [videoPayment, setVideoPayment] = useState(null); // { file, totalAmount, extraMB, razorpayOrder }
   const [videoUploading, setVideoUploading] = useState(false);
   const [selectedModule, setSelectedModule] = useState("");
@@ -817,15 +818,25 @@ const AddProduct = () => {
               </div>
 
               {/* Extra Details Toggle */}
-              <div className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl">
+              <div 
+                className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-brand-300 transition-colors"
+                onClick={() => setShowDetailedInfo(!showDetailedInfo)}
+              >
                 <div>
                   <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
                   <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
                 </div>
-
+                <button
+                  type="button"
+                  className={`w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 transition-transform ${showDetailedInfo ? 'rotate-180' : ''}`}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                  </svg>
+                </button>
               </div>
 
-              {user?.allowCustomProductEntry && (
+              {showDetailedInfo && (
                 <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-1.5 flex flex-col">
