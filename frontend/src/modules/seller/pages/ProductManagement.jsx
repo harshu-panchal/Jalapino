@@ -1645,7 +1645,6 @@ const ProductManagement = () => {
                           <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
                           <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
                         </div>
-<<<<<<< HEAD
                         <button
                           type="button"
                           className={`w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 transition-transform ${showDetailedInfo ? 'rotate-180' : ''}`}
@@ -1657,12 +1656,6 @@ const ProductManagement = () => {
                       </div>
 
                       {showDetailedInfo && (
-=======
-
-                      </div>
-
-                      {user?.allowCustomProductEntry && (
->>>>>>> 65df4390db42b96354354790ed5c0a2fba56370d
                         <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-1.5 flex flex-col">

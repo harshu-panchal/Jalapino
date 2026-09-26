@@ -79,7 +79,14 @@ const AddProduct = () => {
     hasIngredients: false,
     hasShelfLife: false,
     hasFssaiLicense: false,
+    hasBrandName: false,
+    hasIngredients: false,
+    hasShelfLife: false,
+    hasFssaiLicense: false,
     hasExtraDetails: false,
+    isDelivery: false,
+    isService: false,
+    isRental: false,
     isDelivery: false,
     isService: false,
     isRental: false,
@@ -91,6 +98,7 @@ const AddProduct = () => {
     advanceOrderSetting: "",
     cancellationPolicy: "",
     ticketingSystem: "",
+    tickets: [],
     tickets: [],
     deliveryCoverage: user?.serviceCoverage || ["hyperlocal"],
     variants: [
@@ -292,12 +300,26 @@ const AddProduct = () => {
       }
 
       // Variants and Tickets
+      // Variants and Tickets
       data.append("variants", JSON.stringify(formData.variants));
       data.append("tickets", JSON.stringify(formData.tickets || []));
 
       // Delivery Coverage & Colors
       data.append("deliveryCoverage", JSON.stringify(formData.deliveryCoverage));
       data.append("colors", JSON.stringify(formData.colors));
+
+      // Payment & Advanced Order Settings
+      data.append("isDelivery", formData.isDelivery);
+      data.append("isService", formData.isService);
+      data.append("isRental", formData.isRental);
+      data.append("paymentMode", formData.paymentMode || "full");
+      data.append("remainingPaymentTiming", formData.remainingPaymentTiming || "");
+      data.append("decorationUploadTime", formData.decorationUploadTime || "");
+      data.append("minOrderQty", formData.minOrderQty || 1);
+      data.append("maxOrderQty", formData.maxOrderQty || "");
+      data.append("advanceOrderSetting", formData.advanceOrderSetting || "");
+      data.append("cancellationPolicy", formData.cancellationPolicy || "");
+      data.append("ticketingSystem", formData.ticketingSystem || "");
 
       // Payment & Advanced Order Settings
       data.append("isDelivery", formData.isDelivery);
@@ -459,626 +481,627 @@ const AddProduct = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 pb-12">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <Button
-          variant="ghost"
-          className="pl-0 hover:bg-transparent hover:text-primary-600"
-          onClick={() => navigate(-1)}>
-          <HiOutlineArrowLeft className="mr-2 h-5 w-5" />
-          Back to Products
-        </Button>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => navigate(-1)}>
-            Cancel
-          </Button>
+    <>
+      <div className="max-w-6xl mx-auto space-y-6 pb-12">
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <Button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="min-w-[140px]">
-            {isSaving ? (
-              <>
-                <HiOutlineArrowPath className="mr-2 h-5 w-5 animate-spin" />
-                Publishing...
-              </>
-            ) : (
-              "Save & Publish"
-            )}
+            variant="ghost"
+            className="pl-0 hover:bg-transparent hover:text-primary-600"
+            onClick={() => navigate(-1)}>
+            <HiOutlineArrowLeft className="mr-2 h-5 w-5" />
+            Back to Products
           </Button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-slate-100">
-        {/* Sidebar Tabs */}
-        <div className="md:w-64 bg-slate-50/50 border-r border-slate-100 p-4 space-y-1 overflow-y-auto">
-          {[
-            { id: "general", label: "General Info", icon: HiOutlineTag },
-            { id: "variants", label: "Item Variants", icon: HiOutlineSwatch },
-            { id: "category", label: "Groups", icon: HiOutlineFolderOpen },
-            { id: "venue", label: "Venue Settings", icon: HiOutlineCalendar },
-            { id: "media", label: "Photos", icon: HiOutlinePhoto },
-            ...(user?.ticketSystemEnabled ? [{ id: "tickets", label: "Tickets", icon: HiOutlineTicket }] : []),
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setModalTab(tab.id)}
-              className={cn(
-                "w-full flex items-center space-x-3 px-4 py-3 rounded-md text-xs font-bold transition-all text-left",
-                modalTab === tab.id
-                  ? "bg-white text-primary shadow-sm ring-1 ring-slate-100"
-                  : "text-slate-600 hover:bg-slate-100",
-              )}>
-              <tab.icon className="h-4 w-4" />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-
-          <div className="pt-8 px-4">
-            <div className="p-4 bg-brand-50 rounded-md border border-brand-100">
-              <p className="text-[9px] font-bold text-brand-600 uppercase tracking-widest mb-1">
-                Status
-              </p>
-              <select
-                value={formData.status}
-                onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
-                }
-                className="w-full bg-transparent border-none text-xs font-bold text-brand-700 outline-none p-0 cursor-pointer focus:ring-0">
-                <option value="active">PUBLISHED</option>
-                <option value="inactive">DRAFT</option>
-              </select>
-            </div>
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => navigate(-1)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="min-w-[140px]">
+              {isSaving ? (
+                <>
+                  <HiOutlineArrowPath className="mr-2 h-5 w-5 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                "Save & Publish"
+              )}
+            </Button>
           </div>
         </div>
 
-        {/* Content Area */}
-        <div className="flex-1 p-8 overflow-y-auto">
-          {modalTab === "general" && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
-              <div className="space-y-1.5 flex flex-col relative">
-                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                  Product Title
-                </label>
-                <input
-                  value={formData.name}
-                  disabled={!user?.allowCustomProductEntry}
-                  onChange={(e) => {
-                    const nextName = e.target.value;
-                    setFormData((prev) => ({
-                      ...prev,
-                      name: nextName,
-                      sku:
-                        !prev.sku || isAutoSku(prev.sku, prev.name, 1)
-                          ? makeSku(nextName, 1)
-                          : prev.sku,
-                      variants: prev.variants.map((variant, idx) => {
-                        const variantIndex = idx + 1;
-                        const shouldAuto =
-                          !variant.sku ||
-                          isAutoSku(variant.sku, prev.name, variantIndex);
-                        return shouldAuto
-                          ? { ...variant, sku: makeSku(nextName, variantIndex) }
-                          : variant;
-                      }),
-                    }));
-                  }}
-                  className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${!user?.allowCustomProductEntry
+        <div className="bg-white rounded-lg shadow-xl overflow-hidden flex flex-col md:flex-row min-h-[600px] border border-slate-100">
+          {/* Sidebar Tabs */}
+          <div className="md:w-64 bg-slate-50/50 border-r border-slate-100 p-4 space-y-1 overflow-y-auto">
+            {[
+              { id: "general", label: "General Info", icon: HiOutlineTag },
+              { id: "variants", label: "Item Variants", icon: HiOutlineSwatch },
+              { id: "category", label: "Groups", icon: HiOutlineFolderOpen },
+              { id: "venue", label: "Venue Settings", icon: HiOutlineCalendar },
+              { id: "media", label: "Photos", icon: HiOutlinePhoto },
+              ...(user?.ticketSystemEnabled ? [{ id: "tickets", label: "Tickets", icon: HiOutlineTicket }] : []),
+              ...(user?.ticketSystemEnabled ? [{ id: "tickets", label: "Tickets", icon: HiOutlineTicket }] : []),
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setModalTab(tab.id)}
+                className={cn(
+                  "w-full flex items-center space-x-3 px-4 py-3 rounded-md text-xs font-bold transition-all text-left",
+                  modalTab === tab.id
+                    ? "bg-white text-primary shadow-sm ring-1 ring-slate-100"
+                    : "text-slate-600 hover:bg-slate-100",
+                )}>
+                <tab.icon className="h-4 w-4" />
+                <span>{tab.label}</span>
+              </button>
+            ))}
+
+            <div className="pt-8 px-4">
+              <div className="p-4 bg-brand-50 rounded-md border border-brand-100">
+                <p className="text-[9px] font-bold text-brand-600 uppercase tracking-widest mb-1">
+                  Status
+                </p>
+                <select
+                  value={formData.status}
+                  onChange={(e) =>
+                    setFormData({ ...formData, status: e.target.value })
+                  }
+                  className="w-full bg-transparent border-none text-xs font-bold text-brand-700 outline-none p-0 cursor-pointer focus:ring-0">
+                  <option value="active">PUBLISHED</option>
+                  <option value="inactive">DRAFT</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Content Area */}
+          <div className="flex-1 p-8 overflow-y-auto">
+            {modalTab === "general" && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-2 duration-300">
+                <div className="space-y-1.5 flex flex-col relative">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    Product Title
+                  </label>
+                  <input
+                    value={formData.name}
+                    disabled={!user?.allowCustomProductEntry}
+                    onChange={(e) => {
+                      const nextName = e.target.value;
+                      setFormData((prev) => ({
+                        ...prev,
+                        name: nextName,
+                        sku:
+                          !prev.sku || isAutoSku(prev.sku, prev.name, 1)
+                            ? makeSku(nextName, 1)
+                            : prev.sku,
+                        variants: prev.variants.map((variant, idx) => {
+                          const variantIndex = idx + 1;
+                          const shouldAuto =
+                            !variant.sku ||
+                            isAutoSku(variant.sku, prev.name, variantIndex);
+                          return shouldAuto
+                            ? { ...variant, sku: makeSku(nextName, variantIndex) }
+                            : variant;
+                        }),
+                      }));
+                    }}
+                    className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${!user?.allowCustomProductEntry
                       ? "bg-slate-200 cursor-not-allowed text-slate-500"
                       : "bg-slate-100"
-                    }`}
-                  placeholder={!user?.allowCustomProductEntry ? "Contact Admin to allow custom entry" : "e.g. Premium Basmati Rice"}
-                />
-              </div>
-              <div className="space-y-1.5 flex flex-col">
-                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                  About this item
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) =>
-                    setFormData({ ...formData, description: e.target.value })
-                  }
-                  onWheel={(e) => e.stopPropagation()}
-                  onTouchMove={(e) => e.stopPropagation()}
-                  className="w-full px-4 py-3 bg-slate-100 border-none rounded-2xl text-sm font-semibold min-h-[160px] max-h-[260px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none overflow-y-auto custom-scrollbar"
-                  placeholder="Describe the item here..."
-                />
-              </div>
-
-              {/* Listing Type Toggles */}
-              <div className="space-y-4 p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-700">Listing Type</h4>
-                  <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select all applicable types for this item.</p>
+                      }`}
+                    placeholder={!user?.allowCustomProductEntry ? "Contact Admin to allow custom entry" : "e.g. Premium Basmati Rice"}
+                  />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                      Delivery
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.isDelivery} onChange={(e) => setFormData({ ...formData, isDelivery: e.target.checked })} />
-                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                    </label>
-                  </div>
-                  <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                      Service
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.isService} onChange={(e) => setFormData({ ...formData, isService: e.target.checked })} />
-                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                    </label>
-                  </div>
-                  <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                      Rental
-                    </label>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input type="checkbox" className="sr-only peer" checked={formData.isRental} onChange={(e) => setFormData({ ...formData, isRental: e.target.checked })} />
-                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                    </label>
-                  </div>
-                </div>
-              </div>
-
-              {/* Conditional Delivery Availability Blocks */}
-              {(formData.isDelivery || formData.isService || formData.isRental) && (
-                <div className="space-y-4 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                  {formData.isDelivery && (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Courier/Delivery Type (Delivery)
-                      </p>
-                      <div className="flex flex-wrap gap-4">
-                        {[
-                          { id: "self_delivery", label: "Self Delivery" },
-                          { id: "hyperlocal", label: "Hyperlocal service delivery" },
-                          { id: "pan_india", label: "Pan India (Courier Delivery)" },
-                          { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
-                          { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
-                        ].map((option) => {
-                          const alwaysAllowed = ["none", "self_delivery", "jalapino_rider"];
-                          const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
-                          if (!isAllowedBySeller) return null;
-                          const isSelected = formData.deliveryCoverage.includes(option.id);
-                          return (
-                            <label key={`delivery_${option.id}`} className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                              <input
-                                type="checkbox"
-                                checked={isSelected}
-                                onChange={() => {
-                                  setFormData((prev) => {
-                                    const current = prev.deliveryCoverage;
-                                    const next = current.includes(option.id) ? current.filter((c) => c !== option.id) : [...current, option.id];
-                                    return { ...prev, deliveryCoverage: next };
-                                  });
-                                }}
-                                className="w-4 h-4 accent-brand-500 cursor-pointer"
-                              />
-                              <span className="text-sm font-semibold text-slate-700">{option.label}</span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.isService && (
-                    <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Service Delivery Option
-                      </p>
-                      <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={formData.deliveryCoverage.includes("self_delivery")}
-                            onChange={() => {
-                              setFormData((prev) => {
-                                const current = prev.deliveryCoverage;
-                                const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
-                                return { ...prev, deliveryCoverage: next };
-                              });
-                            }}
-                            className="w-4 h-4 accent-brand-500 cursor-pointer"
-                          />
-                          <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.isRental && (
-                    <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
-                      <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                        Rental Delivery Option
-                      </p>
-                      <div className="flex flex-wrap gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                          <input
-                            type="checkbox"
-                            checked={formData.deliveryCoverage.includes("self_delivery")}
-                            onChange={() => {
-                              setFormData((prev) => {
-                                const current = prev.deliveryCoverage;
-                                const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
-                                return { ...prev, deliveryCoverage: next };
-                              });
-                            }}
-                            className="w-4 h-4 accent-brand-500 cursor-pointer"
-                          />
-                          <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  {formData.deliveryCoverage.length === 0 && (
-                    <p className="text-xs text-red-500 font-semibold mt-1">Please select at least one delivery option.</p>
-                  )}
-                </div>
-              )}
-
-              {/* Payment Mode */}
-              <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
-                  Payment Mode
-                </label>
-                <div className="flex flex-col gap-3 mt-1">
-                  {[
-                    { id: "full", label: "Full Payment" },
-                    { id: "advance", label: "Advance Payment" },
-                    { id: "milestone", label: "Milestone Payment Structure (Advanced Payment System)" },
-                  ].map((mode) => (
-                    <div
-                      key={mode.id}
-                      className="flex items-center gap-3 cursor-pointer select-none"
-                      onClick={() => setFormData({ ...formData, paymentMode: mode.id })}
-                    >
-                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${formData.paymentMode === mode.id ? "border-primary bg-primary/10" : "border-slate-300 bg-white"
-                        }`}>
-                        {formData.paymentMode === mode.id && <div className="w-2.5 h-2.5 bg-primary rounded-full" />}
-                      </div>
-                      <span className="text-sm font-semibold text-slate-700">{mode.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Advanced Order & Payment Settings */}
-              <div className="space-y-4 p-4 bg-white border border-slate-200 rounded-xl">
-                <div>
-                  <h4 className="text-sm font-bold text-slate-700">Advanced Order & Payment Settings</h4>
-                  <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Configure advanced options for this product.</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-1.5 flex flex-col">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Remaining Payment Timing</label>
-                    <input
-                      value={formData.remainingPaymentTiming}
-                      onChange={(e) => setFormData({ ...formData, remainingPaymentTiming: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                      placeholder="e.g. 2 days before event"
-                    />
-                  </div>
-                  <div className="space-y-1.5 flex flex-col">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Decoration Color Option Upload Time</label>
-                    <input
-                      value={formData.decorationUploadTime}
-                      onChange={(e) => setFormData({ ...formData, decorationUploadTime: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                      placeholder="e.g. Upload within 24 hrs"
-                    />
-                  </div>
-                  <div className="space-y-1.5 flex flex-col">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Minimum Order Qty</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.minOrderQty}
-                      onChange={(e) => setFormData({ ...formData, minOrderQty: parseInt(e.target.value) || 1 })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                    />
-                  </div>
-                  <div className="space-y-1.5 flex flex-col">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Maximum Order Qty (Optional)</label>
-                    <input
-                      type="number"
-                      min="1"
-                      value={formData.maxOrderQty}
-                      onChange={(e) => setFormData({ ...formData, maxOrderQty: parseInt(e.target.value) || "" })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                      placeholder="e.g. 100"
-                    />
-                  </div>
-                  <div className="space-y-1.5 flex flex-col">
-                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Advance Order Setting</label>
-                    <input
-                      value={formData.advanceOrderSetting}
-                      onChange={(e) => setFormData({ ...formData, advanceOrderSetting: e.target.value })}
-                      className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                      placeholder="e.g. Order 48 hrs prior"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-1.5 flex flex-col mt-4">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Cancellation & Refund Process</label>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                    About this item
+                  </label>
                   <textarea
-                    value={formData.cancellationPolicy}
-                    onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold min-h-[80px] outline-none transition-all focus:ring-2 focus:ring-brand-500 resize-none"
-                    placeholder="Describe cancellation timings and refund percentages..."
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
+                    className="w-full px-4 py-3 bg-slate-100 border-none rounded-2xl text-sm font-semibold min-h-[160px] max-h-[260px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none overflow-y-auto custom-scrollbar"
+                    placeholder="Describe the item here..."
                   />
                 </div>
-              </div>
 
-              {/* Extra Details Toggle */}
-              <div
-                className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-brand-300 transition-colors"
-                onClick={() => setShowDetailedInfo(!showDetailedInfo)}
-              >
-                <div>
-                  <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
-                  <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="sr-only peer"
-                    checked={formData.hasExtraDetails}
-                    onChange={(e) => setFormData({ ...formData, hasExtraDetails: e.target.checked })}
-                  />
-                  <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-500"></div>
-                </label>
-              </div>
-
-              {formData.hasExtraDetails && (
-                <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1.5 flex flex-col">
-                      <div className="flex justify-between items-center w-full">
-                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                          Brand Name
-                        </label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" checked={formData.hasBrandName} onChange={(e) => setFormData({ ...formData, hasBrandName: e.target.checked })} />
-                          <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                        </label>
-                      </div>
-                      {formData.hasBrandName && (
-                        <input
-                          value={formData.brand}
-                          disabled={!user?.allowCustomProductEntry}
-                          onChange={(e) =>
-                            setFormData({ ...formData, brand: e.target.value })
-                          }
-                          className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${!user?.allowCustomProductEntry
-                              ? "bg-slate-200 cursor-not-allowed text-slate-500"
-                              : "bg-slate-100"
-                            }`}
-                          placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
-                        />
-                      )}
-                    </div>
-                    <div className="space-y-1.5 flex flex-col">
-                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                        Product Code
-                      </label>
-                      <input
-                        value={formData.sku}
-                        onChange={(e) =>
-                          setFormData({ ...formData, sku: e.target.value })
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-mono font-bold outline-none ring-primary/5 focus:ring-2 transition-all"
-                        placeholder="AUTO-GENERATED"
-                      />
-                    </div>
+                {/* Listing Type Toggles */}
+                <div className="space-y-4 p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-700">Listing Type</h4>
+                    <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select all applicable types for this item.</p>
                   </div>
-
-                  <div className="space-y-1.5 flex flex-col">
-                    <div className="flex justify-between items-center w-full">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
                       <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                        Ingredients
+                        Delivery
                       </label>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" checked={formData.hasIngredients} onChange={(e) => setFormData({ ...formData, hasIngredients: e.target.checked })} />
+                        <input type="checkbox" className="sr-only peer" checked={formData.isDelivery} onChange={(e) => setFormData({ ...formData, isDelivery: e.target.checked })} />
                         <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
                       </label>
                     </div>
-                    {formData.hasIngredients && (
-                      <textarea
-                        value={formData.ingredients}
+                    <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Service
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={formData.isService} onChange={(e) => setFormData({ ...formData, isService: e.target.checked })} />
+                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
+                    </div>
+                    <div className="flex justify-between items-center w-full bg-white p-3 border border-slate-200 rounded-lg">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Rental
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={formData.isRental} onChange={(e) => setFormData({ ...formData, isRental: e.target.checked })} />
+                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Conditional Delivery Availability Blocks */}
+                {(formData.isDelivery || formData.isService || formData.isRental) && (
+                  <div className="space-y-4 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                    {formData.isDelivery && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                          Courier/Delivery Type (Delivery)
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                          {[
+                            { id: "self_delivery", label: "Self Delivery" },
+                            { id: "hyperlocal", label: "Hyperlocal service delivery" },
+                            { id: "pan_india", label: "Pan India (Courier Delivery)" },
+                            { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
+                            { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
+                          ].map((option) => {
+                            const alwaysAllowed = ["none", "self_delivery", "jalapino_rider"];
+                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
+                            if (!isAllowedBySeller) return null;
+                            const isSelected = formData.deliveryCoverage.includes(option.id);
+                            return (
+                              <label key={`delivery_${option.id}`} className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={() => {
+                                    setFormData((prev) => {
+                                      const current = prev.deliveryCoverage;
+                                      const next = current.includes(option.id) ? current.filter((c) => c !== option.id) : [...current, option.id];
+                                      return { ...prev, deliveryCoverage: next };
+                                    });
+                                  }}
+                                  className="w-4 h-4 accent-brand-500 cursor-pointer"
+                                />
+                                <span className="text-sm font-semibold text-slate-700">{option.label}</span>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.isService && (
+                      <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                          Service Delivery Option
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={formData.deliveryCoverage.includes("self_delivery")}
+                              onChange={() => {
+                                setFormData((prev) => {
+                                  const current = prev.deliveryCoverage;
+                                  const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
+                                  return { ...prev, deliveryCoverage: next };
+                                });
+                              }}
+                              className="w-4 h-4 accent-brand-500 cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.isRental && (
+                      <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
+                          Rental Delivery Option
+                        </p>
+                        <div className="flex flex-wrap gap-4">
+                          <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
+                            <input
+                              type="checkbox"
+                              checked={formData.deliveryCoverage.includes("self_delivery")}
+                              onChange={() => {
+                                setFormData((prev) => {
+                                  const current = prev.deliveryCoverage;
+                                  const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
+                                  return { ...prev, deliveryCoverage: next };
+                                });
+                              }}
+                              className="w-4 h-4 accent-brand-500 cursor-pointer"
+                            />
+                            <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
+                          </label>
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.deliveryCoverage.length === 0 && (
+                      <p className="text-xs text-red-500 font-semibold mt-1">Please select at least one delivery option.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* Payment Mode */}
+                <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
+                    Payment Mode
+                  </label>
+                  <div className="flex flex-col gap-3 mt-1">
+                    {[
+                      { id: "full", label: "Full Payment" },
+                      { id: "advance", label: "Advance Payment" },
+                      { id: "milestone", label: "Milestone Payment Structure (Advanced Payment System)" },
+                    ].map((mode) => (
+                      <div
+                        key={mode.id}
+                        className="flex items-center gap-3 cursor-pointer select-none"
+                        onClick={() => setFormData({ ...formData, paymentMode: mode.id })}
+                      >
+                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors ${formData.paymentMode === mode.id ? "border-primary bg-primary/10" : "border-slate-300 bg-white"
+                          }`}>
+                          {formData.paymentMode === mode.id && <div className="w-2.5 h-2.5 bg-primary rounded-full" />}
+                        </div>
+                        <span className="text-sm font-semibold text-slate-700">{mode.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              {/* Advanced Order & Payment Settings */}
+            <div className="space-y-4 p-4 bg-white border border-slate-200 rounded-xl">
+              <div>
+                <h4 className="text-sm font-bold text-slate-700">Advanced Order & Payment Settings</h4>
+                <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Configure advanced options for this product.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Remaining Payment Timing</label>
+                  <input
+                    value={formData.remainingPaymentTiming}
+                    onChange={(e) => setFormData({ ...formData, remainingPaymentTiming: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                    placeholder="e.g. 2 days before event"
+                  />
+                </div>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Decoration Color Option Upload Time</label>
+                  <input
+                    value={formData.decorationUploadTime}
+                    onChange={(e) => setFormData({ ...formData, decorationUploadTime: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                    placeholder="e.g. Upload within 24 hrs"
+                  />
+                </div>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Minimum Order Qty</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.minOrderQty}
+                    onChange={(e) => setFormData({ ...formData, minOrderQty: parseInt(e.target.value) || 1 })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                  />
+                </div>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Maximum Order Qty (Optional)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.maxOrderQty}
+                    onChange={(e) => setFormData({ ...formData, maxOrderQty: parseInt(e.target.value) || "" })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                    placeholder="e.g. 100"
+                  />
+                </div>
+                <div className="space-y-1.5 flex flex-col">
+                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Advance Order Setting</label>
+                  <input
+                    value={formData.advanceOrderSetting}
+                    onChange={(e) => setFormData({ ...formData, advanceOrderSetting: e.target.value })}
+                    className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
+                    placeholder="e.g. Order 48 hrs prior"
+                  />
+                </div>
+              </div>
+              <div className="space-y-1.5 flex flex-col mt-4">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Cancellation & Refund Process</label>
+                <textarea
+                  value={formData.cancellationPolicy}
+                  onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold min-h-[80px] outline-none transition-all focus:ring-2 focus:ring-brand-500 resize-none"
+                  placeholder="Describe cancellation timings and refund percentages..."
+                />
+              </div>
+            </div>
+
+            {/* Extra Details Toggle */}
+            <div
+              className="flex items-center justify-between p-4 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-brand-300 transition-colors"
+              onClick={() => setShowDetailedInfo(!showDetailedInfo)}
+            >
+              <div>
+                <h4 className="text-sm font-bold text-slate-700">Add Detailed Product Info</h4>
+                <p className="text-[10px] sm:text-xs text-slate-500 font-medium">Brand, FSSAI, Shelf Life, Origin (Optional)</p>
+              </div>
+              <button
+                type="button"
+                className={`w-8 h-8 flex items-center justify-center rounded-full bg-slate-50 text-slate-500 hover:bg-slate-100 transition-transform ${showDetailedInfo ? 'rotate-180' : ''}`}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+              </button>
+            </div>
+
+            {showDetailedInfo && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-top-2 duration-300">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-1.5 flex flex-col">
+                    <div className="flex justify-between items-center w-full">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Brand Name
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={formData.hasBrandName} onChange={(e) => setFormData({ ...formData, hasBrandName: e.target.checked })} />
+                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
+                    </div>
+                    {formData.hasBrandName && (
+                      <input
+                        value={formData.brand}
                         disabled={!user?.allowCustomProductEntry}
                         onChange={(e) =>
-                          setFormData({ ...formData, ingredients: e.target.value })
+                          setFormData({ ...formData, brand: e.target.value })
                         }
-                        onWheel={(e) => e.stopPropagation()}
-                        onTouchMove={(e) => e.stopPropagation()}
-                        className={`w-full px-4 py-3 border-none rounded-2xl text-sm font-semibold min-h-[100px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none ${!user?.allowCustomProductEntry
-                            ? "bg-slate-200 cursor-not-allowed text-slate-500"
-                            : "bg-slate-100"
+                        className={`w-full px-4 py-2.5 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all ${!user?.allowCustomProductEntry
+                          ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                          : "bg-slate-100"
                           }`}
-                        placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
+                        placeholder={!user?.allowCustomProductEntry ? "Locked" : "e.g. Amul"}
                       />
                     )}
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="space-y-1.5 flex flex-col">
-                      <div className="flex justify-between items-center w-full">
-                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                          Shelf Life
-                        </label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" checked={formData.hasShelfLife} onChange={(e) => setFormData({ ...formData, hasShelfLife: e.target.checked })} />
-                          <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                        </label>
-                      </div>
-                      {formData.hasShelfLife && (
-                        <input
-                          value={formData.shelfLife}
-                          onChange={(e) =>
-                            setFormData({ ...formData, shelfLife: e.target.value })
-                          }
-                          className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                          placeholder="e.g. 3 Days"
-                        />
-                      )}
-                    </div>
-                    <div className="space-y-1.5 flex flex-col">
-                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                        Country of Origin
-                      </label>
-                      <input
-                        value={formData.countryOfOrigin}
-                        onChange={(e) =>
-                          setFormData({ ...formData, countryOfOrigin: e.target.value })
-                        }
-                        className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                        placeholder="e.g. India"
-                      />
-                    </div>
-                    <div className="space-y-1.5 flex flex-col">
-                      <div className="flex justify-between items-center w-full">
-                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                          FSSAI License
-                        </label>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                          <input type="checkbox" className="sr-only peer" checked={formData.hasFssaiLicense} onChange={(e) => setFormData({ ...formData, hasFssaiLicense: e.target.checked })} />
-                          <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
-                        </label>
-                      </div>
-                      {formData.hasFssaiLicense && (
-                        <input
-                          value={formData.fssaiLicense}
-                          onChange={(e) =>
-                            setFormData({ ...formData, fssaiLicense: e.target.value })
-                          }
-                          className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
-                          placeholder="e.g. 1001234567890"
-                        />
-                      )}
-                    </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                      Product Code
+                    </label>
+                    <input
+                      value={formData.sku}
+                      onChange={(e) =>
+                        setFormData({ ...formData, sku: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-mono font-bold outline-none ring-primary/5 focus:ring-2 transition-all"
+                      placeholder="AUTO-GENERATED"
+                    />
                   </div>
                 </div>
-              )}
 
-              {/* Colors Section */}
-              <div className="space-y-1.5 flex flex-col">
-                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                  Product Colors (Optional)
-                </label>
-                <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
-                  <div className="flex flex-wrap gap-2">
-                    {["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].map((color) => {
-                      const isSelected = formData.colors.includes(color);
-                      return (
-                        <button
-                          key={color}
-                          type="button"
-                          onClick={() => {
-                            setFormData((prev) => {
-                              const nextColors = isSelected
-                                ? prev.colors.filter(c => c !== color)
-                                : [...prev.colors, color];
-                              return { ...prev, colors: nextColors };
-                            });
-                          }}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${isSelected
-                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
-                            }`}
-                        >
-                          {color}
-                        </button>
-                      );
-                    })}
+                <div className="space-y-1.5 flex flex-col">
+                  <div className="flex justify-between items-center w-full">
+                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                      Ingredients
+                    </label>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={formData.hasIngredients} onChange={(e) => setFormData({ ...formData, hasIngredients: e.target.checked })} />
+                      <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                    </label>
                   </div>
-                  <div className="flex gap-2 items-center">
-                    <input
-                      type="color"
-                      id="visualColorPicker"
-                      className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
-                      defaultValue="#000000"
+                  {formData.hasIngredients && (
+                    <textarea
+                      value={formData.ingredients}
+                      disabled={!user?.allowCustomProductEntry}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ingredients: e.target.value })
+                      }
+                      onWheel={(e) => e.stopPropagation()}
+                      onTouchMove={(e) => e.stopPropagation()}
+                      className={`w-full px-4 py-3 border-none rounded-2xl text-sm font-semibold min-h-[100px] outline-none transition-all focus:ring-2 focus:ring-primary/5 resize-none ${!user?.allowCustomProductEntry
+                        ? "bg-slate-200 cursor-not-allowed text-slate-500"
+                        : "bg-slate-100"
+                        }`}
+                      placeholder={!user?.allowCustomProductEntry ? "Locked" : "List ingredients separated by commas..."}
                     />
-                    <input
-                      type="text"
-                      id="customColorInput"
-                      placeholder="Type custom color or select hex..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = e.target.value.trim() || document.getElementById("visualColorPicker").value;
-                          if (val && !formData.colors.includes(val)) {
-                            setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
-                          }
-                          e.target.value = '';
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-1.5 flex flex-col">
+                    <div className="flex justify-between items-center w-full">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        Shelf Life
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={formData.hasShelfLife} onChange={(e) => setFormData({ ...formData, hasShelfLife: e.target.checked })} />
+                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
+                    </div>
+                    {formData.hasShelfLife && (
+                      <input
+                        value={formData.shelfLife}
+                        onChange={(e) =>
+                          setFormData({ ...formData, shelfLife: e.target.value })
                         }
-                      }}
-                      className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                        className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                        placeholder="e.g. 3 Days"
+                      />
+                    )}
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                      Country of Origin
+                    </label>
+                    <input
+                      value={formData.countryOfOrigin}
+                      onChange={(e) =>
+                        setFormData({ ...formData, countryOfOrigin: e.target.value })
+                      }
+                      className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                      placeholder="e.g. India"
                     />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const input = document.getElementById("customColorInput");
-                        const picker = document.getElementById("visualColorPicker");
-                        const val = input.value.trim() || picker.value;
+                  </div>
+                  <div className="space-y-1.5 flex flex-col">
+                    <div className="flex justify-between items-center w-full">
+                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        FSSAI License
+                      </label>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" checked={formData.hasFssaiLicense} onChange={(e) => setFormData({ ...formData, hasFssaiLicense: e.target.checked })} />
+                        <div className="w-8 h-4 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
+                    </div>
+                    {formData.hasFssaiLicense && (
+                      <input
+                        value={formData.fssaiLicense}
+                        onChange={(e) =>
+                          setFormData({ ...formData, fssaiLicense: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all"
+                        placeholder="e.g. 1001234567890"
+                      />
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Colors Section */}
+            <div className="space-y-1.5 flex flex-col">
+              <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                Product Colors (Optional)
+              </label>
+              <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].map((color) => {
+                    const isSelected = formData.colors.includes(color);
+                    return (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => {
+                          setFormData((prev) => {
+                            const nextColors = isSelected
+                              ? prev.colors.filter(c => c !== color)
+                              : [...prev.colors, color];
+                            return { ...prev, colors: nextColors };
+                          });
+                        }}
+                        className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${isSelected
+                          ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm"
+                          : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                          }`}
+                      >
+                        {color}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="color"
+                    id="visualColorPicker"
+                    className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
+                    defaultValue="#000000"
+                  />
+                  <input
+                    type="text"
+                    id="customColorInput"
+                    placeholder="Type custom color or select hex..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = e.target.value.trim() || document.getElementById("visualColorPicker").value;
                         if (val && !formData.colors.includes(val)) {
                           setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
                         }
-                        input.value = '';
-                      }}
-                      className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
-                    >
-                      ADD
-                    </button>
+                        e.target.value = '';
+                      }
+                    }}
+                    className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById("customColorInput");
+                      const picker = document.getElementById("visualColorPicker");
+                      const val = input.value.trim() || picker.value;
+                      if (val && !formData.colors.includes(val)) {
+                        setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
+                      }
+                      input.value = '';
+                    }}
+                    className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
+                  >
+                    ADD
+                  </button>
+                </div>
+                {formData.colors.length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
+                    {formData.colors.filter(c => !["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].includes(c)).map(color => {
+                      const isHex = /^#[0-9A-F]{6}$/i.test(color);
+                      return (
+                        <div key={color} className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-2 py-1.5 rounded-md text-[10px] font-bold shadow-sm">
+                          {isHex && <span className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: color }}></span>}
+                          <span>{color}</span>
+                          <button type="button" className="ml-1 text-slate-400 hover:text-rose-500" onClick={() => setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }))}>
+                            <HiOutlineXMark className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
-                  {formData.colors.length > 0 && (
-                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
-                      {formData.colors.filter(c => !["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].includes(c)).map(color => {
-                        const isHex = /^#[0-9A-F]{6}$/i.test(color);
-                        return (
-                          <div key={color} className="flex items-center gap-1.5 bg-white border border-slate-200 text-slate-700 px-2 py-1.5 rounded-md text-[10px] font-bold shadow-sm">
-                            {isHex && <span className="w-3 h-3 rounded-full border border-slate-300" style={{ backgroundColor: color }}></span>}
-                            <span>{color}</span>
-                            <button type="button" className="ml-1 text-slate-400 hover:text-rose-500" onClick={() => setFormData(prev => ({ ...prev, colors: prev.colors.filter(c => c !== color) }))}>
-                              <HiOutlineXMark className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-1.5 flex flex-col">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    HSN Code / GST
-                  </label>
-                  <select
-                    value={formData.hsnId}
-                    onChange={(e) =>
-                      setFormData({ ...formData, hsnId: e.target.value })
-                    }
-                    className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all cursor-pointer">
-                    <option value="">Select HSN Code (Default 0% GST)</option>
-                    {dbHsns.map((hsn) => (
-                      <option key={hsn._id} value={hsn._id}>
-                        {hsn.hsnCode} - {hsn.description} ({hsn.gstPercentage}% GST)
-                      </option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-slate-500 font-medium ml-1">
-                    This will determine the exact tax calculated at checkout.
-                  </p>
-                </div>
+                )}
               </div>
             </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-1.5 flex flex-col">
+                <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                  HSN Code / GST
+                </label>
+                <select
+                  value={formData.hsnId}
+                  onChange={(e) =>
+                    setFormData({ ...formData, hsnId: e.target.value })
+                  }
+                  className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-semibold outline-none ring-primary/5 focus:ring-2 transition-all cursor-pointer">
+                  <option value="">Select HSN Code (Default 0% GST)</option>
+                  {dbHsns.map((hsn) => (
+                    <option key={hsn._id} value={hsn._id}>
+                      {hsn.hsnCode} - {hsn.description} ({hsn.gstPercentage}% GST)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-slate-500 font-medium ml-1">
+                  This will determine the exact tax calculated at checkout.
+                </p>
+              </div>
+            </div>
+          </div>
           )}
 
           {modalTab === "variants" && (
@@ -1547,8 +1570,8 @@ const AddProduct = () => {
                             });
                           }}
                           className={`px-3 py-1.5 text-xs font-bold rounded-full border transition-all ${isSelected
-                              ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm"
-                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                            ? "bg-brand-50 border-brand-500 text-brand-700 shadow-sm"
+                            : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
                             }`}
                         >
                           {facility}
@@ -1683,62 +1706,64 @@ const AddProduct = () => {
             </div>
           )}
         </div>
-      </div>      {videoPayment && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
-              <h3 className="text-lg font-bold text-slate-800">Video Storage Payment</h3>
-              <button onClick={() => setVideoPayment(null)} className="text-slate-400 hover:text-slate-600">
-                <HiOutlineXMark size={22} />
-              </button>
-            </div>
-            <div className="p-6">
-              <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
-                <p className="text-sm font-semibold text-rose-800">Storage Limit Exceeded</p>
-                <p className="text-xs text-rose-600 mt-1">
-                  This upload exceeds your included storage by <strong>{videoPayment.mbToCharge.toFixed(2)} MB</strong>.
-                </p>
-                <div className="mt-3 flex justify-between items-baseline">
-                  <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Required Amount:</span>
-                  <span className="text-2xl font-black text-rose-600">₹{videoPayment.totalAmount}</span>
+      </div>
+      </div>
+      {videoPayment && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+              <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+                <h3 className="text-lg font-bold text-slate-800">Video Storage Payment</h3>
+                <button onClick={() => setVideoPayment(null)} className="text-slate-400 hover:text-slate-600">
+                  <HiOutlineXMark size={22} />
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
+                  <p className="text-sm font-semibold text-rose-800">Storage Limit Exceeded</p>
+                  <p className="text-xs text-rose-600 mt-1">
+                    This upload exceeds your included storage by <strong>{videoPayment.mbToCharge.toFixed(2)} MB</strong>.
+                  </p>
+                  <div className="mt-3 flex justify-between items-baseline">
+                    <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Required Amount:</span>
+                    <span className="text-2xl font-black text-rose-600">₹{videoPayment.totalAmount}</span>
+                  </div>
                 </div>
+
+                <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Select Payment Method</p>
+                <div className="space-y-3">
+                  <button
+                    onClick={handleVideoPayRazorpay}
+                    disabled={videoUploading}
+                    className="w-full flex items-center justify-between px-5 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-3">
+                      <HiOutlineFilm size={20} />
+                      <span>Pay Online (Razorpay)</span>
+                    </div>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Instant</span>
+                  </button>
+
+                  <button
+                    onClick={handleVideoPayCOD}
+                    disabled={videoUploading}
+                    className="w-full flex items-center justify-between px-5 py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all font-bold disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-3">
+                      <HiOutlineTruck size={20} />
+                      <span>Cash on Delivery (COD)</span>
+                    </div>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Pending</span>
+                  </button>
+                </div>
+
+                {videoUploading && (
+                  <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">Uploading and processing video...</p>
+                )}
               </div>
-
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Select Payment Method</p>
-              <div className="space-y-3">
-                <button
-                  onClick={handleVideoPayRazorpay}
-                  disabled={videoUploading}
-                  className="w-full flex items-center justify-between px-5 py-4 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold disabled:opacity-60"
-                >
-                  <div className="flex items-center gap-3">
-                    <HiOutlineFilm size={20} />
-                    <span>Pay Online (Razorpay)</span>
-                  </div>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Instant</span>
-                </button>
-
-                <button
-                  onClick={handleVideoPayCOD}
-                  disabled={videoUploading}
-                  className="w-full flex items-center justify-between px-5 py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all font-bold disabled:opacity-60"
-                >
-                  <div className="flex items-center gap-3">
-                    <HiOutlineTruck size={20} />
-                    <span>Cash on Delivery (COD)</span>
-                  </div>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Pending</span>
-                </button>
-              </div>
-
-              {videoUploading && (
-                <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">Uploading and processing video...</p>
-              )}
             </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+    </>
   );
 };
 
