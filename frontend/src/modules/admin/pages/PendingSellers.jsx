@@ -155,6 +155,9 @@ const PendingSellers = () => {
                         shopClosingTime: s.shopClosingTime || "10:40 PM",
                         advanceBookingBuffer: s.advanceBookingBuffer || 0,
                         advanceBookingBufferUnit: s.advanceBookingBufferUnit || "days",
+                        advanceBookingBufferEnabled: s.advanceBookingBufferEnabled ?? false,
+                        shopHolidaysEnabled: s.shopHolidaysEnabled ?? false,
+                        shopClosedDates: s.shopClosedDates || [],
                         wholesaleEnabled: s.wholesaleEnabled ?? false,
                         allowedRetailCategories: s.allowedRetailCategories || [],
                         allowedWholesaleCategories: s.allowedWholesaleCategories || [],
@@ -344,6 +347,7 @@ const PendingSellers = () => {
                         shopClosingTime: s.shopClosingTime || "10:40 PM",
                         advanceBookingBuffer: s.advanceBookingBuffer || 0,
                         advanceBookingBufferUnit: s.advanceBookingBufferUnit || "days",
+                        advanceBookingBufferEnabled: s.advanceBookingBufferEnabled ?? false,
                         wholesaleEnabled: s.wholesaleEnabled ?? false,
                         allowedRetailCategories: s.allowedRetailCategories || [],
                         allowedWholesaleCategories: s.allowedWholesaleCategories || [],
@@ -675,6 +679,13 @@ const PendingSellers = () => {
                                                     ordersEnabled: s.ordersEnabled ?? true,
                                                     walletEnabled: s.walletEnabled ?? true,
                                                     analyticsEnabled: s.analyticsEnabled ?? true,
+                                                    isShopActive: s.isShopActive ?? true,
+                                                    shopTimingsEnabled: s.shopTimingsEnabled ?? false,
+                                                    shopOpeningTime: s.shopOpeningTime || "10:30 AM",
+                                                    shopClosingTime: s.shopClosingTime || "10:40 PM",
+                                                    advanceBookingBuffer: s.advanceBookingBuffer || 0,
+                                                    advanceBookingBufferUnit: s.advanceBookingBufferUnit || "days",
+                                                    advanceBookingBufferEnabled: s.advanceBookingBufferEnabled ?? false,
                                                     wholesaleEnabled: s.wholesaleEnabled ?? false,
                                                     allowedRetailCategories: s.allowedRetailCategories || [],
                                                     allowedWholesaleCategories: s.allowedWholesaleCategories || [],
@@ -1847,127 +1858,46 @@ const PendingSellers = () => {
 
 
 
-                                                        <div className="flex flex-col gap-2 mt-2">
-                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                                                                Advance Booking Buffer
-                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Minimum time before booking</span>
-                                                            </label>
-                                                            <div className="flex gap-2 w-full max-w-xs">
-                                                                <input type="number" min="0"
-                                                                    value={permissions.advanceBookingBuffer ?? 0}
-                                                                    onChange={async (e) => {
-                                                                        const val = Number(e.target.value);
-                                                                        setPermissions(prev => ({ ...prev, advanceBookingBuffer: val }));
-                                                                        try {
-                                                                            await adminApi.updateSeller(viewingSeller.id, { advanceBookingBuffer: val });
-                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBuffer: val } : seller));
-                                                                        } catch (err) { toast.error("Failed to update"); }
-                                                                    }}
-                                                                    className="flex-1 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                />
-                                                                <select
-                                                                    value={permissions.advanceBookingBufferUnit || 'days'}
-                                                                    onChange={async (e) => {
-                                                                        const val = e.target.value;
-                                                                        setPermissions(prev => ({ ...prev, advanceBookingBufferUnit: val }));
-                                                                        try {
-                                                                            await adminApi.updateSeller(viewingSeller.id, { advanceBookingBufferUnit: val });
-                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBufferUnit: val } : seller));
-                                                                        } catch (err) { toast.error("Failed to update"); }
-                                                                    }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-slate-50"
-                                                                >
-                                                                    <option value="days">Days</option>
-                                                                    <option value="hours">Hours</option>
-                                                                </select>
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    max="23"
-                                                                    placeholder="Hrs"
-                                                                    value={permissions.advanceBookingBufferTime || "12"}
-                                                                    onChange={async (e) => {
-                                                                        const val = e.target.value;
-                                                                        setPermissions(prev => ({ ...prev, advanceBookingBufferTime: val }));
-                                                                        try {
-                                                                            await adminApi.updateSeller(viewingSeller.id, { advanceBookingBufferTime: val });
-                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBufferTime: val } : seller));
-                                                                        } catch (err) { toast.error("Failed to update time"); }
-                                                                    }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-20"
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                        <PermissionToggle
+                                                            label="Advance Booking Buffer Settings"
+                                                            description="Enable to set minimum time required before booking"
+                                                            checked={permissions.advanceBookingBufferEnabled ?? false}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, advanceBookingBufferEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { advanceBookingBufferEnabled: checked });
+                                                                    toast.success('Advance booking buffer toggle updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, advanceBookingBufferEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, advanceBookingBufferEnabled: !checked }));
+                                                                    toast.error('Failed to toggle buffer setting');
+                                                                }
+                                                            }}
+                                                        />
+
+
 
                                                         {/* Shop Closed Dates / Holidays */}
-                                                        <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-200">
-                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                                                                Shop Closed Dates / Holidays
-                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Select dates when shop is closed</span>
-                                                            </label>
-                                                            <div className="flex flex-col gap-3">
-                                                                <div className="flex gap-2">
-                                                                    <input 
-                                                                        type="date" 
-                                                                        id={`holiday-input-${viewingSeller.id}`}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                    />
-                                                                    <button 
-                                                                        onClick={async () => {
-                                                                            const input = document.getElementById(`holiday-input-${viewingSeller.id}`);
-                                                                            if (!input.value) return;
-                                                                            const dateVal = input.value;
-                                                                            const currentDates = permissions.shopClosedDates || [];
-                                                                            if (currentDates.includes(dateVal)) {
-                                                                                toast.error("Date already added");
-                                                                                return;
-                                                                            }
-                                                                            const newDates = [...currentDates, dateVal].sort();
-                                                                            setPermissions(prev => ({ ...prev, shopClosedDates: newDates }));
-                                                                            try {
-                                                                                await adminApi.updateSeller(viewingSeller.id, { shopClosedDates: newDates });
-                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopClosedDates: newDates } : seller));
-                                                                                input.value = '';
-                                                                                toast.success("Holiday added successfully");
-                                                                            } catch (err) {
-                                                                                setPermissions(prev => ({ ...prev, shopClosedDates: currentDates }));
-                                                                                toast.error("Failed to add holiday");
-                                                                            }
-                                                                        }}
-                                                                        className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-fuchsia-700 transition-colors"
-                                                                    >
-                                                                        Add Date
-                                                                    </button>
-                                                                </div>
-                                                                {(permissions.shopClosedDates || []).length > 0 && (
-                                                                    <div className="flex flex-wrap gap-2 mt-1">
-                                                                        {(permissions.shopClosedDates || []).map((date, idx) => (
-                                                                            <div key={idx} className="flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1 rounded-full text-xs font-medium">
-                                                                                <span>{new Date(date).toLocaleDateString('en-GB')}</span>
-                                                                                <button 
-                                                                                    onClick={async () => {
-                                                                                        const currentDates = permissions.shopClosedDates || [];
-                                                                                        const newDates = currentDates.filter(d => d !== date);
-                                                                                        setPermissions(prev => ({ ...prev, shopClosedDates: newDates }));
-                                                                                        try {
-                                                                                            await adminApi.updateSeller(viewingSeller.id, { shopClosedDates: newDates });
-                                                                                            setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopClosedDates: newDates } : seller));
-                                                                                            toast.success("Holiday removed");
-                                                                                        } catch (err) {
-                                                                                            setPermissions(prev => ({ ...prev, shopClosedDates: currentDates }));
-                                                                                            toast.error("Failed to remove holiday");
-                                                                                        }
-                                                                                    }}
-                                                                                    className="ml-1 hover:text-rose-900 focus:outline-none"
-                                                                                >
-                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                                                                </button>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        </div>
+                                                        <PermissionToggle
+                                                            label="Shop Closed Dates / Holidays"
+                                                            description="Enable so seller can manage their closed/holiday dates"
+                                                            checked={permissions.shopHolidaysEnabled ?? false}
+                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, shopHolidaysEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { shopHolidaysEnabled: checked });
+                                                                    toast.success('Shop holidays toggle updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, shopHolidaysEnabled: checked } : seller));
+                                                                } catch (err) {
+                                                                    setPermissions(prev => ({ ...prev, shopHolidaysEnabled: !checked }));
+                                                                    toast.error('Failed to toggle shop holidays');
+                                                                }
+                                                            }}
+                                                        />
 
                                                         <div className="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
                                                             <PermissionToggle
@@ -2021,7 +1951,7 @@ const PendingSellers = () => {
                                                             <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
                                                                 <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Retail Categories</h6>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                    {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('retail'))).map(cat => {
+                                                                    {allCategories.filter(cat => cat.type === 'header' && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('retail'))).map(cat => {
                                                                         const isChecked = (permissions.allowedRetailCategories || []).includes(cat._id);
                                                                         return (
                                                                             <label key={cat._id} className={cn(
@@ -2059,7 +1989,7 @@ const PendingSellers = () => {
                                                             <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm">
                                                                 <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Wholesale Categories</h6>
                                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
-                                                                    {allCategories.filter(cat => (cat.type === 'category' || cat.type === 'header') && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('wholesale'))).map(cat => {
+                                                                    {allCategories.filter(cat => cat.type === 'header' && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('wholesale'))).map(cat => {
                                                                         const isChecked = (permissions.allowedWholesaleCategories || []).includes(cat._id);
                                                                         return (
                                                                             <label key={cat._id} className={cn(
@@ -2095,6 +2025,42 @@ const PendingSellers = () => {
 
                                                         {permissions.planMyEventEnabled && (
                                                             <div className="bg-white p-4 rounded-xl border border-slate-200/60 shadow-sm flex flex-col gap-4">
+                                                                <div className="mb-4 pb-4 border-b border-dashed border-slate-200">
+                                                                    <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Plan My Event Categories (Standard)</h6>
+                                                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
+                                                                        {allCategories.filter(cat => cat.type === 'header' && (!cat.applicableModules || cat.applicableModules.length === 0 || cat.applicableModules.includes('plan_my_event'))).map(cat => {
+                                                                            const isChecked = (permissions.allowedEventCategories || []).includes(cat._id);
+                                                                            return (
+                                                                                <label key={cat._id} className={cn(
+                                                                                    "flex items-center gap-3 p-3 rounded-xl border cursor-pointer text-xs font-bold transition-all",
+                                                                                    isChecked
+                                                                                        ? "border-pink-600/20 bg-pink-50/30 text-slate-900"
+                                                                                        : "border-slate-100 bg-white text-slate-500 hover:border-slate-200"
+                                                                                )}>
+                                                                                    <input
+                                                                                        type="checkbox"
+                                                                                        checked={isChecked}
+                                                                                        onChange={async (e) => {
+                                                                                            const checked = e.target.checked;
+                                                                                            const current = permissions.allowedEventCategories || [];
+                                                                                            const next = checked ? [...current, cat._id] : current.filter(id => id !== cat._id);
+                                                                                            setPermissions(prev => ({ ...prev, allowedEventCategories: next }));
+                                                                                            try {
+                                                                                                await adminApi.updateSeller(viewingSeller.id, { allowedEventCategories: next });
+                                                                                                toast.success(`${cat.name} updated in Plan My Event Categories`);
+                                                                                            } catch (err) {
+                                                                                                toast.error('Failed to update categories');
+                                                                                            }
+                                                                                        }}
+                                                                                        className="rounded text-pink-600 focus:ring-pink-600/20 h-4.5 w-4.5"
+                                                                                    />
+                                                                                    <span>{cat.name}</span>
+                                                                                </label>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+
                                                                 <div>
                                                                     <h6 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">Allowed Event Service Categories (Event Commerce)</h6>
                                                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-48 overflow-y-auto pr-1">
@@ -2341,7 +2307,7 @@ const PendingSellers = () => {
                                                             <label className="text-[11px] font-bold text-amber-900 block uppercase">Terms & Conditions</label>
                                                             {viewingSeller?.termsAccepted && viewingSeller?.termsAcceptedVersionText === adminTerms ? (
                                                                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-md border border-emerald-200">
-                                                                    ✓ Accepted by Seller
+                                                                    ✓ Accepted by Seller {viewingSeller?.termsAcceptedAt ? `on ${new Date(viewingSeller.termsAcceptedAt).toLocaleString('en-GB')}` : ''}
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-md border border-amber-200">

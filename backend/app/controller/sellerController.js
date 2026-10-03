@@ -214,8 +214,8 @@ export const getSellerProfile = async (req, res) => {
       );
       if (unpopulatedIds.length > 0) {
         try {
-          const EventCategory = (await import('../models/EventCategory.js')).default;
-          const eventCats = await EventCategory.find({ _id: { $in: unpopulatedIds } }).select('name icon').lean();
+          const Category = (await import('../models/category.js')).default;
+          const eventCats = await Category.find({ _id: { $in: unpopulatedIds } }).select('name icon').lean();
           const eventCatMap = new Map(eventCats.map(c => [c._id.toString(), c]));
           seller.allowedEventCategories = seller.allowedEventCategories.map(c => {
             if (c && typeof c === 'object' && c.name) return c;
@@ -223,7 +223,7 @@ export const getSellerProfile = async (req, res) => {
             return eventCatMap.get(idStr) || c;
           });
         } catch (err) {
-          console.error("Failed to populate EventCategory references:", err.message);
+          console.error("Failed to populate Category references:", err.message);
         }
       }
     }

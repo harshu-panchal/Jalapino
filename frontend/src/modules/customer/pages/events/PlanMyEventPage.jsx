@@ -622,11 +622,11 @@ const PlanMyEventPage = () => {
 
     // Category-wise date/time toggle flags — dynamically driven from admin settings
     const relevantCats = activeCategory ? [activeCategory] : categories;
-    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime) || filteredSellers.some(s => s.standardDateEnabled);
-    const showStandardDateSlotFilter = relevantCats.some(c => c.showStandardDateTimeSlot) || filteredSellers.some(s => s.standardDateTimeSlotEnabled);
-    const showAdvancedDateFilter = relevantCats.some(c => c.showAdvancedDateTime) || filteredSellers.some(s => s.advancedDateEnabled);
-    const showAdvancedDateSlotFilter = relevantCats.some(c => c.showAdvancedDateTimeSlot) || filteredSellers.some(s => s.advancedDateTimeSlotEnabled);
-    const showMultipleDateFilter = relevantCats.some(c => c.showMultipleDateTime) || filteredSellers.some(s => s.multipleDateRemarksEnabled);
+    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime) || (selectedSellerDetail && selectedSellerDetail.showStandardDateTime);
+    const showStandardDateSlotFilter = relevantCats.some(c => c.showStandardDateTimeSlot) || (selectedSellerDetail && selectedSellerDetail.showStandardDateTimeSlot);
+    const showAdvancedDateFilter = relevantCats.some(c => c.showAdvancedDateTime) || (selectedSellerDetail && selectedSellerDetail.showAdvancedDateTime);
+    const showAdvancedDateSlotFilter = relevantCats.some(c => c.showAdvancedDateTimeSlot) || (selectedSellerDetail && selectedSellerDetail.showAdvancedDateTimeSlot);
+    const showMultipleDateFilter = relevantCats.some(c => c.showMultipleDateTime) || (selectedSellerDetail && selectedSellerDetail.showMultipleDateTime);
     const showAnyDateFilter = showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter;
 
     // Priority for rendering: Multiple > AdvancedSlot > Advanced > StandardSlot > Standard

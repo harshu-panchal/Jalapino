@@ -236,6 +236,7 @@ export const updateSellerDetails = async (req, res) => {
     const shopClosingTime = req.body.shopClosingTime;
     const advanceBookingBuffer = req.body.advanceBookingBuffer;
     const advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
+    const advanceBookingBufferEnabled = req.body.advanceBookingBufferEnabled;
     const demoTrialEnabled = req.body.demoTrialEnabled;
     const demoTrialDays = req.body.demoTrialDays;
 
@@ -273,6 +274,7 @@ export const updateSellerDetails = async (req, res) => {
     if (shopClosingTime !== undefined) updateData.shopClosingTime = shopClosingTime;
     if (advanceBookingBuffer !== undefined) updateData.advanceBookingBuffer = advanceBookingBuffer;
     if (advanceBookingBufferUnit !== undefined) updateData.advanceBookingBufferUnit = advanceBookingBufferUnit;
+    if (advanceBookingBufferEnabled !== undefined) updateData.advanceBookingBufferEnabled = advanceBookingBufferEnabled;
     if (wholesaleEnabled !== undefined) updateData.wholesaleEnabled = wholesaleEnabled;
     if (allowedRetailCategories !== undefined) updateData.allowedRetailCategories = allowedRetailCategories;
     if (allowedWholesaleCategories !== undefined) updateData.allowedWholesaleCategories = allowedWholesaleCategories;
@@ -317,6 +319,8 @@ export const updateSellerDetails = async (req, res) => {
     if (physicalPaymentEnabled !== undefined) updateData.physicalPaymentEnabled = physicalPaymentEnabled;
     if (paymentQrCode !== undefined) updateData.paymentQrCode = paymentQrCode;
     if (ticketSystemEnabled !== undefined) updateData.ticketSystemEnabled = ticketSystemEnabled;
+    if (req.body.shopHolidaysEnabled !== undefined) updateData.shopHolidaysEnabled = req.body.shopHolidaysEnabled;
+    if (req.body.shopClosedDates !== undefined) updateData.shopClosedDates = req.body.shopClosedDates;
 
     const existingSeller = await Seller.findById(id);
     if (!existingSeller) throw new Error("Seller not found");

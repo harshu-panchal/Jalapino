@@ -417,7 +417,10 @@ const Home = () => {
         heroConfig: heroConfigMemoryCache.__home__ || EMPTY_HERO_CONFIG,
       };
       if (catRes.data.success) {
-        const dbCats = catRes.data.results || catRes.data.result || [];
+        const currentMode = localStorage.getItem('customer-shopping-mode') === 'whole' ? 'wholesale' : 'retail';
+        let dbCats = catRes.data.results || catRes.data.result || [];
+        dbCats = dbCats.filter(c => !c.applicableModules || c.applicableModules.includes(currentMode));
+        
         const catMap = {};
         const subMap = {};
         dbCats.forEach((c) => { if (c.type === "category") catMap[c._id] = c; else if (c.type === "subcategory") subMap[c._id] = c; });

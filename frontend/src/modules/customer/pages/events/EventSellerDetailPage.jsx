@@ -361,6 +361,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     </div>
 
                     {/* Customization Options form depending on Seller config */}
+                    {selectedSeller?.customizationEngineEnabled && (
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4">
                             Customization Details
@@ -408,7 +409,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </div>
 
                             {/* Color Combination Option (Multiple Colors) */}
-                            {relevantCats.some(c => c.quoteColorCombination) && (
+                            {selectedSeller?.quoteColorCombination && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
 
@@ -519,7 +520,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </div>
 
                             {/* Reference Photo Upload Option */}
-                            {relevantCats.some(c => c.quoteReferencePhotoUpload) && (
+                            {selectedSeller?.quoteReferencePhotoUpload && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
                                 <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all">
@@ -541,7 +542,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             )}
 
                             {/* Customer Notes Option */}
-                            {relevantCats.some(c => c.quoteCustomerNotes) && (
+                            {selectedSeller?.quoteCustomerNotes && (
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
                                 <textarea
@@ -555,7 +556,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             )}
                         </div>
                     </div>
+                    )}
                     {/* Live Chat with Seller (Socket.io) */}
+                    {selectedSeller?.ticketSystemEnabled && (
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
                         <div className="bg-slate-50 px-5 py-3 border-b border-slate-150 flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -604,6 +607,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </button>
                         </div>
                     </div>
+                    )}
 
                     {/* --- New Event Details Form Below Chat --- */}
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-6">

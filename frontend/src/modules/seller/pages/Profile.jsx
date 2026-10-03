@@ -883,36 +883,41 @@ const SellerProfile = () => {
                 </div>
               )}
 
-              <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
-                <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
-                  Advance Booking Buffer
-                  <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Minimum time before booking</span>
-                </label>
-                <div className="flex gap-4 w-full md:max-w-xs mt-2">
-                  <input type="number" min="0"
-                    value={formData.advanceBookingBuffer ?? 0}
-                    onChange={(e) => setFormData({ ...formData, advanceBookingBuffer: Number(e.target.value) })}
-                    disabled={!isEditing}
-                    className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
-                  />
-                  <select
-                    value={formData.advanceBookingBufferUnit || 'days'}
-                    onChange={(e) => setFormData({ ...formData, advanceBookingBufferUnit: e.target.value })}
-                    disabled={!isEditing}
-                    className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
-                  >
-                    <option value="days">Days</option>
-                    <option value="hours">Hours</option>
-                  </select>
-                  <input
-                    type="time"
-                    value={formData.advanceBookingBufferTime || "12:00"}
-                    onChange={(e) => setFormData({ ...formData, advanceBookingBufferTime: e.target.value })}
-                    disabled={!isEditing}
-                    className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
-                  />
+              {profile?.advanceBookingBufferEnabled && (
+                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
+                  <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
+                    Advance Booking Buffer
+                    <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Minimum time before booking</span>
+                  </label>
+                  <div className="flex gap-4 w-full md:max-w-xs mt-2 items-center">
+                    <input type="number" min="0"
+                      value={formData.advanceBookingBuffer ?? 0}
+                      onChange={(e) => setFormData({ ...formData, advanceBookingBuffer: Number(e.target.value) })}
+                      disabled={!isEditing}
+                      className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                    />
+                    <span className="text-sm font-bold text-slate-600 px-2">Days</span>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {profile?.shopHolidaysEnabled && (
+                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
+                  <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
+                    Shop Closed Dates / Holidays
+                    <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Dates when shop is closed</span>
+                  </label>
+                  {profile?.shopClosedDates?.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-1">
+                      {profile.shopClosedDates.map((date, idx) => (
+                        <span key={idx} className="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-medium">
+                          {new Date(date).toLocaleDateString('en-GB')}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 

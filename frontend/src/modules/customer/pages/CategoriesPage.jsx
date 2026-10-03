@@ -20,15 +20,18 @@ const CategoriesPage = () => {
         try {
             const res = await customerApi.getCategories({ tree: true });
             if (res.data.success) {
-                const tree = res.data.results || res.data.result || [];
+                const currentMode = localStorage.getItem('customer-shopping-mode') === 'whole' ? 'wholesale' : 'retail';
+                let tree = res.data.results || res.data.result || [];
+                // Filter the headers as well as the children (Level 2 categories)
                 const flatCats = [];
                 const seenIds = new Set();
 
                 tree
                     .filter((header) => (header.name || '').trim().toLowerCase() !== 'all')
                     .forEach((header) => {
+                        // Filter header level if we want, but definitely filter children
                         (header.children || []).forEach((cat) => {
-                            if (!seenIds.has(cat._id)) {
+                            if ((!cat.applicableModules || cat.applicableModules.includes(currentMode)) && !seenIds.has(cat._id)) {
                                 seenIds.add(cat._id);
                                 flatCats.push({
                                     id: cat._id,

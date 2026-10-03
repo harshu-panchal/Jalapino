@@ -444,6 +444,22 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    advanceBookingBufferEnabled: {
+      type: Boolean,
+      default: false
+    },
+    advanceBookingBuffer: {
+      type: Number,
+      default: 0
+    },
+    advanceBookingBufferUnit: {
+      type: String,
+      default: "days"
+    },
+    advanceBookingBufferTime: {
+      type: String,
+      default: "12"
+    },
     addonDecorationEnabled: {
       type: Boolean,
       default: false
@@ -615,6 +631,10 @@ const sellerSchema = new mongoose.Schema(
       default: "12:00 PM"
     },
     demoTrialEnabled: {
+      type: Boolean,
+      default: false
+    },
+    shopHolidaysEnabled: {
       type: Boolean,
       default: false
     },
