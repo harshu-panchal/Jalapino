@@ -72,17 +72,17 @@ const productSchema = new mongoose.Schema(
         headerId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",
-            required: true,
+            default: null,
         },
         categoryId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",
-            required: true,
+            default: null,
         },
         subcategoryId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "Category",
-            required: true,
+            default: null,
         },
         sellerId: {
             type: mongoose.Schema.Types.ObjectId,
@@ -129,6 +129,10 @@ const productSchema = new mongoose.Schema(
                 salePrice: Number,
                 stock: Number,
                 sku: String,
+                hasBrandName: { type: Boolean, default: false },
+                brand: { type: String, trim: true, default: "" },
+                hasIngredients: { type: Boolean, default: false },
+                ingredients: { type: String, trim: true, default: "" },
             }
         ],
         tickets: [
@@ -137,6 +141,13 @@ const productSchema = new mongoose.Schema(
                 price: Number,
                 salePrice: Number,
                 capacity: Number,
+                instructions: String,
+                timeSlotsEnabled: { type: Boolean, default: false },
+                timeSlots: [{
+                    date: String,
+                    startTime: String,
+                    endTime: String,
+                }],
             }
         ],
         isFeatured: {
@@ -164,8 +175,6 @@ const productSchema = new mongoose.Schema(
         }],
         deliveryCoverage: [{
             type: String,
-            enum: ["hyperlocal", "pan_india", "zone_wise", "none", "self_delivery", "jalapino_rider"],
-            default: "hyperlocal",
         }],
         isDelivery: {
             type: Boolean,
@@ -192,8 +201,7 @@ const productSchema = new mongoose.Schema(
         // --- Food Transparency Engine ---
         paymentMode: {
             type: String,
-            enum: ["full", "advance", "milestone"],
-            default: "full"
+            default: "",
         },
         remainingPaymentTiming: {
             type: String,

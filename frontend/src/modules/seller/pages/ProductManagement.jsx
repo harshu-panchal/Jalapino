@@ -33,6 +33,7 @@ import { sellerApi } from "../services/sellerApi";
 import { toast } from "sonner";
 import Pagination from "@shared/components/ui/Pagination";
 import { useAuth } from "@core/context/AuthContext";
+import { eventConfigApi } from "../../customer/services/eventConfigApi";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -43,6 +44,7 @@ const ProductManagement = () => {
   const [products, setProducts] = useState([]);
   const [dbCategories, setDbCategories] = useState([]);
   const [dbHsns, setDbHsns] = useState([]);
+  const [dbPaymentModes, setDbPaymentModes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -99,15 +101,25 @@ const ProductManagement = () => {
 
   const fetchCategories = async () => {
     try {
-      const [catRes, hsnRes] = await Promise.all([
+      const [catRes, hsnRes, payModesRes] = await Promise.all([
         sellerApi.getCategoryTree(),
-        sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } }))
+        sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } })),
+        eventConfigApi.getPaymentModes().catch(() => [])
       ]);
       if (catRes.data?.success) {
         setDbCategories(catRes.data.results || catRes.data.result || []);
       }
       if (hsnRes.data?.success) {
         setDbHsns(hsnRes.data.results || []);
+      }
+      if (payModesRes && payModesRes.length > 0) {
+        setDbPaymentModes(payModesRes);
+      } else {
+        setDbPaymentModes([
+          { id: 'full', label: 'Full Payment', desc: 'Complete payment upfront' },
+          { id: 'advance', label: 'Advance Payment', desc: 'Pay a portion in advance' },
+          { id: 'milestone', label: 'Milestone Payment', desc: 'Advanced Payment System' },
+        ]);
       }
     } catch (error) {
       // fail silently
@@ -638,102 +650,8 @@ const ProductManagement = () => {
 
   const openEditModal = (item = null) => {
     if (item) {
-      const catId = item.subcategoryId?._id || item.subcategoryId || item.categoryId?._id || item.categoryId || item.headerId?._id || item.headerId;
-      const detectedMod = findModuleForCategory(catId, dbCategories);
-      setSelectedModule(detectedMod || "");
-      setFormData({
-        name: item.name || "",
-        slug: item.slug || "",
-        sku: item.sku || "",
-        description: item.description || "",
-        price: item.price || "",
-        salePrice: item.salePrice || "",
-        stock: item.stock || "",
-        lowStockAlert: item.lowStockAlert || 5,
-        header: item.headerId?._id || item.headerId || "",
-        category: item.categoryId?._id || item.categoryId || "",
-        subcategory: item.subcategoryId?._id || item.subcategoryId || "",
-        hsnId: item.hsnId?._id || item.hsnId || "",
-        status: item.status || "active",
-        tags: Array.isArray(item.tags) ? item.tags.join(", ") : item.tags || "",
-        weight: item.weight || "",
-        brand: item.brand || "",
-        mainImage: item.mainImage || null,
-        galleryImages: item.galleryImages || [],
-        videoUrl: item.videoUrl || "",
-        shelfLife: item.shelfLife || "",
-        countryOfOrigin: item.countryOfOrigin || "",
-        fssaiLicense: item.fssaiLicense || "",
-        hasBrandName: item.hasBrandName || false,
-        hasIngredients: item.hasIngredients || false,
-        hasShelfLife: item.hasShelfLife || false,
-        hasFssaiLicense: item.hasFssaiLicense || false,
-        hasExtraDetails: item.hasExtraDetails || false,
-        isDelivery: item.isDelivery || false,
-        isService: item.isService || false,
-        isRental: item.isRental || false,
-        paymentMode: item.paymentMode || "full",
-        remainingPaymentTiming: item.remainingPaymentTiming || "",
-        decorationUploadTime: item.decorationUploadTime || "",
-        minOrderQty: item.minOrderQty || 1,
-        maxOrderQty: item.maxOrderQty || "",
-        advanceOrderSetting: item.advanceOrderSetting || "",
-        cancellationPolicy: item.cancellationPolicy || "",
-        ticketingSystem: item.ticketingSystem || "",
-        tickets: item.tickets || [],
-        colors: item.colors || [],
-        deliveryCoverage: item.deliveryCoverage || user?.serviceCoverage || ["hyperlocal"],
-        variants: (item.variants && item.variants.length > 0) ? item.variants.map(v => ({ ...v, id: v._id || Date.now() })) : [
-          {
-            id: Date.now(),
-            name: "",
-            price: item.price || "",
-            salePrice: item.salePrice || "",
-            stock: item.stock || "",
-            sku: item.sku || "",
-          },
-        ],
-      });
-      setEditingItem(item);
-    } else {
-      setSelectedModule("");
-      setFormData({
-        name: "",
-        slug: "",
-        sku: "",
-        description: "",
-        price: "",
-        salePrice: "",
-        stock: "",
-        lowStockAlert: 5,
-        category: "",
-        header: "",
-        hsnId: "",
-        status: "active",
-        tags: "",
-        weight: "",
-        brand: "",
-        mainImage: null,
-        galleryImages: [],
-        videoUrl: "",
-        shelfLife: "",
-        countryOfOrigin: "",
-        fssaiLicense: "",
-        variants: [
-          {
-            id: Date.now(),
-            name: "",
-            price: "",
-            salePrice: "",
-            stock: "",
-            sku: "",
-          },
-        ],
-      });
-      setEditingItem(null);
+      navigate(`/seller/products/edit/${item._id || item.id}`);
     }
-    setModalTab("general");
-    setIsProductModalOpen(true);
   };
 
   return (
@@ -1316,10 +1234,58 @@ const ProductManagement = () => {
                         />
                       </div>
 
-                      {/* Listing Type Toggles */}
+                      {/* Delivery Coverage Type */}
+                      {(() => {
+                        const coverageOptions = [
+                          { id: "hyperlocal", label: "Hyperlocal", desc: "Nearby area delivery" },
+                          { id: "pan_india", label: "Pan India", desc: "Courier delivery all over India" },
+                          { id: "zone_wise", label: "Zone Wise", desc: "Specific zone delivery" },
+                        ];
+                        const coverageIds = coverageOptions.map(o => o.id);
+                        const selectedCoverage = formData.deliveryCoverage.find(c => coverageIds.includes(c)) || "";
+                        return (
+                          <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
+                            <div>
+                              <h4 className="text-sm font-bold text-slate-700">Delivery Coverage Type</h4>
+                              <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select your product's delivery reach.</p>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              {coverageOptions.map((opt) => (
+                                <label
+                                  key={opt.id}
+                                  className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 cursor-pointer transition-all ${selectedCoverage === opt.id
+                                    ? "border-brand-500 bg-brand-50"
+                                    : "border-slate-200 bg-white hover:border-slate-300"
+                                    }`}
+                                >
+                                  <input
+                                    type="radio"
+                                    name="deliveryCoverageType"
+                                    value={opt.id}
+                                    checked={selectedCoverage === opt.id}
+                                    onChange={() => {
+                                      setFormData((prev) => {
+                                        const others = prev.deliveryCoverage.filter(c => !coverageIds.includes(c));
+                                        return { ...prev, deliveryCoverage: [...others, opt.id] };
+                                      });
+                                    }}
+                                    className="accent-brand-500 w-4 h-4 cursor-pointer"
+                                  />
+                                  <div className="flex flex-col">
+                                    <span className={`text-xs font-bold uppercase tracking-wider ${selectedCoverage === opt.id ? "text-brand-700" : "text-slate-700"}`}>{opt.label}</span>
+                                    <span className="text-[10px] font-medium opacity-60">{opt.desc}</span>
+                                  </div>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Delivery Type Toggles */}
                       <div className="space-y-4 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                         <div>
-                          <h4 className="text-sm font-bold text-slate-700">Listing Type</h4>
+                          <h4 className="text-sm font-bold text-slate-700">Delivery Type</h4>
                           <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select all applicable types for this item.</p>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1353,103 +1319,6 @@ const ProductManagement = () => {
                         </div>
                       </div>
 
-                      {/* Conditional Delivery Availability Blocks */}
-                      {(formData.isDelivery || formData.isService || formData.isRental) && (
-                        <div className="space-y-4 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
-                          {formData.isDelivery && (
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                Courier/Delivery Type (Delivery)
-                              </p>
-                              <div className="flex flex-wrap gap-4">
-                                {[
-                                  { id: "self_delivery", label: "Self Delivery" },
-                                  { id: "hyperlocal", label: "Hyperlocal service delivery" },
-                                  { id: "pan_india", label: "Pan India (Courier Delivery)" },
-                                  { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
-                                  { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
-                                ].map((option) => {
-                                  const alwaysAllowed = ["none", "self_delivery", "jalapino_rider"];
-                                  const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
-                                  if (!isAllowedBySeller) return null;
-                                  const isSelected = formData.deliveryCoverage.includes(option.id);
-                                  return (
-                                    <label key={`delivery_${option.id}`} className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                                      <input
-                                        type="checkbox"
-                                        checked={isSelected}
-                                        onChange={() => {
-                                          setFormData((prev) => {
-                                            const current = prev.deliveryCoverage;
-                                            const next = current.includes(option.id) ? current.filter((c) => c !== option.id) : [...current, option.id];
-                                            return { ...prev, deliveryCoverage: next };
-                                          });
-                                        }}
-                                        className="w-4 h-4 accent-brand-500 cursor-pointer"
-                                      />
-                                      <span className="text-sm font-semibold text-slate-700">{option.label}</span>
-                                    </label>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {formData.isService && (
-                            <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
-                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                Service Delivery Option
-                              </p>
-                              <div className="flex flex-wrap gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                                  <input
-                                    type="checkbox"
-                                    checked={formData.deliveryCoverage.includes("self_delivery")}
-                                    onChange={() => {
-                                      setFormData((prev) => {
-                                        const current = prev.deliveryCoverage;
-                                        const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
-                                        return { ...prev, deliveryCoverage: next };
-                                      });
-                                    }}
-                                    className="w-4 h-4 accent-brand-500 cursor-pointer"
-                                  />
-                                  <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
-                                </label>
-                              </div>
-                            </div>
-                          )}
-
-                          {formData.isRental && (
-                            <div className="space-y-2 mt-4 pt-4 border-t border-slate-200">
-                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-                                Rental Delivery Option
-                              </p>
-                              <div className="flex flex-wrap gap-4">
-                                <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-2 border border-slate-200 rounded-lg hover:border-brand-300 transition-colors">
-                                  <input
-                                    type="checkbox"
-                                    checked={formData.deliveryCoverage.includes("self_delivery")}
-                                    onChange={() => {
-                                      setFormData((prev) => {
-                                        const current = prev.deliveryCoverage;
-                                        const next = current.includes("self_delivery") ? current.filter((c) => c !== "self_delivery") : [...current, "self_delivery"];
-                                        return { ...prev, deliveryCoverage: next };
-                                      });
-                                    }}
-                                    className="w-4 h-4 accent-brand-500 cursor-pointer"
-                                  />
-                                  <span className="text-sm font-semibold text-slate-700">Self Delivery</span>
-                                </label>
-                              </div>
-                            </div>
-                          )}
-
-                          {formData.deliveryCoverage.length === 0 && (
-                            <p className="text-xs text-red-500 font-semibold mt-1">Please select at least one delivery option.</p>
-                          )}
-                        </div>
-                      )}
 
                       {/* Payment Mode */}
                       <div className="space-y-2 flex flex-col p-4 bg-slate-50 border border-slate-100 rounded-xl">
@@ -1457,11 +1326,7 @@ const ProductManagement = () => {
                           Payment Mode
                         </label>
                         <div className="flex flex-col gap-3 mt-1">
-                          {[
-                            { id: "full", label: "Full Payment" },
-                            { id: "advance", label: "Advance Payment" },
-                            { id: "milestone", label: "Milestone Payment Structure (Advanced Payment System)" },
-                          ].map((mode) => (
+                          {dbPaymentModes.map((mode) => (
                             <div 
                               key={mode.id} 
                               className="flex items-center gap-3 cursor-pointer select-none"

@@ -19,7 +19,7 @@ import {
   HiOutlineFilm,
   HiOutlineTicket,
 } from "react-icons/hi2";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { sellerApi } from "../services/sellerApi";
@@ -71,8 +71,9 @@ const VariantDetails = ({ variant, onChange }) => (
   </div>
 );
 
-const AddProduct = () => {
+const EditProduct = () => {
   const navigate = useNavigate();
+  const { id } = useParams();
   const { user, refreshUser } = useAuth();
   console.log("Seller Profile in AddProduct:", user);
   const [modalTab, setModalTab] = useState(() => sessionStorage.getItem('addProductTab') || "general");
@@ -209,20 +210,20 @@ const AddProduct = () => {
     if (refreshUser) {
       refreshUser();
     }
-    const fetchCats = async () => {
+    const fetchData = async () => {
       try {
         const [catRes, hsnRes, facRes, payModesRes, coverageTypesRes, productColorsRes] = await Promise.all([
           sellerApi.getCategoryTree().catch(() => ({ data: { success: false, results: [] } })),
-          sellerApi.getActiveHsns().catch(() => ({ data: { results: [] } })),
+          sellerApi.getActiveHsns().catch(() => ({ data: { success: false, results: [] } })),
           eventConfigApi.getFacilities().catch(() => []),
           eventConfigApi.getPaymentModes().catch(() => []),
           eventConfigApi.getDeliveryCoverageTypes().catch(() => []),
           eventConfigApi.getProductColors().catch(() => [])
         ]);
-        if (catRes.data.success) {
+        if (catRes?.data?.success) {
           setDbCategories(catRes.data.results || catRes.data.result || []);
         }
-        if (hsnRes.data.success) {
+        if (hsnRes?.data?.success) {
           setDbHsns(hsnRes.data.results || []);
         }
         if (facRes) {
@@ -231,17 +232,81 @@ const AddProduct = () => {
         setDbPaymentModes(Array.isArray(payModesRes) ? payModesRes : []);
         setDbDeliveryCoverageTypes(Array.isArray(coverageTypesRes) ? coverageTypesRes : []);
         setDbProductColors(Array.isArray(productColorsRes) ? productColorsRes : []);
-        if (payModesRes?.length) {
-          setFormData((prev) => prev.paymentMode ? prev : { ...prev, paymentMode: payModesRes[0].id });
-        }
       } catch (error) {
-        toast.error("Failed to load categories/HSNs/facilities");
-      } finally {
-        setIsLoadingCats(false);
+        console.error("Categories fetch error:", error);
       }
+
+      // Fetch Product Data separately so category load failure doesn't block product load
+      if (id) {
+        try {
+          const prodRes = await sellerApi.getSellerProductById(id);
+          if (prodRes.data?.success) {
+            const product = prodRes.data.result || prodRes.data.results;
+            setFormData(prev => ({
+              ...prev,
+              name: product.name || "",
+              slug: product.slug || "",
+              sku: product.sku || "",
+              description: product.description || "",
+              price: product.price || "",
+              salePrice: product.salePrice || "",
+              stock: product.stock || "",
+              lowStockAlert: product.lowStockAlert ?? 5,
+              brand: product.brand || "",
+              weight: product.weight || "",
+              status: product.status || "active",
+              header: product.headerId?._id || product.headerId || "",
+              category: product.categoryId?._id || product.categoryId || "",
+              subcategory: product.subcategoryId?._id || product.subcategoryId || "",
+              hsnId: product.hsnId?._id || product.hsnId || "",
+              tags: Array.isArray(product.tags) ? product.tags.join(", ") : product.tags || "",
+              videoUrl: product.videoUrl || "",
+              shelfLife: product.shelfLife || "",
+              countryOfOrigin: product.countryOfOrigin || "",
+              fssaiLicense: product.fssaiLicense || "",
+              ingredients: product.ingredients || "",
+              hasExtraDetails: product.hasExtraDetails || false,
+              hasBrandName: product.hasBrandName || false,
+              hasIngredients: product.hasIngredients || false,
+              hasShelfLife: product.hasShelfLife || false,
+              hasFssaiLicense: product.hasFssaiLicense || false,
+              isDelivery: product.isDelivery || false,
+              isService: product.isService || false,
+              isRental: product.isRental || false,
+              paymentMode: product.paymentMode || dbPaymentModes[0]?.id || "",
+              remainingPaymentTiming: product.remainingPaymentTiming || "",
+              decorationUploadTime: product.decorationUploadTime || "",
+              minOrderQty: product.minOrderQty || 1,
+              maxOrderQty: product.maxOrderQty || "",
+              advanceOrderSetting: product.advanceOrderSetting || "",
+              cancellationPolicy: product.cancellationPolicy || "",
+              ticketingSystem: product.ticketingSystem || "",
+              deliveryCoverage: product.deliveryCoverage || [],
+              colors: product.colors || [],
+              variants: product.variants?.length
+                ? product.variants.map(v => ({ ...v, id: v._id || Date.now() }))
+                : prev.variants,
+              tickets: product.tickets || [],
+              capacityMin: product.capacityMin || "",
+              capacityMax: product.capacityMax || "",
+              venueAddress: product.venueAddress || "",
+              venueState: product.venueState || "",
+              venueCity: product.venueCity || "",
+              facilities: product.facilities || [],
+              mainImage: product.mainImage || null,
+              galleryImages: product.galleryImages || [],
+            }));
+          }
+        } catch (error) {
+          console.error("Product fetch error:", error);
+          toast.error("Failed to load product data");
+        }
+      }
+
+      setIsLoadingCats(false);
     };
-    fetchCats();
-  }, []);
+    fetchData();
+  }, [id]);
 
   const isCategoryMatchingModule = (cat, mod) => {
     if (!mod) return true;
@@ -383,12 +448,12 @@ const AddProduct = () => {
       data.append("venueCity", formData.venueCity || "");
       data.append("facilities", JSON.stringify(formData.facilities || []));
 
-      const response = await sellerApi.createProduct(data);
+      const response = await sellerApi.updateProduct(id, data);
       const approvalStatus = response?.data?.result?.approvalStatus;
       if (approvalStatus === "pending") {
-        toast.success("Product submitted for admin approval");
+        toast.success("Product updated and submitted for admin approval");
       } else {
-        toast.success(response?.data?.message || "Product saved successfully!");
+        toast.success(response?.data?.message || "Product updated successfully!");
       }
       navigate("/seller/products");
     } catch (error) {
@@ -1770,4 +1835,4 @@ const AddProduct = () => {
   );
 };
 
-export default AddProduct;
+export default EditProduct;

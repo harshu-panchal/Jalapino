@@ -764,7 +764,7 @@ export const createProduct = async (req, res) => {
       try {
         productData.deliveryCoverage = JSON.parse(productData.deliveryCoverage);
       } catch (e) {
-        productData.deliveryCoverage = ["hyperlocal"];
+        productData.deliveryCoverage = [];
       }
     }
 
@@ -774,6 +774,14 @@ export const createProduct = async (req, res) => {
         productData.colors = JSON.parse(productData.colors);
       } catch (e) {
         productData.colors = [];
+      }
+    }
+
+    if (typeof productData.facilities === "string") {
+      try {
+        productData.facilities = JSON.parse(productData.facilities);
+      } catch (e) {
+        productData.facilities = [];
       }
     }
 
@@ -923,7 +931,7 @@ export const updateProduct = async (req, res) => {
       try {
         productData.deliveryCoverage = JSON.parse(productData.deliveryCoverage);
       } catch (e) {
-        productData.deliveryCoverage = ["hyperlocal"];
+        productData.deliveryCoverage = [];
       }
     }
 
@@ -933,6 +941,14 @@ export const updateProduct = async (req, res) => {
         productData.colors = JSON.parse(productData.colors);
       } catch (e) {
         productData.colors = [];
+      }
+    }
+
+    if (typeof productData.facilities === "string") {
+      try {
+        productData.facilities = JSON.parse(productData.facilities);
+      } catch (e) {
+        productData.facilities = [];
       }
     }
 
@@ -1098,6 +1114,29 @@ export const deleteProduct = async (req, res) => {
 /* ===============================
    GET SINGLE PRODUCT
 ================================ */
+export const getSellerProductById = async (req, res) => {
+  try {
+    const product = await Product.findOne({ _id: req.params.id, sellerId: req.user.id })
+      .populate("headerId", "name")
+      .populate("categoryId", "name")
+      .populate("subcategoryId", "name")
+      .lean();
+
+    if (!product) {
+      return handleResponse(res, 404, "Product not found or unauthorized");
+    }
+
+    return handleResponse(
+      res,
+      200,
+      "Seller product details fetched",
+      normalizeProductDocumentModeration(product),
+    );
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
 export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;

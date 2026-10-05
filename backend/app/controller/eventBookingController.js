@@ -4,17 +4,49 @@ import EventReservation from '../models/event/EventReservation.js';
 import EventPayout from '../models/event/EventPayout.js';
 import SellerCalendar from '../models/event/SellerCalendar.js';
 import Seller from '../models/seller.js';
+import Product from '../models/product.js';
 import handleResponse from '../utils/helper.js';
 import { emitSellerNotification, emitCustomerNotification } from '../modules/notifications/notification.service.js';
 
 // Create a new event booking
 export const createEventBooking = async (req, res) => {
     try {
-        const { eventData, preferences, selectedCategories, paymentMethod, paymentDetails, amount, sellerId } = req.body;
+        const { eventData, preferences, selectedCategories, paymentMethod, paymentDetails, amount, sellerId, selectedProducts = [] } = req.body;
         const customerId = req.user.id || req.user._id;
 
         if (!sellerId) {
             return handleResponse(res, 400, "Seller is required for booking");
+        }
+
+        const baseAmount = Number(amount || 0);
+        if (!Number.isFinite(baseAmount) || baseAmount < 0) {
+            return handleResponse(res, 400, "Booking amount is invalid");
+        }
+
+        let productSubtotal = 0;
+        if (Array.isArray(selectedProducts) && selectedProducts.length > 0) {
+            const productLines = selectedProducts.map(line => ({
+                productId: line.productId || line._id,
+                quantity: Number(line.quantity || 1),
+            }));
+
+            if (productLines.some(line => !line.productId || !Number.isInteger(line.quantity) || line.quantity < 1)) {
+                return handleResponse(res, 400, "Selected product quantities are invalid");
+            }
+
+            const productDocs = await Product.find({
+                _id: { $in: productLines.map(line => line.productId) },
+                sellerId,
+            }).select('_id price').lean();
+
+            const productsById = new Map(productDocs.map(product => [String(product._id), product]));
+            if (productLines.some(line => !productsById.has(String(line.productId)))) {
+                return handleResponse(res, 400, "One or more selected products are unavailable for this seller");
+            }
+
+            productSubtotal = productLines.reduce((sum, line) => {
+                return sum + (Number(productsById.get(String(line.productId)).price || 0) * line.quantity);
+            }, 0);
         }
 
         // Fetch GASP Global Settings
@@ -131,7 +163,7 @@ export const createEventBooking = async (req, res) => {
             services: services,
             paymentStatus: 'PENDING',
             paymentMode: paymentMethod || 'ONLINE', // Will be finalized later
-            totalAmount: amount || 0,
+            totalAmount: baseAmount + productSubtotal,
             overallStatus: 'PENDING' // Waiting for seller approval
         });
 

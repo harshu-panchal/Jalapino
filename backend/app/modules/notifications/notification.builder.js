@@ -386,6 +386,13 @@ function eventDefinition(eventType) {
         title: () => "Event Booking Rejected",
         body: (payload) => payload.message || "Your event booking request has been rejected.",
       };
+    case NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Remaining Payment Due",
+        body: (payload) => payload.message || "Your event service is complete. Please pay the remaining balance.",
+      };
     case NOTIFICATION_EVENTS.EVENT_CHECKED_IN:
       return {
         role: NOTIFICATION_ROLES.CUSTOMER,
@@ -449,7 +456,8 @@ function eventData(eventType, payload = {}, role) {
   if (
     eventType === NOTIFICATION_EVENTS.NEW_EVENT_BOOKING_REQUEST ||
     eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_APPROVED ||
-    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REJECTED
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REJECTED ||
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE
   ) {
     const bookingId = String(payload.bookingId || "").trim() || undefined;
     const baseUrl = getFrontendBaseUrl();

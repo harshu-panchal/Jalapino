@@ -174,7 +174,30 @@ export const updateReservationStatus = async (req, res) => {
                     });
                 } catch (e) { console.log('Notification error', e) }
             } else if (newStatus === 'COMPLETED') {
-                booking.overallStatus = 'COMPLETED';
+                booking.overallStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+
+                if (allCompleted && booking.paymentStatus === 'ADVANCE_PAID') {
+                    try {
+                        const Setting = await import('../models/setting.js').then(m => m.default);
+                        const globalSettings = await Setting.findOne({}).lean();
+                        const advancePercent = globalSettings?.bookingControl?.advanceBookingLimitPercent ?? 20;
+                        const advancePaid = Math.round((Number(booking.totalAmount || 0) * advancePercent) / 100);
+                        const remainingAmount = Math.max(0, Number(booking.totalAmount || 0) - advancePaid);
+
+                        if (remainingAmount > 0) {
+                            const { emitCustomerNotification } = await import('../modules/notifications/notification.service.js');
+                            const { NOTIFICATION_EVENTS } = await import('../modules/notifications/notification.constants.js');
+                            emitCustomerNotification(NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE, {
+                                userId: booking.customer,
+                                bookingId: booking._id,
+                                message: `The seller has completed your event service. Please pay the remaining balance of ₹${remainingAmount}.`,
+                                data: { remainingAmount },
+                            });
+                        }
+                    } catch (notificationError) {
+                        console.error('Remaining payment notification error:', notificationError);
+                    }
+                }
 
                 // --- GENERATE PAYOUT ---
                 try {

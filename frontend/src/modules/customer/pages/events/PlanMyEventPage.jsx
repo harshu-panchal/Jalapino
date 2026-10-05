@@ -239,11 +239,27 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
    MAIN PAGE
 ════════════════════════════════════════════════ */
 const libraries = ['places'];
+const PLAN_MY_EVENT_VIEW_KEY = 'jalapino_plan_my_event_view';
+
+const readSavedPlanMyEventView = () => {
+    try {
+        return JSON.parse(sessionStorage.getItem(PLAN_MY_EVENT_VIEW_KEY) || 'null');
+    } catch {
+        return null;
+    }
+};
 
 const PlanMyEventPage = () => {
     const navigate = useNavigate();
     const { user: authUser, isAuthenticated } = useAuth();
     const { currentLocation } = useAppLocation();
+    const [savedView] = useState(readSavedPlanMyEventView);
+
+    useEffect(() => () => {
+        if (!window.location.pathname.startsWith('/plan-my-event')) {
+            sessionStorage.removeItem(PLAN_MY_EVENT_VIEW_KEY);
+        }
+    }, []);
 
 
     const { isLoaded } = useJsApiLoader({
@@ -272,23 +288,24 @@ const PlanMyEventPage = () => {
         noOfGuests: '',
         lat: null,
         lng: null,
+        ...(savedView?.eventInfo || {}),
     });
     const [savingInfo, setSavingInfo] = useState(false);
     const [savedInfo, setSavedInfo] = useState(false);
 
     /* — left sidebar — */
     const [categories, setCategories] = useState([]);
-    const [activeCategory, setActiveCategory] = useState(null);
+    const [activeCategory, setActiveCategory] = useState(savedView?.activeCategory || null);
     const [catSearch, setCatSearch] = useState('');
     const [loadingCats, setLoadingCats] = useState(true);
 
     /* — top filters — */
     const [eventTypes, setEventTypes] = useState([]);
-    const [selectedType, setSelectedType] = useState('');
-    const [filterDate, setFilterDate] = useState('');
+    const [selectedType, setSelectedType] = useState(savedView?.selectedType || '');
+    const [filterDate, setFilterDate] = useState(savedView?.filterDate || '');
     const [filterEndDate, setFilterEndDate] = useState('');
-    const [filterTime, setFilterTime] = useState('');
-    const [filterMultipleDates, setFilterMultipleDates] = useState([]);
+    const [filterTime, setFilterTime] = useState(savedView?.filterTime || '');
+    const [filterMultipleDates, setFilterMultipleDates] = useState(savedView?.filterMultipleDates || []);
     const [filterRemarks, setFilterRemarks] = useState('');
     const [multiInputDate, setMultiInputDate] = useState('');
     const [multiInputTime, setMultiInputTime] = useState('');
@@ -305,7 +322,7 @@ const PlanMyEventPage = () => {
     const [globalSearch, setGlobalSearch] = useState('');
 
     /* — inline detail view — */
-    const [selectedSellerDetail, setSelectedSellerDetail] = useState(null);
+    const [selectedSellerDetail, setSelectedSellerDetail] = useState(savedView?.selectedSellerDetail || null);
 
     /* — dynamic cards state — */
     const [liveStreams, setLiveStreams] = useState([]);
@@ -319,9 +336,11 @@ const PlanMyEventPage = () => {
             date: filterDate,
             time: filterTime,
             multipleEvents: filterMultipleDates,
+            guestCount: eventInfo.noOfGuests || 1,
+            location: eventInfo.functionLocation || '',
         },
         preferences: {}
-    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime, filterMultipleDates]);
+    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime, filterMultipleDates, eventInfo.noOfGuests, eventInfo.functionLocation]);
 
     /* — banners — */
     const [banners, setBanners] = useState([]);
@@ -473,7 +492,7 @@ const PlanMyEventPage = () => {
                 // if (sorted.length > 0) setActiveCategory(sorted[0]); // Removed default selection
 
                 setEventTypes(Array.isArray(typesRes) ? typesRes : []);
-                if (typesRes?.length > 0) setSelectedType(typesRes[0].value || typesRes[0]._id);
+                if (typesRes?.length > 0) setSelectedType(current => current || typesRes[0].value || typesRes[0]._id);
 
                 setBanners(Array.isArray(bannersRes) ? bannersRes : []);
             } catch (err) {
@@ -524,11 +543,30 @@ const PlanMyEventPage = () => {
         const lat = eventInfo.lat || currentLocation?.latitude;
         const lng = eventInfo.lng || currentLocation?.longitude;
         fetchSellers(activeCategory, filterDate, filterTime, searchLoc, lat, lng);
-        // Reset detail view if category/filters change
-        setSelectedSellerDetail(null);
         // Reset booking data when filters change
         setSellerBookings({});
     }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, currentLocation, fetchSellers]);
+
+    useEffect(() => {
+        if (!activeCategory && !selectedSellerDetail) {
+            sessionStorage.removeItem(PLAN_MY_EVENT_VIEW_KEY);
+            return;
+        }
+
+        try {
+            sessionStorage.setItem(PLAN_MY_EVENT_VIEW_KEY, JSON.stringify({
+                activeCategory,
+                selectedSellerDetail,
+                selectedType,
+                filterDate,
+                filterTime,
+                filterMultipleDates,
+                eventInfo,
+            }));
+        } catch (error) {
+            console.warn('Could not preserve Plan My Event page state:', error);
+        }
+    }, [activeCategory, selectedSellerDetail, selectedType, filterDate, filterTime, filterMultipleDates, eventInfo]);
 
     /* ── fetch booking counts for each seller when date is selected ── */
     useEffect(() => {
@@ -691,6 +729,7 @@ const PlanMyEventPage = () => {
                                         <button
                                             onClick={() => {
                                                 setActiveCategory(null);
+                                                setSelectedSellerDetail(null);
                                             }}
                                             className="shrink-0 lg:w-full flex items-center gap-2 px-3 py-2 rounded-xl transition-all duration-150 text-left font-bold text-purple-700 bg-purple-50 hover:bg-purple-100 border border-purple-200"
                                         >
@@ -704,7 +743,10 @@ const PlanMyEventPage = () => {
                                         return (
                                             <button
                                                 key={cat._id}
-                                                onClick={() => setActiveCategory(cat)}
+                                                onClick={() => {
+                                                    setActiveCategory(cat);
+                                                    setSelectedSellerDetail(null);
+                                                }}
                                                 className={`shrink-0 lg:w-full flex items-center gap-3 px-3 py-2 lg:py-3 rounded-xl transition-all duration-150 text-left font-bold border-2 ${isActive
                                                     ? 'border-slate-800 scale-[1.01] ring-2 ring-purple-400/50 shadow-md'
                                                     : 'border-transparent opacity-85 hover:opacity-100 hover:scale-[1.01]'

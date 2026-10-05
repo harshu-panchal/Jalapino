@@ -2,6 +2,7 @@ import express from "express";
 import {
     getProducts,
     getSellerProducts,
+    getSellerProductById,
     createProduct,
     updateProduct,
     deleteProduct,
@@ -31,6 +32,7 @@ router.get("/", optionalVerifyToken, getProducts);
 // Seller protected routes
 router.get("/seller/me", verifyToken, allowRoles("seller"), requireApprovedSeller, getSellerProducts);
 router.get("/stock-history", verifyToken, allowRoles("seller"), requireApprovedSeller, getStockHistory);
+router.get("/seller/:id", verifyToken, allowRoles("seller"), requireApprovedSeller, getSellerProductById);
 router.post("/adjust-stock", verifyToken, allowRoles("seller"), requireApprovedSeller, adjustStock);
 router.get("/moderation", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), getModerationProducts);
 router.patch("/moderation/:id/approve", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveProduct);

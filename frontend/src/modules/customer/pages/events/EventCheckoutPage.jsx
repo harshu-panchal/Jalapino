@@ -8,8 +8,19 @@ import { toast } from 'sonner';
 import { customerApi } from '../../services/customerApi';
 import { useSettings } from '@core/context/SettingsContext';
 
+const CHECKOUT_STATE_KEY = 'jalapino_plan_event_checkout';
+
+const readSavedCheckoutState = () => {
+    try {
+        return JSON.parse(sessionStorage.getItem(CHECKOUT_STATE_KEY) || 'null');
+    } catch {
+        return null;
+    }
+};
+
 const EventCheckoutPage = () => {
-    const { state } = useLocation();
+    const { state: routeState } = useLocation();
+    const state = routeState || readSavedCheckoutState();
     const navigate = useNavigate();
     const { settings } = useSettings();
     const eventData = state?.eventData;
@@ -17,6 +28,7 @@ const EventCheckoutPage = () => {
     const selectedCategories = state?.selectedCategories;
     const selectedSeller = state?.selectedSeller;
     const selectedPackage = state?.selectedPackage;
+    const selectedProducts = Array.isArray(state?.selectedProducts) ? state.selectedProducts : [];
 
     useEffect(() => {
         if (!eventData || !selectedCategories || !selectedSeller) {
@@ -33,10 +45,16 @@ const EventCheckoutPage = () => {
             .catch(console.error);
     }, []);
 
-    // Calculate total amount based on package or budget
-    const totalAmount = selectedPackage
+    // Calculate existing package/budget amount plus the selected catalog items.
+    const baseAmount = selectedPackage
         ? selectedPackage.pricing * (parseInt(eventData?.guestCount, 10) || 1)
         : parseInt(eventData?.budget, 10) || 0;
+    const selectedProductsSubtotal = selectedProducts.reduce((sum, product) => {
+        const price = Number(product.price || 0);
+        const quantity = Number(product.quantity || 1);
+        return sum + (price * quantity);
+    }, 0);
+    const totalAmount = baseAmount + selectedProductsSubtotal;
 
     const handleSendRequest = async () => {
         setIsSending(true);
@@ -49,8 +67,14 @@ const EventCheckoutPage = () => {
                 sellerId: selectedSeller._id,
                 packageId: selectedPackage?._id,
                 paymentMethod: 'ONLINE', // Will be finalized at payment time
-                amount: totalAmount
+                amount: baseAmount,
+                selectedProducts: selectedProducts.map(product => ({
+                    productId: product._id,
+                    quantity: product.quantity || 1,
+                }))
             });
+            sessionStorage.removeItem(CHECKOUT_STATE_KEY);
+            sessionStorage.removeItem(`jalapino_plan_event_products_${selectedSeller._id}`);
             toast.success("Request Sent! Awaiting Seller Approval.", { id: 'booking' });
             navigate('/orders'); // Go to orders page
         } catch (error) {
@@ -63,7 +87,7 @@ const EventCheckoutPage = () => {
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
             <div className="sticky top-0 left-0 right-0 h-16 bg-white z-50 flex items-center px-4 shadow-sm shrink-0">
-                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
+                    <button onClick={() => navigate('/plan-my-event')} className="p-2 -ml-2 rounded-full hover:bg-slate-100 transition-colors">
                     <ArrowBackIcon />
                 </button>
                 <div className="ml-2">
@@ -135,6 +159,22 @@ const EventCheckoutPage = () => {
                                 <div className="flex justify-between">
                                     <span className="text-slate-500">Selected Services</span>
                                     <span className="font-semibold text-slate-800">{selectedCategories?.length} Services</span>
+                                </div>
+                            )}
+                            {selectedProducts.map(product => {
+                                const quantity = Number(product.quantity || 1);
+                                const lineTotal = Number(product.price || 0) * quantity;
+                                return (
+                                    <div key={product._id} className="flex justify-between text-sm">
+                                        <span className="text-slate-500">{product.name} × {quantity}</span>
+                                        <span className="font-semibold text-slate-800">₹{lineTotal.toLocaleString()}</span>
+                                    </div>
+                                );
+                            })}
+                            {selectedProducts.length > 0 && (
+                                <div className="flex justify-between text-xs border-t pt-2">
+                                    <span className="text-slate-500">Product subtotal</span>
+                                    <span className="font-semibold text-slate-800">₹{selectedProductsSubtotal.toLocaleString()}</span>
                                 </div>
                             )}
                         </div>

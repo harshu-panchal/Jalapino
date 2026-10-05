@@ -22,7 +22,6 @@ import {
   Terminal,
   Sparkles,
   User,
-  Coffee,
 } from "lucide-react";
 
 const Dashboard = React.lazy(() => import("../pages/Dashboard"));
@@ -221,17 +220,6 @@ const navItems = [
       { label: "Cancelled", path: "/admin/orders/cancelled" },
       { label: "Returned", path: "/admin/orders/returned" },
       { label: "Return Requests", path: "/admin/returns" },
-    ],
-  },
-  {
-    label: "Catering",
-    icon: Coffee,
-    color: "amber",
-    children: [
-      { label: "Dashboard", path: "/admin/catering/dashboard" },
-      { label: "Services", path: "/admin/catering/services" },
-      { label: "Packages", path: "/admin/catering/packages" },
-      { label: "Bookings", path: "/admin/catering/bookings" },
     ],
   },
   {

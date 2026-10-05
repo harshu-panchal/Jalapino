@@ -12,7 +12,8 @@ import axiosInstance from '@core/api/axios';
 import { getOrderSocket } from '@/core/services/orderSocket';
 import { getStoredAuthToken } from '@core/utils/authStorage';
 import { useAuth } from '@/core/context/AuthContext';
-import AssignmentIcon from '@mui/icons-material/Assignment';
+import AddIcon from '@mui/icons-material/Add';
+import RemoveIcon from '@mui/icons-material/Remove';
 
 const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const navigate = useNavigate();
@@ -27,6 +28,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [products, setProducts] = useState([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState([]);
+    const selectedProductsStorageKey = `jalapino_plan_event_products_${selectedSeller?._id || 'seller'}`;
 
     // Customization States
     const [themePreference, setThemePreference] = useState('');
@@ -61,7 +63,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 // Fetch catalog products filtered by this seller
                 const response = await axiosInstance.get(`/products?sellerId=${selectedSeller._id}&module=plan_my_event`);
                 const responseData = response.data?.result || response.data?.results || response.data?.data || [];
-                setProducts(Array.isArray(responseData) ? responseData : (responseData.items || []));
+                const sellerProducts = Array.isArray(responseData) ? responseData : (responseData.items || []);
+                setProducts(sellerProducts);
+                try {
+                    const savedSelection = JSON.parse(sessionStorage.getItem(selectedProductsStorageKey) || '[]');
+                    const savedQuantities = new Map(savedSelection.map(item => [String(item.productId), Number(item.quantity) || 1]));
+                    setSelectedProducts(sellerProducts
+                        .filter(product => savedQuantities.has(String(product._id)))
+                        .map(product => ({ ...product, quantity: savedQuantities.get(String(product._id)) })));
+                } catch {
+                    setSelectedProducts([]);
+                }
             } catch (error) {
                 console.error("Failed to fetch seller products:", error);
             } finally {
@@ -119,7 +131,18 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 currentSocket.off('chat_message');
             }
         };
-    }, [eventData, selectedSeller, navigate, user]);
+    }, [eventData, selectedSeller, navigate, user, selectedProductsStorageKey]);
+
+    useEffect(() => {
+        if (isLoadingProducts) return;
+        try {
+            sessionStorage.setItem(selectedProductsStorageKey, JSON.stringify(
+                selectedProducts.map(({ _id, quantity }) => ({ productId: _id, quantity }))
+            ));
+        } catch (error) {
+            console.warn('Could not preserve selected event products:', error);
+        }
+    }, [selectedProducts, selectedProductsStorageKey, isLoadingProducts]);
 
     // Check date availability
     useEffect(() => {
@@ -187,13 +210,20 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         setChatInput('');
     };
 
-    const handleProductSelect = (product) => {
+    const handleProductQuantityChange = (product, change) => {
         setSelectedProducts(prev => {
-            if (prev.find(p => p._id === product._id)) {
+            const selectedProduct = prev.find(p => p._id === product._id);
+            const nextQuantity = (selectedProduct?.quantity || 0) + change;
+
+            if (nextQuantity <= 0) {
                 return prev.filter(p => p._id !== product._id);
-            } else {
-                return [...prev, product];
             }
+
+            if (!selectedProduct) {
+                return [...prev, { ...product, quantity: nextQuantity }];
+            }
+
+            return prev.map(p => p._id === product._id ? { ...p, quantity: nextQuantity } : p);
         });
     };
 
@@ -215,19 +245,28 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 referencePhoto,
                 customNotes,
                 customBudget,
-                selectedProducts: selectedProducts.map(p => p._id)
+                selectedProducts: selectedProducts.map(p => p._id),
+                selectedProductQuantities: selectedProducts.map(({ _id, quantity }) => ({ productId: _id, quantity }))
             }
         };
 
+        // Keep the selected products and quantities available after refresh/back navigation.
+        const checkoutState = {
+            eventData,
+            preferences: collectedPreferences,
+            selectedCategories,
+            selectedSeller,
+            selectedProducts,
+        };
+        try {
+            sessionStorage.setItem('jalapino_plan_event_checkout', JSON.stringify(checkoutState));
+        } catch (error) {
+            console.warn('Could not preserve event checkout details:', error);
+        }
+
         // Go to Event Checkout/Summary Page
         navigate('/plan-my-event/checkout', {
-            state: {
-                eventData,
-                preferences: collectedPreferences,
-                selectedCategories,
-                selectedSeller,
-                selectedProducts
-            }
+            state: checkoutState
         });
     };
 
@@ -238,6 +277,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             navigate(-1);
         }
     };
+
+    const selectedProductsSubtotal = selectedProducts.reduce(
+        (total, product) => total + (Number(product.price) || 0) * (Number(product.quantity) || 1),
+        0
+    );
 
     const content = (
         <div className="max-w-5xl mx-auto px-4 pt-4 pb-24">
@@ -294,7 +338,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                 {/* Left/Main Column: Products and Customization */}
-                <div className="lg:col-span-8 space-y-6">
+                <div className="lg:col-span-12 space-y-6">
 
                     {/* Products Grid */}
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -319,8 +363,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     return (
                                         <div
                                             key={product._id}
-                                            onClick={() => handleProductSelect(product)}
-                                            className={`border-2 rounded-2xl p-4 cursor-pointer transition-all flex flex-col justify-between
+                                            className={`border-2 rounded-2xl p-4 transition-all flex flex-col justify-between
                                                         ${isSelected
                                                     ? 'border-purple-500 bg-purple-50/40 shadow-sm'
                                                     : 'border-slate-100 hover:border-purple-200'
@@ -341,17 +384,39 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 </div>
                                             </div>
                                             <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
-                                                <span className="font-extrabold text-sm text-purple-600">₹{product.price}</span>
-                                                <button
-                                                    type="button"
-                                                    className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 transition-all
-                                                                ${isSelected
-                                                            ? 'bg-purple-600 border-purple-600 text-white shadow-sm'
-                                                            : 'bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600'
-                                                        }`}
-                                                >
-                                                    {isSelected ? 'Selected' : 'Add Item'}
-                                                </button>
+                                                <span className="font-extrabold text-sm text-purple-600">
+                                                    ₹{((Number(product.price) || 0) * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}
+                                                    {isSelected?.quantity > 1 && <span className="ml-1 text-[10px] font-semibold text-slate-400">({isSelected.quantity} × ₹{Number(product.price || 0).toLocaleString('en-IN')})</span>}
+                                                </span>
+                                                {isSelected ? (
+                                                    <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
+                                                        <button
+                                                            type="button"
+                                                            aria-label={`Remove one ${product.name}`}
+                                                            onClick={() => handleProductQuantityChange(product, -1)}
+                                                            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
+                                                        >
+                                                            <RemoveIcon fontSize="small" />
+                                                        </button>
+                                                        <span className="min-w-5 text-center text-xs font-black text-slate-800">{isSelected.quantity}</span>
+                                                        <button
+                                                            type="button"
+                                                            aria-label={`Add one ${product.name}`}
+                                                            onClick={() => handleProductQuantityChange(product, 1)}
+                                                            className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                                                        >
+                                                            <AddIcon fontSize="small" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleProductQuantityChange(product, 1)}
+                                                        className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
+                                                    >
+                                                        Add Item
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -609,23 +674,39 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     </div>
                     )}
 
-                    {/* --- New Event Details Form Below Chat --- */}
+                    {/* --- Plan Summary Below Chat --- */}
                     <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-6">
-                        <div className="flex items-center gap-4 mb-6">
-                            <div className="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center shadow-md shadow-blue-200 shrink-0">
-                                <AssignmentIcon sx={{ color: 'white' }} />
-                            </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-slate-800">Event Details</h3>
-                                <p className="text-sm text-slate-500">Provide details to customize your plan</p>
+                        <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-5">
+                            <h3 className="text-xl font-bold text-slate-800">Plan Summary</h3>
+                            <div className="mt-3 space-y-2 text-sm">
+                                <div className="flex justify-between gap-4 text-slate-600">
+                                    <span>Event Type</span><span className="font-semibold">{eventData?.eventType || 'Not selected'}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-slate-600">
+                                    <span>Date & Time</span><span className="font-semibold">{eventData?.date || 'Not selected'}{eventData?.time ? ` · ${eventData.time}` : ''}</span>
+                                </div>
+                                <div className="flex justify-between gap-4 text-slate-600">
+                                    <span>Guests</span><span className="font-semibold">{eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
+                                </div>
+                                {selectedProducts.map(product => {
+                                    const quantity = Number(product.quantity) || 1;
+                                    return (
+                                        <div key={product._id} className="flex justify-between gap-4 text-slate-600">
+                                            <span>{product.name} × {quantity}</span>
+                                            <span className="font-semibold">₹{((Number(product.price) || 0) * quantity).toLocaleString('en-IN')}</span>
+                                        </div>
+                                    );
+                                })}
+                                <div className="flex justify-between border-t border-purple-100 pt-3 font-bold text-slate-800">
+                                    <span>Selected Products</span><span>{selectedProducts.reduce((total, product) => total + (Number(product.quantity) || 0), 0)} items · ₹{selectedProductsSubtotal.toLocaleString('en-IN')}</span>
+                                </div>
                             </div>
                         </div>
-
-                        <div className="flex flex-col gap-3">
+                        <div className="mt-4 flex flex-col gap-3">
                             <button
                                 onClick={handleProceed}
                                 className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold rounded-xl hover:opacity-90 transition-all text-[13px] tracking-wide shadow-md">
-                                START PLANNING
+                                Proceed to Checkout
                             </button>
                             <button
                                 onClick={() => navigate('/plan-my-event/venues')}
@@ -634,65 +715,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </button>
                         </div>
                     </div>
-                </div>
-
-                {/* Right Column: Action Sticky Summary */}
-                <div className="lg:col-span-4 space-y-6 relative">
-
-                    {/* Sticky Summary Card */}
-                    <div className="bg-white p-5 rounded-3xl border border-slate-200 shadow-sm space-y-4">
-                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-wider">Plan Summary</h4>
-                        <div className="space-y-2 border-b border-slate-100 pb-3">
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Event Type:</span>
-                                <span className="capitalize">{eventData?.eventType}</span>
-                            </div>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Date:</span>
-                                <span>{eventData?.date}</span>
-                            </div>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Time Slot:</span>
-                                <span>{eventData?.time || 'Not selected'}</span>
-                            </div>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Selected Products:</span>
-                                <span>{selectedProducts.length} items</span>
-                            </div>
-                            <div className="flex justify-between text-xs font-semibold text-slate-600">
-                                <span>Guests:</span>
-                                <span className={
-                                    (parseInt(eventData?.guestCount, 10) || 1) < (selectedSeller?.minGuestCapacity || 1) || 
-                                    (parseInt(eventData?.guestCount, 10) || 1) > (selectedSeller?.maxGuestCapacity || 500) 
-                                        ? "text-rose-500 font-bold" : ""
-                                }>
-                                    {eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})
-                                </span>
-                            </div>
-                        </div>
-
-                        {((parseInt(eventData?.guestCount, 10) || 1) < (selectedSeller?.minGuestCapacity || 1) || 
-                          (parseInt(eventData?.guestCount, 10) || 1) > (selectedSeller?.maxGuestCapacity || 500)) && (
-                            <div className="text-[10px] text-rose-500 bg-rose-50 p-2 rounded-lg font-bold">
-                                Your guest count ({eventData?.guestCount || 1}) is outside the provider's allowed capacity ({selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500}). Please go back and adjust your guest count.
-                            </div>
-                        )}
-
-                        <button
-                            onClick={handleProceed}
-                            disabled={((parseInt(eventData?.guestCount, 10) || 1) < (selectedSeller?.minGuestCapacity || 1) || 
-                                       (parseInt(eventData?.guestCount, 10) || 1) > (selectedSeller?.maxGuestCapacity || 500))}
-                            className={`w-full py-3 ${
-                                ((parseInt(eventData?.guestCount, 10) || 1) >= (selectedSeller?.minGuestCapacity || 1) && 
-                                 (parseInt(eventData?.guestCount, 10) || 1) <= (selectedSeller?.maxGuestCapacity || 500)) 
-                                 ? 'bg-purple-600 hover:bg-purple-700 active:scale-95 shadow-purple-200' 
-                                 : 'bg-slate-300 cursor-not-allowed'
-                            } text-white font-extrabold rounded-2xl transition-all shadow-md text-center`}
-                        >
-                            Proceed to Checkout
-                        </button>
-                    </div>
-
                 </div>
             </div>
         </div>

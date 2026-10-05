@@ -4,7 +4,56 @@ import PreferenceForm from '../models/event/PreferenceForm.js';
 import CategoryBusinessRule from '../models/event/CategoryBusinessRule.js';
 import City from '../models/City.js';
 import VenueFacility from '../models/event/VenueFacility.js';
+import AppConfig from '../models/AppConfig.js';
 import handleResponse from '../utils/helper.js';
+
+const DEFAULT_PAYMENT_MODES = [
+    { id: 'full', label: 'Full Payment', desc: 'Complete payment upfront' },
+    { id: 'advance', label: 'Advance Payment', desc: 'Pay a portion in advance' },
+    { id: 'milestone', label: 'Milestone Payment', desc: 'Advanced Payment System' },
+];
+
+const DEFAULT_DELIVERY_COVERAGE_TYPES = [
+    { id: 'hyperlocal', label: 'Hyperlocal service delivery', desc: 'Nearby area delivery' },
+    { id: 'pan_india', label: 'Pan India (Courier Delivery)', desc: 'Courier delivery all over India' },
+    { id: 'zone_wise', label: 'Zone Wise', desc: 'Specific delivery zones' },
+];
+
+const DEFAULT_PRODUCT_COLORS = [
+    'Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Pink', 'Purple',
+    'Brown', 'Grey', 'Gold', 'Silver', 'Multicolor',
+];
+
+export const getPaymentModes = async (req, res) => {
+    try {
+        const config = await AppConfig.findOne({ key: 'paymentModes' });
+        return handleResponse(res, 200, 'Payment modes fetched successfully', config?.value?.length ? config.value : DEFAULT_PAYMENT_MODES);
+    } catch (error) {
+        console.error('Error fetching payment modes:', error);
+        return handleResponse(res, 200, 'Payment modes fetched (fallback)', DEFAULT_PAYMENT_MODES);
+    }
+};
+
+export const getDeliveryCoverageTypes = async (req, res) => {
+    try {
+        const config = await AppConfig.findOne({ key: 'deliveryCoverageTypes' });
+        return handleResponse(res, 200, 'Delivery coverage types fetched successfully', config?.value?.length ? config.value : DEFAULT_DELIVERY_COVERAGE_TYPES);
+    } catch (error) {
+        console.error('Error fetching delivery coverage types:', error);
+        return handleResponse(res, 200, 'Delivery coverage types fetched (fallback)', DEFAULT_DELIVERY_COVERAGE_TYPES);
+    }
+};
+
+export const getProductColors = async (req, res) => {
+    try {
+        const config = await AppConfig.findOne({ key: 'productColors' });
+        return handleResponse(res, 200, 'Product colors fetched successfully', config?.value?.length ? config.value : DEFAULT_PRODUCT_COLORS);
+    } catch (error) {
+        console.error('Error fetching product colors:', error);
+        return handleResponse(res, 200, 'Product colors fetched (fallback)', DEFAULT_PRODUCT_COLORS);
+    }
+};
+
 
 export const getCities = async (req, res) => {
     try {

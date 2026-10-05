@@ -114,5 +114,45 @@ export const eventConfigApi = {
             console.error('Error fetching event banners:', error);
             throw error;
         }
+    },
+
+    // Get payment modes (dynamic from DB)
+    getPaymentModes: async () => {
+        try {
+            const response = await axiosInstance.get('/event-config/payment-modes');
+            return response.data?.results || response.data?.data || response.data || [];
+        } catch (error) {
+            console.error('Error fetching payment modes:', error);
+            return [
+                { id: 'full', label: 'Full Payment', desc: 'Complete payment upfront' },
+                { id: 'advance', label: 'Advance Payment', desc: 'Pay a portion in advance' },
+                { id: 'milestone', label: 'Milestone Payment', desc: 'Advanced Payment System' },
+            ];
+        }
+    },
+
+    // Get delivery coverage types (dynamic from DB)
+    getDeliveryCoverageTypes: async () => {
+        try {
+            const response = await axiosInstance.get('/event-config/delivery-coverage-types');
+            return response.data?.results || response.data?.data || response.data || [];
+        } catch (error) {
+            console.error('Error fetching delivery coverage types:', error);
+            return [
+                { id: 'hyperlocal', label: 'Hyperlocal service delivery', desc: 'Nearby area delivery' },
+                { id: 'pan_india', label: 'Pan India (Courier Delivery)', desc: 'Courier delivery all over India' },
+                { id: 'zone_wise', label: 'Zone Wise', desc: 'Specific delivery zones' },
+            ];
+        }
+    },
+
+    getProductColors: async () => {
+        try {
+            const response = await axiosInstance.get('/event-config/product-colors');
+            return response.data?.results || response.data?.data || response.data || [];
+        } catch (error) {
+            console.error('Error fetching product colors:', error);
+            return ['Red', 'Blue', 'Green', 'Black', 'White', 'Yellow', 'Pink', 'Purple', 'Brown', 'Grey', 'Gold', 'Silver', 'Multicolor'];
+        }
     }
 };

@@ -39,6 +39,7 @@ function dedupeKeyForNotification(eventType, notification, payload = {}) {
     notification?.data?.productId ||
     notification?.data?.variantSku ||
     payload.checkoutGroupId ||
+    payload.bookingId ||
     payload.userId ||
     notification?.userId ||
     "unknown";
@@ -98,6 +99,7 @@ function isOrderUpdateEvent(eventType) {
     NOTIFICATION_EVENTS.RETURN_APPROVED,
     NOTIFICATION_EVENTS.RETURN_REJECTED,
     NOTIFICATION_EVENTS.RETURN_COMPLETED,
+    NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE,
   ].includes(eventType);
 }
 

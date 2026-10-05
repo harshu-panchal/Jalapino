@@ -646,7 +646,7 @@ const OrdersPage = () => {
 
                             {booking.overallStatus !== 'CANCELLED' && booking.overallStatus !== 'PAYMENT_PENDING' && (
                                 <div className="flex gap-2 border-t border-slate-100 pt-3 flex-wrap">
-                                    {booking.paymentStatus === 'ADVANCE_PAID' && (
+                                    {booking.paymentStatus === 'ADVANCE_PAID' && booking.overallStatus === 'COMPLETED' && (
                                         <button 
                                             onClick={() => handleRemainingPayment(booking)}
                                             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-200 mb-1"
