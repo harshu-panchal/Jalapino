@@ -34,6 +34,7 @@ import { toast } from "sonner";
 import Pagination from "@shared/components/ui/Pagination";
 import { useAuth } from "@core/context/AuthContext";
 import { eventConfigApi } from "../../customer/services/eventConfigApi";
+import { resolveImageUrl } from "@/core/utils/imageUtils";
 
 const ProductManagement = () => {
   const navigate = useNavigate();
@@ -853,20 +854,36 @@ const ProductManagement = () => {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
                       <div className="h-14 w-14 rounded-lg overflow-hidden bg-slate-100 ring-1 ring-slate-200">
-                        <img
-                          src={
-                            p.mainImage ||
-                            p.image ||
-                            "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=400&h=400"
-                          }
-                          alt={p.name}
-                          className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
-                        />
+                        {(p.mainImage || p.image || p.galleryImages?.[0]) ? (
+                          <img
+                            src={resolveImageUrl(p.mainImage || p.image || p.galleryImages?.[0])}
+                            alt={p.name}
+                            className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
+                          />
+                        ) : (
+                          <div className="h-full w-full flex items-center justify-center text-slate-400">
+                            {p.tickets?.length ? <HiOutlineTicket className="h-6 w-6" /> : <HiOutlinePhoto className="h-6 w-6" />}
+                          </div>
+                        )}
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <p className="text-sm font-medium text-slate-900">
                           {p.name}
                         </p>
+                        {p.tickets?.length > 0 && (
+                          <div className="mt-1 space-y-0.5">
+                            {p.tickets.map((ticket, ticketIndex) => (
+                              <p key={ticket._id || ticketIndex} className="text-[10px] text-purple-700">
+                                <span className="font-bold">{ticket.name || "Ticket"}</span>
+                                {ticket.price !== undefined && ticket.price !== "" && ` · ₹${Number(ticket.price).toLocaleString("en-IN")}`}
+                                {ticket.salePrice !== undefined && ticket.salePrice !== null && ticket.salePrice !== "" && ` · Sale ₹${Number(ticket.salePrice).toLocaleString("en-IN")}`}
+                                {ticket.capacity !== undefined && ticket.capacity !== null && ` · Capacity ${ticket.capacity}`}
+                                {ticket.instructions && ` · ${ticket.instructions}`}
+                                {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && ` · ${ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}-${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(" ")).filter(Boolean).join(", ")}`}
+                              </p>
+                            ))}
+                          </div>
+                        )}
                         {String(p.approvalStatus || "").toLowerCase() === "pending" ? (
                           <p className="text-[10px] font-medium text-amber-600">
                             Hidden from customers until admin approval.

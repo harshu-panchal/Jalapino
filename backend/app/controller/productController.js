@@ -11,7 +11,6 @@ import {
   enqueueProductRemoval,
 } from "../services/searchSyncService.js";
 import { buildKey, getOrSet, getTTL, invalidate } from "../services/cacheService.js";
-import { uploadToCloudinary } from "../services/mediaService.js";
 import logger from "../services/logger.js";
 import { resolveCategoryName, resolveSellerName } from "../services/entityNameCache.js";
 import {
@@ -74,6 +73,28 @@ function makeProductSku(name, index = 1) {
     .replace(/[^a-z0-9]/g, "")
     .slice(0, 5) || "item";
   return `${prefix}-${String(index).padStart(3, "0")}`;
+}
+
+async function makeUniqueProductIdentifiers({ name, slug, sku, excludeId } = {}) {
+  const slugBase = slugify(slug || name) || "product";
+  const skuBase = String(sku || makeProductSku(name, 1)).trim() || "item-001";
+  const exclusion = excludeId ? { _id: { $ne: excludeId } } : {};
+  let uniqueSlug = slugBase;
+  let uniqueSku = skuBase;
+  let suffix = 2;
+
+  while (await Product.exists({ slug: uniqueSlug, ...exclusion })) {
+    uniqueSlug = `${slugBase}-${suffix}`;
+    suffix += 1;
+  }
+
+  suffix = 2;
+  while (await Product.exists({ sku: uniqueSku, ...exclusion })) {
+    uniqueSku = `${skuBase}-${suffix}`;
+    suffix += 1;
+  }
+
+  return { slug: uniqueSlug, sku: uniqueSku };
 }
 
 function parseJsonIfString(value) {
@@ -342,11 +363,25 @@ export const getProducts = async (req, res) => {
           query.categoryId.$in = query.categoryId.$in.filter(id => targetCatIds.includes(id));
         } else if (query.categoryId) {
           if (!targetCatIds.includes(String(query.categoryId))) query.categoryId = "000000000000000000000000";
+        } else if (requestedModule === "plan_my_event" && isSellerSpecificRequest) {
+          query.$and = [
+            ...(query.$and || []),
+            {
+              $or: [
+                { categoryId: { $in: targetCatIds } },
+                { tickets: { $exists: true, $ne: [] } },
+              ],
+            },
+          ];
         } else {
           query.categoryId = { $in: targetCatIds };
         }
       } else {
-        query.categoryId = "000000000000000000000000";
+        if (requestedModule === "plan_my_event" && isSellerSpecificRequest) {
+          query.tickets = { $exists: true, $ne: [] };
+        } else {
+          query.categoryId = "000000000000000000000000";
+        }
       }
     }
 
@@ -386,8 +421,8 @@ export const getProducts = async (req, res) => {
     const fetchFn = async () => {
       const [rawProducts, total] = await Promise.all([
         Product.find(finalQuery)
-          .select(
-            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants videoUrl createdAt",
+        .select(
+            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt",
           )
           // No .populate() — names resolved via cache-backed entityNameCache
           .sort(sortQuery)
@@ -563,7 +598,7 @@ export const getSellerProducts = async (req, res) => {
     ] = await Promise.all([
       Product.find(query)
         .select(
-          "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants videoUrl createdAt",
+          "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt",
         )
         .populate("headerId", "name")
         .populate("categoryId", "name")
@@ -686,26 +721,9 @@ export const createProduct = async (req, res) => {
     if (files.length > 0) {
       const galleryUrls = [];
       for (const file of files) {
-        try {
-          if (file.fieldname === "mainImage") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            productData.mainImage = url;
-          } else if (file.fieldname === "galleryImages") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            galleryUrls.push(url);
-          }
-        } catch (err) {
-          logger.error("Cloudinary upload failed", {
-            scope: "createProduct",
-            error: err,
-          });
-        }
+        const imageUrl = `/images/products/${file.filename}`;
+        if (file.fieldname === "mainImage") productData.mainImage = imageUrl;
+        else if (file.fieldname === "galleryImages") galleryUrls.push(imageUrl);
       }
       if (galleryUrls.length > 0) {
         productData.galleryImages = galleryUrls;
@@ -751,6 +769,8 @@ export const createProduct = async (req, res) => {
     if (!productData.sku || String(productData.sku).trim() === "") {
       productData.sku = makeProductSku(productData.name, 1);
     }
+
+    Object.assign(productData, await makeUniqueProductIdentifiers(productData));
 
     applyMediaFields(productData);
 
@@ -881,30 +901,11 @@ export const updateProduct = async (req, res) => {
     if (files.length > 0) {
       const galleryUrls = [];
       for (const file of files) {
-        try {
-          if (file.fieldname === "mainImage") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            productData.mainImage = url;
-          } else if (file.fieldname === "galleryImages") {
-            const url = await uploadToCloudinary(file.buffer, "products", {
-              mimeType: file.mimetype,
-              resourceType: "image",
-            });
-            galleryUrls.push(url);
-          }
-        } catch (err) {
-          logger.error("Cloudinary upload failed during update", {
-            scope: "updateProduct",
-            error: err,
-          });
-        }
+        const imageUrl = `/images/products/${file.filename}`;
+        if (file.fieldname === "mainImage") productData.mainImage = imageUrl;
+        else if (file.fieldname === "galleryImages") galleryUrls.push(imageUrl);
       }
-      if (galleryUrls.length > 0) {
-        productData.galleryImages = galleryUrls;
-      }
+      if (galleryUrls.length > 0) productData.galleryImages = galleryUrls;
     }
 
     // Parse JSON fields
@@ -980,6 +981,19 @@ export const updateProduct = async (req, res) => {
       productData.sku = product.sku || makeProductSku(skuBaseName, 1);
     }
 
+    Object.assign(productData, await makeUniqueProductIdentifiers({
+      name: skuBaseName,
+      slug: productData.slug || product.slug,
+      sku: productData.sku || product.sku,
+      excludeId: product._id,
+    }));
+
+    if (productData.mainImage === undefined) productData.mainImage = product.mainImage;
+    if (productData.galleryImages === undefined) {
+      productData.galleryImages = product.galleryImages || [];
+    } else if ((req.files || []).some((file) => file.fieldname === "galleryImages")) {
+      productData.galleryImages = [...(product.galleryImages || []), ...productData.galleryImages];
+    }
     applyMediaFields(productData);
 
     if (typeof productData.tags === "string") {
@@ -1165,7 +1179,7 @@ export const getProductById = async (req, res) => {
       async () =>
         Product.findById(id)
           .select(
-            "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants createdAt",
+            "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt",
           )
           .populate("headerId", "name")
           .populate("categoryId", "name")
@@ -1283,7 +1297,7 @@ export const getModerationProducts = async (req, res) => {
       await Promise.all([
         Product.find(moderatedQuery)
           .select(
-            "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants createdAt",
+            "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt",
           )
           .populate("headerId", "name")
           .populate("categoryId", "name")

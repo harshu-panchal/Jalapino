@@ -291,7 +291,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     <ArrowBackIcon />
                 </button>
                 <div>
-                    <h1 className="text-lg font-bold text-slate-800 leading-tight">Customize Request</h1>
+                    <h1 className="text-lg font-bold text-slate-800 leading-tight">Customize Booking</h1>
                     <p className="text-[10px] text-slate-500 font-medium">Select items & options offered by {selectedSeller?.shopName || selectedSeller?.name}</p>
                 </div>
             </div>
@@ -381,6 +381,30 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <div className="min-w-0">
                                                     <h4 className="font-bold text-sm text-slate-800 truncate">{product.name}</h4>
                                                     <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{product.description}</p>
+                                                    {product.tickets?.length > 0 && (
+                                                        <div className="mt-2 space-y-1.5">
+                                                            {product.tickets.map((ticket, ticketIndex) => (
+                                                                <div key={ticket._id || ticketIndex} className="rounded-lg bg-purple-50/70 border border-purple-100 px-2.5 py-2">
+                                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
+                                                                        <span className="font-bold text-slate-700">{ticket.name}</span>
+                                                                        <span className="font-extrabold text-purple-700">₹{Number(ticket.price || 0).toLocaleString('en-IN')}</span>
+                                                                        {ticket.salePrice !== undefined && ticket.salePrice !== null && ticket.salePrice !== "" && (
+                                                                            <span className="text-slate-500">Sale: ₹{Number(ticket.salePrice).toLocaleString('en-IN')}</span>
+                                                                        )}
+                                                                        {ticket.capacity !== undefined && ticket.capacity !== null && (
+                                                                            <span className="text-slate-500">Capacity: {ticket.capacity}</span>
+                                                                        )}
+                                                                    </div>
+                                                                    {ticket.instructions && <p className="text-[10px] text-slate-500 mt-0.5">{ticket.instructions}</p>}
+                                                                    {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
+                                                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                                                            {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </div>
                                             <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">

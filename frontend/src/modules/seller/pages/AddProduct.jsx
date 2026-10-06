@@ -296,7 +296,12 @@ const AddProduct = () => {
 
   const handleSave = async () => {
     // Auto-fill title if empty â€” ticket-only save bhi kaam karega
-    const productName = formData.name?.trim() || "Untitled Product";
+    const tickets = (formData.tickets || []).filter((ticket) => String(ticket.name || "").trim());
+    const productName = formData.name?.trim() || tickets[0]?.name?.trim() || "";
+    if (!productName) {
+      toast.error("Product name ya kam se kam ek ticket name add karein");
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -311,11 +316,15 @@ const AddProduct = () => {
       data.append("weight", formData.weight);
       data.append("status", formData.status);
 
-      // Map top-level price/stock from first variant â€” safe defaults if empty
-      const firstVariant = formData.variants[0] || {};
-      data.append("price", firstVariant.price || 0);
-      data.append("salePrice", firstVariant.salePrice || 0);
-      data.append("stock", firstVariant.stock || 0);
+      // Ticket-only products use the first ticket for catalog price and capacity.
+      const variants = (formData.variants || []).filter((variant) =>
+        variant.name || variant.price !== "" || variant.stock !== ""
+      );
+      const firstVariant = variants[0] || {};
+      const firstTicket = tickets[0] || {};
+      data.append("price", firstVariant.price !== undefined && firstVariant.price !== "" ? firstVariant.price : (firstTicket.price || 0));
+      data.append("salePrice", firstVariant.salePrice !== undefined && firstVariant.salePrice !== "" ? firstVariant.salePrice : (firstTicket.salePrice || 0));
+      data.append("stock", firstVariant.stock !== undefined && firstVariant.stock !== "" ? firstVariant.stock : (firstTicket.capacity || 0));
 
 
       // Category IDs â€” sirf tab append karo jab value ho (empty string ObjectId error deta hai)
@@ -354,9 +363,8 @@ const AddProduct = () => {
       }
 
       // Variants and Tickets
-      // Variants and Tickets
-      data.append("variants", JSON.stringify(formData.variants));
-      data.append("tickets", JSON.stringify(formData.tickets || []));
+      data.append("variants", JSON.stringify(variants));
+      data.append("tickets", JSON.stringify(tickets));
 
       // Delivery Coverage & Colors
       data.append("deliveryCoverage", JSON.stringify(formData.deliveryCoverage));

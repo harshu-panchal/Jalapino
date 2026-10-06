@@ -20,9 +20,28 @@ import {
     requireApprovedSeller,
 } from "../middleware/authMiddleware.js";
 import multer from "multer";
+import fs from "node:fs";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+const STORAGE_BASE_PATH = process.env.STORAGE_BASE_PATH || path.join(process.cwd(), "uploads");
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadDir = path.join(STORAGE_BASE_PATH, "products");
+        fs.mkdir(uploadDir, { recursive: true }, (error) => cb(error, uploadDir));
+    },
+    filename: (req, file, cb) => {
+        const extension = path.extname(file.originalname).toLowerCase();
+        cb(null, `product-${randomUUID()}${extension}`);
+    },
+});
+const upload = multer({
+    storage,
+    fileFilter: (req, file, cb) => {
+        if (String(file.mimetype || "").startsWith("image/")) return cb(null, true);
+        cb(new Error("Only image files are allowed for product photos"));
+    },
+});
 
 const router = express.Router();
 

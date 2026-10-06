@@ -68,9 +68,6 @@ const SellerModuleInfoCard = () => {
     )
   );
 
-  const primaryCategory = formatCategoryName(seller.category);
-
-  // If seller.category is not in eventCatNames/retailCatNames, add it under primary / event if event seller
   const isEventSeller = Boolean(seller.planMyEventEnabled || seller.isEventSeller);
 
   // Build categorized badge list
@@ -82,7 +79,7 @@ const SellerModuleInfoCard = () => {
 
   // Plan My Event Categories
   eventCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
+    if (!categorizedBadges.some((b) => b.module === 'Plan My Event' && b.name.toLowerCase() === name.toLowerCase())) {
       categorizedBadges.push({
         module: 'Plan My Event',
         name,
@@ -91,9 +88,20 @@ const SellerModuleInfoCard = () => {
     }
   });
 
+  // Event Commerce service categories selected by the admin during seller review
+  serviceCatNames.forEach((name) => {
+    if (!categorizedBadges.some((b) => b.module === 'Plan My Event · Event Commerce' && b.name.toLowerCase() === name.toLowerCase())) {
+      categorizedBadges.push({
+        module: 'Plan My Event · Event Commerce',
+        name,
+        badgeStyle: 'bg-purple-50 text-purple-700 border-purple-200',
+      });
+    }
+  });
+
   // Retail Store Categories
   retailCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
+    if (!categorizedBadges.some((b) => b.module === 'Retail' && b.name.toLowerCase() === name.toLowerCase())) {
       categorizedBadges.push({
         module: 'Retail',
         name,
@@ -104,7 +112,7 @@ const SellerModuleInfoCard = () => {
 
   // Wholesale Categories
   wholesaleCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.name.toLowerCase() === name.toLowerCase())) {
+    if (!categorizedBadges.some((b) => b.module === 'Wholesale' && b.name.toLowerCase() === name.toLowerCase())) {
       categorizedBadges.push({
         module: 'Wholesale',
         name,
@@ -112,9 +120,6 @@ const SellerModuleInfoCard = () => {
       });
     }
   });
-
-  // Service Categories are intentionally hidden from UI as per user request
-  // (We no longer iterate over serviceCatNames to push them into categorizedBadges)
 
   // Modules Badges
   const modules = [
