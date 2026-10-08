@@ -24,27 +24,41 @@ export const createEventBooking = async (req, res) => {
         }
 
         let productSubtotal = 0;
+        let selectedProductLines = [];
         if (Array.isArray(selectedProducts) && selectedProducts.length > 0) {
-            const productLines = selectedProducts.map(line => ({
+            selectedProductLines = selectedProducts.map(line => ({
                 productId: line.productId || line._id,
                 quantity: Number(line.quantity || 1),
+                selectedColors: Array.isArray(line.selectedColors) ? line.selectedColors : [],
             }));
 
-            if (productLines.some(line => !line.productId || !Number.isInteger(line.quantity) || line.quantity < 1)) {
+            if (selectedProductLines.some(line => !line.productId || !Number.isInteger(line.quantity) || line.quantity < 1)) {
                 return handleResponse(res, 400, "Selected product quantities are invalid");
             }
 
             const productDocs = await Product.find({
-                _id: { $in: productLines.map(line => line.productId) },
+                _id: { $in: selectedProductLines.map(line => line.productId) },
                 sellerId,
-            }).select('_id price').lean();
+            }).select('_id name price colors').lean();
 
             const productsById = new Map(productDocs.map(product => [String(product._id), product]));
-            if (productLines.some(line => !productsById.has(String(line.productId)))) {
+            if (selectedProductLines.some(line => !productsById.has(String(line.productId)))) {
                 return handleResponse(res, 400, "One or more selected products are unavailable for this seller");
             }
+            selectedProductLines = selectedProductLines.map(line => ({
+                ...line,
+                productName: productsById.get(String(line.productId)).name,
+            }));
 
-            productSubtotal = productLines.reduce((sum, line) => {
+            const hasInvalidProductColors = selectedProductLines.some(line => {
+                const allowedColors = productsById.get(String(line.productId)).colors || [];
+                return line.selectedColors.some(color => !allowedColors.includes(color));
+            });
+            if (hasInvalidProductColors) {
+                return handleResponse(res, 400, "One or more selected product colors are unavailable");
+            }
+
+            productSubtotal = selectedProductLines.reduce((sum, line) => {
                 return sum + (Number(productsById.get(String(line.productId)).price || 0) * line.quantity);
             }, 0);
         }
@@ -136,13 +150,24 @@ export const createEventBooking = async (req, res) => {
         const services = (selectedCategories || []).map(cat => {
             const catId = typeof cat === 'object' ? (cat._id || cat.id) : cat;
             const catPreferences = preferences ? preferences[catId] : {};
+            const bookingPreferences = { ...(catPreferences || {}) };
+            const selectedProductColors = selectedProductLines
+                .filter(line => line.selectedColors.length > 0)
+                .map(line => ({
+                    productId: line.productId,
+                    productName: line.productName,
+                    colors: line.selectedColors,
+                }));
+            if (selectedProductColors.length > 0) {
+                bookingPreferences.selectedProductColors = selectedProductColors;
+            }
 
             return {
                 seller: sellerId,
                 category: catId || null,
-                preferences: Object.keys(catPreferences || {}).map(key => ({
+                preferences: Object.keys(bookingPreferences).map(key => ({
                     fieldName: key,
-                    value: catPreferences[key]
+                    value: bookingPreferences[key]
                 }))
             };
         });

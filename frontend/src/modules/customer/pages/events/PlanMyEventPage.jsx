@@ -51,7 +51,13 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
         const fetchProducts = async () => {
             setLoadingProd(true);
             try {
-                const res = await axiosInstance.get(`/products?sellerId=${seller._id}&limit=4&module=plan_my_event`);
+                const productParams = new URLSearchParams({ sellerId: seller._id, limit: '4', module: 'plan_my_event' });
+                if (eventParams?.lat && eventParams?.lng) {
+                    productParams.set('lat', eventParams.lat);
+                    productParams.set('lng', eventParams.lng);
+                }
+                if (eventParams?.location) productParams.set('location', eventParams.location);
+                const res = await axiosInstance.get(`/products?${productParams.toString()}`);
                 const responseData = res.data?.results || res.data?.result || res.data?.data || [];
                 const itemsArray = Array.isArray(responseData) ? responseData : (responseData.items || []);
                 if (!cancelled) setProducts(itemsArray.slice(0, 4));
@@ -63,7 +69,7 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
         };
         fetchProducts();
         return () => { cancelled = true; };
-    }, [seller._id]);
+    }, [seller._id, eventParams?.lat, eventParams?.lng]);
 
     const catStyle = getCategoryStyle(activeCategory?.name || '');
 
@@ -338,9 +344,11 @@ const PlanMyEventPage = () => {
             multipleEvents: filterMultipleDates,
             guestCount: eventInfo.noOfGuests || 1,
             location: eventInfo.functionLocation || '',
+            lat: eventInfo.lat || currentLocation?.latitude,
+            lng: eventInfo.lng || currentLocation?.longitude,
         },
         preferences: {}
-    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime, filterMultipleDates, eventInfo.noOfGuests, eventInfo.functionLocation]);
+    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime, filterMultipleDates, eventInfo.noOfGuests, eventInfo.functionLocation, eventInfo.lat, eventInfo.lng, currentLocation?.latitude, currentLocation?.longitude]);
 
     /* — banners — */
     const [banners, setBanners] = useState([]);
@@ -1348,7 +1356,7 @@ const PlanMyEventPage = () => {
                                                         key={seller._id}
                                                         seller={seller}
                                                         activeCategory={activeCategory}
-                                                        eventParams={{ date: filterDate, time: filterTime, eventType: selectedType }}
+                                                        eventParams={{ date: filterDate, time: filterTime, eventType: selectedType, location: eventInfo.functionLocation || currentLocation?.name, lat: eventInfo.lat || currentLocation?.latitude, lng: eventInfo.lng || currentLocation?.longitude }}
                                                         onSelect={handleSellerSelect}
                                                         bookings={sellerBookings[seller._id]?.bookings || []}
                                                         isBlocked={sellerBookings[seller._id]?.isBlocked || false}

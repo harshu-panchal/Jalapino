@@ -5,6 +5,7 @@ import getPagination from "../utils/pagination.js";
 import {
   parseCustomerCoordinates,
   getNearbySellerIdsForCustomer,
+  getZoneSellerIdsForCustomer,
 } from "../services/customerVisibilityService.js";
 import {
   enqueueProductIndex,
@@ -248,6 +249,7 @@ export const getProducts = async (req, res) => {
       sort,
       lat,
       lng,
+      location,
       hasVideo,
       module,
     } = req.query;
@@ -281,7 +283,10 @@ export const getProducts = async (req, res) => {
     const coords = parseCustomerCoordinates({ lat, lng });
     const isSellerSpecificRequest = requestedSellerIds.length > 0;
     
-    const shouldApplyLocationFilter = (enforceRadius && !isSellerSpecificRequest) || coords.valid;
+    const isPlanEventSellerProducts =
+      String(module || "").toLowerCase() === "plan_my_event" && isSellerSpecificRequest;
+    const shouldApplyLocationFilter =
+      (enforceRadius && !isSellerSpecificRequest) || (coords.valid && !isPlanEventSellerProducts);
     
     if (enforceRadius && !isSellerSpecificRequest && !coords.valid) {
       return handleResponse(
@@ -385,6 +390,27 @@ export const getProducts = async (req, res) => {
       }
     }
 
+    // Plan My Event products must have a selected delivery type and coverage.
+    // Hyperlocal products are limited to nearby sellers; Pan India products
+    // are available regardless of distance.
+    if (requestedModule === "plan_my_event" && isSellerSpecificRequest) {
+      const nearbySellerIds = coords.valid
+        ? await getNearbySellerIdsForCustomer(coords.lat, coords.lng)
+        : [];
+      const zoneSellerIds = location ? await getZoneSellerIdsForCustomer(location) : [];
+      query.$and = [
+        ...(query.$and || []),
+        {
+          $or: [
+            { deliveryCoverage: "pan_india" },
+            { deliveryCoverage: "hyperlocal", sellerId: { $in: nearbySellerIds } },
+            { deliveryCoverage: "zone_wise", sellerId: { $in: zoneSellerIds } },
+          ],
+        },
+        { $or: [{ isDelivery: true }, { isService: true }, { isRental: true }] },
+      ];
+    }
+
     let finalQuery = { ...query };
     if (enforceRadius) {
       finalQuery.status = "active";
@@ -422,7 +448,7 @@ export const getProducts = async (req, res) => {
       const [rawProducts, total] = await Promise.all([
         Product.find(finalQuery)
         .select(
-            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt",
+            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt deliveryCoverage isDelivery isService isRental colors",
           )
           // No .populate() — names resolved via cache-backed entityNameCache
           .sort(sortQuery)

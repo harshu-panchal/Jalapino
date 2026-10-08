@@ -1,9 +1,13 @@
 import mongoose from "mongoose";
 import Seller from "../models/seller.js";
+import Product from "../models/product.js";
 import SellerAvailability from "../models/event/SellerAvailability.js";
 import SellerReservation from "../models/event/SellerReservation.js";
 import SellerPackage from "../models/event/SellerPackage.js";
-import { getNearbySellerIdsForCustomer } from "../services/customerVisibilityService.js";
+import {
+  getNearbySellerIdsForCustomer,
+  getZoneSellerIdsForCustomer,
+} from "../services/customerVisibilityService.js";
 
 export const searchEventSellers = async (req, res) => {
   try {
@@ -71,12 +75,31 @@ export const searchEventSellers = async (req, res) => {
 
     if (lat && lng) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(lat, lng);
+      const panIndiaSellerIds = await Product.distinct("sellerId", {
+        deliveryCoverage: "pan_india",
+        status: "active",
+        $or: [{ isDelivery: true }, { isService: true }, { isRental: true }],
+      });
+      const zoneProductsSellerIds = await Product.distinct("sellerId", {
+        deliveryCoverage: "zone_wise",
+        status: "active",
+        $or: [{ isDelivery: true }, { isService: true }, { isRental: true }],
+      });
+      const zonedSellerIds = location
+        ? await getZoneSellerIdsForCustomer(location)
+        : [];
+      const eligibleZoneSellerIds = zoneProductsSellerIds
+        .map(String)
+        .filter((id) => zonedSellerIds.includes(id));
+      const eligibleSellerIds = [...new Set([
+        ...nearbySellerIds,
+        ...panIndiaSellerIds,
+        ...eligibleZoneSellerIds,
+      ].map(String))];
       console.log("==== DEBUG: nearbySellerIds returned by getNearbySellerIdsForCustomer ====");
       console.log(nearbySellerIds);
       console.log("==========================================================================");
-      query.$and.push({
-        _id: { $in: nearbySellerIds }
-      });
+      query.$and.push({ _id: { $in: eligibleSellerIds } });
     } else if (location) {
       // Split location by comma and filter out noise: country name, 6-digit pincodes,
       // pincode+state combos, very short tokens, and state names

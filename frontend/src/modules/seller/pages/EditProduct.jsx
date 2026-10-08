@@ -57,6 +57,15 @@ const isMilestonePaymentMode = (mode) =>
   String(mode?.id || "").toLowerCase() === "milestone" ||
   String(mode?.label || "").toLowerCase().includes("milestone");
 
+const getProfileAdvanceOrderSetting = (profile) => {
+  if (!profile) return "";
+  const bookingType = profile.bookingType === "one_time" ? "One Time booking" : "Multiple Time booking";
+  if (!profile.advanceBookingBufferEnabled) return `${bookingType} · No advance booking buffer set in profile`;
+  const buffer = Number(profile.advanceBookingBuffer) || 0;
+  const unit = profile.advanceBookingBufferUnit === "hours" ? "hours" : "days";
+  return `${bookingType} · ${buffer > 0 ? `Order at least ${buffer} ${unit} before the event` : "No advance order buffer"}`;
+};
+
 const VariantDetails = ({ variant, onChange }) => (
   <div className="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200 pt-3 mt-1">
     {[{ label: "Brand Name", flag: "hasBrandName", value: "brand", placeholder: "Enter brand name" }, { label: "Ingredients", flag: "hasIngredients", value: "ingredients", placeholder: "Enter ingredients" }].map((field) => (
@@ -75,6 +84,8 @@ const EditProduct = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const { user, refreshUser } = useAuth();
+  const [sellerBookingProfile, setSellerBookingProfile] = useState(null);
+  const profileAdvanceOrderSetting = getProfileAdvanceOrderSetting(sellerBookingProfile);
   console.log("Seller Profile in AddProduct:", user);
   const [modalTab, setModalTab] = useState(() => sessionStorage.getItem('addProductTab') || "general");
   const [isSaving, setIsSaving] = useState(false);
@@ -82,6 +93,18 @@ const EditProduct = () => {
   useEffect(() => {
     sessionStorage.setItem('addProductTab', modalTab);
   }, [modalTab]);
+
+  useEffect(() => {
+    let cancelled = false;
+    sellerApi.getProfile()
+      .then((response) => {
+        if (!cancelled) setSellerBookingProfile(response.data?.result || null);
+      })
+      .catch(() => {
+        if (!cancelled) setSellerBookingProfile(null);
+      });
+    return () => { cancelled = true; };
+  }, []);
   const [showDetailedInfo, setShowDetailedInfo] = useState(false);
   const [videoPayment, setVideoPayment] = useState(null); // { file, totalAmount, extraMB, razorpayOrder }
   const [videoUploading, setVideoUploading] = useState(false);
@@ -179,6 +202,14 @@ const EditProduct = () => {
   const [dbDeliveryCoverageTypes, setDbDeliveryCoverageTypes] = useState([]);
   const [dbProductColors, setDbProductColors] = useState([]);
   const [isLoadingCats, setIsLoadingCats] = useState(true);
+
+  const sellerModule = useMemo(() => {
+    const seller = sellerBookingProfile || user || {};
+    if (seller.isEventSeller || seller.planMyEventEnabled) return "plan_my_event";
+    if (seller.wholesaleEnabled) return "wholesale";
+    if (seller.retailEnabled) return "retail";
+    return "";
+  }, [sellerBookingProfile, user]);
 
   useEffect(() => {
     setFormData((prev) => {
@@ -308,22 +339,17 @@ const EditProduct = () => {
     fetchData();
   }, [id]);
 
-  const isCategoryMatchingModule = (cat, mod) => {
+  const isCategoryMatchingModule = (cat, mod, inheritedMatch = false) => {
     if (!mod) return true;
-    const mods = cat.applicableModules;
-    const selfMatch = !mods || mods.length === 0 || mods.includes(mod);
-    if (selfMatch) return true;
-    if (cat.children && Array.isArray(cat.children) && cat.children.length > 0) {
-      return cat.children.some((child) => isCategoryMatchingModule(child, mod));
-    }
-    return false;
+    const mods = Array.isArray(cat.applicableModules) ? cat.applicableModules : [];
+    const matches = mods.includes(mod) || (inheritedMatch && mods.length === 0);
+    return matches || (Array.isArray(cat.children) && cat.children.some((child) => isCategoryMatchingModule(child, mod, matches)));
   };
 
-  const getFilteredList = (list, mod) => {
+  const getFilteredList = (list, mod, parentMatches = false) => {
     if (!list || !Array.isArray(list)) return [];
     if (!mod) return list;
-    const filtered = list.filter((c) => isCategoryMatchingModule(c, mod));
-    return filtered.length > 0 ? filtered : list;
+    return list.filter((c) => isCategoryMatchingModule(c, mod, parentMatches));
   };
 
   const filteredCategories = useMemo(() => {
@@ -358,6 +384,14 @@ const EditProduct = () => {
       return { value: mod, label: mod.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') };
     });
   }, [dbCategories]);
+
+  useEffect(() => {
+    if (selectedModule) return;
+    const defaultModule = dynamicModules.some((module) => module.value === sellerModule)
+      ? sellerModule
+      : dynamicModules.length === 1 ? dynamicModules[0].value : "";
+    if (defaultModule) setSelectedModule(defaultModule);
+  }, [sellerModule, dynamicModules, selectedModule]);
 
   const handleSave = async () => {
     const tickets = (formData.tickets || []).filter((ticket) => String(ticket.name || "").trim());
@@ -442,7 +476,7 @@ const EditProduct = () => {
       data.append("decorationUploadTime", formData.decorationUploadTime || "");
       data.append("minOrderQty", formData.minOrderQty || 1);
       data.append("maxOrderQty", formData.maxOrderQty || "");
-      data.append("advanceOrderSetting", formData.advanceOrderSetting || "");
+      data.append("advanceOrderSetting", profileAdvanceOrderSetting || formData.advanceOrderSetting || "");
       data.append("cancellationPolicy", formData.cancellationPolicy || "");
       data.append("ticketingSystem", formData.ticketingSystem || "");
 
@@ -817,9 +851,9 @@ const EditProduct = () => {
                             { id: "hyperlocal", label: "Hyperlocal service delivery" },
                             { id: "pan_india", label: "Pan India (Courier Delivery)" },
                             { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
-                            { id: "none", label: "None(Means At Seller Shop) koi delivery ni only on shop" },
+                            { id: "none", label: "No Delivery (In-Store Pickup Only)" },
                           ].map((option) => {
-                            const alwaysAllowed = ["none", "self_delivery", "jalapino_rider"];
+                            const alwaysAllowed = ["none", "self_delivery", "jalapino_rider", "pan_india"];
                             const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
                             if (!isAllowedBySeller) return null;
                             const isSelected = formData.deliveryCoverage.includes(option.id);
@@ -979,8 +1013,9 @@ const EditProduct = () => {
                     <div className="space-y-1.5 flex flex-col">
                       <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Advance Order Setting</label>
                       <input
-                        value={formData.advanceOrderSetting}
+                        value={profileAdvanceOrderSetting || formData.advanceOrderSetting}
                         onChange={(e) => setFormData({ ...formData, advanceOrderSetting: e.target.value })}
+                        readOnly={Boolean(profileAdvanceOrderSetting)}
                         className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
                         placeholder="e.g. Order 48 hrs prior"
                       />
@@ -1573,13 +1608,14 @@ const EditProduct = () => {
                   </label>
                   <select
                     value={selectedModule}
+                    disabled={Boolean(sellerModule)}
                     onChange={(e) => {
                       setSelectedModule(e.target.value);
                       setFormData({ ...formData, header: "", category: "", subcategory: "" });
                     }}
                     className="w-full md:w-1/2 px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all">
-                    <option value="">All Categories</option>
-                    {dynamicModules.map((mod) => (
+                    {!sellerModule && <option value="">All Categories</option>}
+                    {dynamicModules.filter((mod) => !sellerModule || mod.value === sellerModule).map((mod) => (
                       <option key={mod.value} value={mod.value}>{mod.label}</option>
                     ))}
                   </select>
@@ -1616,14 +1652,15 @@ const EditProduct = () => {
                       disabled={!formData.header}
                       className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                       <option value="">Select Category</option>
-                      {getFilteredList(
-                        categories.find((h) => (h._id || h.id) === formData.header)?.children,
-                        selectedModule
-                      ).map((c) => (
+                      {(() => {
+                        const selectedHeader = categories.find((h) => (h._id || h.id) === formData.header);
+                        const headerMatches = selectedHeader?.applicableModules?.includes(selectedModule);
+                        return getFilteredList(selectedHeader?.children, selectedModule, headerMatches).map((c) => (
                         <option key={c._id || c.id} value={c._id || c.id}>
                           {c.name}
                         </option>
-                      ))}
+                        ));
+                      })()}
                     </select>
                   </div>
                 </div>
@@ -1640,16 +1677,16 @@ const EditProduct = () => {
                       disabled={!formData.category}
                       className="w-full px-4 py-2.5 bg-slate-100 border-none rounded-md text-sm font-bold outline-none cursor-pointer focus:ring-2 focus:ring-primary/5 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                       <option value="">Select Sub-Category</option>
-                      {getFilteredList(
-                        categories
-                          .find((h) => (h._id || h.id) === formData.header)
-                          ?.children?.find((c) => (c._id || c.id) === formData.category)?.children,
-                        selectedModule
-                      ).map((sc) => (
+                      {(() => {
+                        const selectedHeader = categories.find((h) => (h._id || h.id) === formData.header);
+                        const selectedCategory = selectedHeader?.children?.find((c) => (c._id || c.id) === formData.category);
+                        const inheritedMatch = selectedHeader?.applicableModules?.includes(selectedModule) || selectedCategory?.applicableModules?.includes(selectedModule);
+                        return getFilteredList(selectedCategory?.children, selectedModule, inheritedMatch).map((sc) => (
                         <option key={sc._id || sc.id} value={sc._id || sc.id}>
                           {sc.name}
                         </option>
-                      ))}
+                        ));
+                      })()}
                     </select>
                   </div>
                 </div>

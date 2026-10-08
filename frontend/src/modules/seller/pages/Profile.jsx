@@ -698,21 +698,26 @@ const SellerProfile = () => {
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                     Booking Type
                   </label>
-                  <div className="relative group">
+                  <div className="relative min-w-0 w-full">
                     <select
                       name="bookingType"
                       value={formData.bookingType}
                       onChange={handleChange}
                       disabled={!isEditing}
-                      className="w-full px-6 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70 appearance-none"
+                      className="block w-full min-w-0 max-w-full appearance-none truncate rounded-lg border-2 border-transparent bg-slate-50 py-3 pl-3 pr-10 text-xs font-bold text-slate-700 outline-none transition-all focus:border-slate-100 focus:bg-white disabled:opacity-70 sm:py-4 sm:pl-6 sm:pr-12 sm:text-sm"
                     >
-                      <option value="one_time">One Time (Locks full capacity on single booking)</option>
-                      <option value="multiple_time">Multiple Time (Reduces capacity per booking)</option>
+                      <option value="one_time">One Time</option>
+                      <option value="multiple_time">Multiple Time</option>
                     </select>
-                    <div className="absolute right-5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                    <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none sm:right-5">
                       ▼
                     </div>
                   </div>
+                  <p className="mt-2 px-1 text-[11px] leading-relaxed text-slate-500 sm:text-xs">
+                    {formData.bookingType === "one_time"
+                      ? "Locks the full capacity after a single booking."
+                      : "Reduces available capacity with each booking."}
+                  </p>
                 </div>
               </div>
 
@@ -896,7 +901,15 @@ const SellerProfile = () => {
                       disabled={!isEditing}
                       className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
                     />
-                    <span className="text-sm font-bold text-slate-600 px-2">Days</span>
+                    <select
+                      value={formData.advanceBookingBufferUnit || "days"}
+                      onChange={(e) => setFormData({ ...formData, advanceBookingBufferUnit: e.target.value })}
+                      disabled={!isEditing}
+                      className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 outline-none disabled:opacity-70"
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                    </select>
                   </div>
                 </div>
               )}

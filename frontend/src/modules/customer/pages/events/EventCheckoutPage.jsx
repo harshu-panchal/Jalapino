@@ -71,6 +71,7 @@ const EventCheckoutPage = () => {
                 selectedProducts: selectedProducts.map(product => ({
                     productId: product._id,
                     quantity: product.quantity || 1,
+                    selectedColors: product.selectedColors || [],
                 }))
             });
             sessionStorage.removeItem(CHECKOUT_STATE_KEY);

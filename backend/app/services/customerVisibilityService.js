@@ -65,3 +65,24 @@ export async function getNearbySellerIdsForCustomer(lat, lng) {
 
   return getOrSet(buildNearbySellersKey(lat, lng), fetchFn, getTTL("nearbySellers"));
 }
+
+export async function getZoneSellerIdsForCustomer(location) {
+  const locationTokens = String(location || "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length >= 3 && !/^india$/i.test(part) && !/^\d{6}$/.test(part));
+
+  if (!locationTokens.length) return [];
+
+  const patterns = locationTokens.map(
+    (part) => new RegExp(part.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&"), "i"),
+  );
+  const sellers = await Seller.find({
+    $or: [
+      { "customZones.city": { $in: patterns } },
+      { "customZones.areas": { $in: patterns } },
+    ],
+  }).select("_id").lean();
+
+  return sellers.map((seller) => String(seller._id));
+}

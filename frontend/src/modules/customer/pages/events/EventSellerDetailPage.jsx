@@ -61,16 +61,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             setIsLoadingProducts(true);
             try {
                 // Fetch catalog products filtered by this seller
-                const response = await axiosInstance.get(`/products?sellerId=${selectedSeller._id}&module=plan_my_event`);
+                const productParams = new URLSearchParams({ sellerId: selectedSeller._id, module: 'plan_my_event' });
+                if (eventData?.lat && eventData?.lng) {
+                    productParams.set('lat', eventData.lat);
+                    productParams.set('lng', eventData.lng);
+                }
+                if (eventData?.location) productParams.set('location', eventData.location);
+                const response = await axiosInstance.get(`/products?${productParams.toString()}`);
                 const responseData = response.data?.result || response.data?.results || response.data?.data || [];
                 const sellerProducts = Array.isArray(responseData) ? responseData : (responseData.items || []);
                 setProducts(sellerProducts);
                 try {
                     const savedSelection = JSON.parse(sessionStorage.getItem(selectedProductsStorageKey) || '[]');
-                    const savedQuantities = new Map(savedSelection.map(item => [String(item.productId), Number(item.quantity) || 1]));
+                    const savedSelections = new Map(savedSelection.map(item => [String(item.productId), item]));
                     setSelectedProducts(sellerProducts
-                        .filter(product => savedQuantities.has(String(product._id)))
-                        .map(product => ({ ...product, quantity: savedQuantities.get(String(product._id)) })));
+                        .filter(product => savedSelections.has(String(product._id)))
+                        .map(product => {
+                            const saved = savedSelections.get(String(product._id));
+                            return { ...product, quantity: Number(saved.quantity) || 1, selectedColors: saved.selectedColors || [] };
+                        }));
                 } catch {
                     setSelectedProducts([]);
                 }
@@ -137,7 +146,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         if (isLoadingProducts) return;
         try {
             sessionStorage.setItem(selectedProductsStorageKey, JSON.stringify(
-                selectedProducts.map(({ _id, quantity }) => ({ productId: _id, quantity }))
+                selectedProducts.map(({ _id, quantity, selectedColors = [] }) => ({ productId: _id, quantity, selectedColors }))
             ));
         } catch (error) {
             console.warn('Could not preserve selected event products:', error);
@@ -227,6 +236,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         });
     };
 
+    const handleProductSelection = (product) => {
+        setSelectedProducts(prev => prev.some(p => p._id === product._id)
+            ? prev.filter(p => p._id !== product._id)
+            : [...prev, { ...product, quantity: 1, selectedColors: [] }]);
+    };
+
+    const handleProductColorToggle = (productId, color) => {
+        setSelectedProducts(prev => prev.map(product => {
+            if (product._id !== productId) return product;
+            const selectedColors = product.selectedColors || [];
+            return {
+                ...product,
+                selectedColors: selectedColors.includes(color)
+                    ? selectedColors.filter(selectedColor => selectedColor !== color)
+                    : [...selectedColors, color],
+            };
+        }));
+    };
+
     const handlePhotoUpload = (e) => {
         const file = e.target.files[0];
         if (file) {
@@ -246,7 +274,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 customNotes,
                 customBudget,
                 selectedProducts: selectedProducts.map(p => p._id),
-                selectedProductQuantities: selectedProducts.map(({ _id, quantity }) => ({ productId: _id, quantity }))
+                selectedProductQuantities: selectedProducts.map(({ _id, quantity }) => ({ productId: _id, quantity })),
+                selectedProductColors: selectedProducts
+                    .filter(product => product.selectedColors?.length)
+                    .map(({ _id, name, selectedColors }) => ({ productId: _id, productName: name, colors: selectedColors }))
             }
         };
 
@@ -407,12 +438,34 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     )}
                                                 </div>
                                             </div>
+                                            {isSelected && Array.isArray(product.colors) && product.colors.length > 0 && (
+                                                <div className="mt-3 rounded-xl border border-purple-100 bg-white p-3">
+                                                    <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Choose colors for {product.name}</p>
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {product.colors.map((color, colorIndex) => {
+                                                            const isColorSelected = (isSelected.selectedColors || []).includes(color);
+                                                            return (
+                                                                <button
+                                                                    key={`${color}-${colorIndex}`}
+                                                                    type="button"
+                                                                    aria-pressed={isColorSelected}
+                                                                    onClick={() => handleProductColorToggle(product._id, color)}
+                                                                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${isColorSelected ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300'}`}
+                                                                >
+                                                                    <span className="h-3.5 w-3.5 rounded-full border border-slate-200" style={{ backgroundColor: color }} />
+                                                                    {color}
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
                                             <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
                                                 <span className="font-extrabold text-sm text-purple-600">
                                                     ₹{((Number(product.price) || 0) * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}
                                                     {isSelected?.quantity > 1 && <span className="ml-1 text-[10px] font-semibold text-slate-400">({isSelected.quantity} × ₹{Number(product.price || 0).toLocaleString('en-IN')})</span>}
                                                 </span>
-                                                {isSelected ? (
+                                                {product.isService ? (isSelected ? (
                                                     <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
                                                         <button
                                                             type="button"
@@ -439,6 +492,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
                                                     >
                                                         Add Item
+                                                    </button>
+                                                )) : (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleProductSelection(product)}
+                                                        className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 transition-all ${isSelected ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600'}`}
+                                                    >
+                                                        {isSelected ? 'Remove Item' : 'Add Item'}
                                                     </button>
                                                 )}
                                             </div>
