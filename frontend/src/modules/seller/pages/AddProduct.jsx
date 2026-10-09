@@ -15,6 +15,7 @@ import {
   HiOutlinePlus,
   HiOutlineSquaresPlus,
   HiOutlineXMark,
+  HiOutlineMinus,
   HiOutlineCalendar,
   HiOutlineFilm,
   HiOutlineTicket,
@@ -66,17 +67,74 @@ const getProfileAdvanceOrderSetting = (profile) => {
   return `${bookingType} · ${buffer > 0 ? `Order at least ${buffer} ${unit} before the event` : "No advance order buffer"}`;
 };
 
-const VariantDetails = ({ variant, onChange }) => (
-  <div className="col-span-12 grid grid-cols-1 md:grid-cols-2 gap-4 border-t border-slate-200 pt-3 mt-1">
-    {[{ label: "Brand Name", flag: "hasBrandName", value: "brand", placeholder: "Enter brand name" }, { label: "Ingredients", flag: "hasIngredients", value: "ingredients", placeholder: "Enter ingredients" }].map((field) => (
-      <div key={field.flag} className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">{field.label}</label>
-            <ToggleSwitch checked={variant[field.flag]} label={`Toggle ${field.label}`} onChange={() => onChange(field.flag, !variant[field.flag])} />
+const MultiInput = ({ value, onChange, placeholder }) => {
+  const items = (value || "").split(',').map(s => s.trim());
+  if (items.length === 0 || (items.length === 1 && items[0] === "")) {
+    items[0] = "";
+  }
+
+  const handleChange = (index, val) => {
+    const newItems = [...items];
+    newItems[index] = val;
+    onChange(newItems.join(', '));
+  };
+
+  const handleAdd = () => {
+    onChange([...items, ""].join(', '));
+  };
+
+  const handleRemove = (index) => {
+    const newItems = items.filter((_, i) => i !== index);
+    if (newItems.length === 0) newItems.push("");
+    onChange(newItems.join(', '));
+  };
+
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div key={index} className="flex gap-2 items-center">
+          <input
+            value={item}
+            onChange={(e) => handleChange(index, e.target.value)}
+            placeholder={placeholder}
+            className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 rounded-xl text-xs font-semibold"
+          />
+          {index === items.length - 1 ? (
+            <button type="button" onClick={handleAdd} className="p-1.5 bg-brand-50 text-brand-600 rounded-lg hover:bg-brand-100">
+              <HiOutlinePlus className="w-4 h-4" />
+            </button>
+          ) : (
+            <button type="button" onClick={() => handleRemove(index)} className="p-1.5 bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-100">
+              <HiOutlineMinus className="w-4 h-4" />
+            </button>
+          )}
         </div>
-        {variant[field.flag] && <input value={variant[field.value] || ""} onChange={(e) => onChange(field.value, e.target.value)} placeholder={field.placeholder} className="w-full px-3 py-2 bg-white ring-1 ring-slate-200 rounded-xl text-xs font-semibold" />}
+      ))}
+    </div>
+  );
+};
+
+const VariantDetails = ({ variant, onChange }) => (
+  <div className="col-span-12 border-t border-slate-200 pt-3 mt-1 space-y-4">
+    <div className="flex items-center justify-between">
+      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Brand Name & Ingredients</label>
+      <ToggleSwitch checked={variant.hasBrandName || variant.hasIngredients} label="Toggle Brand Name & Ingredients" onChange={() => {
+        const nextVal = !(variant.hasBrandName || variant.hasIngredients);
+        onChange("multiple", { hasBrandName: nextVal, hasIngredients: nextVal });
+      }} />
+    </div>
+    {(variant.hasBrandName || variant.hasIngredients) && (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Brand Name</label>
+          <MultiInput value={variant.brand} onChange={(val) => onChange("brand", val)} placeholder="Enter brand name" />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Ingredients</label>
+          <MultiInput value={variant.ingredients} onChange={(val) => onChange("ingredients", val)} placeholder="Enter ingredients" />
+        </div>
       </div>
-    ))}
+    )}
   </div>
 );
 
@@ -691,15 +749,21 @@ const AddProduct = () => {
                   />
                 </div>
 
-                {/* Delivery Coverage Type */}
+                {/* Location Coverage Type */}
                 {(() => {
-                  const coverageOptions = dbDeliveryCoverageTypes.filter(({ id }) => ["hyperlocal", "pan_india", "zone_wise"].includes(id));
+                  const coverageOptions = dbDeliveryCoverageTypes.filter(({ id }) => ["hyperlocal", "pan_india", "zone_wise"].includes(id)).map(opt => {
+                    let label = opt.label;
+                    if (opt.id === "hyperlocal") label = "HYPERLOCAL";
+                    if (opt.id === "pan_india") label = "PANINDIA";
+                    if (opt.id === "zone_wise") label = "ZONE WISE";
+                    return { ...opt, label };
+                  });
                   const coverageIds = coverageOptions.map(o => o.id);
                   const selectedCoverage = formData.deliveryCoverage.find(c => coverageIds.includes(c)) || "";
                   return (
                     <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                       <div>
-                        <h4 className="text-sm font-bold text-slate-700">Delivery Coverage Type</h4>
+                        <h4 className="text-sm font-bold text-slate-700">Location Coverage Type</h4>
                         <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select your product's delivery reach.</p>
                       </div>
                       <div className="flex flex-col gap-2">
@@ -917,15 +981,15 @@ const AddProduct = () => {
                         />
                       </div>
                     )}
-                    <div className="space-y-1.5 flex flex-col">
-                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Decoration Color Option Upload Time</label>
-                      <input
-                        value={formData.decorationUploadTime}
-                        onChange={(e) => setFormData({ ...formData, decorationUploadTime: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                        placeholder="e.g. Upload within 24 hrs"
-                      />
-                    </div>
+
+
+
+
+
+
+
+
+
                     <div className="space-y-1.5 flex flex-col">
                       <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Minimum Order Qty</label>
                       <input
@@ -1068,9 +1132,16 @@ const AddProduct = () => {
 
                 {/* Colors Section */}
                 <div className="space-y-1.5 flex flex-col">
-                  <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                    Product Colors (Optional)
-                  </label>
+                  <div className="flex items-center justify-between ml-1 mb-2">
+                    <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
+                      Product Colors (Optional)
+                    </label>
+                    <ToggleSwitch
+                      checked={formData.hasCustomColors}
+                      onChange={() => setFormData({ ...formData, hasCustomColors: !formData.hasCustomColors })}
+                      label="Toggle Custom Colors"
+                    />
+                  </div>
                   <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
                     <div className="flex flex-wrap gap-2">
                       {dbProductColors.map((colorOption) => {
@@ -1098,45 +1169,47 @@ const AddProduct = () => {
                         );
                       })}
                     </div>
-                    <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        id="visualColorPicker"
-                        className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
-                        defaultValue="#000000"
-                      />
-                      <input
-                        type="text"
-                        id="customColorInput"
-                        placeholder="Type custom color or select hex..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const val = e.target.value.trim() || document.getElementById("visualColorPicker").value;
+                    {formData.hasCustomColors && (
+                      <div className="flex gap-2 items-center">
+                        <input
+                          type="color"
+                          id="visualColorPicker"
+                          className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
+                          defaultValue="#000000"
+                        />
+                        <input
+                          type="text"
+                          id="customColorInput"
+                          placeholder="Type custom color or select hex..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const val = e.target.value.trim() || document.getElementById("visualColorPicker").value;
+                              if (val && !formData.colors.includes(val)) {
+                                setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
+                              }
+                              e.target.value = '';
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById("customColorInput");
+                            const picker = document.getElementById("visualColorPicker");
+                            const val = input.value.trim() || picker.value;
                             if (val && !formData.colors.includes(val)) {
                               setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
                             }
-                            e.target.value = '';
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.getElementById("customColorInput");
-                          const picker = document.getElementById("visualColorPicker");
-                          const val = input.value.trim() || picker.value;
-                          if (val && !formData.colors.includes(val)) {
-                            setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
-                          }
-                          input.value = '';
-                        }}
-                        className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
-                      >
-                        ADD
-                      </button>
-                    </div>
+                            input.value = '';
+                          }}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
+                        >
+                          ADD
+                        </button>
+                      </div>
+                    )}
                     {formData.colors.length > 0 && (
                       <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
                         {formData.colors.filter(c => !dbProductColors.some(option => (typeof option === "string" ? option : option.name || option.value || option.id) === c)).map(color => {
@@ -1337,7 +1410,11 @@ const AddProduct = () => {
                       </div>
                       <VariantDetails variant={variant} onChange={(field, value) => {
                         const next = [...formData.variants];
-                        next[index] = { ...next[index], [field]: value };
+                        if (field === "multiple") {
+                          next[index] = { ...next[index], ...value };
+                        } else {
+                          next[index] = { ...next[index], [field]: value };
+                        }
                         setFormData({ ...formData, variants: next });
                       }} />
                     </div>
@@ -1593,9 +1670,9 @@ const AddProduct = () => {
                         const selectedHeader = categories.find((h) => (h._id || h.id) === formData.header);
                         const headerMatches = selectedHeader?.applicableModules?.includes(selectedModule);
                         return getFilteredList(selectedHeader?.children, selectedModule, headerMatches).map((c) => (
-                        <option key={c._id || c.id} value={c._id || c.id}>
-                          {c.name}
-                        </option>
+                          <option key={c._id || c.id} value={c._id || c.id}>
+                            {c.name}
+                          </option>
                         ));
                       })()}
                     </select>
@@ -1619,9 +1696,9 @@ const AddProduct = () => {
                         const selectedCategory = selectedHeader?.children?.find((c) => (c._id || c.id) === formData.category);
                         const inheritedMatch = selectedHeader?.applicableModules?.includes(selectedModule) || selectedCategory?.applicableModules?.includes(selectedModule);
                         return getFilteredList(selectedCategory?.children, selectedModule, inheritedMatch).map((sc) => (
-                        <option key={sc._id || sc.id} value={sc._id || sc.id}>
-                          {sc.name}
-                        </option>
+                          <option key={sc._id || sc.id} value={sc._id || sc.id}>
+                            {sc.name}
+                          </option>
                         ));
                       })()}
                     </select>
@@ -1670,9 +1747,9 @@ const AddProduct = () => {
                       </p>
                       <button className="text-[10px] font-black text-primary uppercase tracking-wider hover:underline">
                         Pick from Library
-                        </button>
-                      </div>
+                      </button>
                     </div>
+                  </div>
                 </div>
 
                 {/* Gallery Section */}

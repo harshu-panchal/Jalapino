@@ -1251,19 +1251,19 @@ const ProductManagement = () => {
                         />
                       </div>
 
-                      {/* Delivery Coverage Type */}
+                      {/* Location Coverage Type */}
                       {(() => {
                         const coverageOptions = [
-                          { id: "hyperlocal", label: "Hyperlocal", desc: "Nearby area delivery" },
-                          { id: "pan_india", label: "Pan India", desc: "Courier delivery all over India" },
-                          { id: "zone_wise", label: "Zone Wise", desc: "Specific zone delivery" },
+                          { id: "hyperlocal", label: "HYPERLOCAL", desc: "Nearby area delivery" },
+                          { id: "pan_india", label: "PANINDIA", desc: "Courier delivery all over India" },
+                          { id: "zone_wise", label: "ZONE WISE", desc: "Specific zone delivery" },
                         ];
                         const coverageIds = coverageOptions.map(o => o.id);
                         const selectedCoverage = formData.deliveryCoverage.find(c => coverageIds.includes(c)) || "";
                         return (
                           <div className="space-y-3 p-4 bg-slate-50 border border-slate-100 rounded-xl">
                             <div>
-                              <h4 className="text-sm font-bold text-slate-700">Delivery Coverage Type</h4>
+                              <h4 className="text-sm font-bold text-slate-700">Location Coverage Type</h4>
                               <p className="text-[10px] sm:text-xs text-slate-500 font-medium mt-1">Select your product's delivery reach.</p>
                             </div>
                             <div className="flex flex-col gap-2">
@@ -1377,15 +1377,15 @@ const ProductManagement = () => {
                               placeholder="e.g. 2 days before event"
                             />
                           </div>
-                          <div className="space-y-1.5 flex flex-col">
-                            <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Decoration Color Option Upload Time</label>
-                            <input
-                              value={formData.decorationUploadTime}
-                              onChange={(e) => setFormData({ ...formData, decorationUploadTime: e.target.value })}
-                              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                              placeholder="e.g. Upload within 24 hrs"
-                            />
-                          </div>
+
+
+
+
+
+
+
+
+
                           <div className="space-y-1.5 flex flex-col">
                             <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Minimum Order Qty</label>
                             <input
@@ -1430,9 +1430,16 @@ const ProductManagement = () => {
 
                       {/* Colors Section */}
                       <div className="space-y-1.5 flex flex-col">
-                        <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
+                        <div className="flex items-center justify-between ml-1 mb-2">
+                          <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
                           Product Colors (Optional)
-                        </label>
+                          </label>
+                          <ToggleSwitch 
+                            checked={formData.hasCustomColors} 
+                            onChange={() => setFormData({ ...formData, hasCustomColors: !formData.hasCustomColors })}
+                            label="Toggle Custom Colors"
+                          />
+                        </div>
                         <div className="p-4 bg-slate-50 border border-slate-100 rounded-xl space-y-3">
                           <div className="flex flex-wrap gap-2">
                             {["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].map((color) => {
@@ -1460,7 +1467,8 @@ const ProductManagement = () => {
                               );
                             })}
                           </div>
-                          <div className="flex gap-2 items-center">
+                          {formData.hasCustomColors && (
+                            <div className="flex gap-2 items-center">
                             <input 
                               type="color" 
                               id="editVisualColorPicker"
@@ -1498,7 +1506,8 @@ const ProductManagement = () => {
                             >
                               ADD
                             </button>
-                          </div>
+                            </div>
+                          )}
                           {formData.colors.length > 0 && (
                             <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200">
                               {formData.colors.filter(c => !["Red", "Blue", "Green", "Black", "White", "Yellow", "Pink", "Purple", "Brown", "Grey", "Gold", "Silver", "Multicolor"].includes(c)).map(color => {

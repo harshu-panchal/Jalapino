@@ -49,17 +49,48 @@ const CategoryProductsPage = () => {
                 Number.isFinite(currentLocation?.latitude) &&
                 Number.isFinite(currentLocation?.longitude);
 
-            // Fetch products and categories in parallel instead of sequentially
-            const [prodRes, catRes] = await Promise.all([
-                hasValidLocation
-                    ? customerApi.getProducts({
-                        categoryId: catId,
-                        lat: currentLocation.latitude,
-                        lng: currentLocation.longitude,
-                    })
-                    : Promise.resolve({ data: { success: true, result: { items: [] } } }),
-                customerApi.getCategories({ tree: true }),
-            ]);
+            const catRes = await customerApi.getCategories({ tree: true });
+            let currentCat = null;
+            let isHeader = false;
+
+            if (catRes.data.success) {
+                const tree = catRes.data.results || catRes.data.result || [];
+                for (const header of tree) {
+                    if (header._id === catId) {
+                        currentCat = header;
+                        isHeader = true;
+                        break;
+                    }
+                    const found = (header.children || []).find(c => c._id === catId);
+                    if (found) {
+                        currentCat = found;
+                        break;
+                    }
+                }
+
+                if (currentCat) {
+                    setCategory(currentCat);
+                    const subs = (currentCat.children || []).map(s => ({
+                        id: s._id,
+                        name: s.name,
+                        icon: s.image || 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png'
+                    }));
+                    const sortedSubs = [...subs].sort((a, b) => a.name.localeCompare(b.name));
+                    setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...sortedSubs]);
+                }
+            }
+
+            const queryParams = {
+                lat: currentLocation.latitude,
+                lng: currentLocation.longitude,
+            };
+            if (isHeader) {
+                queryParams.header = catId;
+            } else {
+                queryParams.categoryId = catId;
+            }
+
+            const prodRes = hasValidLocation ? await customerApi.getProducts(queryParams) : { data: { success: true, result: { items: [] } } };
 
             if (prodRes.data.success) {
                 const rawResult = prodRes.data.result;
@@ -87,29 +118,6 @@ const CategoryProductsPage = () => {
             } else {
                 setProducts([]);
             }
-
-            if (catRes.data.success) {
-                const tree = catRes.data.results || catRes.data.result || [];
-                let currentCat = null;
-                for (const header of tree) {
-                    const found = (header.children || []).find(c => c._id === catId);
-                    if (found) {
-                        currentCat = found;
-                        break;
-                    }
-                }
-
-                if (currentCat) {
-                    setCategory(currentCat);
-                    const subs = (currentCat.children || []).map(s => ({
-                        id: s._id,
-                        name: s.name,
-                        icon: s.image || 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png'
-                    }));
-                    const sortedSubs = [...subs].sort((a, b) => a.name.localeCompare(b.name));
-                    setSubCategories([{ id: 'all', name: 'All', icon: 'https://cdn-icons-png.flaticon.com/128/2321/2321831.png' }, ...sortedSubs]);
-                }
-            }
         } catch (error) {
             console.error("Error fetching category data:", error);
         } finally {
@@ -125,7 +133,7 @@ const CategoryProductsPage = () => {
     const safeProducts = Array.isArray(products) ? products : [];
 
     const filteredProducts = safeProducts.filter(p =>
-        (selectedSubCategory === 'all' || p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory)
+        (selectedSubCategory === 'all' || p.subcategoryId?._id === selectedSubCategory || p.subcategoryId === selectedSubCategory || p.categoryId?._id === selectedSubCategory || p.categoryId === selectedSubCategory)
         && (!searchQuery.trim() || (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()))
     );
 

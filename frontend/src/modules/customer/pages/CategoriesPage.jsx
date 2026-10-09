@@ -29,17 +29,13 @@ const CategoriesPage = () => {
                 tree
                     .filter((header) => (header.name || '').trim().toLowerCase() !== 'all')
                     .forEach((header) => {
-                        // Filter header level if we want, but definitely filter children
-                        (header.children || []).forEach((cat) => {
-                            if ((!cat.applicableModules || cat.applicableModules.includes(currentMode)) && !seenIds.has(cat._id)) {
-                                seenIds.add(cat._id);
-                                flatCats.push({
-                                    id: cat._id,
-                                    name: cat.name,
-                                    image: cat.image || "https://cdn.grofers.com/cdn-cgi/image/f=auto,fit=scale-down,q=70,metadata=none,w=270/layout-engine/2022-11/Slice-1_9.png",
-                                });
-                            }
-                        });
+                        if (!header.applicableModules || header.applicableModules.includes(currentMode)) {
+                            flatCats.push({
+                                id: header._id,
+                                name: header.name,
+                                image: header.image || "https://cdn.grofers.com/cdn-cgi/image/f=auto,fit=scale-down,q=70,metadata=none,w=270/layout-engine/2022-11/Slice-1_9.png",
+                            });
+                        }
                     });
                 setCategories(flatCats);
             }

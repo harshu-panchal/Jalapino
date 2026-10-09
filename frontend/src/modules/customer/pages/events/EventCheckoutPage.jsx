@@ -10,6 +10,13 @@ import { useSettings } from '@core/context/SettingsContext';
 
 const CHECKOUT_STATE_KEY = 'jalapino_plan_event_checkout';
 
+const getProductPricing = (product) => {
+    const originalPrice = Number(product.price) || 0;
+    const salePrice = Number(product.salePrice) || 0;
+    const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
+    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice };
+};
+
 const readSavedCheckoutState = () => {
     try {
         return JSON.parse(sessionStorage.getItem(CHECKOUT_STATE_KEY) || 'null');
@@ -50,7 +57,7 @@ const EventCheckoutPage = () => {
         ? selectedPackage.pricing * (parseInt(eventData?.guestCount, 10) || 1)
         : parseInt(eventData?.budget, 10) || 0;
     const selectedProductsSubtotal = selectedProducts.reduce((sum, product) => {
-        const price = Number(product.price || 0);
+        const price = getProductPricing(product).unitPrice;
         const quantity = Number(product.quantity || 1);
         return sum + (price * quantity);
     }, 0);
@@ -164,11 +171,15 @@ const EventCheckoutPage = () => {
                             )}
                             {selectedProducts.map(product => {
                                 const quantity = Number(product.quantity || 1);
-                                const lineTotal = Number(product.price || 0) * quantity;
+                                const pricing = getProductPricing(product);
+                                const lineTotal = pricing.unitPrice * quantity;
                                 return (
                                     <div key={product._id} className="flex justify-between text-sm">
                                         <span className="text-slate-500">{product.name} × {quantity}</span>
-                                        <span className="font-semibold text-slate-800">₹{lineTotal.toLocaleString()}</span>
+                                        <span className="flex items-center gap-2 font-semibold text-slate-800">
+                                            {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString()}</span>}
+                                            <span>₹{lineTotal.toLocaleString()}</span>
+                                        </span>
                                     </div>
                                 );
                             })}
