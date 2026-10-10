@@ -164,7 +164,9 @@ function normalizeTarget(channel, rawValue) {
   throw error;
 }
 
-async function ensureTargetAvailable(channel, target) {
+async function ensureTargetAvailable(channel, target, isProfileEdit = false) {
+  if (isProfileEdit) return; // Skip existence check if editing an existing profile
+  
   const query = channel === "email" ? { email: new RegExp(`^${target}$`, "i") } : { phone: target };
   const existingSeller = await Seller.findOne(query).select("_id applicationStatus").lean();
   if (existingSeller) {
@@ -264,11 +266,12 @@ export async function issueSellerVerificationOtp({
   channel,
   rawValue,
   ipAddress = "unknown",
+  isProfileEdit = false,
 }) {
   const normalizedChannel = String(channel || "").trim().toLowerCase();
   const target = normalizeTarget(normalizedChannel, rawValue);
 
-  await ensureTargetAvailable(normalizedChannel, target);
+  await ensureTargetAvailable(normalizedChannel, target, isProfileEdit);
 
   // Fetch dynamic OTP expiry from GASP settings
   const settings = await Setting.findOne();

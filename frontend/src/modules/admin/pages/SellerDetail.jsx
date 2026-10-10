@@ -42,7 +42,10 @@ const SellerDetail = () => {
     const activeTab = searchParams.get('tab') || 'orders';
 
     const setActiveTab = (tab) => {
-        setSearchParams({ tab });
+        setSearchParams((prev) => {
+            prev.set('tab', tab);
+            return prev;
+        });
     };
     const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -141,6 +144,22 @@ const SellerDetail = () => {
                     : (data.isVerified && data.isActive && data.sellerVerificationStatus === 'verified') ? 'active'
                     : data.sellerVerificationStatus === 'pending' ? 'pending_verification'
                     : (data.applicationStatus || 'inactive'),
+                documents: data.documents || {},
+                documentStatuses: data.documentStatuses || {},
+                documentFiles: Object.entries(data.documents || {})
+                    .filter(([, value]) => Boolean(value))
+                    .map(([key, value]) => {
+                        const normalizedValue = String(value).trim();
+                        const isUrl = /^https?:\/\//i.test(normalizedValue);
+                        return {
+                            key,
+                            label: key.replace(/([A-Z])/g, " $1").trim(),
+                            url: isUrl ? normalizedValue : "",
+                            isViewable: isUrl,
+                            fileType: normalizedValue.toLowerCase().includes(".pdf") ? "pdf" : "image",
+                            status: (data.documentStatuses && data.documentStatuses[key]) || "pending"
+                        };
+                    }),
                 productsEnabled: data.productsEnabled ?? true,
                 stockEnabled: data.stockEnabled ?? true,
                 ordersEnabled: data.ordersEnabled ?? true,
@@ -1925,6 +1944,34 @@ const SellerDetail = () => {
                                             <button className="w-full mt-4 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
                                                 SUSPEND STORE
                                             </button>
+                                            {searchParams.get('edit') === 'true' && (
+                                                <div className="mt-4 flex gap-3">
+                                                    <button 
+                                                        onClick={() => setIsEditingShop(true)}
+                                                        className="flex-1 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                                                    >
+                                                        UPDATE
+                                                    </button>
+                                                    <button 
+                                                        onClick={async () => {
+                                                            if(window.confirm('Are you sure you want to delete this seller? This action will soft-delete the seller.')) {
+                                                                try {
+                                                                    const res = await adminUsersApi.deleteSeller(seller.id);
+                                                                    if (res.data?.success || res.data) {
+                                                                        showToast('Seller soft deleted successfully', 'success');
+                                                                        navigate('/admin/sellers/active');
+                                                                    }
+                                                                } catch (err) {
+                                                                    showToast(err.response?.data?.message || 'Failed to delete seller', 'error');
+                                                                }
+                                                            }
+                                                        }}
+                                                        className="flex-1 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all"
+                                                    >
+                                                        DELETE
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1988,6 +2035,37 @@ const SellerDetail = () => {
                             </button>
                         </div>
                     </Card>
+
+                    {/* Documents */}
+                    {(seller?.documentFiles?.length > 0 || Object.values(seller?.documents || {}).some(url => url && typeof url === 'string' && url.trim() !== '')) && (
+                        <Card className="p-4 border-none shadow-xl ring-1 ring-slate-100 bg-white rounded-xl text-left mt-6">
+                            <h4 className="text-[10px] font-bold opacity-40 uppercase tracking-[0.2em] mb-6 text-slate-900">Store Documents</h4>
+                            <div className="space-y-4">
+                                {(seller.documentFiles || []).map((doc, idx) => (
+                                    <div key={idx} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-bold text-slate-700 capitalize">{doc.label || doc.key || 'Document'}</span>
+                                            {doc.status && doc.status !== 'pending' && (
+                                                <span className={`text-[9px] mt-0.5 font-bold uppercase ${doc.status === 'verified' || doc.status === 'approved' ? 'text-emerald-600' : doc.status === 'reuploaded' ? 'text-blue-600' : 'text-amber-600'}`}>
+                                                    {doc.status.replace('_', ' ')}
+                                                </span>
+                                            )}
+                                        </div>
+                                        <a href={doc.url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline bg-primary/10 px-3 py-1.5 rounded-lg">View</a>
+                                    </div>
+                                ))}
+                                {(!seller.documentFiles || seller.documentFiles.length === 0) && Object.entries(seller?.documents || {}).map(([key, url]) => {
+                                    if (!url || typeof url !== 'string' || url.trim() === '') return null;
+                                    return (
+                                        <div key={key} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                                            <span className="text-xs font-bold text-slate-700 capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
+                                            <a href={url} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-primary uppercase tracking-wider hover:underline bg-primary/10 px-3 py-1.5 rounded-lg">View</a>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </Card>
+                    )}
                 </div>
             </div>
 

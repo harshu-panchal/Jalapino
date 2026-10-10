@@ -405,9 +405,10 @@ export const getProducts = async (req, res) => {
             { deliveryCoverage: "pan_india" },
             { deliveryCoverage: "hyperlocal", sellerId: { $in: nearbySellerIds } },
             { deliveryCoverage: "zone_wise", sellerId: { $in: zoneSellerIds } },
+            { tickets: { $exists: true, $ne: [] } },
           ],
         },
-        { $or: [{ isDelivery: true }, { isService: true }, { isRental: true }] },
+        { $or: [{ isDelivery: true }, { isService: true }, { isRental: true }, { tickets: { $exists: true, $ne: [] } }] },
       ];
     }
 

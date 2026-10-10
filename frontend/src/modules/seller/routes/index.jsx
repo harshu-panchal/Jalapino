@@ -180,6 +180,10 @@ const SellerRoutes = () => {
     activeNavItems = activeNavItems.filter(item => !['Advance Bookings', 'Bookings'].includes(item.label));
   }
 
+  if (user?.ticketSystemEnabled === false) {
+    activeNavItems = activeNavItems.filter(item => !['Ticket Scanner'].includes(item.label));
+  }
+
   if (user?.videoUploadEnabled !== true) {
     activeNavItems = activeNavItems.filter(item => !['Video Plans'].includes(item.label));
   }

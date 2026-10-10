@@ -44,7 +44,8 @@ import {
     updateSellerType,
     updateSellerDetails,
     reuploadSellerDocument,
-    approveSellerDocument
+    approveSellerDocument,
+    softDeleteSeller
 } from "../controller/adminController.js";
 import {
     exportAdminFinanceStatementController,
@@ -207,6 +208,7 @@ router.patch("/sellers/:id/type", verifyToken, allowRoles("admin"), requireAdmin
 router.put("/sellers/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), updateSellerDetails);
 router.patch("/sellers/approve/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerApplication);
 router.delete("/sellers/reject/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), rejectSellerApplication);
+router.delete("/sellers/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), softDeleteSeller);
 router.put("/sellers/bounce-back/:id", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), bounceBackSellerApplication);
 router.put("/sellers/:id/documents/reupload", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), upload.single("document"), reuploadSellerDocument);
 router.put("/sellers/:id/documents/:documentKey/approve", verifyToken, allowRoles("admin"), requireAdminRole("super_admin", "sub_admin"), approveSellerDocument);

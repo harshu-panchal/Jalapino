@@ -353,3 +353,23 @@ export const updateSellerDetails = async (req, res) => {
     return handleResponse(res, 500, error.message);
   }
 };
+
+export const softDeleteSeller = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Seller = await import("../../models/seller.js").then((m) => m.default);
+    
+    const existingSeller = await Seller.findById(id);
+    if (!existingSeller) throw new Error("Seller not found");
+
+    const seller = await Seller.findByIdAndUpdate(
+      id,
+      { $set: { isDeleted: true, status: 'REJECTED', isShopActive: false } },
+      { new: true }
+    );
+    
+    return handleResponse(res, 200, "Seller soft deleted successfully", seller);
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};

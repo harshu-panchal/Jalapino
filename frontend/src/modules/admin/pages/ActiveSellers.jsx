@@ -20,6 +20,7 @@ import {
 } from "react-icons/hi2";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
+import SellerEditOtpModal from "../components/SellerEditOtpModal";
 import { toast } from "sonner";
 import { adminApi } from "../services/adminApi";
 import { adminEventConfigApi } from "../services/adminEventConfigApi";
@@ -118,6 +119,8 @@ const ActiveSellers = () => {
   const [lastSyncAt, setLastSyncAt] = useState(null);
   const [refreshTick, setRefreshTick] = useState(0);
   const [selectedSeller, setSelectedSeller] = useState(null);
+  const [otpModalVisible, setOtpModalVisible] = useState(false);
+  const [editTargetSeller, setEditTargetSeller] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -220,21 +223,21 @@ const ActiveSellers = () => {
       return eventCategories.map((c) => c.name).sort((a, b) => a.localeCompare(b));
     } else if (moduleFilter === "retail") {
       return allCategories
-        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "retail"))
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.applicableModules || c.modules || []).some(m => String(m).toLowerCase() === "retail"))
         .map((c) => c.name)
         .sort((a, b) => a.localeCompare(b));
     } else if (moduleFilter === "wholesale") {
       return allCategories
-        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "wholesale"))
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.applicableModules || c.modules || []).some(m => String(m).toLowerCase() === "wholesale"))
         .map((c) => c.name)
         .sort((a, b) => a.localeCompare(b));
     } else {
       // "All Modules"
       const retail = allCategories
-        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "retail"))
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.applicableModules || c.modules || []).some(m => String(m).toLowerCase() === "retail"))
         .map((c) => c.name);
       const wholesale = allCategories
-        .filter((c) => (c.type === "category" || c.type === "header") && (c.modules || []).some(m => String(m).toLowerCase() === "wholesale"))
+        .filter((c) => (c.type === "category" || c.type === "header") && (c.applicableModules || c.modules || []).some(m => String(m).toLowerCase() === "wholesale"))
         .map((c) => c.name);
       const events = eventCategories.map((c) => c.name);
       const allGlobal = [...new Set([...retail, ...wholesale, ...events, ...categories])].sort((a, b) => a.localeCompare(b));
@@ -554,6 +557,16 @@ const ActiveSellers = () => {
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <button
+                          onClick={() => {
+                            setEditTargetSeller(seller);
+                            setOtpModalVisible(true);
+                          }}
+                          className="px-4 py-2.5 bg-primary/10 text-primary rounded-xl text-[10px] font-bold hover:bg-primary/20 transition-all flex items-center gap-2"
+                        >
+                          <HiOutlineEye className="h-3.5 w-3.5" />
+                          EDIT
+                        </button>
+                        <button
                           onClick={() => navigate(`/admin/sellers/active/${seller.id}`)}
                           className="px-4 py-2.5 bg-slate-900 text-white rounded-xl text-[10px] font-bold hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2"
                         >
@@ -807,6 +820,19 @@ const ActiveSellers = () => {
           </div>
         )}
       </AnimatePresence>
+      <SellerEditOtpModal
+        isOpen={otpModalVisible}
+        onClose={() => {
+          setOtpModalVisible(false);
+          setEditTargetSeller(null);
+        }}
+        seller={editTargetSeller}
+        onSuccess={(sellerId) => {
+          setOtpModalVisible(false);
+          setEditTargetSeller(null);
+          navigate(`/admin/sellers/active/${sellerId}?edit=true`);
+        }}
+      />
     </div>
   );
 };

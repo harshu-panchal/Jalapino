@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Button from "@shared/components/ui/Button";
 import Badge from "@shared/components/ui/Badge";
 import {
@@ -262,9 +262,10 @@ const AddProduct = () => {
 
   const sellerModule = useMemo(() => {
     const seller = sellerBookingProfile || user || {};
-    if (seller.isEventSeller || seller.planMyEventEnabled) return "plan_my_event";
-    if (seller.wholesaleEnabled) return "wholesale";
-    if (seller.retailEnabled) return "retail";
+    if (seller.planMyEventEnabled === true) return "plan_my_event";
+    if (seller.retailEnabled === true) return "retail";
+    if (seller.wholesaleEnabled === true) return "wholesale";
+    if (seller.planMyEventEnabled !== false && seller.isEventSeller) return "plan_my_event";
     return "";
   }, [sellerBookingProfile, user]);
 
@@ -346,8 +347,8 @@ const AddProduct = () => {
   };
 
   const filteredCategories = useMemo(() => {
-    return getFilteredList(dbCategories, selectedModule);
-  }, [dbCategories, selectedModule]);
+    return getFilteredList(dbCategories, selectedModule || sellerModule);
+  }, [dbCategories, selectedModule, sellerModule]);
 
   const categories = filteredCategories;
 
@@ -1621,7 +1622,7 @@ const AddProduct = () => {
                     Target Module
                   </label>
                   <select
-                    value={selectedModule}
+                    value={selectedModule || sellerModule}
                     disabled={Boolean(sellerModule)}
                     onChange={(e) => {
                       setSelectedModule(e.target.value);

@@ -265,9 +265,10 @@ const EditProduct = () => {
 
   const sellerModule = useMemo(() => {
     const seller = sellerBookingProfile || user || {};
-    if (seller.isEventSeller || seller.planMyEventEnabled) return "plan_my_event";
-    if (seller.wholesaleEnabled) return "wholesale";
-    if (seller.retailEnabled) return "retail";
+    if (seller.planMyEventEnabled === true) return "plan_my_event";
+    if (seller.retailEnabled === true) return "retail";
+    if (seller.wholesaleEnabled === true) return "wholesale";
+    if (seller.planMyEventEnabled !== false && seller.isEventSeller) return "plan_my_event";
     return "";
   }, [sellerBookingProfile, user]);
 
@@ -413,8 +414,8 @@ const EditProduct = () => {
   };
 
   const filteredCategories = useMemo(() => {
-    return getFilteredList(dbCategories, selectedModule);
-  }, [dbCategories, selectedModule]);
+    return getFilteredList(dbCategories, selectedModule || sellerModule);
+  }, [dbCategories, selectedModule, sellerModule]);
 
   const categories = filteredCategories;
 
@@ -1686,7 +1687,7 @@ const EditProduct = () => {
                     Target Module
                   </label>
                   <select
-                    value={selectedModule}
+                    value={selectedModule || sellerModule}
                     disabled={Boolean(sellerModule)}
                     onChange={(e) => {
                       setSelectedModule(e.target.value);

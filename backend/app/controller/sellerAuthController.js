@@ -307,7 +307,7 @@ export const signupSeller = async (req, res) => {
 
 export const sendSellerSignupOtp = async (req, res) => {
     try {
-        const { channel, email, phone, value } = req.body || {};
+        const { channel, email, phone, value, purpose } = req.body || {};
         const targetValue =
             channel === "email"
                 ? email || value
@@ -318,7 +318,7 @@ export const sendSellerSignupOtp = async (req, res) => {
         const result = await issueSellerVerificationOtp({
             channel,
             rawValue: targetValue,
-            ipAddress: req.ip,
+            ipAddress: req.ip, isProfileEdit: purpose === "PROFILE_EDIT",
         });
 
         return handleResponse(res, 200, "OTP sent successfully", result);

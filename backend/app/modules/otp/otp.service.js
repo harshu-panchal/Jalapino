@@ -17,7 +17,7 @@ import {
 } from "../../utils/smsHelpers.js";
 
 const SUPPORTED_USER_TYPES = ["Admin", "Seller", "Customer", "Delivery"];
-const SUPPORTED_PURPOSES = ["LOGIN", "SIGNUP", "PASSWORD_RESET"];
+const SUPPORTED_PURPOSES = ["LOGIN", "SIGNUP", "PASSWORD_RESET", "PROFILE_EDIT"];
 const USER_TYPE_CONFIG = {
   Admin: { model: Admin, tokenRole: "admin" },
   Seller: { model: Seller, tokenRole: "seller" },
@@ -100,7 +100,7 @@ async function findAccountByUserType(userType, mobile) {
 }
 
 function assertPurposeEligibility({ purpose, account, userType }) {
-  if (purpose === "LOGIN" || purpose === "PASSWORD_RESET") {
+  if (purpose === "LOGIN" || purpose === "PASSWORD_RESET" || purpose === "PROFILE_EDIT") {
     if (!account) {
       const error = new Error(`${userType} account not found`);
       error.statusCode = 404;
@@ -174,7 +174,7 @@ export async function sendSmsOtp({ mobile, userType, purpose, ipAddress = "unkno
   }
 
   let otp = generateOTP(getOtpLength());
-  if (normalizedMobile === "6268423925" || normalizedMobile === "9111966732") {
+  if (isMockOtpEnabled() || normalizedMobile === "6268423925" || normalizedMobile === "9111966732") {
     otp = "123456";
   }
   const expiresAt = new Date(Date.now() + getExpiryMinutes() * 60 * 1000);
@@ -225,9 +225,9 @@ export async function verifySmsOtp({ mobile, otp, userType, purpose, ipAddress =
 
   const normalizedMobile = assertValidMobile(mobile);
   const code = String(otp || "").trim();
-  const otpPattern = new RegExp(`^\\d{${getOtpLength()}}$`);
+  const otpPattern = /^\d{4,6}$/;
   if (!otpPattern.test(code)) {
-    const error = new Error(`OTP must be exactly ${getOtpLength()} digits`);
+    const error = new Error(`OTP must be between 4 and 6 digits`);
     error.statusCode = 400;
     throw error;
   }

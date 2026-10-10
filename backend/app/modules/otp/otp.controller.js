@@ -3,25 +3,27 @@ import handleResponse from "../../utils/helper.js";
 import { sendSmsOtp, verifySmsOtp } from "./otp.service.js";
 
 const sendOtpSchema = Joi.object({
-  mobile: Joi.string().trim().required(),
+  mobile: Joi.string().trim(),
+  email: Joi.string().trim().email(),
   userType: Joi.string()
     .valid("Admin", "Seller", "Customer", "Delivery")
     .required(),
   purpose: Joi.string()
-    .valid("LOGIN", "SIGNUP", "PASSWORD_RESET")
+    .valid("LOGIN", "SIGNUP", "PASSWORD_RESET", "PROFILE_EDIT")
     .required(),
-});
+}).or('mobile', 'email');
 
 const verifyOtpSchema = Joi.object({
-  mobile: Joi.string().trim().required(),
-  otp: Joi.string().trim().pattern(/^\d{4}$/).required(),
+  mobile: Joi.string().trim(),
+  email: Joi.string().trim().email(),
+  otp: Joi.string().trim().pattern(/^\d{4,6}$/).required(),
   userType: Joi.string()
     .valid("Admin", "Seller", "Customer", "Delivery")
     .required(),
   purpose: Joi.string()
-    .valid("LOGIN", "SIGNUP", "PASSWORD_RESET")
+    .valid("LOGIN", "SIGNUP", "PASSWORD_RESET", "PROFILE_EDIT")
     .required(),
-});
+}).or('mobile', 'email');
 
 function validateSchema(schema, payload) {
   const { error, value } = schema.validate(payload, {

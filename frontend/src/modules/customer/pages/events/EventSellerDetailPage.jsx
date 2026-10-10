@@ -32,7 +32,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const currentState = embeddedState || routerState || {};
     const { eventData, preferences, selectedCategories, selectedSeller } = currentState;
     const { user } = useAuth();
-    
+
     // Derived from selected categories (category toggles from admin)
     const relevantCats = selectedCategories && selectedCategories.length > 0 ? selectedCategories : [];
 
@@ -40,14 +40,49 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
+    const [zoomLevel, setZoomLevel] = useState(1);
     const selectedProductsStorageKey = `jalapino_plan_event_products_${selectedSeller?._id || 'seller'}`;
 
+    const [failedImages, setFailedImages] = useState(new Set());
+    const [isFullScreenImage, setIsFullScreenImage] = useState(false);
+
     const openProductGallery = (product) => {
-        const primaryProductImage = product.mainImage || product.galleryImages?.[0];
-        if (typeof primaryProductImage === 'string' && primaryProductImage.trim()) {
-            setImagePreview({ images: [resolveProductImageUrl(primaryProductImage)], activeIndex: 0, name: product.name });
+        const imagesSet = new Set();
+        const images = [];
+
+        const addImage = (img) => {
+            if (typeof img === 'string') {
+                const cleanedImg = img.trim();
+                if (cleanedImg && !cleanedImg.includes('undefined') && !cleanedImg.includes('null') && cleanedImg !== '[]') {
+                    const resolved = resolveProductImageUrl(cleanedImg);
+                    const baseUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/$/, "") : "";
+                    if (resolved && resolved !== baseUrl && resolved !== `${baseUrl}/`) {
+                        if (!imagesSet.has(resolved)) {
+                            imagesSet.add(resolved);
+                            images.push(resolved);
+                        }
+                    }
+                }
+            }
+        };
+
+        addImage(product.mainImage);
+        if (Array.isArray(product.galleryImages)) {
+            product.galleryImages.forEach(addImage);
+        }
+
+        if (images.length > 0) {
+            setImagePreview({ images, activeIndex: 0, name: product.name, product: product });
+            setZoomLevel(1);
+            setFailedImages(new Set());
+            setIsFullScreenImage(false);
         }
     };
+
+
+
+
+
 
     useEffect(() => {
         if (!imagePreview) return undefined;
@@ -388,7 +423,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     <h2 className="text-3xl font-black mt-3 leading-tight drop-shadow-md">
                         {selectedSeller?.shopName || selectedSeller?.name}
                     </h2>
-                    <a 
+                    <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedSeller?.address || 'Indore, Madhya Pradesh')}`}
                         target="_blank"
                         rel="noopener noreferrer"
@@ -543,7 +578,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     <span>₹{(pricing.unitPrice * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}</span>
                                                     {isSelected?.quantity > 1 && <span className="text-[10px] font-semibold text-slate-400">({isSelected.quantity} × ₹{pricing.unitPrice.toLocaleString('en-IN')})</span>}
                                                 </span>
-                                                {(product.isDelivery || product.isRental) ? (isSelected ? (
+                                                {(product.isDelivery || product.isRental || (product.tickets && product.tickets.length > 0)) ? (isSelected ? (
                                                     <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
                                                         <button
                                                             type="button"
@@ -590,263 +625,263 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                     {/* Customization Options form depending on Seller config */}
                     {selectedSeller?.customizationEngineEnabled && (
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
-                        <div className="flex items-center justify-between gap-4 mb-4">
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
-                                Request Customization
-                            </h3>
-                            <button
-                                type="button"
-                                role="switch"
-                                aria-checked={isCustomizationRequested}
-                                aria-label="Request Customization"
-                                onClick={() => setIsCustomizationRequested((isOn) => !isOn)}
-                                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${isCustomizationRequested ? 'bg-purple-600' : 'bg-slate-300'}`}
-                            >
-                                <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isCustomizationRequested ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                            </button>
-                        </div>
-
-                        {isCustomizationRequested && <div className="space-y-4">
-                            {/* Material Preference (Flower/Balloon) */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Decoration Type</label>
-                                <div className="flex items-center gap-6">
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="material"
-                                            value="Flower"
-                                            checked={materialPreference === 'Flower'}
-                                            onChange={(e) => setMaterialPreference(e.target.value)}
-                                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
-                                        />
-                                        <span className="text-sm font-semibold text-slate-700">Flower</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="material"
-                                            value="Balloon"
-                                            checked={materialPreference === 'Balloon'}
-                                            onChange={(e) => setMaterialPreference(e.target.value)}
-                                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
-                                        />
-                                        <span className="text-sm font-semibold text-slate-700">Balloon</span>
-                                    </label>
-                                    <label className="flex items-center gap-2 cursor-pointer">
-                                        <input
-                                            type="radio"
-                                            name="material"
-                                            value="Both"
-                                            checked={materialPreference === 'Both'}
-                                            onChange={(e) => setMaterialPreference(e.target.value)}
-                                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
-                                        />
-                                        <span className="text-sm font-semibold text-slate-700">Both</span>
-                                    </label>
-                                </div>
+                        <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                            <div className="flex items-center justify-between gap-4 mb-4">
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                                    Request Customization
+                                </h3>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={isCustomizationRequested}
+                                    aria-label="Request Customization"
+                                    onClick={() => setIsCustomizationRequested((isOn) => !isOn)}
+                                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${isCustomizationRequested ? 'bg-purple-600' : 'bg-slate-300'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${isCustomizationRequested ? 'translate-x-5' : 'translate-x-0.5'}`} />
+                                </button>
                             </div>
 
-                            {/* Color Combination Option (Multiple Colors) */}
-                            {selectedSeller?.quoteColorCombination && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
+                            {isCustomizationRequested && <div className="space-y-4">
+                                {/* Material Preference (Flower/Balloon) */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Decoration Type</label>
+                                    <div className="flex items-center gap-6">
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="material"
+                                                value="Flower"
+                                                checked={materialPreference === 'Flower'}
+                                                onChange={(e) => setMaterialPreference(e.target.value)}
+                                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Flower</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="material"
+                                                value="Balloon"
+                                                checked={materialPreference === 'Balloon'}
+                                                onChange={(e) => setMaterialPreference(e.target.value)}
+                                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Balloon</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                            <input
+                                                type="radio"
+                                                name="material"
+                                                value="Both"
+                                                checked={materialPreference === 'Both'}
+                                                onChange={(e) => setMaterialPreference(e.target.value)}
+                                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-slate-300"
+                                            />
+                                            <span className="text-sm font-semibold text-slate-700">Both</span>
+                                        </label>
+                                    </div>
+                                </div>
 
-                                {/* Predefined Colors from Admin */}
-                                {selectedSeller?.availableColors && selectedSeller.availableColors.length > 0 && (
-                                    <div className="flex flex-wrap gap-2 mb-3">
-                                        {selectedSeller.availableColors.map((color, idx) => {
-                                            const isSelected = colorPreferences.includes(color);
-                                            return (
-                                                <button
-                                                    key={idx}
-                                                    type="button"
-                                                    onClick={() => {
-                                                        if (isSelected) {
-                                                            setColorPreferences(prev => prev.filter(c => c !== color));
-                                                        } else {
-                                                            setColorPreferences(prev => [...prev, color]);
-                                                        }
-                                                    }}
-                                                    className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 ${isSelected
-                                                        ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200"
-                                                        : "bg-white text-slate-600 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
-                                                        }`}
-                                                >
-                                                    <div
-                                                        className={`w-3.5 h-3.5 rounded-full border ${isSelected ? 'border-white/50' : 'border-slate-200'}`}
-                                                        style={{ backgroundColor: color }}
-                                                    />
+                                {/* Color Combination Option (Multiple Colors) */}
+                                {selectedSeller?.quoteColorCombination && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
+
+                                        {/* Predefined Colors from Admin */}
+                                        {selectedSeller?.availableColors && selectedSeller.availableColors.length > 0 && (
+                                            <div className="flex flex-wrap gap-2 mb-3">
+                                                {selectedSeller.availableColors.map((color, idx) => {
+                                                    const isSelected = colorPreferences.includes(color);
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                if (isSelected) {
+                                                                    setColorPreferences(prev => prev.filter(c => c !== color));
+                                                                } else {
+                                                                    setColorPreferences(prev => [...prev, color]);
+                                                                }
+                                                            }}
+                                                            className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all flex items-center gap-2 ${isSelected
+                                                                ? "bg-purple-600 text-white border-purple-600 shadow-md shadow-purple-200"
+                                                                : "bg-white text-slate-600 border-slate-200 hover:border-purple-300 hover:bg-purple-50"
+                                                                }`}
+                                                        >
+                                                            <div
+                                                                className={`w-3.5 h-3.5 rounded-full border ${isSelected ? 'border-white/50' : 'border-slate-200'}`}
+                                                                style={{ backgroundColor: color }}
+                                                            />
+                                                            {color}
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
+
+                                        <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 flex flex-wrap gap-2 items-center focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all">
+                                            {colorPreferences.map((color, idx) => (
+                                                <span key={idx} className="flex items-center gap-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 shadow-sm">
                                                     {color}
-                                                </button>
-                                            );
-                                        })}
+                                                    <button
+                                                        onClick={() => setColorPreferences(prev => prev.filter((_, i) => i !== idx))}
+                                                        className="ml-1 text-slate-400 hover:text-red-500 font-bold"
+                                                    >
+                                                        ×
+                                                    </button>
+                                                </span>
+                                            ))}
+                                            <input
+                                                type="color"
+                                                value={colorInput.startsWith('#') ? colorInput : '#8b5cf6'}
+                                                onChange={(e) => setColorInput(e.target.value)}
+                                                className="w-8 h-8 rounded-md border-0 p-0 shrink-0 cursor-pointer bg-transparent"
+                                            />
+                                            <input
+                                                type="text"
+                                                placeholder={colorPreferences.length === 0 ? "Type custom color (Press Enter)" : "Add another color..."}
+                                                value={colorInput}
+                                                onChange={(e) => setColorInput(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter' && colorInput.trim()) {
+                                                        e.preventDefault();
+                                                        if (!colorPreferences.includes(colorInput.trim())) {
+                                                            setColorPreferences(prev => [...prev, colorInput.trim()]);
+                                                        }
+                                                        setColorInput('');
+                                                    }
+                                                }}
+                                                className="flex-1 min-w-[150px] outline-none text-sm font-semibold bg-transparent px-1 py-1"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    if (colorInput.trim() && !colorPreferences.includes(colorInput.trim())) {
+                                                        setColorPreferences(prev => [...prev, colorInput.trim()]);
+                                                        setColorInput('');
+                                                    }
+                                                }}
+                                                className="bg-purple-600 text-white px-3 py-1 rounded-md text-xs font-bold shrink-0 hover:bg-purple-700 transition-colors"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
 
-                                <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 flex flex-wrap gap-2 items-center focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all">
-                                    {colorPreferences.map((color, idx) => (
-                                        <span key={idx} className="flex items-center gap-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 shadow-sm">
-                                            {color}
-                                            <button
-                                                onClick={() => setColorPreferences(prev => prev.filter((_, i) => i !== idx))}
-                                                className="ml-1 text-slate-400 hover:text-red-500 font-bold"
-                                            >
-                                                ×
-                                            </button>
-                                        </span>
-                                    ))}
-                                    <input
-                                        type="color"
-                                        value={colorInput.startsWith('#') ? colorInput : '#8b5cf6'}
-                                        onChange={(e) => setColorInput(e.target.value)}
-                                        className="w-8 h-8 rounded-md border-0 p-0 shrink-0 cursor-pointer bg-transparent"
-                                    />
+                                {/* Theme Selection Option */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Theme Name</label>
                                     <input
                                         type="text"
-                                        placeholder={colorPreferences.length === 0 ? "Type custom color (Press Enter)" : "Add another color..."}
-                                        value={colorInput}
-                                        onChange={(e) => setColorInput(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' && colorInput.trim()) {
-                                                e.preventDefault();
-                                                if (!colorPreferences.includes(colorInput.trim())) {
-                                                    setColorPreferences(prev => [...prev, colorInput.trim()]);
-                                                }
-                                                setColorInput('');
-                                            }
-                                        }}
-                                        className="flex-1 min-w-[150px] outline-none text-sm font-semibold bg-transparent px-1 py-1"
+                                        placeholder="e.g. Fairy Tale Theme, Retro Bollywood Night"
+                                        value={themePreference}
+                                        onChange={(e) => setThemePreference(e.target.value)}
+                                        className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            if (colorInput.trim() && !colorPreferences.includes(colorInput.trim())) {
-                                                setColorPreferences(prev => [...prev, colorInput.trim()]);
-                                                setColorInput('');
-                                            }
-                                        }}
-                                        className="bg-purple-600 text-white px-3 py-1 rounded-md text-xs font-bold shrink-0 hover:bg-purple-700 transition-colors"
-                                    >
-                                        Add
-                                    </button>
                                 </div>
-                            </div>
-                            )}
 
-                            {/* Theme Selection Option */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Theme Name</label>
-                                <input
-                                    type="text"
-                                    placeholder="e.g. Fairy Tale Theme, Retro Bollywood Night"
-                                    value={themePreference}
-                                    onChange={(e) => setThemePreference(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
-                                />
-                            </div>
-
-                            {/* Budget Selection Option */}
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Your Custom Budget Limit (₹)</label>
-                                <input
-                                    type="number"
-                                    placeholder="e.g. 50000"
-                                    value={customBudget}
-                                    onChange={(e) => setCustomBudget(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
-                                />
-                            </div>
-
-                            {/* Reference Photo Upload Option */}
-                            {selectedSeller?.quoteReferencePhotoUpload && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
-                                <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all">
+                                {/* Budget Selection Option */}
+                                <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Your Custom Budget Limit (₹)</label>
                                     <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handlePhotoUpload}
-                                        className="hidden"
-                                        id="ref-photo-file"
+                                        type="number"
+                                        placeholder="e.g. 50000"
+                                        value={customBudget}
+                                        onChange={(e) => setCustomBudget(e.target.value)}
+                                        className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                     />
-                                    <label htmlFor="ref-photo-file" className="cursor-pointer text-center">
-                                        <span className="text-xs font-black text-purple-600 uppercase tracking-wider block">Browse File</span>
-                                        <span className="text-[10px] text-slate-400 block mt-0.5">
-                                            {referencePhoto ? referencePhoto.name : 'Upload layout PNG, JPG (Max 5MB)'}
-                                        </span>
-                                    </label>
                                 </div>
-                            </div>
-                            )}
 
-                            {/* Customer Notes Option */}
-                            {selectedSeller?.quoteCustomerNotes && (
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
-                                <textarea
-                                    rows={3}
-                                    placeholder="Write specific guidelines, food allergy notices, or schedule requests for the seller..."
-                                    value={customNotes}
-                                    onChange={(e) => setCustomNotes(e.target.value)}
-                                    className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
-                                />
-                            </div>
-                            )}
-                        </div>}
-                    </div>
+                                {/* Reference Photo Upload Option */}
+                                {selectedSeller?.quoteReferencePhotoUpload && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
+                                        <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all">
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handlePhotoUpload}
+                                                className="hidden"
+                                                id="ref-photo-file"
+                                            />
+                                            <label htmlFor="ref-photo-file" className="cursor-pointer text-center">
+                                                <span className="text-xs font-black text-purple-600 uppercase tracking-wider block">Browse File</span>
+                                                <span className="text-[10px] text-slate-400 block mt-0.5">
+                                                    {referencePhoto ? referencePhoto.name : 'Upload layout PNG, JPG (Max 5MB)'}
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Customer Notes Option */}
+                                {selectedSeller?.quoteCustomerNotes && (
+                                    <div>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
+                                        <textarea
+                                            rows={3}
+                                            placeholder="Write specific guidelines, food allergy notices, or schedule requests for the seller..."
+                                            value={customNotes}
+                                            onChange={(e) => setCustomNotes(e.target.value)}
+                                            className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+                                        />
+                                    </div>
+                                )}
+                            </div>}
+                        </div>
                     )}
                     {/* Live Chat with Seller (Socket.io) */}
                     {selectedSeller?.ticketSystemEnabled && (
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
-                        <div className="bg-slate-50 px-5 py-3 border-b border-slate-150 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                                <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Seller & Customer Chat Option</h4>
+                        <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
+                            <div className="bg-slate-50 px-5 py-3 border-b border-slate-150 flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
+                                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Seller & Customer Chat Option</h4>
+                                </div>
+                                <span className="text-[9px] font-bold text-slate-400 uppercase">Realtime</span>
                             </div>
-                            <span className="text-[9px] font-bold text-slate-400 uppercase">Realtime</span>
-                        </div>
 
-                        {/* Messages Board */}
-                        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
-                            {messages.map(msg => {
-                                const isCustomer = msg.sender === 'customer';
-                                return (
-                                    <div key={msg.id} className={`flex flex-col ${isCustomer ? 'items-end' : 'items-start'}`}>
-                                        <div
-                                            className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-xs font-medium shadow-sm leading-relaxed
+                            {/* Messages Board */}
+                            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3.5 bg-slate-50/50">
+                                {messages.map(msg => {
+                                    const isCustomer = msg.sender === 'customer';
+                                    return (
+                                        <div key={msg.id} className={`flex flex-col ${isCustomer ? 'items-end' : 'items-start'}`}>
+                                            <div
+                                                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-xs font-medium shadow-sm leading-relaxed
                                                         ${isCustomer
-                                                    ? 'bg-purple-600 text-white rounded-tr-none'
-                                                    : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
-                                                }`}
-                                        >
-                                            {msg.text}
+                                                        ? 'bg-purple-600 text-white rounded-tr-none'
+                                                        : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
+                                                    }`}
+                                            >
+                                                {msg.text}
+                                            </div>
+                                            <span className="text-[9px] text-slate-400 mt-1 px-1 font-semibold">{msg.time}</span>
                                         </div>
-                                        <span className="text-[9px] text-slate-400 mt-1 px-1 font-semibold">{msg.time}</span>
-                                    </div>
-                                );
-                            })}
-                        </div>
+                                    );
+                                })}
+                            </div>
 
-                        {/* Input bar */}
-                        <div className="p-3 bg-white border-t border-slate-150 flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="Type your message..."
-                                value={chatInput}
-                                onChange={(e) => setChatInput(e.target.value)}
-                                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                                className="flex-1 border border-slate-200 rounded-xl px-3 outline-none text-xs bg-slate-50 focus:border-purple-500 transition-all"
-                            />
-                            <button
-                                onClick={handleSendMessage}
-                                className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
-                            >
-                                <SendIcon sx={{ fontSize: 14 }} />
-                            </button>
+                            {/* Input bar */}
+                            <div className="p-3 bg-white border-t border-slate-150 flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Type your message..."
+                                    value={chatInput}
+                                    onChange={(e) => setChatInput(e.target.value)}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                                    className="flex-1 border border-slate-200 rounded-xl px-3 outline-none text-xs bg-slate-50 focus:border-purple-500 transition-all"
+                                />
+                                <button
+                                    onClick={handleSendMessage}
+                                    className="w-9 h-9 rounded-xl bg-purple-600 text-white flex items-center justify-center hover:bg-purple-700 transition-colors"
+                                >
+                                    <SendIcon sx={{ fontSize: 14 }} />
+                                </button>
+                            </div>
                         </div>
-                    </div>
                     )}
 
                     {/* --- Plan Summary Below Chat --- */}
@@ -898,77 +933,318 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             </div>
             {imagePreview && (
                 <div
-                    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4"
-                    onClick={() => setImagePreview(null)}
+                    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 md:p-8"
+                    onClick={() => { setImagePreview(null); setZoomLevel(1); }}
                     role="presentation"
                 >
-                    <div className="mb-4 text-center text-sm font-semibold text-white" onClick={(e) => e.stopPropagation()}>
-                        {imagePreview.name} <span className="ml-2 text-white/70">{imagePreview.activeIndex + 1} / {imagePreview.images.length}</span>
-                    </div>
-                    <div className="relative flex h-[min(68vh,720px)] w-[min(92vw,1100px)] items-center justify-center" onClick={(e) => e.stopPropagation()}>
-                        <button
-                            type="button"
-                            onClick={() => setImagePreview(null)}
-                            aria-label="Close image preview"
-                            className="absolute -right-3 -top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white text-2xl font-bold text-slate-800 shadow-lg"
-                        >
-                            &times;
-                        </button>
-                        {imagePreview.images.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => setImagePreview(current => ({ ...current, activeIndex: (current.activeIndex - 1 + current.images.length) % current.images.length }))}
-                                aria-label="Previous product image"
-                                className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-2xl font-bold text-slate-800 shadow-lg"
-                            >
-                                ‹
-                            </button>
-                        )}
-                        <img
-                            src={imagePreview.images[imagePreview.activeIndex]}
-                            alt={`${imagePreview.name} image ${imagePreview.activeIndex + 1}`}
-                            className="h-full w-full rounded-xl bg-white object-contain shadow-2xl"
-                            onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
-                        />
-                        {imagePreview.images.length > 1 && (
-                            <button
-                                type="button"
-                                onClick={() => setImagePreview(current => ({ ...current, activeIndex: (current.activeIndex + 1) % current.images.length }))}
-                                aria-label="Next product image"
-                                className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full bg-white/95 text-2xl font-bold text-slate-800 shadow-lg"
-                            >
-                                ›
-                            </button>
-                        )}
-                    </div>
-                    {imagePreview.images.length > 1 && (
-                        <div className="mt-4 flex max-w-[94vw] gap-2 overflow-x-auto px-1" onClick={(e) => e.stopPropagation()}>
-                            {imagePreview.images.map((image, index) => (
-                                <button
-                                    key={`${image}-${index}`}
-                                    type="button"
-                                    onClick={() => setImagePreview(current => ({ ...current, activeIndex: index }))}
-                                    aria-label={`Show product image ${index + 1}`}
-                                    aria-pressed={imagePreview.activeIndex === index}
-                                    className={`h-14 w-14 shrink-0 overflow-hidden rounded-lg border-2 ${imagePreview.activeIndex === index ? 'border-purple-400' : 'border-white/40'}`}
-                                >
-                                    <img
-                                        src={image}
-                                        alt=""
-                                        className="h-full w-full bg-white object-cover"
-                                        onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
-                                    />
-                                </button>
-                            ))}
+                    <button
+                        type="button"
+                        onClick={() => { setImagePreview(null); setZoomLevel(1); }}
+                        aria-label="Close product preview"
+                        className="absolute right-4 top-4 z-[110] flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-md transition-colors"
+                    >
+                        <span className="text-2xl font-bold leading-none">&times;</span>
+                    </button>
+
+                    <div
+                        className="flex flex-col md:flex-row w-full max-w-5xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Left: Image Viewer with Zoom */}
+                        <div className="relative flex-1 bg-slate-100 min-h-[45vh] md:min-h-0 flex items-center justify-center overflow-hidden group">
+                            <div className="w-full h-full flex items-center justify-center overflow-auto relative">
+                                <img
+                                    src={imagePreview.images[imagePreview.activeIndex]}
+                                    alt={imagePreview.name}
+                                    className="max-w-full max-h-full object-contain transition-transform duration-300 ease-out origin-center"
+                                    style={{ transform: `scale(${zoomLevel})`, cursor: zoomLevel > 1 ? 'grab' : 'zoom-in' }}
+                                    onClick={() => setIsFullScreenImage(true)}
+                                    onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
+                                />
+                            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            {/* Next/Prev Controls */}
+                            {(imagePreview.images.length - failedImages.size) > 1 && (
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setZoomLevel(1);
+                                            setImagePreview(c => {
+                                                let nextIndex = (c.activeIndex - 1 + c.images.length) % c.images.length;
+                                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                                                    nextIndex = (nextIndex - 1 + c.images.length) % c.images.length;
+                                                }
+                                                return { ...c, activeIndex: nextIndex };
+                                            });
+                                        }}
+                                        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-xl font-bold text-slate-800 shadow-lg backdrop-blur-sm hover:bg-white transition-colors border border-white"
+                                    >
+                                        ‹
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setZoomLevel(1);
+                                            setImagePreview(c => {
+                                                let nextIndex = (c.activeIndex + 1) % c.images.length;
+                                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                                                    nextIndex = (nextIndex + 1) % c.images.length;
+                                                }
+                                                return { ...c, activeIndex: nextIndex };
+                                            });
+                                        }}
+                                        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-xl font-bold text-slate-800 shadow-lg backdrop-blur-sm hover:bg-white transition-colors border border-white"
+                                    >
+                                        ›
+                                    </button>
+                                </>
+                            )}
                         </div>
-                    )}
+
+                        {/* Right: Product Details */}
+                        <div className="w-full md:w-[420px] lg:w-[480px] p-6 lg:p-8 flex flex-col max-h-[50vh] md:max-h-full overflow-y-auto bg-white border-l border-slate-100">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 mb-2 block bg-purple-50 w-fit px-2.5 py-1 rounded-md">
+                                {imagePreview.product?.category || selectedSeller?.category || 'Product'}
+                            </span>
+                            <h2 className="text-2xl lg:text-3xl font-black text-slate-800 leading-tight mb-3">
+                                {imagePreview.name}
+                            </h2>
+
+                            {imagePreview.product && (
+                                <div className="flex items-end gap-3 mb-6 pb-6 border-b border-slate-100">
+                                    <span className="text-3xl font-black text-purple-700 tracking-tight">
+                                        ₹{(Number(imagePreview.product.salePrice) > 0 && Number(imagePreview.product.salePrice) < Number(imagePreview.product.price)) ? Number(imagePreview.product.salePrice).toLocaleString('en-IN') : Number(imagePreview.product.price).toLocaleString('en-IN')}
+                                    </span>
+                                    {(Number(imagePreview.product.salePrice) > 0 && Number(imagePreview.product.salePrice) < Number(imagePreview.product.price)) && (
+                                        <span className="text-slate-400 line-through text-base font-semibold mb-1">
+                                            ₹{Number(imagePreview.product.price).toLocaleString('en-IN')}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="flex-1">
+                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2">Description</h4>
+                                <p className="text-sm text-slate-600 leading-relaxed mb-8 font-medium whitespace-pre-line">
+                                    {imagePreview.product?.description || 'No detailed description available for this product.'}
+                                </p>
+
+                                {imagePreview.images.length > 1 && (imagePreview.images.length - failedImages.size) > 1 && (
+                                    <div className="mb-8">
+                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
+                                            Gallery Images ({imagePreview.images.length - failedImages.size})
+                                        </h4>
+                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
+                                            {imagePreview.images.map((img, idx) => {
+                                                if (failedImages.has(idx)) return null;
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => { setZoomLevel(1); setImagePreview(c => ({ ...c, activeIndex: idx })) }}
+                                                        className={`w-16 h-16 rounded-xl border-2 shrink-0 overflow-hidden transition-all ${imagePreview.activeIndex === idx ? 'border-purple-600 shadow-md scale-105' : 'border-slate-100 opacity-70 hover:opacity-100'}`}
+                                                    >
+                                                        <img
+                                                            src={img}
+                                                            className="w-full h-full object-cover bg-slate-50"
+                                                            onError={(e) => {
+                                                                setFailedImages(prev => new Set(prev).add(idx));
+                                                                e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png';
+                                                            }}
+                                                        />
+                                                    </button>
+                                                )
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Action Button */}
+                            {imagePreview.product && (
+                                <div className="pt-4 mt-auto border-t border-slate-100 bg-white">
+                                    <button
+                                        onClick={() => {
+                                            handleProductSelection(imagePreview.product);
+                                            setImagePreview(null);
+                                        }}
+                                        className={`w-full py-4 rounded-2xl font-black uppercase tracking-wider text-sm transition-all
+                                            ${selectedProducts.find(p => p._id === imagePreview.product?._id)
+                                                ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                                                : 'bg-purple-600 text-white shadow-lg shadow-purple-200 hover:bg-purple-700 hover:-translate-y-0.5'
+                                            }`}
+                                    >
+                                        {selectedProducts.find(p => p._id === imagePreview.product?._id) ? 'Remove Item' : 'Add to Selection'}
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
                 </div>
             )}
         </div>
     );
 
+    const fullScreenViewer = isFullScreenImage && imagePreview && (
+        <div 
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-white animate-in fade-in duration-200"
+            role="dialog"
+            onClick={(e) => {
+                e.stopPropagation();
+            }}
+        >
+            <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); setIsFullScreenImage(false); setZoomLevel(1); }}
+                className="absolute left-4 top-4 md:left-6 md:top-6 z-[99999] flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 hover:bg-slate-200 text-slate-800 transition-colors"
+                aria-label="Close full screen view"
+            >
+                <ArrowBackIcon />
+            </button>
+
+            <div className="w-full h-full p-4 md:p-12 flex items-center justify-center relative bg-white overflow-auto">
+                <img
+                    src={imagePreview.images[imagePreview.activeIndex]}
+                    alt={imagePreview.name}
+                    className="max-w-full max-h-full object-contain transition-transform duration-300 ease-out origin-center"
+                    style={{ transform: `scale(${zoomLevel})`, cursor: zoomLevel > 1 ? 'grab' : 'zoom-in' }}
+                    onDoubleClick={(e) => {
+                        e.stopPropagation();
+                        setZoomLevel(prev => prev === 1 ? 2.5 : 1);
+                    }}
+                    onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
+                />
+            </div>
+
+            {(imagePreview.images.length - failedImages.size) > 1 && (
+                <>
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setImagePreview(c => {
+                                let nextIndex = (c.activeIndex - 1 + c.images.length) % c.images.length;
+                                while(failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                                    nextIndex = (nextIndex - 1 + c.images.length) % c.images.length;
+                                }
+                                return {...c, activeIndex: nextIndex};
+                            });
+                        }} 
+                        className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 flex h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
+                    >
+                        <span className="text-3xl text-slate-800 leading-none">‹</span>
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            setImagePreview(c => {
+                                let nextIndex = (c.activeIndex + 1) % c.images.length;
+                                while(failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                                    nextIndex = (nextIndex + 1) % c.images.length;
+                                }
+                                return {...c, activeIndex: nextIndex};
+                            });
+                        }} 
+                        className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 flex h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
+                    >
+                        <span className="text-3xl text-slate-800 leading-none">›</span>
+                    </button>
+
+                    <div className="absolute bottom-6 md:bottom-8 left-0 right-0 flex justify-center gap-2">
+                        {imagePreview.images.map((_, idx) => {
+                            if (failedImages.has(idx)) return null;
+                            return (
+                                <div 
+                                    key={idx}
+                                    className={`h-2 rounded-full transition-all ${imagePreview.activeIndex === idx ? 'w-6 bg-slate-400' : 'w-2 bg-slate-200'}`}
+                                />
+                            );
+                        })}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+
     if (embeddedState) {
-        return content;
+        return (
+            <>
+                {content}
+                {fullScreenViewer}
+            </>
+        );
     }
 
     return (
@@ -977,6 +1253,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             <div id="main-scroll-container" className="flex-1 w-full overflow-y-auto transition-all duration-300" style={{ paddingTop: 'calc(var(--header-height, 180px) - var(--header-shrink-offset, 0px))' }}>
                 {content}
             </div>
+            {fullScreenViewer}
         </div>
     );
 };

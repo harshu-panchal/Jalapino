@@ -78,48 +78,54 @@ const SellerModuleInfoCard = () => {
   // if (primaryCategory) { ... }
 
   // Plan My Event Categories
-  eventCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.module === 'Plan My Event' && b.name.toLowerCase() === name.toLowerCase())) {
-      categorizedBadges.push({
-        module: 'Plan My Event',
-        name,
-        badgeStyle: 'bg-purple-50 text-purple-700 border-purple-200',
-      });
-    }
-  });
+  if (isEventSeller) {
+    eventCatNames.forEach((name) => {
+      if (!categorizedBadges.some((b) => b.module === 'Plan My Event' && b.name.toLowerCase() === name.toLowerCase())) {
+        categorizedBadges.push({
+          module: 'Plan My Event',
+          name,
+          badgeStyle: 'bg-purple-50 text-purple-700 border-purple-200',
+        });
+      }
+    });
 
-  // Event Commerce service categories selected by the admin during seller review
-  serviceCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.module === 'Plan My Event · Event Commerce' && b.name.toLowerCase() === name.toLowerCase())) {
-      categorizedBadges.push({
-        module: 'Plan My Event · Event Commerce',
-        name,
-        badgeStyle: 'bg-purple-50 text-purple-700 border-purple-200',
-      });
-    }
-  });
+    // Event Commerce service categories selected by the admin during seller review
+    serviceCatNames.forEach((name) => {
+      if (!categorizedBadges.some((b) => b.module === 'Plan My Event · Event Commerce' && b.name.toLowerCase() === name.toLowerCase())) {
+        categorizedBadges.push({
+          module: 'Plan My Event · Event Commerce',
+          name,
+          badgeStyle: 'bg-purple-50 text-purple-700 border-purple-200',
+        });
+      }
+    });
+  }
 
   // Retail Store Categories
-  retailCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.module === 'Retail' && b.name.toLowerCase() === name.toLowerCase())) {
-      categorizedBadges.push({
-        module: 'Retail',
-        name,
-        badgeStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      });
-    }
-  });
+  if (seller.retailEnabled) {
+    retailCatNames.forEach((name) => {
+      if (!categorizedBadges.some((b) => b.module === 'Retail' && b.name.toLowerCase() === name.toLowerCase())) {
+        categorizedBadges.push({
+          module: 'Retail',
+          name,
+          badgeStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        });
+      }
+    });
+  }
 
   // Wholesale Categories
-  wholesaleCatNames.forEach((name) => {
-    if (!categorizedBadges.some((b) => b.module === 'Wholesale' && b.name.toLowerCase() === name.toLowerCase())) {
-      categorizedBadges.push({
-        module: 'Wholesale',
-        name,
-        badgeStyle: 'bg-blue-50 text-blue-700 border-blue-200',
-      });
-    }
-  });
+  if (seller.wholesaleEnabled) {
+    wholesaleCatNames.forEach((name) => {
+      if (!categorizedBadges.some((b) => b.module === 'Wholesale' && b.name.toLowerCase() === name.toLowerCase())) {
+        categorizedBadges.push({
+          module: 'Wholesale',
+          name,
+          badgeStyle: 'bg-blue-50 text-blue-700 border-blue-200',
+        });
+      }
+    });
+  }
 
   // Modules Badges
   const modules = [
