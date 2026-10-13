@@ -224,6 +224,11 @@ export const updateSellerDetails = async (req, res) => {
     const physicalPaymentEnabled = req.body.physicalPaymentEnabled;
     const paymentQrCode = req.body.paymentQrCode;
     const ticketSystemEnabled = req.body.ticketSystemEnabled;
+    const venueVisitsEnabled = req.body.venueVisitsEnabled;
+    const capacityEnabled = req.body.capacityEnabled;
+    const totalCapacity = req.body.totalCapacity;
+    const bookingType = req.body.bookingType;
+    const numberOfShops = req.body.numberOfShops;
     const videoUploadEnabled = req.body.videoUploadEnabled;
     const showStandardDateTime = req.body.showStandardDateTime;
     const showStandardDateTimeSlot = req.body.showStandardDateTimeSlot;
@@ -236,6 +241,7 @@ export const updateSellerDetails = async (req, res) => {
     const shopClosingTime = req.body.shopClosingTime;
     const advanceBookingBuffer = req.body.advanceBookingBuffer;
     const advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
+    const advanceBookingBufferTime = req.body.advanceBookingBufferTime;
     const advanceBookingBufferEnabled = req.body.advanceBookingBufferEnabled;
     const demoTrialEnabled = req.body.demoTrialEnabled;
     const demoTrialDays = req.body.demoTrialDays;
@@ -319,6 +325,12 @@ export const updateSellerDetails = async (req, res) => {
     if (physicalPaymentEnabled !== undefined) updateData.physicalPaymentEnabled = physicalPaymentEnabled;
     if (paymentQrCode !== undefined) updateData.paymentQrCode = paymentQrCode;
     if (ticketSystemEnabled !== undefined) updateData.ticketSystemEnabled = ticketSystemEnabled;
+    if (venueVisitsEnabled !== undefined) updateData.venueVisitsEnabled = venueVisitsEnabled;
+    if (capacityEnabled !== undefined) updateData.capacityEnabled = capacityEnabled;
+    if (totalCapacity !== undefined) updateData.totalCapacity = Number(totalCapacity);
+    if (bookingType !== undefined) updateData.bookingType = bookingType;
+    if (numberOfShops !== undefined) updateData.numberOfShops = Number(numberOfShops);
+    if (advanceBookingBufferTime !== undefined) updateData.advanceBookingBufferTime = advanceBookingBufferTime;
     if (req.body.shopHolidaysEnabled !== undefined) updateData.shopHolidaysEnabled = req.body.shopHolidaysEnabled;
     if (req.body.shopClosedDates !== undefined) updateData.shopClosedDates = req.body.shopClosedDates;
 
@@ -364,7 +376,15 @@ export const softDeleteSeller = async (req, res) => {
 
     const seller = await Seller.findByIdAndUpdate(
       id,
-      { $set: { isDeleted: true, status: 'REJECTED', isShopActive: false } },
+      { 
+        $set: { 
+          isDeleted: true, 
+          status: 'REJECTED', 
+          applicationStatus: 'rejected',
+          isActive: false, 
+          isShopActive: false 
+        } 
+      },
       { new: true }
     );
     

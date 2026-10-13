@@ -27,7 +27,9 @@ import {
     XCircle,
     RotateCw,
     Search,
-    Download
+    Download,
+    Trash2,
+    Save
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@shared/components/ui/Toast';
@@ -41,6 +43,8 @@ const SellerDetail = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const activeTab = searchParams.get('tab') || 'orders';
 
+    const isEditMode = searchParams.get('edit') === 'true';
+
     const setActiveTab = (tab) => {
         setSearchParams((prev) => {
             prev.set('tab', tab);
@@ -49,10 +53,6 @@ const SellerDetail = () => {
     };
     const [isRefreshing, setIsRefreshing] = useState(false);
 
-    // Edit Shop Modal State
-    const [isEditingShop, setIsEditingShop] = useState(false);
-    const [isSavingEdit, setIsSavingEdit] = useState(false);
-    const [editFormData, setEditFormData] = useState({});
 
     // Mock Data for Seller
     const [seller, setSeller] = useState({
@@ -195,6 +195,24 @@ const SellerDetail = () => {
                 addonCateringPrice: data.addonCateringPrice ?? 0,
                 physicalPaymentEnabled: data.physicalPaymentEnabled ?? false,
                 paymentQrCode: data.paymentQrCode ?? "",
+                venueVisitsEnabled: data.venueVisitsEnabled ?? true,
+                isShopActive: data.isShopActive ?? true,
+                shopTimingsEnabled: data.shopTimingsEnabled ?? false,
+                advanceBookingBuffer: data.advanceBookingBuffer ?? 0,
+                advanceBookingBufferUnit: data.advanceBookingBufferUnit || 'days',
+                advanceBookingBufferTime: data.advanceBookingBufferTime || "12",
+                shopClosedDates: data.shopClosedDates || [],
+                demoTrialEnabled: data.demoTrialEnabled ?? false,
+                demoTrialDays: data.demoTrialDays || 15,
+                corporateContactEnabled: data.corporateContactEnabled ?? false,
+                noOfGuestsEnabled: data.noOfGuestsEnabled ?? false,
+                functionLocationEnabled: data.functionLocationEnabled ?? false,
+                sellerLocationEnabled: data.sellerLocationEnabled ?? false,
+                numberOfShops: data.numberOfShops || 1,
+                videoUploadEnabled: data.videoUploadEnabled ?? false,
+                customerImageReviewEnabled: data.customerImageReviewEnabled ?? false,
+                advanceBookingEnabled: data.advanceBookingEnabled ?? false,
+                quoteAdvancePayment: data.quoteAdvancePayment ?? false,
             }));
         } catch (error) {
             console.error(error);
@@ -255,36 +273,100 @@ const SellerDetail = () => {
         fetchSellerData().finally(() => setIsRefreshing(false));
     };
 
-    const handleEditShopClick = () => {
-        setEditFormData({
-            shopName: seller.shopName,
-            name: seller.ownerName,
-            phone: seller.phone,
-            address: seller.location,
-            description: seller.description,
-            availableColors: seller.availableColors || [],
-            sellerStatus: seller.status,
-            commissionRate: seller.commissionRate?.replace('%', '') || '10',
-            bankDetails: seller.bankInfo,
-            retailEnabled: seller.retailEnabled,
-            planMyEventEnabled: seller.planMyEventEnabled
-        });
-        setIsEditingShop(true);
+    const [isUpdating, setIsUpdating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleUpdateStoreInfo = async () => {
+        setIsUpdating(true);
+        try {
+            const payload = {
+                retailEnabled: seller.retailEnabled,
+                productsEnabled: seller.productsEnabled,
+                stockEnabled: seller.stockEnabled,
+                ordersEnabled: seller.ordersEnabled,
+                walletEnabled: seller.walletEnabled,
+                analyticsEnabled: seller.analyticsEnabled,
+                planMyEventEnabled: seller.planMyEventEnabled,
+                isShopActive: seller.isShopActive,
+                shopTimingsEnabled: seller.shopTimingsEnabled,
+                advanceBookingBuffer: seller.advanceBookingBuffer,
+                advanceBookingBufferUnit: seller.advanceBookingBufferUnit,
+                advanceBookingBufferTime: seller.advanceBookingBufferTime,
+                shopClosedDates: seller.shopClosedDates,
+                demoTrialEnabled: seller.demoTrialEnabled,
+                demoTrialDays: seller.demoTrialDays,
+                eventDetailsEnabled: seller.eventDetailsEnabled,
+                primaryContactEnabled: seller.primaryContactEnabled,
+                coupleContactEnabled: seller.coupleContactEnabled,
+                corporateContactEnabled: seller.corporateContactEnabled,
+                noOfGuestsEnabled: seller.noOfGuestsEnabled,
+                showStandardDateTime: seller.showStandardDateTime,
+                showStandardDateTimeSlot: seller.showStandardDateTimeSlot,
+                showAdvancedDateTime: seller.showAdvancedDateTime,
+                showAdvancedDateTimeSlot: seller.showAdvancedDateTimeSlot,
+                showMultipleDateTime: seller.showMultipleDateTime,
+                functionLocationEnabled: seller.functionLocationEnabled,
+                sellerLocationEnabled: seller.sellerLocationEnabled,
+                capacityEnabled: seller.capacityEnabled,
+                totalCapacity: seller.totalCapacity,
+                bookingType: seller.bookingType,
+                numberOfShops: seller.numberOfShops,
+                minCapacity: seller.minCapacity,
+                maxCapacity: seller.maxCapacity,
+                allowCustomProductEntry: seller.allowCustomProductEntry,
+                liveKitchenEnabled: seller.liveKitchenEnabled,
+                liveAddToCartEnabled: seller.liveAddToCartEnabled,
+                liveServicesEnabled: seller.liveServicesEnabled,
+                videoUploadEnabled: seller.videoUploadEnabled,
+                customizationEngineEnabled: seller.customizationEngineEnabled,
+                quoteReferencePhotoUpload: seller.quoteReferencePhotoUpload,
+                quoteColorCombination: seller.quoteColorCombination,
+                quoteThemeSelection: seller.quoteThemeSelection,
+                quoteBudgetSelection: seller.quoteBudgetSelection,
+                quoteCustomerNotes: seller.quoteCustomerNotes,
+                quoteSellerQuotation: seller.quoteSellerQuotation,
+                quoteQuoteRevision: seller.quoteQuoteRevision,
+                quoteCustomerApproval: seller.quoteCustomerApproval,
+                quoteAdvancePayment: seller.quoteAdvancePayment,
+                quoteFinalPayment: seller.quoteFinalPayment,
+                customerImageReviewEnabled: seller.customerImageReviewEnabled,
+                advanceBookingEnabled: seller.advanceBookingEnabled,
+                addonDecorationEnabled: seller.addonDecorationEnabled,
+                addonDecorationPrice: Number(seller.addonDecorationPrice || 0),
+                addonBridalEnabled: seller.addonBridalEnabled,
+                addonBridalPrice: Number(seller.addonBridalPrice || 0),
+                addonCateringEnabled: seller.addonCateringEnabled,
+                addonCateringPrice: Number(seller.addonCateringPrice || 0),
+                physicalPaymentEnabled: seller.physicalPaymentEnabled,
+                paymentQrCode: seller.paymentQrCode,
+                acceptsCOD: seller.acceptsCOD,
+                acceptsRazorpay: seller.acceptsRazorpay,
+                ticketSystemEnabled: seller.ticketSystemEnabled,
+                venueVisitsEnabled: seller.venueVisitsEnabled
+            };
+            await adminUsersApi.updateSeller(seller.id, payload);
+            showToast('Store permissions & settings updated successfully in database', 'success');
+        } catch (err) {
+            console.error('Update error:', err);
+            showToast(err.response?.data?.message || 'Failed to update store settings', 'error');
+        } finally {
+            setIsUpdating(false);
+        }
     };
 
-    const handleEditSubmit = async (e) => {
-        e.preventDefault();
-        setIsSavingEdit(true);
+    const handleDeleteSeller = async () => {
+        setIsDeleting(true);
         try {
-            await adminUsersApi.updateSeller(id, editFormData);
-            showToast('Shop details updated successfully', 'success');
-            setIsEditingShop(false);
-            fetchSellerData();
-        } catch (error) {
-            console.error(error);
-            showToast(error.response?.data?.message || 'Failed to update shop details', 'error');
+            await adminUsersApi.deleteSeller(seller.id);
+            showToast('Seller soft-deleted successfully', 'success');
+            setShowDeleteConfirm(false);
+            navigate('/admin/sellers/active');
+        } catch (err) {
+            console.error('Delete seller error:', err);
+            showToast(err.response?.data?.message || 'Failed to delete seller', 'error');
         } finally {
-            setIsSavingEdit(false);
+            setIsDeleting(false);
         }
     };
 
@@ -330,13 +412,6 @@ const SellerDetail = () => {
                     >
                         <RotateCw className={cn("h-4 w-4 text-primary", isRefreshing && "animate-spin")} />
                         SYNC DATA
-                    </button>
-                    <button
-                        onClick={handleEditShopClick}
-                        className="flex items-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-2xl text-xs font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
-                    >
-                        <Edit3 className="h-4 w-4" />
-                        EDIT SHOP
                     </button>
                 </div>
             </div>
@@ -1941,38 +2016,55 @@ const SellerDetail = () => {
                                                 Safety Controls
                                             </h5>
                                             <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Suspend this store immediately from the consumer app in case of policy violations.</p>
-                                            <button className="w-full mt-4 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all">
-                                                SUSPEND STORE
+                                            <button 
+                                                onClick={async () => {
+                                                    try {
+                                                        const newStatus = !seller.isShopActive;
+                                                        await adminUsersApi.updateSeller(seller.id, { isShopActive: newStatus });
+                                                        setSeller(prev => ({ ...prev, isShopActive: newStatus }));
+                                                        showToast(newStatus ? 'Store unsuspended successfully' : 'Store suspended successfully', 'success');
+                                                    } catch (err) {
+                                                        showToast('Failed to update suspension status', 'error');
+                                                    }
+                                                }}
+                                                className="w-full mt-4 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all"
+                                            >
+                                                {seller.isShopActive ? "SUSPEND STORE" : "UNSUSPEND STORE"}
                                             </button>
-                                            {searchParams.get('edit') === 'true' && (
-                                                <div className="mt-4 flex gap-3">
-                                                    <button 
-                                                        onClick={() => setIsEditingShop(true)}
-                                                        className="flex-1 py-3 bg-primary text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-primary/20 hover:bg-primary/90 transition-all"
+                                        </div>
+
+                                        {/* Action Controls: Update & Soft Delete (Only visible in edit mode after verification) */}
+                                        {isEditMode && (
+                                            <div className="p-6 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                                                <h5 className="text-[10px] font-black text-slate-700 uppercase tracking-widest mb-1 flex items-center gap-2">
+                                                    <Edit3 className="h-4 w-4 text-primary" />
+                                                    Store Actions
+                                                </h5>
+                                                <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Save any modified toggle settings directly to the database or soft-delete this seller.</p>
+                                                
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                                                    <button
+                                                        type="button"
+                                                        disabled={isUpdating}
+                                                        onClick={handleUpdateStoreInfo}
+                                                        className="w-full py-3.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        UPDATE
+                                                        <Save className={cn("h-4 w-4", isUpdating && "animate-spin")} />
+                                                        {isUpdating ? "SAVING..." : "UPDATE STORE"}
                                                     </button>
-                                                    <button 
-                                                        onClick={async () => {
-                                                            if(window.confirm('Are you sure you want to delete this seller? This action will soft-delete the seller.')) {
-                                                                try {
-                                                                    const res = await adminUsersApi.deleteSeller(seller.id);
-                                                                    if (res.data?.success || res.data) {
-                                                                        showToast('Seller soft deleted successfully', 'success');
-                                                                        navigate('/admin/sellers/active');
-                                                                    }
-                                                                } catch (err) {
-                                                                    showToast(err.response?.data?.message || 'Failed to delete seller', 'error');
-                                                                }
-                                                            }
-                                                        }}
-                                                        className="flex-1 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg hover:bg-slate-800 transition-all"
+
+                                                    <button
+                                                        type="button"
+                                                        disabled={isDeleting}
+                                                        onClick={() => setShowDeleteConfirm(true)}
+                                                        className="w-full py-3.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-md shadow-rose-200 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                                     >
-                                                        DELETE
+                                                        <Trash2 className="h-4 w-4" />
+                                                        DELETE SELLER
                                                     </button>
                                                 </div>
-                                            )}
-                                        </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -2069,225 +2161,40 @@ const SellerDetail = () => {
                 </div>
             </div>
 
-            {/* Edit Shop Modal */}
+            {/* Soft Delete Confirmation Modal */}
             <Modal
-                isOpen={isEditingShop}
-                onClose={() => !isSavingEdit && setIsEditingShop(false)}
-                title="Edit Shop Details"
-                className="max-w-2xl"
+                isOpen={showDeleteConfirm}
+                onClose={() => setShowDeleteConfirm(false)}
+                title="Confirm Seller Deletion"
+                size="md"
             >
-                <form onSubmit={handleEditSubmit} className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs font-bold text-slate-600">Shop Name</label>
-                            <input
-                                type="text"
-                                required
-                                value={editFormData.shopName || ''}
-                                onChange={e => setEditFormData({ ...editFormData, shopName: e.target.value })}
-                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-600">Owner Name</label>
-                            <input
-                                type="text"
-                                required
-                                value={editFormData.name || ''}
-                                onChange={e => setEditFormData({ ...editFormData, name: e.target.value })}
-                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-600">Phone</label>
-                            <input
-                                type="text"
-                                required
-                                value={editFormData.phone || ''}
-                                onChange={e => setEditFormData({ ...editFormData, phone: e.target.value })}
-                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs font-bold text-slate-600">Status</label>
-                            <select
-                                value={editFormData.sellerStatus || 'active'}
-                                onChange={e => setEditFormData({ ...editFormData, sellerStatus: e.target.value })}
-                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                            >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="on_leave">On Leave</option>
-                            </select>
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="text-xs font-bold text-slate-600">Address</label>
-                            <textarea
-                                value={editFormData.address || ''}
-                                onChange={e => setEditFormData({ ...editFormData, address: e.target.value })}
-                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="text-xs font-bold text-slate-600">About Us / Description (Poster Text)</label>
-                            <textarea
-                                value={editFormData.description || ''}
-                                onChange={e => setEditFormData({ ...editFormData, description: e.target.value })}
-                                placeholder="Welcome to our shop! We offer customized catering..."
-                                className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                                rows={3}
-                            />
-                        </div>
-                        <div className="md:col-span-2">
-                            <label className="text-xs font-bold text-slate-600">Available Colors (Pick a color or type and press Enter)</label>
-                            <div className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus-within:ring-2 focus-within:ring-primary/20 flex flex-wrap gap-2 items-center">
-                                {(editFormData.availableColors || []).map((color, idx) => (
-                                    <span key={idx} className="bg-white border border-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm">
-                                        <div className="w-3 h-3 rounded-full border border-slate-200" style={{ backgroundColor: color }}></div>
-                                        {color}
-                                        <XCircle 
-                                            className="h-3 w-3 ml-1 cursor-pointer text-slate-400 hover:text-red-500" 
-                                            onClick={() => setEditFormData({
-                                                ...editFormData,
-                                                availableColors: editFormData.availableColors.filter((_, i) => i !== idx)
-                                            })}
-                                        />
-                                    </span>
-                                ))}
-                                <input
-                                    type="color"
-                                    className="w-8 h-8 rounded cursor-pointer border-none p-0 bg-transparent"
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (val && !(editFormData.availableColors || []).includes(val)) {
-                                            setEditFormData({
-                                                ...editFormData,
-                                                availableColors: [...(editFormData.availableColors || []), val]
-                                            });
-                                        }
-                                    }}
-                                />
-                                <input
-                                    type="text"
-                                    placeholder="Or type color and press enter..."
-                                    className="bg-transparent border-none outline-none flex-1 min-w-[180px] text-sm"
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') {
-                                            e.preventDefault();
-                                            const val = e.target.value.trim();
-                                            if (val && !(editFormData.availableColors || []).includes(val)) {
-                                                setEditFormData({
-                                                    ...editFormData,
-                                                    availableColors: [...(editFormData.availableColors || []), val]
-                                                });
-                                                e.target.value = '';
-                                            }
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <p className="text-[10px] text-slate-500 mt-1">These colors will be shown as clickable options to the customer.</p>
-                        </div>
+                <div className="space-y-4 py-2">
+                    <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs leading-relaxed">
+                        Are you sure you want to delete seller <strong className="text-rose-950">{seller.shopName}</strong>?
+                        <br />
+                        This will remove the seller from active listings immediately.
                     </div>
 
-                    <div className="border-t border-slate-100 pt-6">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Finance Details</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-xs font-bold text-slate-600">Commission Rate (%)</label>
-                                <input
-                                    type="number"
-                                    min="0" max="100"
-                                    value={editFormData.commissionRate || ''}
-                                    onChange={e => setEditFormData({ ...editFormData, commissionRate: e.target.value })}
-                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-600">Bank Name</label>
-                                <input
-                                    type="text"
-                                    value={editFormData.bankDetails?.bankName || ''}
-                                    onChange={e => setEditFormData({ ...editFormData, bankDetails: { ...editFormData.bankDetails, bankName: e.target.value } })}
-                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-600">Account Number</label>
-                                <input
-                                    type="text"
-                                    value={editFormData.bankDetails?.accountNo || ''}
-                                    onChange={e => setEditFormData({ ...editFormData, bankDetails: { ...editFormData.bankDetails, accountNo: e.target.value } })}
-                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-                            <div>
-                                <label className="text-xs font-bold text-slate-600">IFSC Code</label>
-                                <input
-                                    type="text"
-                                    value={editFormData.bankDetails?.ifscCode || ''}
-                                    onChange={e => setEditFormData({ ...editFormData, bankDetails: { ...editFormData.bankDetails, ifscCode: e.target.value } })}
-                                    className="w-full mt-1 p-3 bg-slate-50 border-none rounded-xl text-sm font-bold focus:ring-2 focus:ring-primary/20"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-slate-100 pt-6">
-                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Module Permissions</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h4 className="text-sm font-bold text-slate-800">Retail Module</h4>
-                                    <p className="text-[10px] text-slate-500">Enable Quick Commerce Retail</p>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={editFormData.retailEnabled ?? true}
-                                        onChange={(e) => setEditFormData({ ...editFormData, retailEnabled: e.target.checked })}
-                                    />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                                </label>
-                            </div>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h4 className="text-sm font-bold text-slate-800">Plan My Event</h4>
-                                    <p className="text-[10px] text-slate-500">Enable Event Commerce</p>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={editFormData.planMyEventEnabled ?? false}
-                                        onChange={(e) => setEditFormData({ ...editFormData, planMyEventEnabled: e.target.checked })}
-                                    />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="flex justify-end gap-3 mt-8 pt-4 border-t border-slate-100">
+                    <div className="flex items-center justify-end gap-3 pt-3">
                         <button
                             type="button"
-                            onClick={() => setIsEditingShop(false)}
-                            className="px-5 py-2.5 text-xs font-black uppercase text-slate-500 hover:bg-slate-50 rounded-xl"
-                            disabled={isSavingEdit}
+                            disabled={isDeleting}
+                            onClick={() => setShowDeleteConfirm(false)}
+                            className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-all"
                         >
                             Cancel
                         </button>
                         <button
-                            type="submit"
-                            className="px-5 py-2.5 text-xs font-black uppercase bg-slate-900 text-white hover:bg-slate-800 rounded-xl disabled:opacity-50 flex items-center gap-2"
-                            disabled={isSavingEdit}
+                            type="button"
+                            disabled={isDeleting}
+                            onClick={handleDeleteSeller}
+                            className="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-200 transition-all flex items-center gap-2 disabled:opacity-50"
                         >
-                            {isSavingEdit && <RotateCw className="h-3 w-3 animate-spin" />}
-                            Save Changes
+                            <Trash2 className="h-3.5 w-3.5" />
+                            {isDeleting ? "Deleting..." : "Confirm Delete"}
                         </button>
                     </div>
-                </form>
+                </div>
             </Modal>
         </div>
     );

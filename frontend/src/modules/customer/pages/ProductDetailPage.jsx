@@ -226,6 +226,18 @@ const ProductDetailPage = () => {
 
     const cleanDesc = cleanDescription(product?.description);
     const variantKey = String(selectedVariant?.sku || selectedVariant?.name || "").trim();
+
+    const currentDisplayPrice = Number(
+        (selectedVariant && (selectedVariant.salePrice || selectedVariant.price))
+            ? (selectedVariant.salePrice || selectedVariant.price)
+            : product.price
+    );
+    const currentOriginalPrice = Number(
+        (selectedVariant && selectedVariant.price && selectedVariant.salePrice)
+            ? selectedVariant.price
+            : (product.originalPrice || product.price)
+    );
+
     const cartItem = product
         ? cart.find(
             (item) =>
@@ -249,6 +261,9 @@ const ProductDetailPage = () => {
     const handleAddToCart = () => {
         addToCart({
             ...product,
+            price: currentDisplayPrice,
+            originalPrice: currentOriginalPrice,
+            salePrice: currentDisplayPrice,
             variantSku: String(selectedVariant?.sku || selectedVariant?.name || "").trim(),
         });
         showToast(`${product.name} added to cart`, 'success');
@@ -347,14 +362,14 @@ const ProductDetailPage = () => {
                         </motion.button>
 
                         {/* Discount Badge (center) */}
-                        {(product.originalPrice > product.price) && (
+                        {(currentOriginalPrice > currentDisplayPrice) && (
                             <motion.div
                                 initial={{ scale: 0, rotate: -10 }}
                                 animate={{ scale: 1, rotate: 0 }}
                                 transition={{ type: 'spring', delay: 0.2 }}
                                 className="bg-gradient-to-r from-primary to-[var(--brand-400)] text-white text-[10px] font-[800] px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-md shadow-brand-200/40"
                             >
-                                {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% OFF
+                                {Math.round(((currentOriginalPrice - currentDisplayPrice) / currentOriginalPrice) * 100)}% OFF
                             </motion.div>
                         )}
 
@@ -438,14 +453,14 @@ const ProductDetailPage = () => {
                     <div className="flex-1 px-7 py-6 lg:px-8 lg:py-7 space-y-3">
                         {/* Top badges row */}
                         <div className="flex items-center gap-2 flex-wrap">
-                            {product.originalPrice > product.price && (
+                            {currentOriginalPrice > currentDisplayPrice && (
                                 <motion.div
                                     initial={{ opacity: 0, x: -10 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.15 }}
                                     className="text-[10px] font-[700] text-primary bg-brand-50 px-3 py-1.5 rounded-lg border border-brand-200/50 uppercase tracking-wider"
                                 >
-                                    💰 Save ₹{product.originalPrice - product.price}
+                                    💰 Save ₹{currentOriginalPrice - currentDisplayPrice}
                                 </motion.div>
                             )}
                             {reviews.length > 0 && (
@@ -501,15 +516,15 @@ const ProductDetailPage = () => {
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-baseline gap-2">
                                         <span className="text-[28px] lg:text-[32px] font-[800] text-primary tracking-tight leading-none">
-                                            ₹{product.price}
+                                            ₹{currentDisplayPrice}
                                         </span>
-                                        {product.originalPrice > product.price && (
-                                            <span className="text-[14px] text-gray-400 line-through font-[600]">₹{product.originalPrice}</span>
+                                        {currentOriginalPrice > currentDisplayPrice && (
+                                            <span className="text-[14px] text-gray-400 line-through font-[600]">₹{currentOriginalPrice}</span>
                                         )}
                                     </div>
-                                    {product.originalPrice > product.price && (
+                                    {currentOriginalPrice > currentDisplayPrice && (
                                         <span className="inline-flex w-fit items-center text-[10px] font-[800] text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
-                                            {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% off
+                                            {Math.round(((currentOriginalPrice - currentDisplayPrice) / currentOriginalPrice) * 100)}% off
                                         </span>
                                     )}
                                 </div>
@@ -594,6 +609,28 @@ const ProductDetailPage = () => {
                                         </motion.button>
                                     ))}
                                 </div>
+                            </motion.div>
+                        )}
+
+                        {/* Dynamic Brand Name & Ingredients for Selected Variant */}
+                        {selectedVariant && (selectedVariant.brand || selectedVariant.ingredients) && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 5 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 mt-2"
+                            >
+                                {selectedVariant.brand && (
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[75px]">Brand:</span>
+                                        <span className="text-xs font-bold text-slate-800">{selectedVariant.brand}</span>
+                                    </div>
+                                )}
+                                {selectedVariant.ingredients && (
+                                    <div className="flex items-start gap-2">
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[75px]">Ingredients:</span>
+                                        <span className="text-xs font-medium text-slate-700 leading-relaxed">{selectedVariant.ingredients}</span>
+                                    </div>
+                                )}
                             </motion.div>
                         )}
 

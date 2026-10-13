@@ -14,6 +14,8 @@ import { getStoredAuthToken } from '@core/utils/authStorage';
 import { useAuth } from '@/core/context/AuthContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Heart, ShoppingBag, Clock, Search, Star, MessageSquare } from 'lucide-react';
 
 const resolveProductImageUrl = (path) => (
     typeof path === 'string' && path.startsWith('data:') ? path : resolveImageUrl(path)
@@ -45,6 +47,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     const [failedImages, setFailedImages] = useState(new Set());
     const [isFullScreenImage, setIsFullScreenImage] = useState(false);
+    const [modalSelectedVariant, setModalSelectedVariant] = useState(null);
 
     const openProductGallery = (product) => {
         const imagesSet = new Set();
@@ -73,6 +76,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
         if (images.length > 0) {
             setImagePreview({ images, activeIndex: 0, name: product.name, product: product });
+            setModalSelectedVariant(product.variants && product.variants.length > 0 ? product.variants[0] : null);
             setZoomLevel(1);
             setFailedImages(new Set());
             setIsFullScreenImage(false);
@@ -578,7 +582,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     <span>₹{(pricing.unitPrice * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}</span>
                                                     {isSelected?.quantity > 1 && <span className="text-[10px] font-semibold text-slate-400">({isSelected.quantity} × ₹{pricing.unitPrice.toLocaleString('en-IN')})</span>}
                                                 </span>
-                                                {(product.isDelivery || product.isRental || (product.tickets && product.tickets.length > 0)) ? (isSelected ? (
+                                                {(product.isDelivery || product.isRental) ? (isSelected ? (
                                                     <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
                                                         <button
                                                             type="button"
@@ -929,235 +933,304 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </button>
                         </div>
                     </div>
-                </div>
-            </div>
-            {imagePreview && (
-                <div
-                    className="fixed inset-0 z-[100] flex flex-col items-center justify-center bg-black/90 p-4 md:p-8"
-                    onClick={() => { setImagePreview(null); setZoomLevel(1); }}
-                    role="presentation"
-                >
-                    <button
-                        type="button"
-                        onClick={() => { setImagePreview(null); setZoomLevel(1); }}
-                        aria-label="Close product preview"
-                        className="absolute right-4 top-4 z-[110] flex h-10 w-10 items-center justify-center rounded-full bg-white/20 text-white hover:bg-white/30 backdrop-blur-md transition-colors"
-                    >
-                        <span className="text-2xl font-bold leading-none">&times;</span>
-                    </button>
+                    {imagePreview && (
+                        <div
+                            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 md:p-6"
+                            onClick={() => { setImagePreview(null); setZoomLevel(1); }}
+                            role="presentation"
+                        >
+                            {/* Modal Card */}
+                            <div
+                                className="flex flex-col md:flex-row w-full max-w-5xl max-h-[92vh] bg-white rounded-3xl overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {/* Left: Image Gallery & Carousel */}
+                                <div className="relative w-full md:w-[46%] lg:w-[48%] flex-shrink-0 flex flex-col min-h-[300px] md:min-h-full bg-gradient-to-br from-slate-50 via-white to-slate-50 border-b md:border-b-0 md:border-r border-slate-100">
+                                    {/* Top action buttons */}
+                                    <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
+                                        <button
+                                            type="button"
+                                            onClick={() => { setImagePreview(null); setZoomLevel(1); }}
+                                            className="w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-md shadow-black/5 flex items-center justify-center hover:shadow-lg transition-all border border-slate-100 text-slate-700"
+                                            aria-label="Close"
+                                        >
+                                            <ArrowLeft size={18} strokeWidth={2.5} />
+                                        </button>
 
-                    <div
-                        className="flex flex-col md:flex-row w-full max-w-5xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        {/* Left: Image Viewer with Zoom */}
-                        <div className="relative flex-1 bg-slate-100 min-h-[45vh] md:min-h-0 flex items-center justify-center overflow-hidden group">
-                            <div className="w-full h-full flex items-center justify-center overflow-auto relative">
-                                <img
-                                    src={imagePreview.images[imagePreview.activeIndex]}
-                                    alt={imagePreview.name}
-                                    className="max-w-full max-h-full object-contain transition-transform duration-300 ease-out origin-center"
-                                    style={{ transform: `scale(${zoomLevel})`, cursor: zoomLevel > 1 ? 'grab' : 'zoom-in' }}
-                                    onClick={() => setIsFullScreenImage(true)}
-                                    onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
-                                />
-                            </div>
+                                        {/* Discount Badge */}
+                                        {(() => {
+                                            const modalPrice = Number(
+                                                (modalSelectedVariant && (modalSelectedVariant.salePrice || modalSelectedVariant.price))
+                                                    ? (modalSelectedVariant.salePrice || modalSelectedVariant.price)
+                                                    : imagePreview.product?.salePrice || imagePreview.product?.price
+                                            );
+                                            const modalOriginal = Number(
+                                                (modalSelectedVariant && modalSelectedVariant.price && modalSelectedVariant.salePrice)
+                                                    ? modalSelectedVariant.price
+                                                    : imagePreview.product?.price || modalPrice
+                                            );
+                                            return (modalOriginal > modalPrice) ? (
+                                                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-md shadow-purple-200">
+                                                    {Math.round(((modalOriginal - modalPrice) / modalOriginal) * 100)}% OFF
+                                                </div>
+                                            ) : null;
+                                        })()}
 
+                                        <div className="w-9 h-9" /> {/* Spacer */}
+                                    </div>
 
+                                    {/* Main Gallery Area with vertical thumbnail strip on desktop */}
+                                    <div className="flex-1 flex mt-14 mb-2 overflow-hidden px-3">
+                                        {imagePreview.images.length > 1 && (imagePreview.images.length - failedImages.size) > 1 && (
+                                            <div className="hidden sm:flex flex-col gap-2 py-2 pr-2 overflow-y-auto no-scrollbar">
+                                                {imagePreview.images.map((img, idx) => {
+                                                    if (failedImages.has(idx)) return null;
+                                                    return (
+                                                        <button
+                                                            key={idx}
+                                                            type="button"
+                                                            onClick={() => { setZoomLevel(1); setImagePreview(c => ({ ...c, activeIndex: idx })) }}
+                                                            className={`w-12 h-12 lg:w-14 lg:h-14 rounded-xl border-2 shrink-0 overflow-hidden transition-all ${imagePreview.activeIndex === idx ? 'border-purple-600 shadow-md scale-105 bg-white' : 'border-slate-200/70 opacity-60 hover:opacity-100 bg-white/70'}`}
+                                                        >
+                                                            <img
+                                                                src={img}
+                                                                alt=""
+                                                                className="w-full h-full object-contain p-1"
+                                                                onError={() => setFailedImages(prev => new Set(prev).add(idx))}
+                                                            />
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        )}
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                            {/* Next/Prev Controls */}
-                            {(imagePreview.images.length - failedImages.size) > 1 && (
-                                <>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setZoomLevel(1);
-                                            setImagePreview(c => {
-                                                let nextIndex = (c.activeIndex - 1 + c.images.length) % c.images.length;
-                                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
-                                                    nextIndex = (nextIndex - 1 + c.images.length) % c.images.length;
-                                                }
-                                                return { ...c, activeIndex: nextIndex };
-                                            });
-                                        }}
-                                        className="absolute left-4 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-xl font-bold text-slate-800 shadow-lg backdrop-blur-sm hover:bg-white transition-colors border border-white"
-                                    >
-                                        ‹
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            setZoomLevel(1);
-                                            setImagePreview(c => {
-                                                let nextIndex = (c.activeIndex + 1) % c.images.length;
-                                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
-                                                    nextIndex = (nextIndex + 1) % c.images.length;
-                                                }
-                                                return { ...c, activeIndex: nextIndex };
-                                            });
-                                        }}
-                                        className="absolute right-4 top-1/2 -translate-y-1/2 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-xl font-bold text-slate-800 shadow-lg backdrop-blur-sm hover:bg-white transition-colors border border-white"
-                                    >
-                                        ›
-                                    </button>
-                                </>
-                            )}
-                        </div>
-
-                        {/* Right: Product Details */}
-                        <div className="w-full md:w-[420px] lg:w-[480px] p-6 lg:p-8 flex flex-col max-h-[50vh] md:max-h-full overflow-y-auto bg-white border-l border-slate-100">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-purple-600 mb-2 block bg-purple-50 w-fit px-2.5 py-1 rounded-md">
-                                {imagePreview.product?.category || selectedSeller?.category || 'Product'}
-                            </span>
-                            <h2 className="text-2xl lg:text-3xl font-black text-slate-800 leading-tight mb-3">
-                                {imagePreview.name}
-                            </h2>
-
-                            {imagePreview.product && (
-                                <div className="flex items-end gap-3 mb-6 pb-6 border-b border-slate-100">
-                                    <span className="text-3xl font-black text-purple-700 tracking-tight">
-                                        ₹{(Number(imagePreview.product.salePrice) > 0 && Number(imagePreview.product.salePrice) < Number(imagePreview.product.price)) ? Number(imagePreview.product.salePrice).toLocaleString('en-IN') : Number(imagePreview.product.price).toLocaleString('en-IN')}
-                                    </span>
-                                    {(Number(imagePreview.product.salePrice) > 0 && Number(imagePreview.product.salePrice) < Number(imagePreview.product.price)) && (
-                                        <span className="text-slate-400 line-through text-base font-semibold mb-1">
-                                            ₹{Number(imagePreview.product.price).toLocaleString('en-IN')}
-                                        </span>
-                                    )}
-                                </div>
-                            )}
-
-                            <div className="flex-1">
-                                <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-2">Description</h4>
-                                <p className="text-sm text-slate-600 leading-relaxed mb-8 font-medium whitespace-pre-line">
-                                    {imagePreview.product?.description || 'No detailed description available for this product.'}
-                                </p>
-
-                                {imagePreview.images.length > 1 && (imagePreview.images.length - failedImages.size) > 1 && (
-                                    <div className="mb-8">
-                                        <h4 className="text-xs font-black text-slate-900 uppercase tracking-wider mb-3">
-                                            Gallery Images ({imagePreview.images.length - failedImages.size})
-                                        </h4>
-                                        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
-                                            {imagePreview.images.map((img, idx) => {
-                                                if (failedImages.has(idx)) return null;
-                                                return (
-                                                    <button
-                                                        key={idx}
-                                                        type="button"
-                                                        onClick={() => { setZoomLevel(1); setImagePreview(c => ({ ...c, activeIndex: idx })) }}
-                                                        className={`w-16 h-16 rounded-xl border-2 shrink-0 overflow-hidden transition-all ${imagePreview.activeIndex === idx ? 'border-purple-600 shadow-md scale-105' : 'border-slate-100 opacity-70 hover:opacity-100'}`}
-                                                    >
-                                                        <img
-                                                            src={img}
-                                                            className="w-full h-full object-cover bg-slate-50"
-                                                            onError={(e) => {
-                                                                setFailedImages(prev => new Set(prev).add(idx));
-                                                                e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png';
-                                                            }}
-                                                        />
-                                                    </button>
-                                                )
-                                            })}
+                                        {/* Main Active Image */}
+                                        <div className="flex-1 flex items-center justify-center p-4 relative min-h-[240px] sm:min-h-[300px]">
+                                            <img
+                                                src={imagePreview.images[imagePreview.activeIndex]}
+                                                alt={imagePreview.name}
+                                                className="max-w-full max-h-[340px] md:max-h-[420px] object-contain drop-shadow-xl hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
+                                                onClick={() => setIsFullScreenImage(true)}
+                                                onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
+                                            />
                                         </div>
                                     </div>
-                                )}
-                            </div>
 
-                            {/* Action Button */}
-                            {imagePreview.product && (
-                                <div className="pt-4 mt-auto border-t border-slate-100 bg-white">
-                                    <button
-                                        onClick={() => {
-                                            handleProductSelection(imagePreview.product);
-                                            setImagePreview(null);
-                                        }}
-                                        className={`w-full py-4 rounded-2xl font-black uppercase tracking-wider text-sm transition-all
-                                            ${selectedProducts.find(p => p._id === imagePreview.product?._id)
-                                                ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
-                                                : 'bg-purple-600 text-white shadow-lg shadow-purple-200 hover:bg-purple-700 hover:-translate-y-0.5'
-                                            }`}
-                                    >
-                                        {selectedProducts.find(p => p._id === imagePreview.product?._id) ? 'Remove Item' : 'Add to Selection'}
-                                    </button>
+                                    {/* Carousel dot indicators */}
+                                    {imagePreview.images.length > 1 && (
+                                        <div className="flex justify-center gap-1.5 pb-4">
+                                            {imagePreview.images.map((_, i) => {
+                                                if (failedImages.has(i)) return null;
+                                                return (
+                                                    <button
+                                                        key={i}
+                                                        type="button"
+                                                        onClick={() => setImagePreview(c => ({ ...c, activeIndex: i }))}
+                                                        className={`rounded-full transition-all duration-300 ${i === imagePreview.activeIndex ? 'w-6 h-1.5 bg-purple-600' : 'w-1.5 h-1.5 bg-slate-300 hover:bg-slate-400'}`}
+                                                    />
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
-                            )}
+
+                                {/* Right: Product Details & Variant Selection */}
+                                <div className="flex-1 flex flex-col bg-white overflow-y-auto max-h-[55vh] md:max-h-full">
+                                    <div className="p-6 lg:p-7 space-y-4 flex-1">
+                                        {(() => {
+                                            const modalPrice = Number(
+                                                (modalSelectedVariant && (modalSelectedVariant.salePrice || modalSelectedVariant.price))
+                                                    ? (modalSelectedVariant.salePrice || modalSelectedVariant.price)
+                                                    : imagePreview.product?.salePrice || imagePreview.product?.price || 0
+                                            );
+                                            const modalOriginal = Number(
+                                                (modalSelectedVariant && modalSelectedVariant.price && modalSelectedVariant.salePrice)
+                                                    ? modalSelectedVariant.price
+                                                    : imagePreview.product?.price || modalPrice
+                                            );
+                                            const isItemAdded = selectedProducts.some(p => p._id === imagePreview.product?._id);
+
+                                            return (
+                                                <>
+                                                    {/* Top badges */}
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        {modalOriginal > modalPrice && (
+                                                            <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200/60 uppercase tracking-wider">
+                                                                💰 Save ₹{modalOriginal - modalPrice}
+                                                            </div>
+                                                        )}
+                                                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
+                                                            {imagePreview.product?.category || selectedSeller?.category || 'Service / Item'}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* Product Title & Unit */}
+                                                    <div>
+                                                        <h2 className="text-xl lg:text-2xl font-black text-slate-900 leading-tight">
+                                                            {imagePreview.name}
+                                                        </h2>
+                                                        {imagePreview.product?.weight && (
+                                                            <span className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5 block">
+                                                                {imagePreview.product.weight}
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Price & Add Card */}
+                                                    <div className="rounded-2xl border border-purple-100 bg-gradient-to-r from-purple-50/70 to-indigo-50/40 p-4 flex items-center justify-between shadow-sm">
+                                                        <div className="flex flex-col">
+                                                            <div className="flex items-baseline gap-2">
+                                                                <span className="text-2xl lg:text-3xl font-black text-purple-700 tracking-tight leading-none">
+                                                                    ₹{modalPrice.toLocaleString('en-IN')}
+                                                                </span>
+                                                                {modalOriginal > modalPrice && (
+                                                                    <span className="text-sm text-slate-400 line-through font-semibold">
+                                                                        ₹{modalOriginal.toLocaleString('en-IN')}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            {modalOriginal > modalPrice && (
+                                                                <span className="inline-flex w-fit items-center text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide mt-1">
+                                                                    {Math.round(((modalOriginal - modalPrice) / modalOriginal) * 100)}% off
+                                                                </span>
+                                                            )}
+                                                        </div>
+
+                                                        <button
+                                                            onClick={() => {
+                                                                handleProductSelection({
+                                                                    ...imagePreview.product,
+                                                                    price: modalPrice,
+                                                                    selectedVariant: modalSelectedVariant
+                                                                });
+                                                                setImagePreview(null);
+                                                            }}
+                                                            className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isItemAdded
+                                                                    ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                                                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
+                                                                }`}
+                                                        >
+                                                            <ShoppingBag size={14} strokeWidth={2.5} />
+                                                            {isItemAdded ? 'Remove Item' : 'Add to Selection'}
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Variants Selection (if product has variants) */}
+                                                    {imagePreview.product?.variants && imagePreview.product.variants.length > 0 && (
+                                                        <div className="bg-slate-50/80 rounded-xl p-3.5 border border-slate-200/80">
+                                                            <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2.5">
+                                                                Select Variant
+                                                            </h4>
+                                                            <div className="flex gap-2.5 flex-wrap">
+                                                                {imagePreview.product.variants.map((v, idx) => {
+                                                                    const isVariantActive = (modalSelectedVariant?.sku || modalSelectedVariant?.name) === (v.sku || v.name);
+                                                                    return (
+                                                                        <button
+                                                                            key={idx}
+                                                                            type="button"
+                                                                            onClick={() => setModalSelectedVariant(v)}
+                                                                            className={`px-4 py-2 font-bold rounded-lg text-xs transition-all border-2 ${isVariantActive
+                                                                                    ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
+                                                                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                                                                }`}
+                                                                        >
+                                                                            {v.name}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dynamic Brand Name & Ingredients for Selected Variant */}
+                                                    {modalSelectedVariant && (modalSelectedVariant.brand || modalSelectedVariant.ingredients) && (
+                                                        <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2">
+                                                            {modalSelectedVariant.brand && (
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[75px]">Brand:</span>
+                                                                    <span className="text-xs font-bold text-slate-800">{modalSelectedVariant.brand}</span>
+                                                                </div>
+                                                            )}
+                                                            {modalSelectedVariant.ingredients && (
+                                                                <div className="flex items-start gap-2">
+                                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[75px]">Ingredients:</span>
+                                                                    <span className="text-xs font-medium text-slate-700 leading-relaxed">{modalSelectedVariant.ingredients}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Tickets Details (if product has tickets) */}
+                                                    {imagePreview.product?.tickets && imagePreview.product.tickets.length > 0 && (
+                                                        <div className="space-y-1.5">
+                                                            {imagePreview.product.tickets.map((ticket, ticketIndex) => (
+                                                                <div key={ticket._id || ticketIndex} className="rounded-xl bg-purple-50/70 border border-purple-100 p-3">
+                                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                                                                        <span className="font-bold text-slate-800">{ticket.name}</span>
+                                                                        <span className="font-extrabold text-purple-700">₹{Number(ticket.price || 0).toLocaleString('en-IN')}</span>
+                                                                        {ticket.salePrice !== undefined && ticket.salePrice !== null && ticket.salePrice !== "" && (
+                                                                            <span className="text-slate-500 font-medium">Sale: ₹{Number(ticket.salePrice).toLocaleString('en-IN')}</span>
+                                                                        )}
+                                                                        {ticket.capacity !== undefined && ticket.capacity !== null && (
+                                                                            <span className="text-slate-500 font-medium">Capacity: {ticket.capacity}</span>
+                                                                        )}
+                                                                    </div>
+                                                                    {ticket.instructions && <p className="text-xs text-slate-500 mt-1">{ticket.instructions}</p>}
+                                                                    {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
+                                                                        <p className="text-xs text-slate-500 mt-1">
+                                                                            {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Product Description (only if available) */}
+                                                    {imagePreview.product?.description && imagePreview.product.description.trim() !== '' && (
+                                                        <div className="border-t border-slate-100 pt-3">
+                                                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                                <Clock size={14} className="text-purple-600" /> Description
+                                                            </h4>
+                                                            <p className="text-xs text-slate-600 leading-relaxed font-medium whitespace-pre-line">
+                                                                {imagePreview.product.description}
+                                                            </p>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Additional details if available */}
+                                                    {(imagePreview.product?.shelfLife || imagePreview.product?.countryOfOrigin) && (
+                                                        <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-2 text-xs">
+                                                            {imagePreview.product.shelfLife && (
+                                                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Shelf Life</span>
+                                                                    <span className="font-black text-slate-800">{imagePreview.product.shelfLife}</span>
+                                                                </div>
+                                                            )}
+                                                            {imagePreview.product.countryOfOrigin && (
+                                                                <div className="bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                                                    <span className="text-[10px] font-bold text-slate-400 uppercase block">Origin</span>
+                                                                    <span className="font-black text-slate-800">{imagePreview.product.countryOfOrigin}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+                    )}
 
                 </div>
-            )}
+            </div>
         </div>
     );
 
     const fullScreenViewer = isFullScreenImage && imagePreview && (
-        <div 
+        <div
             className="fixed inset-0 z-[99999] flex items-center justify-center bg-white animate-in fade-in duration-200"
             role="dialog"
             onClick={(e) => {
@@ -1189,34 +1262,34 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
             {(imagePreview.images.length - failedImages.size) > 1 && (
                 <>
-                    <button 
+                    <button
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             setImagePreview(c => {
                                 let nextIndex = (c.activeIndex - 1 + c.images.length) % c.images.length;
-                                while(failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
                                     nextIndex = (nextIndex - 1 + c.images.length) % c.images.length;
                                 }
-                                return {...c, activeIndex: nextIndex};
+                                return { ...c, activeIndex: nextIndex };
                             });
-                        }} 
+                        }}
                         className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 flex h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
                     >
                         <span className="text-3xl text-slate-800 leading-none">‹</span>
                     </button>
-                    <button 
+                    <button
                         type="button"
                         onClick={(e) => {
                             e.stopPropagation();
                             setImagePreview(c => {
                                 let nextIndex = (c.activeIndex + 1) % c.images.length;
-                                while(failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
                                     nextIndex = (nextIndex + 1) % c.images.length;
                                 }
-                                return {...c, activeIndex: nextIndex};
+                                return { ...c, activeIndex: nextIndex };
                             });
-                        }} 
+                        }}
                         className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 flex h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
                     >
                         <span className="text-3xl text-slate-800 leading-none">›</span>
@@ -1226,7 +1299,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                         {imagePreview.images.map((_, idx) => {
                             if (failedImages.has(idx)) return null;
                             return (
-                                <div 
+                                <div
                                     key={idx}
                                     className={`h-2 rounded-full transition-all ${imagePreview.activeIndex === idx ? 'w-6 bg-slate-400' : 'w-2 bg-slate-200'}`}
                                 />
