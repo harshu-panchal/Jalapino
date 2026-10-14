@@ -935,23 +935,23 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     </div>
                     {imagePreview && (
                         <div
-                            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3 sm:p-4 md:p-6"
+                            className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 md:p-6"
                             onClick={() => { setImagePreview(null); setZoomLevel(1); }}
                             role="presentation"
                         >
                             {/* Modal Card */}
                             <div
-                                className="flex flex-col md:flex-row w-full max-w-5xl max-h-[92vh] bg-white rounded-3xl overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
+                                className="flex flex-col md:flex-row w-full max-w-5xl max-h-[92vh] md:max-h-[88vh] bg-white rounded-2xl sm:rounded-3xl overflow-y-auto md:overflow-hidden shadow-2xl relative animate-in fade-in zoom-in-95 duration-200"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {/* Left: Image Gallery & Carousel */}
-                                <div className="relative w-full md:w-[46%] lg:w-[48%] flex-shrink-0 flex flex-col min-h-[300px] md:min-h-full bg-gradient-to-br from-slate-50 via-white to-slate-50 border-b md:border-b-0 md:border-r border-slate-100">
+                                <div className="relative w-full md:w-[46%] lg:w-[48%] flex-shrink-0 flex flex-col min-h-0 bg-gradient-to-br from-slate-50 via-white to-slate-50 border-b md:border-b-0 md:border-r border-slate-100">
                                     {/* Top action buttons */}
-                                    <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-4 z-20">
+                                    <div className="absolute top-0 left-0 right-0 flex items-center justify-between p-3 sm:p-4 z-20">
                                         <button
                                             type="button"
                                             onClick={() => { setImagePreview(null); setZoomLevel(1); }}
-                                            className="w-9 h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-md shadow-black/5 flex items-center justify-center hover:shadow-lg transition-all border border-slate-100 text-slate-700"
+                                            className="w-8 h-8 sm:w-9 sm:h-9 bg-white/95 backdrop-blur-md rounded-xl shadow-md shadow-black/5 flex items-center justify-center hover:shadow-lg transition-all border border-slate-100 text-slate-700"
                                             aria-label="Close"
                                         >
                                             <ArrowLeft size={18} strokeWidth={2.5} />
@@ -970,17 +970,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     : imagePreview.product?.price || modalPrice
                                             );
                                             return (modalOriginal > modalPrice) ? (
-                                                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-black px-3 py-1.5 rounded-xl uppercase tracking-wider shadow-md shadow-purple-200">
+                                                <div className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-[10px] font-black px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl uppercase tracking-wider shadow-md shadow-purple-200">
                                                     {Math.round(((modalOriginal - modalPrice) / modalOriginal) * 100)}% OFF
                                                 </div>
                                             ) : null;
                                         })()}
 
-                                        <div className="w-9 h-9" /> {/* Spacer */}
+                                        <div className="w-8 h-8 sm:w-9 sm:h-9" /> {/* Spacer */}
                                     </div>
 
                                     {/* Main Gallery Area with vertical thumbnail strip on desktop */}
-                                    <div className="flex-1 flex mt-14 mb-2 overflow-hidden px-3">
+                                    <div className="flex-1 flex mt-12 sm:mt-14 mb-1 sm:mb-2 overflow-hidden px-2 sm:px-3">
                                         {imagePreview.images.length > 1 && (imagePreview.images.length - failedImages.size) > 1 && (
                                             <div className="hidden sm:flex flex-col gap-2 py-2 pr-2 overflow-y-auto no-scrollbar">
                                                 {imagePreview.images.map((img, idx) => {
@@ -1005,20 +1005,44 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         )}
 
                                         {/* Main Active Image */}
-                                        <div className="flex-1 flex items-center justify-center p-4 relative min-h-[240px] sm:min-h-[300px]">
+                                        <div className="flex-1 flex items-center justify-center p-2 sm:p-4 relative min-h-[190px] sm:min-h-[260px] md:min-h-[300px]">
                                             <img
                                                 src={imagePreview.images[imagePreview.activeIndex]}
                                                 alt={imagePreview.name}
-                                                className="max-w-full max-h-[340px] md:max-h-[420px] object-contain drop-shadow-xl hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
+                                                className="max-w-full max-h-[220px] sm:max-h-[300px] md:max-h-[420px] object-contain drop-shadow-md md:drop-shadow-xl hover:scale-[1.02] transition-transform duration-300 cursor-pointer"
                                                 onClick={() => setIsFullScreenImage(true)}
                                                 onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
                                             />
                                         </div>
                                     </div>
 
+                                    {/* Mobile horizontal thumbnail strip */}
+                                    {imagePreview.images.length > 1 && (imagePreview.images.length - failedImages.size) > 1 && (
+                                        <div className="flex sm:hidden justify-center gap-1.5 px-3 pb-1 overflow-x-auto no-scrollbar">
+                                            {imagePreview.images.map((img, idx) => {
+                                                if (failedImages.has(idx)) return null;
+                                                return (
+                                                    <button
+                                                        key={idx}
+                                                        type="button"
+                                                        onClick={() => { setZoomLevel(1); setImagePreview(c => ({ ...c, activeIndex: idx })) }}
+                                                        className={`w-10 h-10 rounded-lg border-2 shrink-0 overflow-hidden transition-all ${imagePreview.activeIndex === idx ? 'border-purple-600 shadow-sm scale-105 bg-white' : 'border-slate-200/70 opacity-60 bg-white/70'}`}
+                                                    >
+                                                        <img
+                                                            src={img}
+                                                            alt=""
+                                                            className="w-full h-full object-contain p-0.5"
+                                                            onError={() => setFailedImages(prev => new Set(prev).add(idx))}
+                                                        />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+
                                     {/* Carousel dot indicators */}
                                     {imagePreview.images.length > 1 && (
-                                        <div className="flex justify-center gap-1.5 pb-4">
+                                        <div className="flex justify-center gap-1.5 pb-3 sm:pb-4">
                                             {imagePreview.images.map((_, i) => {
                                                 if (failedImages.has(i)) return null;
                                                 return (
@@ -1035,8 +1059,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 </div>
 
                                 {/* Right: Product Details & Variant Selection */}
-                                <div className="flex-1 flex flex-col bg-white overflow-y-auto max-h-[55vh] md:max-h-full">
-                                    <div className="p-6 lg:p-7 space-y-4 flex-1">
+                                <div className="flex-1 flex flex-col bg-white md:overflow-y-auto md:max-h-full">
+                                    <div className="p-4 sm:p-6 lg:p-7 space-y-4 flex-1">
                                         {(() => {
                                             const modalPrice = Number(
                                                 (modalSelectedVariant && (modalSelectedVariant.salePrice || modalSelectedVariant.price))
@@ -1106,8 +1130,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 setImagePreview(null);
                                                             }}
                                                             className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isItemAdded
-                                                                    ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
-                                                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
+                                                                ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
+                                                                : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
                                                                 }`}
                                                         >
                                                             <ShoppingBag size={14} strokeWidth={2.5} />
@@ -1130,8 +1154,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                             type="button"
                                                                             onClick={() => setModalSelectedVariant(v)}
                                                                             className={`px-4 py-2 font-bold rounded-lg text-xs transition-all border-2 ${isVariantActive
-                                                                                    ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
-                                                                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                                                                ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
+                                                                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                                                                 }`}
                                                                         >
                                                                             {v.name}
