@@ -19,8 +19,7 @@ const STORAGE_KEY = STORAGE_KEYS.LOCATION;
 const LOCATION_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
 export const LocationProvider = ({ children }) => {
-  // Default location (used until we can resolve a better one)
-  const [currentLocation, setCurrentLocation] = useState({
+  const DEFAULT_FALLBACK_LOCATION = {
     name: "214, Rajshri Palace Colony, Pipliyahana, Indore, Madhya Pradesh 452018, India",
     time: "12-15 mins",
     city: "Indore",
@@ -28,6 +27,28 @@ export const LocationProvider = ({ children }) => {
     pincode: "452018",
     latitude: 22.711140989838025,
     longitude: 75.9001552518043,
+  };
+
+  // Restore cached location immediately on initial load so there's no flicker or reset
+  const [currentLocation, setCurrentLocation] = useState(() => {
+    try {
+      const parsed = getJSON(STORAGE_KEY, null);
+      const addressName = parsed?.address || parsed?.name;
+      if (parsed && addressName) {
+        return {
+          name: addressName,
+          time: parsed.time || "12-15 mins",
+          city: parsed.city || "",
+          state: parsed.state || "",
+          pincode: parsed.pincode || "",
+          latitude: parsed.latitude,
+          longitude: parsed.longitude,
+        };
+      }
+    } catch {
+      // Fallback
+    }
+    return DEFAULT_FALLBACK_LOCATION;
   });
 
   // Address list for drawer UI – will be hydrated from profile API.
@@ -351,29 +372,13 @@ export const LocationProvider = ({ children }) => {
     refreshAddresses();
   }, [refreshAddresses]);
 
-  // On mount: restore from cache first, then auto-fetch live location
+  // On mount: only auto-fetch live location if NO location is saved yet in storage.
+  // If a location is already saved in storage, preserve it across page refreshes.
   useEffect(() => {
     const parsed = getJSON(STORAGE_KEY, null);
     const addressName = parsed?.address || parsed?.name;
-    if (parsed && addressName) {
-      updateLocation(
-        {
-          name: addressName,
-          time: parsed.time || "12-15 mins",
-          city: parsed.city,
-          state: parsed.state,
-          pincode: parsed.pincode,
-          latitude: parsed.latitude,
-          longitude: parsed.longitude,
-        },
-        { persist: false, updateSavedHome: false },
-      );
-    } else {
-      // On mount: if no location is stored, auto-fetch live location or persist default
-      updateLocation(currentLocation, {
-        persist: true,
-        updateSavedHome: false,
-      });
+    if (!parsed || !addressName) {
+      // First time visiting or no saved location: fetch current live location
       fetchAndCacheLocation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

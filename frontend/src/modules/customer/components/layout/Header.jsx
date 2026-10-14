@@ -145,7 +145,6 @@ const Header = () => {
                         data-lenis-prevent
                         data-lenis-prevent-touch
                         onClick={() => {
-                            refreshLocation();
                             setIsLocationOpen(true);
                         }}
                         className="flex items-center gap-3 cursor-pointer active:scale-95 transition-transform border-0 bg-transparent p-0 text-left"
@@ -198,7 +197,6 @@ const Header = () => {
                             data-lenis-prevent
                             data-lenis-prevent-touch
                             onClick={() => {
-                                refreshLocation();
                                 setIsLocationOpen(true);
                             }}
                             className="hidden md:flex items-center gap-2 pl-6 border-l border-slate-200 cursor-pointer active:scale-95 transition-transform border-0 bg-transparent p-0"
