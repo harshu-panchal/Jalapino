@@ -38,6 +38,12 @@ const GeneralBookingForm = () => {
         if (!venue) {
             toast.error("Please select a venue first.");
             navigate('/plan-my-event/venues');
+            return;
+        }
+        if (venue.sellerId?.acceptsCOD === false && venue.sellerId?.acceptsRazorpay !== false) {
+            setPaymentMethod('Razorpay');
+        } else if (venue.sellerId?.acceptsCOD === false && venue.sellerId?.physicalPaymentEnabled) {
+            setPaymentMethod('Physical');
         }
     }, [venue]);
 
@@ -245,7 +251,7 @@ const GeneralBookingForm = () => {
     }
 
     return (
-        <div className="min-h-screen bg-slate-50 flex flex-col font-sans">
+        <div className="h-full w-full bg-slate-50 flex flex-col font-sans overflow-y-auto">
             {/* Header */}
             <div className="sticky top-0 bg-white z-40 border-b border-slate-100 px-4 py-3 flex items-center shadow-sm">
                 <button onClick={() => navigate(-1)} className="p-2 rounded-full hover:bg-slate-100 transition-colors mr-2">

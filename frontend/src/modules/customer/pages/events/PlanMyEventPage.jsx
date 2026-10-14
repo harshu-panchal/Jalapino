@@ -337,6 +337,25 @@ const PlanMyEventPage = () => {
     const embeddedState = React.useMemo(() => ({
         selectedSeller: selectedSellerDetail,
         selectedCategories: [activeCategory?.name || ''],
+        activeCategory: activeCategory,
+        eventTypes,
+        selectedType,
+        setSelectedType,
+        filterDate,
+        setFilterDate,
+        filterEndDate,
+        setFilterEndDate,
+        filterTime,
+        setFilterTime,
+        filterMultipleDates,
+        setFilterMultipleDates,
+        filterRemarks,
+        setFilterRemarks,
+        eventInfo,
+        setEventInfo,
+        handleEventInfoChange,
+        savingInfo,
+        savedInfo,
         eventData: {
             eventType: selectedType,
             date: filterDate,
@@ -348,7 +367,7 @@ const PlanMyEventPage = () => {
             lng: eventInfo.lng || currentLocation?.longitude,
         },
         preferences: {}
-    }), [selectedSellerDetail, activeCategory?.name, selectedType, filterDate, filterTime, filterMultipleDates, eventInfo.noOfGuests, eventInfo.functionLocation, eventInfo.lat, eventInfo.lng, currentLocation?.latitude, currentLocation?.longitude]);
+    }), [selectedSellerDetail, activeCategory, eventTypes, selectedType, filterDate, filterEndDate, filterTime, filterMultipleDates, filterRemarks, eventInfo, savingInfo, savedInfo, currentLocation?.latitude, currentLocation?.longitude]);
 
     /* — banners — */
     const [banners, setBanners] = useState([]);
@@ -432,14 +451,15 @@ const PlanMyEventPage = () => {
 
         customerApi.getProfile().then(res => {
             const p = res?.data?.result || {};
-            setEventInfo({
+            setEventInfo(prev => ({
+                ...prev,
                 bookingType: p.bookingType || 'individual',
                 name: p.name || '',
                 gender: p.gender || '',
                 dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : '',
                 anniversaryDate: p.anniversaryDate ? p.anniversaryDate.split('T')[0] : '',
-                functionLocation: p.functionLocation || '',
-            });
+                functionLocation: p.functionLocation || prev.functionLocation || '',
+            }));
             fetchArea(p.functionLocation || p.city);
         }).catch(() => fetchArea());
     }, [isAuthenticated]);
@@ -465,7 +485,7 @@ const PlanMyEventPage = () => {
     }, []);
 
     /* ── debounced save to DB whenever eventInfo changes ── */
-    const handleEventInfoChange = (field, value) => {
+    function handleEventInfoChange(field, value) {
         setEventInfo(prev => ({ ...prev, [field]: value }));
         setSavedInfo(false);
         if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
@@ -894,7 +914,7 @@ const PlanMyEventPage = () => {
                             )}
 
                             {/* ─── FILTERS: Event Type + Date + Time ─── */}
-                            {(activeCategory && activeCategory.showDateFilters !== false) && (
+                            {(!selectedSellerDetail && activeCategory && activeCategory.showDateFilters !== false) && (
                                 <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                                     <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                         {/* Event Type */}
@@ -1097,7 +1117,7 @@ const PlanMyEventPage = () => {
                             )}
 
                             {/* ─── EVENT INFO CARD ─── */}
-                            {(activeCategory && activeCategory.showEventDetailsForm !== false) && (
+                            {(!selectedSellerDetail && activeCategory && activeCategory.showEventDetailsForm !== false) && (
                                 <div className="px-5 pt-4 pb-2">
                                     <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4">
                                         <div className="flex items-center justify-between mb-3">

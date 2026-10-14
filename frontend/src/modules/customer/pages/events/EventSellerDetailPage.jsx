@@ -14,6 +14,8 @@ import { getStoredAuthToken } from '@core/utils/authStorage';
 import { useAuth } from '@/core/context/AuthContext';
 import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
+import EventIcon from '@mui/icons-material/Event';
+import { customerApi } from '../../services/customerApi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowLeft, Heart, ShoppingBag, Clock, Search, Star, MessageSquare } from 'lucide-react';
 
@@ -37,6 +39,211 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     // Derived from selected categories (category toggles from admin)
     const relevantCats = selectedCategories && selectedCategories.length > 0 ? selectedCategories : [];
+
+    // Category and Permission Resolution (supports Admin Store Info ON seller AND Service Category in Event Commerce)
+    const activeCat = currentState.activeCategory || (
+        Array.isArray(selectedSeller?.serviceCategories)
+            ? selectedSeller.serviceCategories.find(c => c && (c.name === selectedCategories?.[0] || c._id === selectedCategories?.[0])) || selectedSeller.serviceCategories[0]
+            : null
+    );
+
+    // When viewing a specific seller, prioritize the seller's specific store permissions configured by Admin.
+    // Fall back to category permissions only if seller fields are not defined.
+    const isEventDetailsEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.eventDetailsEnabled
+            : (activeCat?.showEventDetailsForm || activeCat?.eventDetailsEnabled)
+    );
+
+    const isPrimaryContactEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.primaryContactEnabled
+            : activeCat?.primaryContactEnabled
+    );
+
+    const isCoupleContactEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.coupleContactEnabled
+            : activeCat?.coupleContactEnabled
+    );
+
+    const isCorporateContactEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.corporateContactEnabled
+            : activeCat?.corporateContactEnabled
+    );
+
+    const isNoOfGuestsEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.noOfGuestsEnabled
+            : (activeCat?.showNoOfGuestsBox || activeCat?.noOfGuestsEnabled)
+    );
+
+    const isFunctionLocationEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.functionLocationEnabled
+            : activeCat?.functionLocationEnabled
+    );
+
+    const isSellerLocationEnabled = Boolean(
+        selectedSeller
+            ? selectedSeller.sellerLocationEnabled
+            : activeCat?.sellerLocationEnabled
+    );
+
+    // Determine the default active booking tab based on enabled permissions
+    const defaultBookingType = isCorporateContactEnabled && !isPrimaryContactEnabled && !isCoupleContactEnabled
+        ? 'corporate'
+        : isCoupleContactEnabled && !isPrimaryContactEnabled
+            ? 'couple'
+            : 'individual';
+
+    // Date & Time Filter toggles
+    const showStandardDateFilter = Boolean(selectedSeller ? selectedSeller.showStandardDateTime : activeCat?.showStandardDateTime);
+    const showStandardDateSlotFilter = Boolean(selectedSeller ? selectedSeller.showStandardDateTimeSlot : activeCat?.showStandardDateTimeSlot);
+    const showAdvancedDateFilter = Boolean(selectedSeller ? selectedSeller.showAdvancedDateTime : activeCat?.showAdvancedDateTime);
+    const showAdvancedDateSlotFilter = Boolean(selectedSeller ? selectedSeller.showAdvancedDateTimeSlot : activeCat?.showAdvancedDateTimeSlot);
+    const showMultipleDateFilter = Boolean(selectedSeller ? selectedSeller.showMultipleDateTime : activeCat?.showMultipleDateTime);
+    const showAnyDateFilter = showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter;
+
+    const dateMode = showMultipleDateFilter ? 'multiple'
+        : showAdvancedDateSlotFilter ? 'advancedSlot'
+            : showAdvancedDateFilter ? 'advanced'
+                : showStandardDateSlotFilter ? 'standardSlot'
+                    : showStandardDateFilter ? 'standard'
+                        : null;
+
+    // Local / fallback states
+    const [localEventTypes, setLocalEventTypes] = useState(currentState.eventTypes || []);
+    const [localSelectedType, setLocalSelectedType] = useState(currentState.selectedType || eventData?.eventType || '');
+    const [localFilterDate, setLocalFilterDate] = useState(currentState.filterDate || eventData?.date || '');
+    const [localFilterEndDate, setLocalFilterEndDate] = useState(currentState.filterEndDate || '');
+    const [localFilterTime, setLocalFilterTime] = useState(currentState.filterTime || eventData?.time || '');
+    const [localFilterMultipleDates, setLocalFilterMultipleDates] = useState(currentState.filterMultipleDates || eventData?.multipleEvents || []);
+    const [localFilterRemarks, setLocalFilterRemarks] = useState(currentState.filterRemarks || '');
+
+    const [multiInputDate, setMultiInputDate] = useState('');
+    const [multiInputTime, setMultiInputTime] = useState('');
+    const [multiInputRemarks, setMultiInputRemarks] = useState('');
+
+    const [localEventInfo, setLocalEventInfo] = useState({
+        bookingType: defaultBookingType,
+        primaryContactName: '',
+        coupleNames: '',
+        corporateCompanyName: '',
+        corporateContactPerson: '',
+        corporateMobile: '',
+        corporateGstNumber: '',
+        gender: '',
+        dateOfBirth: '',
+        anniversaryDate: '',
+        primaryPhone: '',
+        noOfGuests: eventData?.guestCount || '',
+        functionLocation: eventData?.location || '',
+        sellerLocation: '',
+        ...(currentState.eventInfo || eventData?.eventInfo || {})
+    });
+    const [localSavingInfo, setLocalSavingInfo] = useState(false);
+    const [localSavedInfo, setLocalSavedInfo] = useState(false);
+    const saveTimerRef = useRef(null);
+
+    // Active state values: prefer currentState if passed from PlanMyEventPage, else local
+    const allEventTypes = (currentState.eventTypes && currentState.eventTypes.length > 0) ? currentState.eventTypes : localEventTypes;
+    const activeEventType = currentState.selectedType !== undefined ? currentState.selectedType : localSelectedType;
+    const activeDate = currentState.filterDate !== undefined ? currentState.filterDate : localFilterDate;
+    const activeEndDate = currentState.filterEndDate !== undefined ? currentState.filterEndDate : localFilterEndDate;
+    const activeTime = currentState.filterTime !== undefined ? currentState.filterTime : localFilterTime;
+    const activeMultipleDates = currentState.filterMultipleDates !== undefined ? currentState.filterMultipleDates : localFilterMultipleDates;
+    const activeRemarks = currentState.filterRemarks !== undefined ? currentState.filterRemarks : localFilterRemarks;
+    const activeEventInfo = currentState.eventInfo !== undefined ? currentState.eventInfo : localEventInfo;
+    const isSavingInfo = currentState.savingInfo !== undefined ? currentState.savingInfo : localSavingInfo;
+    const isSavedInfo = currentState.savedInfo !== undefined ? currentState.savedInfo : localSavedInfo;
+
+    // Ensure the current booking type is valid for active permissions, else fallback to defaultBookingType
+    const effectiveBookingType = (
+        (activeEventInfo.bookingType === 'corporate' && isCorporateContactEnabled) ||
+        (activeEventInfo.bookingType === 'couple' && isCoupleContactEnabled) ||
+        (activeEventInfo.bookingType === 'individual' && isPrimaryContactEnabled)
+    ) ? activeEventInfo.bookingType : defaultBookingType;
+
+    const handleEventTypeChange = (val) => {
+        if (currentState.setSelectedType) currentState.setSelectedType(val);
+        setLocalSelectedType(val);
+    };
+
+    const handleDateChange = (val) => {
+        if (currentState.setFilterDate) currentState.setFilterDate(val);
+        setLocalFilterDate(val);
+    };
+
+    const handleEndDateChange = (val) => {
+        if (currentState.setFilterEndDate) currentState.setFilterEndDate(val);
+        setLocalFilterEndDate(val);
+    };
+
+    const handleTimeChange = (val) => {
+        if (currentState.setFilterTime) currentState.setFilterTime(val);
+        setLocalFilterTime(val);
+    };
+
+    const handleMultipleDatesChange = (updater) => {
+        if (currentState.setFilterMultipleDates) currentState.setFilterMultipleDates(updater);
+        setLocalFilterMultipleDates(updater);
+    };
+
+    const handleRemarksChange = (val) => {
+        if (currentState.setFilterRemarks) currentState.setFilterRemarks(val);
+        setLocalFilterRemarks(val);
+    };
+
+    const handleEventInfoFieldChange = (field, val) => {
+        if (currentState.handleEventInfoChange) {
+            currentState.handleEventInfoChange(field, val);
+        }
+        setLocalEventInfo(prev => ({ ...prev, [field]: val }));
+        setLocalSavedInfo(false);
+        if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+        saveTimerRef.current = setTimeout(async () => {
+            try {
+                setLocalSavingInfo(true);
+                await customerApi.updateProfile({ [field]: val || null });
+                setLocalSavedInfo(true);
+            } catch (err) {
+                console.error("Failed to update profile", err);
+            } finally {
+                setLocalSavingInfo(false);
+            }
+        }, 800);
+    };
+
+    // Load event types if not already provided
+    useEffect(() => {
+        if (!currentState.eventTypes || currentState.eventTypes.length === 0) {
+            eventConfigApi.getEventTypes()
+                .then(res => setLocalEventTypes(Array.isArray(res) ? res : []))
+                .catch(err => console.error("Error fetching event types", err));
+        }
+    }, [currentState.eventTypes]);
+
+    // Load customer profile into eventInfo if not already populated
+    useEffect(() => {
+        if (!currentState.eventInfo) {
+            customerApi.getProfile()
+                .then(res => {
+                    const p = res?.data?.result || {};
+                    setLocalEventInfo(prev => ({
+                        ...prev,
+                        bookingType: p.bookingType || prev.bookingType || 'individual',
+                        primaryContactName: p.name || prev.primaryContactName || '',
+                        gender: p.gender || prev.gender || '',
+                        dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : prev.dateOfBirth || '',
+                        anniversaryDate: p.anniversaryDate ? p.anniversaryDate.split('T')[0] : prev.anniversaryDate || '',
+                        functionLocation: p.functionLocation || prev.functionLocation || '',
+                    }));
+                })
+                .catch(err => console.error("Error fetching profile", err));
+        }
+    }, [currentState.eventInfo]);
 
     const [products, setProducts] = useState([]);
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
@@ -371,13 +578,24 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
         };
 
+        const updatedEventData = {
+            ...eventData,
+            eventType: activeEventType || eventData?.eventType || '',
+            date: activeDate || eventData?.date || '',
+            time: activeTime || eventData?.time || '',
+            multipleEvents: activeMultipleDates.length > 0 ? activeMultipleDates : eventData?.multipleEvents || [],
+            guestCount: Number(activeEventInfo.noOfGuests || eventData?.guestCount || 1),
+            location: activeEventInfo.functionLocation || eventData?.location || '',
+            eventInfo: activeEventInfo,
+        };
+
         // Keep the selected products and quantities available after refresh/back navigation.
         const checkoutState = {
-            eventData,
+            eventData: updatedEventData,
             preferences: collectedPreferences,
             selectedCategories,
             selectedSeller,
-            selectedProducts,
+            selectedProducts: selectedProducts.filter(p => !p.tickets || p.tickets.length === 0),
         };
         try {
             sessionStorage.setItem('jalapino_plan_event_checkout', JSON.stringify(checkoutState));
@@ -399,10 +617,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         }
     };
 
-    const selectedProductsSubtotal = selectedProducts.reduce(
-        (total, product) => total + getProductPricing(product).unitPrice * (Number(product.quantity) || 1),
-        0
-    );
+    const selectedProductsSubtotal = selectedProducts
+        .filter(product => !product.tickets || product.tickets.length === 0)
+        .reduce(
+            (total, product) => total + getProductPricing(product).unitPrice * (Number(product.quantity) || 1),
+            0
+        );
 
     const content = (
         <div className="max-w-5xl mx-auto px-4 pt-4 pb-24">
@@ -460,6 +680,408 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                 {/* Left/Main Column: Products and Customization */}
                 <div className="lg:col-span-12 space-y-6">
+
+                    {/* ─── DATE & TIME FILTERS (Seller & Service Category Driven) ─── */}
+                    {showAnyDateFilter && (
+                        <div className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 shadow-sm">
+                            <div className="flex flex-wrap gap-3 items-end">
+                                {/* Event Type */}
+                                <div className="flex flex-col gap-1 min-w-[170px] flex-1 sm:flex-initial">
+                                    <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider flex items-center gap-1">
+                                        <EventIcon sx={{ fontSize: 13 }} /> Event Type
+                                    </label>
+                                    <select
+                                        value={activeEventType}
+                                        onChange={e => handleEventTypeChange(e.target.value)}
+                                        className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                                    >
+                                        <option value="">-- Select Type --</option>
+                                        {allEventTypes.map(t => (
+                                            <option key={t.value || t._id} value={t.value || t.name}>{t.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+
+                                {dateMode === 'multiple' && (
+                                    <>
+                                        <div className="flex flex-col gap-1 min-w-[150px]">
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Event Date</label>
+                                            <input
+                                                type="date"
+                                                value={multiInputDate}
+                                                onChange={e => setMultiInputDate(e.target.value)}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1 min-w-[130px]">
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time</label>
+                                            <input
+                                                type="time"
+                                                value={multiInputTime}
+                                                onChange={e => setMultiInputTime(e.target.value)}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1 flex-1 min-w-[160px]">
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📝 Remarks / Occasion</label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Haldi, Sangeet, Reception"
+                                                value={multiInputRemarks}
+                                                onChange={e => setMultiInputRemarks(e.target.value)}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                if (!multiInputDate) return;
+                                                const newEntry = {
+                                                    id: Date.now(),
+                                                    typeId: activeEventType,
+                                                    typeName: allEventTypes.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || 'Event',
+                                                    date: multiInputDate,
+                                                    time: multiInputTime,
+                                                    remarks: multiInputRemarks
+                                                };
+                                                handleMultipleDatesChange(prev => [...(prev || []), newEntry]);
+                                                setMultiInputDate('');
+                                                setMultiInputTime('');
+                                                setMultiInputRemarks('');
+                                            }}
+                                            className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-sm transition-all"
+                                        >
+                                            + Add Date
+                                        </button>
+                                        {activeMultipleDates && activeMultipleDates.length > 0 && (
+                                            <div className="w-full mt-2">
+                                                <div className="flex flex-col gap-2">
+                                                    {activeMultipleDates.map((item, idx) => (
+                                                        <div key={item.id || idx} className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-amber-200">
+                                                            <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700 items-center">
+                                                                <span className="text-purple-700 font-bold bg-purple-50 px-2 py-1 rounded-md">🎉 {item.typeName || item.typeId}</span>
+                                                                <span className="flex items-center gap-1">📅 {item.date}</span>
+                                                                {item.time && <span className="flex items-center gap-1">🕐 {item.time}</span>}
+                                                                {item.remarks && <span className="text-slate-500 font-normal italic flex items-center gap-1">📝 {item.remarks}</span>}
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => handleMultipleDatesChange(prev => prev.filter(x => x.id !== item.id))}
+                                                                className="text-red-500 hover:bg-red-50 px-2 py-1 rounded font-black text-[10px] uppercase transition-colors"
+                                                            >
+                                                                ✕ Remove
+                                                            </button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {(dateMode === 'advancedSlot' || dateMode === 'advanced') && (
+                                    <>
+                                        <div className="flex flex-col gap-1 min-w-[150px]">
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Start Date</label>
+                                            <input
+                                                type="date"
+                                                value={activeDate}
+                                                onChange={e => handleDateChange(e.target.value)}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1 min-w-[150px]">
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 End Date</label>
+                                            <input
+                                                type="date"
+                                                value={activeEndDate}
+                                                onChange={e => handleEndDateChange(e.target.value)}
+                                                min={activeDate || new Date().toISOString().split('T')[0]}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        {dateMode === 'advancedSlot' && (
+                                            <div className="flex flex-col gap-1 min-w-[170px]">
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time Slot</label>
+                                                <select
+                                                    value={activeTime}
+                                                    onChange={e => handleTimeChange(e.target.value)}
+                                                    className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                                                >
+                                                    <option value="">-- Select Slot --</option>
+                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => (
+                                                        <option key={slot} value={slot}>{slot}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                        {dateMode === 'advanced' && (
+                                            <div className="flex flex-col gap-1 min-w-[140px]">
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time</label>
+                                                <input
+                                                    type="time"
+                                                    value={activeTime}
+                                                    onChange={e => handleTimeChange(e.target.value)}
+                                                    className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {(dateMode === 'standardSlot' || dateMode === 'standard') && (
+                                    <>
+                                        <div className="flex flex-col gap-1 min-w-[150px]">
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Date</label>
+                                            <input
+                                                type="date"
+                                                value={activeDate}
+                                                onChange={e => handleDateChange(e.target.value)}
+                                                min={new Date().toISOString().split('T')[0]}
+                                                className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                            />
+                                        </div>
+                                        {dateMode === 'standardSlot' && (
+                                            <div className="flex flex-col gap-1 min-w-[170px]">
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time Slot</label>
+                                                <select
+                                                    value={activeTime}
+                                                    onChange={e => handleTimeChange(e.target.value)}
+                                                    className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
+                                                >
+                                                    <option value="">-- Select Slot --</option>
+                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => (
+                                                        <option key={slot} value={slot}>{slot}</option>
+                                                    ))}
+                                                </select>
+                                            </div>
+                                        )}
+                                        {dateMode === 'standard' && (
+                                            <div className="flex flex-col gap-1 min-w-[140px]">
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time</label>
+                                                <input
+                                                    type="time"
+                                                    value={activeTime}
+                                                    onChange={e => handleTimeChange(e.target.value)}
+                                                    className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
+                                                />
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+
+                                {(activeDate || activeEndDate || activeTime || (activeMultipleDates && activeMultipleDates.length > 0)) && (
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            handleDateChange('');
+                                            handleEndDateChange('');
+                                            handleTimeChange('');
+                                            handleMultipleDatesChange([]);
+                                            handleRemarksChange('');
+                                            setMultiInputDate('');
+                                            setMultiInputTime('');
+                                            setMultiInputRemarks('');
+                                        }}
+                                        className="text-xs text-red-500 font-bold hover:underline self-end pb-2 ml-auto"
+                                    >
+                                        ✕ Clear
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* ─── EVENT DETAILS FORM (Seller & Service Category Driven) ─── */}
+                    {isEventDetailsEnabled && (
+                        <div className="bg-white rounded-3xl border border-purple-100 shadow-sm p-6">
+                            <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <h3 className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span>🎉</span> Your Event Details
+                                    </h3>
+                                    {/* Booking Type Tabs: only show types enabled in seller / category */}
+                                    {(isPrimaryContactEnabled || isCoupleContactEnabled || isCorporateContactEnabled) && (
+                                        <div className="flex bg-purple-50 rounded-lg p-0.5">
+                                            {isPrimaryContactEnabled && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEventInfoFieldChange('bookingType', 'individual')}
+                                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${effectiveBookingType === 'individual' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                >
+                                                    Individual
+                                                </button>
+                                            )}
+                                            {isCoupleContactEnabled && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEventInfoFieldChange('bookingType', 'couple')}
+                                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${effectiveBookingType === 'couple' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                >
+                                                    Couple
+                                                </button>
+                                            )}
+                                            {isCorporateContactEnabled && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleEventInfoFieldChange('bookingType', 'corporate')}
+                                                    className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${effectiveBookingType === 'corporate' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                >
+                                                    Corporate
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    {isSavingInfo && <span className="text-[10px] text-slate-400 font-medium">Saving...</span>}
+                                    {isSavedInfo && <span className="text-[10px] text-green-500 font-bold">✓ Saved</span>}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                {/* Contact Name Field */}
+                                {(effectiveBookingType === 'corporate' ? isCorporateContactEnabled : effectiveBookingType === 'couple' ? isCoupleContactEnabled : isPrimaryContactEnabled) && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                            {effectiveBookingType === 'corporate' ? '🏢 Company Name' : effectiveBookingType === 'couple' ? '💑 Couple Names' : '👤 Primary Contact'}
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={effectiveBookingType === 'corporate' ? (activeEventInfo.corporateCompanyName || '') : effectiveBookingType === 'couple' ? (activeEventInfo.coupleNames || activeEventInfo.primaryContactName || '') : (activeEventInfo.primaryContactName || '')}
+                                            onChange={e => handleEventInfoFieldChange(effectiveBookingType === 'corporate' ? 'corporateCompanyName' : effectiveBookingType === 'couple' ? 'coupleNames' : 'primaryContactName', e.target.value)}
+                                            placeholder={effectiveBookingType === 'corporate' ? 'e.g. Acme Corp' : effectiveBookingType === 'couple' ? 'e.g. Rahul & Priya' : 'Your full name'}
+                                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Corporate Fields */}
+                                {effectiveBookingType === 'corporate' && isCorporateContactEnabled && (
+                                    <>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👤 Contact Person</label>
+                                            <input
+                                                type="text"
+                                                value={activeEventInfo.corporateContactPerson || ''}
+                                                onChange={e => handleEventInfoFieldChange('corporateContactPerson', e.target.value)}
+                                                placeholder="Contact person name"
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📞 Mobile Number</label>
+                                            <input
+                                                type="tel"
+                                                value={activeEventInfo.corporateMobile || ''}
+                                                onChange={e => {
+                                                    const val = e.target.value.replace(/\D/g, '');
+                                                    if (val.length <= 10) handleEventInfoFieldChange('corporateMobile', val);
+                                                }}
+                                                maxLength="10"
+                                                placeholder="10-digit mobile number"
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                            />
+                                        </div>
+                                        <div className="flex flex-col gap-1">
+                                            <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📄 GST Number (Optional)</label>
+                                            <input
+                                                type="text"
+                                                value={activeEventInfo.corporateGstNumber || ''}
+                                                onChange={e => handleEventInfoFieldChange('corporateGstNumber', e.target.value)}
+                                                placeholder="GSTIN"
+                                                className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                            />
+                                        </div>
+                                    </>
+                                )}
+
+                                {/* Individual Gender */}
+                                {effectiveBookingType === 'individual' && isPrimaryContactEnabled && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">⚧ Gender</label>
+                                        <div className="flex gap-2 h-[38px] items-center">
+                                            {['Male', 'Female', 'Other'].map(g => (
+                                                <label key={g} className="flex items-center gap-1.5 text-sm font-semibold text-slate-700 cursor-pointer">
+                                                    <input
+                                                        type="radio"
+                                                        name="sellerDetailGender"
+                                                        value={g}
+                                                        checked={activeEventInfo.gender === g}
+                                                        onChange={e => handleEventInfoFieldChange('gender', e.target.value)}
+                                                        className="accent-purple-600 w-4 h-4"
+                                                    />
+                                                    {g}
+                                                </label>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Date of Birth / Anniversary Date */}
+                                {(effectiveBookingType === 'couple' ? isCoupleContactEnabled : effectiveBookingType === 'individual' ? isPrimaryContactEnabled : false) && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                            {effectiveBookingType === 'couple' ? '💍 Anniversary Date' : '🎂 Date of Birth'}
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={effectiveBookingType === 'couple' ? (activeEventInfo.anniversaryDate || '') : (activeEventInfo.dateOfBirth || '')}
+                                            max={new Date().toISOString().split('T')[0]}
+                                            onChange={e => handleEventInfoFieldChange(effectiveBookingType === 'couple' ? 'anniversaryDate' : 'dateOfBirth', e.target.value)}
+                                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* No of Guests */}
+                                {isNoOfGuestsEnabled && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">👥 No of Guests</label>
+                                        <input
+                                            type="number"
+                                            min="1"
+                                            value={activeEventInfo.noOfGuests || ''}
+                                            onChange={e => handleEventInfoFieldChange('noOfGuests', e.target.value)}
+                                            placeholder="e.g. 150"
+                                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Function Location */}
+                                {isFunctionLocationEnabled && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
+                                        <input
+                                            type="text"
+                                            value={activeEventInfo.functionLocation || ''}
+                                            onChange={e => handleEventInfoFieldChange('functionLocation', e.target.value)}
+                                            placeholder="City / Venue area"
+                                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                        />
+                                    </div>
+                                )}
+
+                                {/* Seller Location */}
+                                {isSellerLocationEnabled && (
+                                    <div className="flex flex-col gap-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Seller Location</label>
+                                        <input
+                                            type="text"
+                                            value={activeEventInfo.sellerLocation || ''}
+                                            onChange={e => handleEventInfoFieldChange('sellerLocation', e.target.value)}
+                                            placeholder="Seller's city/area"
+                                            className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    )}
 
                     {/* Products Grid */}
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
@@ -582,43 +1204,62 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     <span>₹{(pricing.unitPrice * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}</span>
                                                     {isSelected?.quantity > 1 && <span className="text-[10px] font-semibold text-slate-400">({isSelected.quantity} × ₹{pricing.unitPrice.toLocaleString('en-IN')})</span>}
                                                 </span>
-                                                {(product.isDelivery || product.isRental) ? (isSelected ? (
-                                                    <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
+                                                <div className="flex items-center gap-2">
+                                                    {product.tickets?.length > 0 ? (
                                                         <button
                                                             type="button"
-                                                            aria-label={`Remove one ${product.name}`}
-                                                            onClick={() => handleProductQuantityChange(product, -1)}
-                                                            className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
+                                                            onClick={() => {
+                                                                const venueObj = {
+                                                                    _id: product._id,
+                                                                    name: product.name || selectedSeller?.shopName || selectedSeller?.name,
+                                                                    price: Number(product.tickets?.[0]?.salePrice || product.tickets?.[0]?.price || product.price || 1000),
+                                                                    sellerId: selectedSeller,
+                                                                    tickets: product.tickets || [],
+                                                                };
+                                                                navigate('/plan-my-event/booking', { state: { venue: venueObj } });
+                                                            }}
+                                                            className="text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95 transition-all flex items-center gap-1.5"
                                                         >
-                                                            <RemoveIcon fontSize="small" />
+                                                            🎟️ Book Tickets
                                                         </button>
-                                                        <span className="min-w-5 text-center text-xs font-black text-slate-800">{isSelected.quantity}</span>
+                                                    ) : (product.isDelivery || product.isRental) ? (isSelected ? (
+                                                        <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
+                                                            <button
+                                                                type="button"
+                                                                aria-label={`Remove one ${product.name}`}
+                                                                onClick={() => handleProductQuantityChange(product, -1)}
+                                                                className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
+                                                            >
+                                                                <RemoveIcon fontSize="small" />
+                                                            </button>
+                                                            <span className="min-w-5 text-center text-xs font-black text-slate-800">{isSelected.quantity}</span>
+                                                            <button
+                                                                type="button"
+                                                                aria-label={`Add one ${product.name}`}
+                                                                onClick={() => handleProductQuantityChange(product, 1)}
+                                                                className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                                                            >
+                                                                <AddIcon fontSize="small" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
                                                         <button
                                                             type="button"
-                                                            aria-label={`Add one ${product.name}`}
                                                             onClick={() => handleProductQuantityChange(product, 1)}
-                                                            className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                                                            className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
                                                         >
-                                                            <AddIcon fontSize="small" />
+                                                            Add Item
                                                         </button>
-                                                    </div>
-                                                ) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleProductQuantityChange(product, 1)}
-                                                        className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
-                                                    >
-                                                        Add Item
-                                                    </button>
-                                                )) : (
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => handleProductSelection(product)}
-                                                        className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 transition-all ${isSelected ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600'}`}
-                                                    >
-                                                        {isSelected ? 'Remove Item' : 'Add Item'}
-                                                    </button>
-                                                )}
+                                                    )) : (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleProductSelection(product)}
+                                                            className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 transition-all ${isSelected ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600'}`}
+                                                        >
+                                                            {isSelected ? 'Remove Item' : 'Add Item'}
+                                                        </button>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                     );
@@ -894,15 +1535,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             <h3 className="text-xl font-bold text-slate-800">Plan Summary</h3>
                             <div className="mt-3 space-y-2 text-sm">
                                 <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Event Type</span><span className="font-semibold">{eventData?.eventType || 'Not selected'}</span>
+                                    <span>Event Type</span><span className="font-semibold">{activeEventType || eventData?.eventType || 'Not selected'}</span>
                                 </div>
                                 <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Date & Time</span><span className="font-semibold">{eventData?.date || 'Not selected'}{eventData?.time ? ` · ${eventData.time}` : ''}</span>
+                                    <span>Date & Time</span><span className="font-semibold">{activeDate || eventData?.date || 'Not selected'}{activeTime || eventData?.time ? ` · ${activeTime || eventData?.time}` : ''}</span>
                                 </div>
                                 <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Guests</span><span className="font-semibold">{eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
+                                    <span>Guests</span><span className="font-semibold">{activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
                                 </div>
-                                {selectedProducts.map(product => {
+                                {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map(product => {
                                     const quantity = Number(product.quantity) || 1;
                                     const pricing = getProductPricing(product);
                                     return (
@@ -916,20 +1557,29 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     );
                                 })}
                                 <div className="flex justify-between border-t border-purple-100 pt-3 font-bold text-slate-800">
-                                    <span>Selected Products</span><span>{selectedProducts.reduce((total, product) => total + (Number(product.quantity) || 0), 0)} items · ₹{selectedProductsSubtotal.toLocaleString('en-IN')}</span>
+                                    <span>Selected Products</span><span>{selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).reduce((total, product) => total + (Number(product.quantity) || 0), 0)} items · ₹{selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).reduce((total, product) => total + getProductPricing(product).unitPrice * (Number(product.quantity) || 1), 0).toLocaleString('en-IN')}</span>
                                 </div>
+                                {selectedSeller?.advanceBookingEnabled && Number(selectedSeller?.advancePaymentPercentage) > 0 && selectedProductsSubtotal > 0 && (
+                                    <div className="flex justify-between items-center bg-purple-100/60 p-2.5 rounded-xl border border-purple-200 mt-2">
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-purple-900 text-xs">Advance Payment</span>
+                                            <span className="text-[10px] text-purple-600 font-bold uppercase tracking-wider">
+                                                ({selectedSeller.advancePaymentPercentage}% Required to Confirm)
+                                            </span>
+                                        </div>
+                                        <span className="font-black text-base text-purple-700">
+                                            ₹{Math.round((selectedProductsSubtotal * Number(selectedSeller.advancePaymentPercentage)) / 100).toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="mt-4 flex flex-col gap-3">
                             <button
+                                type="button"
                                 onClick={handleProceed}
                                 className="w-full py-3.5 bg-gradient-to-r from-pink-500 to-purple-500 text-white font-extrabold rounded-xl hover:opacity-90 transition-all text-[13px] tracking-wide shadow-md">
-                                Proceed to Checkout
-                            </button>
-                            <button
-                                onClick={() => navigate('/plan-my-event/venues')}
-                                className="w-full py-3.5 bg-white border-2 border-purple-500 text-purple-600 font-extrabold rounded-xl hover:bg-purple-50 transition-all text-[13px] tracking-wide">
-                                EXPLORE & VISIT VENUES
+                                View Details
                             </button>
                         </div>
                     </div>

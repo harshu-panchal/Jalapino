@@ -369,16 +369,13 @@ export const LocationProvider = ({ children }) => {
         { persist: false, updateSavedHome: false },
       );
     } else {
-      // If no location is stored (or TTL expired), persist the default
-      // immediately so subsequent reads have something to anchor on.
+      // On mount: if no location is stored, auto-fetch live location or persist default
       updateLocation(currentLocation, {
         persist: true,
         updateSavedHome: false,
       });
+      fetchAndCacheLocation();
     }
-
-    // Auto-fetch live location on load
-    fetchAndCacheLocation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

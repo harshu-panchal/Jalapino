@@ -212,6 +212,7 @@ const SellerDetail = () => {
                 videoUploadEnabled: data.videoUploadEnabled ?? false,
                 customerImageReviewEnabled: data.customerImageReviewEnabled ?? false,
                 advanceBookingEnabled: data.advanceBookingEnabled ?? false,
+                advancePaymentPercentage: data.advancePaymentPercentage ?? 0,
                 quoteAdvancePayment: data.quoteAdvancePayment ?? false,
             }));
         } catch (error) {
@@ -277,6 +278,12 @@ const SellerDetail = () => {
     const [isDeleting, setIsDeleting] = useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+    const handlePermissionChange = (field) => (e) => {
+        if (!isEditMode) return;
+        const checked = e.target.checked;
+        setSeller(prev => ({ ...prev, [field]: checked }));
+    };
+
     const handleUpdateStoreInfo = async () => {
         setIsUpdating(true);
         try {
@@ -332,6 +339,7 @@ const SellerDetail = () => {
                 quoteFinalPayment: seller.quoteFinalPayment,
                 customerImageReviewEnabled: seller.customerImageReviewEnabled,
                 advanceBookingEnabled: seller.advanceBookingEnabled,
+                advancePaymentPercentage: Number(seller.advancePaymentPercentage || 0),
                 addonDecorationEnabled: seller.addonDecorationEnabled,
                 addonDecorationPrice: Number(seller.addonDecorationPrice || 0),
                 addonBridalEnabled: seller.addonBridalEnabled,
@@ -346,6 +354,16 @@ const SellerDetail = () => {
                 venueVisitsEnabled: seller.venueVisitsEnabled
             };
             await adminUsersApi.updateSeller(seller.id, payload);
+            if (seller.minCapacity !== undefined || seller.maxCapacity !== undefined) {
+                try {
+                    await adminUsersApi.updateSellerType(seller.id, {
+                        minGuestCapacity: seller.minCapacity,
+                        maxGuestCapacity: seller.maxCapacity
+                    });
+                } catch (typeErr) {
+                    console.warn('Could not update guest capacities via seller type API:', typeErr);
+                }
+            }
             showToast('Store permissions & settings updated successfully in database', 'success');
         } catch (err) {
             console.error('Update error:', err);
@@ -744,6 +762,38 @@ const SellerDetail = () => {
                                     </div>
 
                                     <div className="ds-section-spacing">
+                                        {/* VIEW MODE / EDIT MODE STATUS BANNER */}
+                                        <div className={cn(
+                                            "mb-6 p-4 rounded-xl border flex items-center justify-between gap-4 transition-all",
+                                            isEditMode 
+                                                ? "bg-emerald-50/80 border-emerald-200 text-emerald-900" 
+                                                : "bg-slate-50 border-slate-200 text-slate-700"
+                                        )}>
+                                            <div className="flex items-center gap-3">
+                                                <div className={cn(
+                                                    "h-9 w-9 rounded-xl flex items-center justify-center font-black text-white shrink-0",
+                                                    isEditMode ? "bg-emerald-600" : "bg-slate-500"
+                                                )}>
+                                                    {isEditMode ? <Edit3 className="h-4 w-4" /> : <Building2 className="h-4 w-4" />}
+                                                </div>
+                                                <div>
+                                                    <h5 className="text-xs font-black uppercase tracking-wider">
+                                                        {isEditMode ? "Edit Mode Active (Verified)" : "View Profile (Read Only Mode)"}
+                                                    </h5>
+                                                    <p className="text-[11px] font-medium opacity-80">
+                                                        {isEditMode 
+                                                            ? "You can modify toggles and settings below. Click 'UPDATE STORE' at the bottom to save your changes."
+                                                            : "Toggles and inputs are view-only here. To edit and update, click 'EDIT' from Active Sellers list and verify OTP/email."}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {!isEditMode && (
+                                                <span className="text-[10px] font-black uppercase tracking-widest bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg shrink-0">
+                                                    Read Only
+                                                </span>
+                                            )}
+                                        </div>
+
                                         {/* MODULE SETTINGS */}
                                         <div className="mb-8">
                                             <h5 className="text-[10px] font-black text-brand-600 uppercase tracking-widest mb-4">Module Access Permissions</h5>
@@ -753,123 +803,60 @@ const SellerDetail = () => {
                                                     label="Retail Store (Master)"
                                                     description="Main toggle for retail store access"
                                                     checked={seller.retailEnabled}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, retailEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { retailEnabled: checked });
-                                                            showToast('Retail master permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, retailEnabled: !checked }));
-                                                            showToast('Failed to update retail master permission', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('retailEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Products & Catalog"
                                                     description="Allow adding and managing products"
                                                     checked={seller.productsEnabled}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, productsEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { productsEnabled: checked });
-                                                            showToast('Products permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, productsEnabled: !checked }));
-                                                            showToast('Failed to update products permission', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('productsEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Stock & Inventory"
                                                     description="Allow managing product inventory"
                                                     checked={seller.stockEnabled}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, stockEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { stockEnabled: checked });
-                                                            showToast('Stock permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, stockEnabled: !checked }));
-                                                            showToast('Failed to update stock permission', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('stockEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Orders & Returns"
                                                     description="Allow viewing and managing orders"
                                                     checked={seller.ordersEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, ordersEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { ordersEnabled: checked });
-                                                            showToast('Orders permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, ordersEnabled: !checked }));
-                                                            showToast('Failed to update orders permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('ordersEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Wallet & Earnings"
                                                     description="Allow access to payouts and earnings"
                                                     checked={seller.walletEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, walletEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { walletEnabled: checked });
-                                                            showToast('Wallet permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, walletEnabled: !checked }));
-                                                            showToast('Failed to update wallet permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('walletEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Analytics & Reports"
                                                     description="Allow viewing sales analytics"
                                                     checked={seller.analyticsEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, analyticsEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { analyticsEnabled: checked });
-                                                            showToast('Analytics permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, analyticsEnabled: !checked }));
-                                                            showToast('Failed to update analytics permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('analyticsEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Plan My Event"
                                                     description="Allow event service bookings"
                                                     checked={seller.planMyEventEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-violet-500" hoverColor="group-hover:text-violet-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, planMyEventEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { planMyEventEnabled: checked });
-                                                            showToast('Plan my event permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, planMyEventEnabled: !checked }));
-                                                            showToast('Failed to update plan my event permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('planMyEventEnabled')}
                                                 />
 
                                                 {/* Shop Operation Settings */}
@@ -883,39 +870,19 @@ const SellerDetail = () => {
                                                             label="Master Shop Visibility"
                                                             description="If OFF, shop will not be visible on Customer App"
                                                             checked={seller.isShopActive ?? true}
+                                                            disabled={!isEditMode}
                                                             activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, isShopActive: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { isShopActive: checked });
-                                                                    showToast('Shop visibility updated', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, isShopActive: !checked }));
-                                                                    showToast('Failed to update shop visibility', 'error');
-                                                                }
-                                                            }}
+                                                            onChange={handlePermissionChange('isShopActive')}
                                                         />
 
                                                         <PermissionToggle
                                                             label="Strict Operating Hours"
                                                             description="Enable to enforce strict shop opening/closing hours"
                                                             checked={seller.shopTimingsEnabled ?? false}
+                                                            disabled={!isEditMode}
                                                             activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, shopTimingsEnabled: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { shopTimingsEnabled: checked });
-                                                                    showToast('Shop timings toggled', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, shopTimingsEnabled: !checked }));
-                                                                    showToast('Failed to toggle shop timings', 'error');
-                                                                }
-                                                            }}
+                                                            onChange={handlePermissionChange('shopTimingsEnabled')}
                                                         />
-
-
 
                                                         <div className="flex flex-col gap-2 mt-2">
                                                             <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
@@ -925,25 +892,21 @@ const SellerDetail = () => {
                                                             <div className="flex flex-wrap gap-2 w-full">
                                                                 <input type="number" min="0"
                                                                     value={seller.advanceBookingBuffer ?? 0}
-                                                                    onChange={async (e) => {
+                                                                    disabled={!isEditMode}
+                                                                    onChange={(e) => {
                                                                         const val = Number(e.target.value);
                                                                         setSeller(prev => ({ ...prev, advanceBookingBuffer: val }));
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { advanceBookingBuffer: val });
-                                                                        } catch (err) { showToast("Failed to update", "error"); }
                                                                     }}
-                                                                    className="flex-1 min-w-[60px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                    className="flex-1 min-w-[60px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 />
                                                                 <select
                                                                     value={seller.advanceBookingBufferUnit || 'days'}
-                                                                    onChange={async (e) => {
+                                                                    disabled={!isEditMode}
+                                                                    onChange={(e) => {
                                                                         const val = e.target.value;
                                                                         setSeller(prev => ({ ...prev, advanceBookingBufferUnit: val }));
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { advanceBookingBufferUnit: val });
-                                                                        } catch (err) { showToast("Failed to update", "error"); }
                                                                     }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-slate-50"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-slate-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 >
                                                                     <option value="days">Days</option>
                                                                     <option value="hours">Hours</option>
@@ -954,14 +917,12 @@ const SellerDetail = () => {
                                                                     max="23"
                                                                     placeholder="Hrs"
                                                                     value={seller.advanceBookingBufferTime || "12"}
-                                                                    onChange={async (e) => {
+                                                                    disabled={!isEditMode}
+                                                                    onChange={(e) => {
                                                                         const val = e.target.value;
                                                                         setSeller(prev => ({ ...prev, advanceBookingBufferTime: val }));
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { advanceBookingBufferTime: val });
-                                                                        } catch (err) { showToast("Failed to update time", "error"); }
                                                                     }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-16"
+                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-16 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 />
                                                             </div>
                                                         </div>
@@ -973,63 +934,57 @@ const SellerDetail = () => {
                                                                 <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Select dates when shop is closed</span>
                                                             </label>
                                                             <div className="flex flex-col gap-3">
-                                                                <div className="flex gap-2">
-                                                                    <input 
-                                                                        type="date" 
-                                                                        id={`holiday-input-${seller.id}`}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                    />
-                                                                    <button 
-                                                                        onClick={async () => {
-                                                                            const input = document.getElementById(`holiday-input-${seller.id}`);
-                                                                            if (!input.value) return;
-                                                                            const dateVal = input.value;
-                                                                            const currentDates = seller.shopClosedDates || [];
-                                                                            if (currentDates.includes(dateVal)) {
-                                                                                showToast("Date already added", "error");
-                                                                                return;
-                                                                            }
-                                                                            const newDates = [...currentDates, dateVal].sort();
-                                                                            setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
-                                                                            try {
-                                                                                await adminUsersApi.updateSeller(seller.id, { shopClosedDates: newDates });
+                                                                {isEditMode && (
+                                                                    <div className="flex gap-2">
+                                                                        <input 
+                                                                            type="date" 
+                                                                            id={`holiday-input-${seller.id}`}
+                                                                            className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
+                                                                        />
+                                                                        <button 
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                const input = document.getElementById(`holiday-input-${seller.id}`);
+                                                                                if (!input || !input.value) return;
+                                                                                const dateVal = input.value;
+                                                                                const currentDates = seller.shopClosedDates || [];
+                                                                                if (currentDates.includes(dateVal)) {
+                                                                                    showToast("Date already added", "error");
+                                                                                    return;
+                                                                                }
+                                                                                const newDates = [...currentDates, dateVal].sort();
+                                                                                setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
                                                                                 input.value = '';
-                                                                                showToast("Holiday added successfully", "success");
-                                                                            } catch (err) {
-                                                                                setSeller(prev => ({ ...prev, shopClosedDates: currentDates }));
-                                                                                showToast("Failed to add holiday", "error");
-                                                                            }
-                                                                        }}
-                                                                        className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-fuchsia-700 transition-colors"
-                                                                    >
-                                                                        Add Date
-                                                                    </button>
-                                                                </div>
-                                                                {(seller.shopClosedDates || []).length > 0 && (
+                                                                            }}
+                                                                            className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-fuchsia-700 transition-colors"
+                                                                        >
+                                                                            Add Date
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                {(seller.shopClosedDates || []).length > 0 ? (
                                                                     <div className="flex flex-wrap gap-2 mt-1">
                                                                         {(seller.shopClosedDates || []).map((date, idx) => (
                                                                             <div key={idx} className="flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1 rounded-full text-xs font-medium">
                                                                                 <span>{new Date(date).toLocaleDateString('en-GB')}</span>
-                                                                                <button 
-                                                                                    onClick={async () => {
-                                                                                        const currentDates = seller.shopClosedDates || [];
-                                                                                        const newDates = currentDates.filter(d => d !== date);
-                                                                                        setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
-                                                                                        try {
-                                                                                            await adminUsersApi.updateSeller(seller.id, { shopClosedDates: newDates });
-                                                                                            showToast("Holiday removed", "success");
-                                                                                        } catch (err) {
-                                                                                            setSeller(prev => ({ ...prev, shopClosedDates: currentDates }));
-                                                                                            showToast("Failed to remove holiday", "error");
-                                                                                        }
-                                                                                    }}
-                                                                                    className="ml-1 hover:text-rose-900 focus:outline-none"
-                                                                                >
-                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                                                                </button>
+                                                                                {isEditMode && (
+                                                                                    <button 
+                                                                                        type="button"
+                                                                                        onClick={() => {
+                                                                                            const currentDates = seller.shopClosedDates || [];
+                                                                                            const newDates = currentDates.filter(d => d !== date);
+                                                                                            setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
+                                                                                        }}
+                                                                                        className="ml-1 hover:text-rose-900 focus:outline-none"
+                                                                                    >
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                                                    </button>
+                                                                                )}
                                                                             </div>
                                                                         ))}
                                                                     </div>
+                                                                ) : (
+                                                                    <p className="text-xs text-slate-400 italic">No closed dates added</p>
                                                                 )}
                                                             </div>
                                                         </div>
@@ -1039,18 +994,9 @@ const SellerDetail = () => {
                                                                 label="Enable Demo Trial"
                                                                 description="Automatically turn off shop when demo period ends"
                                                                 checked={seller.demoTrialEnabled ?? false}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, demoTrialEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { demoTrialEnabled: checked });
-                                                                        showToast('Demo trial status updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, demoTrialEnabled: !checked }));
-                                                                        showToast('Failed to update demo trial status', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('demoTrialEnabled')}
                                                             />
 
                                                             {seller.demoTrialEnabled && (
@@ -1059,14 +1005,12 @@ const SellerDetail = () => {
                                                                     <div className="flex gap-2 items-center">
                                                                         <input type="number" min="1"
                                                                             value={seller.demoTrialDays || 15}
-                                                                            onChange={async (e) => {
+                                                                            disabled={!isEditMode}
+                                                                            onChange={(e) => {
                                                                                 const val = Number(e.target.value);
                                                                                 setSeller(prev => ({ ...prev, demoTrialDays: val }));
-                                                                                try {
-                                                                                    await adminUsersApi.updateSeller(seller.id, { demoTrialDays: val });
-                                                                                } catch (err) { showToast("Failed to update", "error"); }
                                                                             }}
-                                                                            className="w-24 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 outline-none"
+                                                                            className="w-24 border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-orange-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                         />
                                                                         <span className="text-xs text-slate-500 font-medium">Days</span>
                                                                     </div>
@@ -1080,18 +1024,9 @@ const SellerDetail = () => {
                                                     label="Event Details"
                                                     description="Grant seller access to view customer event details"
                                                     checked={seller.eventDetailsEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, eventDetailsEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { eventDetailsEnabled: checked });
-                                                            showToast('Event details permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, eventDetailsEnabled: !checked }));
-                                                            showToast('Failed to update event details permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('eventDetailsEnabled')}
                                                 />
 
                                                 {/* Event & Ticketing Options (Inside Event Details) */}
@@ -1103,69 +1038,33 @@ const SellerDetail = () => {
                                                                 label="Primary Contact"
                                                                 description="Allow primary contact details collection"
                                                                 checked={seller.primaryContactEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, primaryContactEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { primaryContactEnabled: checked });
-                                                                        showToast('Primary contact permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, primaryContactEnabled: !checked }));
-                                                                        showToast('Failed to update primary contact permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('primaryContactEnabled')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Couple Contact"
                                                                 description="Allow couple details collection"
                                                                 checked={seller.coupleContactEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, coupleContactEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { coupleContactEnabled: checked });
-                                                                        showToast('Couple contact permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, coupleContactEnabled: !checked }));
-                                                                        showToast('Failed to update couple contact permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('coupleContactEnabled')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Corporate Contact"
                                                                 description="Allow corporate details collection"
                                                                 checked={seller.corporateContactEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-purple-500" hoverColor="group-hover:text-purple-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, corporateContactEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { corporateContactEnabled: checked });
-                                                                        showToast('Corporate contact permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, corporateContactEnabled: !checked }));
-                                                                        showToast('Failed to update corporate contact permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('corporateContactEnabled')}
                                                             />
                                                             <PermissionToggle
                                                                 label="No of Guests"
                                                                 description="Allow collection of number of guests"
                                                                 checked={seller.noOfGuestsEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-orange-500" hoverColor="group-hover:text-orange-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, noOfGuestsEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { noOfGuestsEnabled: checked });
-                                                                        showToast('No of guests permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, noOfGuestsEnabled: !checked }));
-                                                                        showToast('Failed to update no of guests permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('noOfGuestsEnabled')}
                                                             />
                                                         </div>
                                                     </div>
@@ -1180,86 +1079,41 @@ const SellerDetail = () => {
                                                                 label="Standard Date & Time"
                                                                 description="Standard Date and Time selection"
                                                                 checked={!!seller.showStandardDateTime}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, showStandardDateTime: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { showStandardDateTime: checked });
-                                                                        showToast('Standard Date & Time setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Date & Time setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, showStandardDateTime: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('showStandardDateTime')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Standard Date & Time Slot"
                                                                 description="Standard Date and Time Slot selection"
                                                                 checked={!!seller.showStandardDateTimeSlot}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, showStandardDateTimeSlot: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { showStandardDateTimeSlot: checked });
-                                                                        showToast('Standard Date & Time Slot setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Date & Time Slot setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, showStandardDateTimeSlot: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('showStandardDateTimeSlot')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Advanced Date Range & Time"
                                                                 description="Advanced date range and time"
                                                                 checked={!!seller.showAdvancedDateTime}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, showAdvancedDateTime: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { showAdvancedDateTime: checked });
-                                                                        showToast('Advanced Date Range & Time setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Advanced Date Range & Time setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, showAdvancedDateTime: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('showAdvancedDateTime')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Advanced Date Range & Time Slot"
                                                                 description="Advanced date range and multiple time slots"
                                                                 checked={!!seller.showAdvancedDateTimeSlot}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, showAdvancedDateTimeSlot: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { showAdvancedDateTimeSlot: checked });
-                                                                        showToast('Advanced Date Range & Time Slot setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Advanced Date Range & Time Slot setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, showAdvancedDateTimeSlot: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('showAdvancedDateTimeSlot')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Multiple Date & Time & Remarks"
                                                                 description="Multiple date & time selection with remarks"
                                                                 checked={!!seller.showMultipleDateTime}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-fuchsia-500" hoverColor="group-hover:text-fuchsia-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, showMultipleDateTime: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { showMultipleDateTime: checked });
-                                                                        showToast('Multiple Date & Time setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Multiple Date & Time setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, showMultipleDateTime: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('showMultipleDateTime')}
                                                             />
                                                         </div>
                                                     </div>
@@ -1273,35 +1127,17 @@ const SellerDetail = () => {
                                                                 label="Function Location"
                                                                 description="Allow function location collection"
                                                                 checked={!!seller.functionLocationEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, functionLocationEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { functionLocationEnabled: checked });
-                                                                        showToast('Function Location setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Function Location setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, functionLocationEnabled: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('functionLocationEnabled')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Seller Location"
                                                                 description="Show seller location option"
                                                                 checked={!!seller.sellerLocationEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-blue-500" hoverColor="group-hover:text-blue-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, sellerLocationEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { sellerLocationEnabled: checked });
-                                                                        showToast('Seller Location setting updated', 'success');
-                                                                    } catch (err) {
-                                                                        showToast('Failed to update Seller Location setting', 'error');
-                                                                        setSeller(prev => ({ ...prev, sellerLocationEnabled: !checked }));
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('sellerLocationEnabled')}
                                                             />
                                                         </div>
                                                     </div>
@@ -1315,18 +1151,9 @@ const SellerDetail = () => {
                                                         label="AT Same Location Seller Capacity"
                                                         description="Show capacity on Seller Banner UI"
                                                         checked={seller.capacityEnabled}
+                                                        disabled={!isEditMode}
                                                         activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, capacityEnabled: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { capacityEnabled: checked });
-                                                                showToast('Capacity setting updated', 'success');
-                                                            } catch (err) {
-                                                                showToast('Failed to update capacity setting', 'error');
-                                                                setSeller(prev => ({ ...prev, capacityEnabled: !checked }));
-                                                            }
-                                                        }}
+                                                        onChange={handlePermissionChange('capacityEnabled')}
                                                     />
 
                                                     {seller.capacityEnabled && (
@@ -1335,31 +1162,20 @@ const SellerDetail = () => {
                                                                 <div className="flex flex-col gap-1 flex-1">
                                                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Total Product Capacity</label>
                                                                     <input type="number" min="0"
-                                                                        value={seller.totalCapacity}
+                                                                        value={seller.totalCapacity ?? 0}
+                                                                        disabled={!isEditMode}
                                                                         onChange={(e) => setSeller(prev => ({ ...prev, totalCapacity: Number(e.target.value) }))}
-                                                                        onBlur={async () => {
-                                                                            try {
-                                                                                await adminUsersApi.updateSeller(seller.id, { totalCapacity: seller.totalCapacity });
-                                                                                showToast('Total capacity updated', 'success');
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                     />
                                                                 </div>
                                                                 
                                                                 <div className="flex flex-col gap-1 flex-1">
                                                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Booking Type</label>
                                                                     <select
-                                                                        value={seller.bookingType}
-                                                                        onChange={async (e) => {
-                                                                            const val = e.target.value;
-                                                                            setSeller(prev => ({ ...prev, bookingType: val }));
-                                                                            try {
-                                                                                await adminUsersApi.updateSeller(seller.id, { bookingType: val });
-                                                                                showToast('Booking type updated', 'success');
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none bg-white"
+                                                                        value={seller.bookingType || 'one_time'}
+                                                                        disabled={!isEditMode}
+                                                                        onChange={(e) => setSeller(prev => ({ ...prev, bookingType: e.target.value }))}
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                     >
                                                                         <option value="one_time">One Time</option>
                                                                         <option value="multiple_time">Multiple Time</option>
@@ -1372,14 +1188,9 @@ const SellerDetail = () => {
                                                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Number of Shops</label>
                                                                     <input type="number" min="1"
                                                                         value={seller.numberOfShops || 1}
+                                                                        disabled={!isEditMode}
                                                                         onChange={(e) => setSeller(prev => ({ ...prev, numberOfShops: Number(e.target.value) }))}
-                                                                        onBlur={async () => {
-                                                                            try {
-                                                                                await adminUsersApi.updateSeller(seller.id, { numberOfShops: seller.numberOfShops });
-                                                                                showToast('Number of shops updated', 'success');
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                     />
                                                                 </div>
                                                             </div>
@@ -1388,33 +1199,19 @@ const SellerDetail = () => {
                                                                 <div className="flex flex-col gap-1 flex-1">
                                                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Minimum Capacity</label>
                                                                     <input type="number" min="0"
-                                                                        value={seller.minCapacity}
+                                                                        value={seller.minCapacity ?? 0}
+                                                                        disabled={!isEditMode}
                                                                         onChange={(e) => setSeller(prev => ({ ...prev, minCapacity: Number(e.target.value) }))}
-                                                                        onBlur={async () => {
-                                                                            try {
-                                                                                await adminUsersApi.updateSellerType(seller.id, {
-                                                                                    minGuestCapacity: seller.minCapacity
-                                                                                });
-                                                                                showToast('Minimum capacity updated', 'success');
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                     />
                                                                 </div>
                                                                 <div className="flex flex-col gap-1 flex-1">
                                                                     <label className="text-[10px] font-bold text-slate-500 uppercase">Maximum Capacity</label>
                                                                     <input type="number" min="0"
-                                                                        value={seller.maxCapacity}
+                                                                        value={seller.maxCapacity ?? 0}
+                                                                        disabled={!isEditMode}
                                                                         onChange={(e) => setSeller(prev => ({ ...prev, maxCapacity: Number(e.target.value) }))}
-                                                                        onBlur={async () => {
-                                                                            try {
-                                                                                await adminUsersApi.updateSellerType(seller.id, {
-                                                                                    maxGuestCapacity: seller.maxCapacity
-                                                                                });
-                                                                                showToast('Maximum capacity updated', 'success');
-                                                                            } catch (err) { showToast("Failed to update", "error"); }
-                                                                        }}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                     />
                                                                 </div>
                                                             </div>
@@ -1426,36 +1223,18 @@ const SellerDetail = () => {
                                                     label="Custom Product Entry"
                                                     description="Allow manual entry of product name, brand, and ingredients"
                                                     checked={seller.allowCustomProductEntry}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-emerald-500" hoverColor="group-hover:text-emerald-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, allowCustomProductEntry: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { allowCustomProductEntry: checked });
-                                                            showToast('Custom product entry permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, allowCustomProductEntry: !checked }));
-                                                            showToast('Failed to update custom product entry permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('allowCustomProductEntry')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Live Kitchen"
                                                     description="Allow live streaming/camera updates from seller kitchen"
                                                     checked={seller.liveKitchenEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, liveKitchenEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { liveKitchenEnabled: checked });
-                                                            showToast('Live kitchen permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, liveKitchenEnabled: !checked }));
-                                                            showToast('Failed to update live kitchen permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('liveKitchenEnabled')}
                                                 />
 
                                                 {/* Live Kitchen Sub-Permissions Inline */}
@@ -1467,75 +1246,38 @@ const SellerDetail = () => {
                                                                 label="Add to Cart"
                                                                 description="Allow customers to add items to cart directly from live"
                                                                 checked={seller.liveAddToCartEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, liveAddToCartEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { liveAddToCartEnabled: checked });
-                                                                        showToast('Live Add to Cart permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, liveAddToCartEnabled: !checked }));
-                                                                        showToast('Failed to update live Add to Cart permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('liveAddToCartEnabled')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Services"
                                                                 description="Allow booking services from live"
                                                                 checked={seller.liveServicesEnabled}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, liveServicesEnabled: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { liveServicesEnabled: checked });
-                                                                        showToast('Live Services permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, liveServicesEnabled: !checked }));
-                                                                        showToast('Failed to update live Services permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('liveServicesEnabled')}
                                                             />
                                                         </div>
                                                     </div>
                                                 )}
 
-
                                                 <PermissionToggle
                                                     label="Video Subscriptions & Uploads"
                                                     description="Allow seller to upload product videos and buy video plans"
                                                     checked={seller.videoUploadEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-blue-600" hoverColor="group-hover:text-blue-700"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, videoUploadEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { videoUploadEnabled: checked });
-                                                            showToast('Video permissions updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, videoUploadEnabled: !checked }));
-                                                            showToast('Failed to update video permissions', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('videoUploadEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Customization & Quotation Engine"
                                                     description="Master toggle to allow customizations and direct quotations"
                                                     checked={seller.customizationEngineEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-indigo-600" hoverColor="group-hover:text-indigo-700"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, customizationEngineEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { customizationEngineEnabled: checked });
-                                                            showToast('Customization engine permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, customizationEngineEnabled: !checked }));
-                                                            showToast('Failed to update customization engine permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('customizationEngineEnabled')}
                                                 />
 
                                                 {/* Customization & Quotation Engine Sub-Permissions Inline */}
@@ -1547,137 +1289,65 @@ const SellerDetail = () => {
                                                                 label="Reference Photo Upload"
                                                                 description="Allow upload of reference photos"
                                                                 checked={seller.quoteReferencePhotoUpload}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteReferencePhotoUpload: checked });
-                                                                        showToast('Reference photo upload permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteReferencePhotoUpload: !checked }));
-                                                                        showToast('Failed to update reference photo upload permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteReferencePhotoUpload')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Color Combination"
                                                                 description="Allow selecting color combinations"
                                                                 checked={seller.quoteColorCombination}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteColorCombination: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteColorCombination: checked });
-                                                                        showToast('Color combination permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteColorCombination: !checked }));
-                                                                        showToast('Failed to update color combination permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteColorCombination')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Customer & Seller Chat"
                                                                 description="Allow chat for plan my event"
                                                                 checked={seller.quoteCustomerNotes}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteCustomerNotes: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteCustomerNotes: checked });
-                                                                        showToast('Customer notes permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteCustomerNotes: !checked }));
-                                                                        showToast('Failed to update customer notes permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteCustomerNotes')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Seller Quotation"
                                                                 description="Allow seller to send quotations"
                                                                 checked={seller.quoteSellerQuotation}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteSellerQuotation: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteSellerQuotation: checked });
-                                                                        showToast('Seller quotation permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteSellerQuotation: !checked }));
-                                                                        showToast('Failed to update seller quotation permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteSellerQuotation')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Quote Revision"
                                                                 description="Allow revisions to quotation"
                                                                 checked={seller.quoteQuoteRevision}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteQuoteRevision: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteQuoteRevision: checked });
-                                                                        showToast('Quote revision permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteQuoteRevision: !checked }));
-                                                                        showToast('Failed to update quote revision permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteQuoteRevision')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Customer Approval"
                                                                 description="Allow customer approval step"
                                                                 checked={seller.quoteCustomerApproval}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteCustomerApproval: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteCustomerApproval: checked });
-                                                                        showToast('Customer approval permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteCustomerApproval: !checked }));
-                                                                        showToast('Failed to update customer approval permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteCustomerApproval')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Advance Payment"
                                                                 description="Allow advance payment step"
                                                                 checked={seller.quoteAdvancePayment}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteAdvancePayment: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteAdvancePayment: checked });
-                                                                        showToast('Advance payment permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteAdvancePayment: !checked }));
-                                                                        showToast('Failed to update advance payment permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteAdvancePayment')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Final Payment"
                                                                 description="Allow final payment step"
                                                                 checked={seller.quoteFinalPayment}
+                                                                disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
-                                                                onChange={async (e) => {
-                                                                    const checked = e.target.checked;
-                                                                    setSeller(prev => ({ ...prev, quoteFinalPayment: checked }));
-                                                                    try {
-                                                                        await adminUsersApi.updateSeller(seller.id, { quoteFinalPayment: checked });
-                                                                        showToast('Final payment permission updated', 'success');
-                                                                    } catch (err) {
-                                                                        setSeller(prev => ({ ...prev, quoteFinalPayment: !checked }));
-                                                                        showToast('Failed to update final payment permission', 'error');
-                                                                    }
-                                                                }}
+                                                                onChange={handlePermissionChange('quoteFinalPayment')}
                                                             />
                                                         </div>
                                                     </div>
@@ -1687,37 +1357,35 @@ const SellerDetail = () => {
                                                     label="Customer Image Review"
                                                     description="Allow seller to review categorized customer uploads"
                                                     checked={seller.customerImageReviewEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, customerImageReviewEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { customerImageReviewEnabled: checked });
-                                                            showToast('Customer image review permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, customerImageReviewEnabled: !checked }));
-                                                            showToast('Failed to update customer image review permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('customerImageReviewEnabled')}
                                                 />
 
                                                 <PermissionToggle
                                                     label="Advance Payment System"
                                                     description="Allow seller to manage advance bookings and status"
                                                     checked={seller.advanceBookingEnabled}
+                                                    disabled={!isEditMode}
                                                     activeColor="bg-teal-600" hoverColor="group-hover:text-teal-700"
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, advanceBookingEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { advanceBookingEnabled: checked });
-                                                            showToast('Advance booking permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, advanceBookingEnabled: !checked }));
-                                                            showToast('Failed to update advance booking permission', 'error');
-                                                        }
-                                                    }}
+                                                    onChange={handlePermissionChange('advanceBookingEnabled')}
                                                 />
+                                                {seller.advanceBookingEnabled && (
+                                                    <div className="flex items-center gap-3 pl-12 mt-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+                                                        <span className="text-[10px] font-bold text-slate-600 uppercase">Advance Payment (%):</span>
+                                                        <input
+                                                            type="number"
+                                                            min="0"
+                                                            max="100"
+                                                            placeholder="0"
+                                                            value={seller.advancePaymentPercentage ?? 0}
+                                                            disabled={!isEditMode}
+                                                            onChange={(e) => setSeller(prev => ({ ...prev, advancePaymentPercentage: e.target.value }))}
+                                                            className="w-24 px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                                                        />
+                                                        <span className="text-xs text-slate-500 font-semibold">%</span>
+                                                    </div>
+                                                )}
 
                                             </div>
 
@@ -1731,17 +1399,8 @@ const SellerDetail = () => {
                                                             label="Decoration Add-on"
                                                             description="Enable decoration service options for booking"
                                                             checked={seller.addonDecorationEnabled}
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, addonDecorationEnabled: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { addonDecorationEnabled: checked });
-                                                                    showToast('Decoration add-on status updated', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, addonDecorationEnabled: !checked }));
-                                                                    showToast('Failed to update decoration add-on', 'error');
-                                                                }
-                                                            }}
+                                                            disabled={!isEditMode}
+                                                            onChange={handlePermissionChange('addonDecorationEnabled')}
                                                         />
                                                         {seller.addonDecorationEnabled && (
                                                             <div className="flex items-center gap-2 pl-12">
@@ -1749,17 +1408,10 @@ const SellerDetail = () => {
                                                                 <input
                                                                     type="number"
                                                                     placeholder="Enter price"
-                                                                    value={seller.addonDecorationPrice}
+                                                                    value={seller.addonDecorationPrice ?? 0}
+                                                                    disabled={!isEditMode}
                                                                     onChange={(e) => setSeller(prev => ({ ...prev, addonDecorationPrice: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { addonDecorationPrice: Number(seller.addonDecorationPrice) });
-                                                                            showToast('Decoration price updated', 'success');
-                                                                        } catch (err) {
-                                                                            showToast('Failed to update decoration price', 'error');
-                                                                        }
-                                                                    }}
-                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500"
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-brand-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 />
                                                             </div>
                                                         )}
@@ -1771,18 +1423,9 @@ const SellerDetail = () => {
                                                             label="Bridal Add-on"
                                                             description="Enable bridal package options for booking"
                                                             checked={seller.addonBridalEnabled}
+                                                            disabled={!isEditMode}
                                                             activeColor="bg-pink-500" hoverColor="group-hover:text-pink-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, addonBridalEnabled: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { addonBridalEnabled: checked });
-                                                                    showToast('Bridal add-on status updated', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, addonBridalEnabled: !checked }));
-                                                                    showToast('Failed to update bridal add-on', 'error');
-                                                                }
-                                                            }}
+                                                            onChange={handlePermissionChange('addonBridalEnabled')}
                                                         />
                                                         {seller.addonBridalEnabled && (
                                                             <div className="flex items-center gap-2 pl-12">
@@ -1790,17 +1433,10 @@ const SellerDetail = () => {
                                                                 <input
                                                                     type="number"
                                                                     placeholder="Enter price"
-                                                                    value={seller.addonBridalPrice}
+                                                                    value={seller.addonBridalPrice ?? 0}
+                                                                    disabled={!isEditMode}
                                                                     onChange={(e) => setSeller(prev => ({ ...prev, addonBridalPrice: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { addonBridalPrice: Number(seller.addonBridalPrice) });
-                                                                            showToast('Bridal price updated', 'success');
-                                                                        } catch (err) {
-                                                                            showToast('Failed to update bridal price', 'error');
-                                                                        }
-                                                                    }}
-                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500"
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-pink-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 />
                                                             </div>
                                                         )}
@@ -1812,18 +1448,9 @@ const SellerDetail = () => {
                                                             label="Catering Add-on"
                                                             description="Enable catering services for booking"
                                                             checked={seller.addonCateringEnabled}
+                                                            disabled={!isEditMode}
                                                             activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
-                                                            onChange={async (e) => {
-                                                                const checked = e.target.checked;
-                                                                setSeller(prev => ({ ...prev, addonCateringEnabled: checked }));
-                                                                try {
-                                                                    await adminUsersApi.updateSeller(seller.id, { addonCateringEnabled: checked });
-                                                                    showToast('Catering add-on status updated', 'success');
-                                                                } catch (err) {
-                                                                    setSeller(prev => ({ ...prev, addonCateringEnabled: !checked }));
-                                                                    showToast('Failed to update catering add-on', 'error');
-                                                                }
-                                                            }}
+                                                            onChange={handlePermissionChange('addonCateringEnabled')}
                                                         />
                                                         {seller.addonCateringEnabled && (
                                                             <div className="flex items-center gap-2 pl-12">
@@ -1831,17 +1458,10 @@ const SellerDetail = () => {
                                                                 <input
                                                                     type="number"
                                                                     placeholder="Enter price"
-                                                                    value={seller.addonCateringPrice}
+                                                                    value={seller.addonCateringPrice ?? 0}
+                                                                    disabled={!isEditMode}
                                                                     onChange={(e) => setSeller(prev => ({ ...prev, addonCateringPrice: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { addonCateringPrice: Number(seller.addonCateringPrice) });
-                                                                            showToast('Catering price updated', 'success');
-                                                                        } catch (err) {
-                                                                            showToast('Failed to update catering price', 'error');
-                                                                        }
-                                                                    }}
-                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500"
+                                                                    className="w-28 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-800 focus:outline-none focus:border-amber-500 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 />
                                                             </div>
                                                         )}
@@ -1857,18 +1477,9 @@ const SellerDetail = () => {
                                                         label="Physical Payment Enabled"
                                                         description="Allow customers to pay physically or via QR code"
                                                         checked={seller.physicalPaymentEnabled}
+                                                        disabled={!isEditMode}
                                                         activeColor="bg-emerald-600" hoverColor="group-hover:text-emerald-700"
-                                                        onChange={async (e) => {
-                                                            const checked = e.target.checked;
-                                                            setSeller(prev => ({ ...prev, physicalPaymentEnabled: checked }));
-                                                            try {
-                                                                await adminUsersApi.updateSeller(seller.id, { physicalPaymentEnabled: checked });
-                                                                showToast('Physical payment status updated', 'success');
-                                                            } catch (err) {
-                                                                setSeller(prev => ({ ...prev, physicalPaymentEnabled: !checked }));
-                                                                showToast('Failed to update physical payment status', 'error');
-                                                            }
-                                                        }}
+                                                        onChange={handlePermissionChange('physicalPaymentEnabled')}
                                                     />
 
                                                     {seller.physicalPaymentEnabled && (
@@ -1878,17 +1489,10 @@ const SellerDetail = () => {
                                                                 <input
                                                                     type="text"
                                                                     placeholder="Enter QR Code image URL"
-                                                                    value={seller.paymentQrCode}
+                                                                    value={seller.paymentQrCode || ''}
+                                                                    disabled={!isEditMode}
                                                                     onChange={(e) => setSeller(prev => ({ ...prev, paymentQrCode: e.target.value }))}
-                                                                    onBlur={async () => {
-                                                                        try {
-                                                                            await adminUsersApi.updateSeller(seller.id, { paymentQrCode: seller.paymentQrCode });
-                                                                            showToast('QR Code link updated', 'success');
-                                                                        } catch (err) {
-                                                                            showToast('Failed to update QR Code link', 'error');
-                                                                        }
-                                                                    }}
-                                                                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
+                                                                    className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:border-emerald-600 disabled:bg-slate-100 disabled:cursor-not-allowed"
                                                                 />
                                                             </div>
                                                             {seller.paymentQrCode && (
@@ -1901,9 +1505,6 @@ const SellerDetail = () => {
                                                 </div>
                                             </div>
 
-
-
-
                                         <div className="bg-slate-50 rounded-xl p-5 border border-slate-100 mt-4">
                                             <div className="flex flex-col gap-1 mb-4 border-b border-slate-200 pb-3">
                                                 <h5 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Payment Options</h5>
@@ -1914,33 +1515,15 @@ const SellerDetail = () => {
                                                     label="Cash on Delivery (COD)"
                                                     description="Allow COD for this seller"
                                                     checked={seller.acceptsCOD ?? true}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, acceptsCOD: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { acceptsCOD: checked });
-                                                            showToast('COD permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, acceptsCOD: !checked }));
-                                                            showToast('Failed to update COD permission', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('acceptsCOD')}
                                                 />
                                                 <PermissionToggle
                                                     label="Razorpay (Online)"
                                                     description="Allow Razorpay for this seller"
                                                     checked={seller.acceptsRazorpay ?? true}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, acceptsRazorpay: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { acceptsRazorpay: checked });
-                                                            showToast('Razorpay permission updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, acceptsRazorpay: !checked }));
-                                                            showToast('Failed to update Razorpay permission', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('acceptsRazorpay')}
                                                 />
                                             </div>
                                         </div>
@@ -1956,33 +1539,15 @@ const SellerDetail = () => {
                                                     label="Ticket System"
                                                     description="Show ticketing options for Plan My Event"
                                                     checked={seller.ticketSystemEnabled ?? true}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, ticketSystemEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { ticketSystemEnabled: checked });
-                                                            showToast('Ticket system visibility updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, ticketSystemEnabled: !checked }));
-                                                            showToast('Failed to update ticket system visibility', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('ticketSystemEnabled')}
                                                 />
                                                 <PermissionToggle
                                                     label="Venue Visits"
                                                     description="Allow physical visit requests for venues"
                                                     checked={seller.venueVisitsEnabled ?? true}
-                                                    onChange={async (e) => {
-                                                        const checked = e.target.checked;
-                                                        setSeller(prev => ({ ...prev, venueVisitsEnabled: checked }));
-                                                        try {
-                                                            await adminUsersApi.updateSeller(seller.id, { venueVisitsEnabled: checked });
-                                                            showToast('Venue visits visibility updated', 'success');
-                                                        } catch (err) {
-                                                            setSeller(prev => ({ ...prev, venueVisitsEnabled: !checked }));
-                                                            showToast('Failed to update venue visits visibility', 'error');
-                                                        }
-                                                    }}
+                                                    disabled={!isEditMode}
+                                                    onChange={handlePermissionChange('venueVisitsEnabled')}
                                                 />
                                             </div>
                                         </div>
@@ -2017,7 +1582,9 @@ const SellerDetail = () => {
                                             </h5>
                                             <p className="text-[10px] font-bold text-slate-500 leading-relaxed">Suspend this store immediately from the consumer app in case of policy violations.</p>
                                             <button 
+                                                disabled={!isEditMode}
                                                 onClick={async () => {
+                                                    if (!isEditMode) return;
                                                     try {
                                                         const newStatus = !seller.isShopActive;
                                                         await adminUsersApi.updateSeller(seller.id, { isShopActive: newStatus });
@@ -2027,7 +1594,7 @@ const SellerDetail = () => {
                                                         showToast('Failed to update suspension status', 'error');
                                                     }
                                                 }}
-                                                className="w-full mt-4 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all"
+                                                className="w-full mt-4 py-3 bg-rose-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-rose-200 hover:bg-rose-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                             >
                                                 {seller.isShopActive ? "SUSPEND STORE" : "UNSUSPEND STORE"}
                                             </button>

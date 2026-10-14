@@ -196,17 +196,28 @@ const EventCheckoutPage = () => {
                                 <span className="font-bold text-slate-800">Total Amount</span>
                                 <span className="font-bold text-lg text-slate-500">₹{totalAmount.toLocaleString()}</span>
                             </div>
-                            <div className="flex justify-between items-center bg-purple-50 p-3 rounded-xl border border-purple-100">
-                                <div className="flex flex-col">
-                                    <span className="font-black text-purple-900">Advance Token to Pay Later</span>
-                                    <span className="text-[10px] text-purple-600 font-bold uppercase tracking-wider">
-                                        ({settings?.bookingControl?.advanceBookingLimitPercent ?? 20}% required to confirm)
-                                    </span>
-                                </div>
-                                <span className="font-black text-xl text-purple-700">
-                                    ₹{Math.round((totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100).toLocaleString()}
-                                </span>
-                            </div>
+                            {(() => {
+                                const isAdvanceEnabled = Boolean(selectedSeller?.advanceBookingEnabled);
+                                const sellerPercent = Number(selectedSeller?.advancePaymentPercentage);
+
+                                if (!isAdvanceEnabled || isNaN(sellerPercent) || sellerPercent <= 0) return null;
+
+                                const advancePercent = sellerPercent;
+
+                                return (
+                                    <div className="flex justify-between items-center bg-purple-50 p-3 rounded-xl border border-purple-100">
+                                        <div className="flex flex-col">
+                                            <span className="font-black text-purple-900">Advance Token to Pay Later</span>
+                                            <span className="text-[10px] text-purple-600 font-bold uppercase tracking-wider">
+                                                ({advancePercent}% required to confirm)
+                                            </span>
+                                        </div>
+                                        <span className="font-black text-xl text-purple-700">
+                                            ₹{Math.round((totalAmount * advancePercent) / 100).toLocaleString('en-IN')}
+                                        </span>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
 
@@ -223,7 +234,7 @@ const EventCheckoutPage = () => {
                         disabled={isSending}
                         className={`w-full font-bold rounded-xl py-4 transition-all shadow-lg ${isSending ? 'bg-slate-300 text-slate-500' : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-500/30 hover:scale-[1.02] active:scale-95'}`}
                     >
-                        {isSending ? 'Sending Request...' : 'Send Request to Provider'}
+                        {isSending ? 'Sending Request...' : 'Send Request to Seller'}
                     </button>
                 </div>
             </div>
