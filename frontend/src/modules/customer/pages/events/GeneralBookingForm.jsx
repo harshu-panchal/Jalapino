@@ -18,13 +18,13 @@ import { toast } from 'sonner';
 const GeneralBookingForm = () => {
     const navigate = useNavigate();
     const routerLocation = useLocation();
-    const { venue } = routerLocation.state || {}; // Pass selected venue from discover screen
+    const { venue, prefilledDate, prefilledTimeSlot } = routerLocation.state || {}; // Pass selected venue from discover screen
 
     const [bookingType, setBookingType] = useState('Family');
-    const [bookingDate, setBookingDate] = useState('');
-    const [timeSlot, setTimeSlot] = useState('');
+    const [bookingDate, setBookingDate] = useState(prefilledDate || '');
+    const [timeSlot, setTimeSlot] = useState(prefilledTimeSlot || '');
     const [members, setMembers] = useState([
-        { name: '', age: '', gender: 'Male', mobileNumber: '' }
+        { name: '', age: '', gender: 'Male', mobileNumber: '', category: 'Adult' }
     ]);
     const [paymentMethod, setPaymentMethod] = useState('COD');
     const [isLoading, setIsLoading] = useState(false);
@@ -33,6 +33,41 @@ const GeneralBookingForm = () => {
     const [addonDecoration, setAddonDecoration] = useState(false);
     const [addonBridal, setAddonBridal] = useState(false);
     const [addonCatering, setAddonCatering] = useState(false);
+
+    // Compute dynamic time slots based on ticket or seller settings
+    const availableSlots = React.useMemo(() => {
+        // 1. If ticket has custom time slots defined
+        const ticketSlots = venue?.tickets?.[0]?.timeSlots;
+        if (venue?.tickets?.[0]?.timeSlotsEnabled && Array.isArray(ticketSlots) && ticketSlots.length > 0) {
+            return ticketSlots.map(s => {
+                const parts = [];
+                if (s.date) parts.push(s.date);
+                if (s.startTime && s.endTime) parts.push(`${s.startTime} - ${s.endTime}`);
+                else if (s.startTime) parts.push(s.startTime);
+                return parts.join(' · ') || `${s.startTime || ''} - ${s.endTime || ''}`;
+            }).filter(Boolean);
+        }
+
+        // 2. If seller has strict operating hours set by admin / profile
+        const seller = venue?.sellerId;
+        if (seller && (seller.shopTimingsEnabled || seller.shopOpeningTime || seller.shopClosingTime)) {
+            const openTime = seller.shopOpeningTime || "09:00 AM";
+            const closeTime = seller.shopClosingTime || "09:00 PM";
+            return [
+                `${openTime} - ${closeTime}`,
+                "Morning Slot (Opening to Afternoon)",
+                "Evening Slot (Afternoon to Closing)"
+            ];
+        }
+
+        // 3. Fallback standard slots
+        return [
+            "10:00 AM - 12:00 PM",
+            "12:00 PM - 02:00 PM",
+            "02:00 PM - 04:00 PM",
+            "04:00 PM - 06:00 PM"
+        ];
+    }, [venue]);
 
     useEffect(() => {
         if (!venue) {
@@ -48,7 +83,7 @@ const GeneralBookingForm = () => {
     }, [venue]);
 
     const handleAddMember = () => {
-        setMembers([...members, { name: '', age: '', gender: 'Male', mobileNumber: '' }]);
+        setMembers([...members, { name: '', age: '', gender: 'Male', mobileNumber: '', category: 'Adult' }]);
     };
 
     const handleRemoveMember = (index) => {
@@ -70,9 +105,12 @@ const GeneralBookingForm = () => {
         }
 
         // Validate all member details
+        const isChildPolicy = Boolean(venue?.sellerId?.childTicketPolicyEnabled);
+        const freeAgeLimit = Number(venue?.sellerId?.childFreeAgeLimit ?? 5);
+
         for (let i = 0; i < members.length; i++) {
             const m = members[i];
-            if (!m.name || !m.age || !m.mobileNumber) {
+            if (!m.name || m.age === undefined || m.age === '' || !m.mobileNumber) {
                 toast.error(`Please fill details for member #${i + 1}`);
                 return;
             }
@@ -80,8 +118,8 @@ const GeneralBookingForm = () => {
                 toast.error(`Mobile number for member #${i + 1} must be exactly 10 digits.`);
                 return;
             }
-            if (Number(m.age) < 5) {
-                toast.error(`Member ${m.name} is below 5 years minimum age limit.`);
+            if (Number(m.age) < 1) {
+                toast.error(`Age for member #${i + 1} must be at least 1.`);
                 return;
             }
         }
@@ -170,14 +208,40 @@ const GeneralBookingForm = () => {
 
     if (!venue) return null;
 
-    const pricePerMember = venue.price || 1000;
+    const adultPricePerMember = venue.price || 1000;
+    const isChildPolicyEnabled = Boolean(venue?.sellerId?.childTicketPolicyEnabled);
+    const childFreeLimit = Number(venue?.sellerId?.childFreeAgeLimit ?? 5);
+    const childMaxLimit = Number(venue?.sellerId?.childMaxAgeLimit ?? 12);
+    const childPriceSetting = Number(venue?.sellerId?.childTicketPrice ?? 0);
+
+    // Calculate member-wise ticket cost
+    let paidAdultsCount = 0;
+    let paidChildrenCount = 0;
+    let freeChildrenCount = 0;
+    let baseAmount = 0;
+
+    members.forEach(m => {
+        const isChild = m.category === 'Child' || (Number(m.age) > 0 && Number(m.age) <= childMaxLimit);
+        if (isChild && isChildPolicyEnabled) {
+            if (Number(m.age) <= childFreeLimit) {
+                freeChildrenCount += 1;
+            } else {
+                paidChildrenCount += 1;
+                baseAmount += childPriceSetting > 0 ? childPriceSetting : adultPricePerMember;
+            }
+        } else {
+            paidAdultsCount += 1;
+            baseAmount += adultPricePerMember;
+        }
+    });
+
+    const pricePerMember = adultPricePerMember;
     
     // Add-on prices calculation
     const decorationPrice = (venue.sellerId?.addonDecorationEnabled && addonDecoration) ? (venue.sellerId.addonDecorationPrice || 0) : 0;
     const bridalPrice = (venue.sellerId?.addonBridalEnabled && addonBridal) ? (venue.sellerId.addonBridalPrice || 0) : 0;
     const cateringPrice = (venue.sellerId?.addonCateringEnabled && addonCatering) ? (venue.sellerId.addonCateringPrice || 0) : 0;
     
-    const baseAmount = pricePerMember * members.length;
     const addonsAmount = decorationPrice + bridalPrice + cateringPrice;
     const totalAmount = baseAmount + addonsAmount;
 
@@ -267,10 +331,24 @@ const GeneralBookingForm = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Booking Details Card */}
                     <div className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
-                        <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
-                            <EventIcon className="text-purple-600" fontSize="small" />
-                            Booking Schedule & Details
-                        </h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                            <h3 className="text-sm font-black text-slate-800 flex items-center gap-1.5">
+                                <EventIcon className="text-purple-600" fontSize="small" />
+                                Booking Schedule & Details
+                            </h3>
+                            <div className="flex flex-wrap items-center gap-2">
+                                {venue?.sellerId?.shopTimingsEnabled && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-50 text-[10px] font-bold text-purple-700 border border-purple-100">
+                                        ⏰ Hours: {venue.sellerId.shopOpeningTime || '09:00 AM'} - {venue.sellerId.shopClosingTime || '09:00 PM'}
+                                    </span>
+                                )}
+                                {venue?.sellerId?.childTicketPolicyEnabled && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-700 border border-emerald-100">
+                                        🧒 Child Policy: Free till {venue.sellerId.childFreeAgeLimit ?? 5} yrs
+                                    </span>
+                                )}
+                            </div>
+                        </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
@@ -280,6 +358,7 @@ const GeneralBookingForm = () => {
                                     onChange={(e) => setBookingType(e.target.value)}
                                     className="w-full border border-slate-200 rounded-xl p-2.5 text-sm outline-none focus:ring-2 focus:ring-purple-600 bg-white"
                                 >
+                                    <option value="Individual">Individual</option>
                                     <option value="Family">Family</option>
                                     <option value="Group">Group</option>
                                     <option value="Corporate">Corporate</option>
@@ -314,10 +393,9 @@ const GeneralBookingForm = () => {
                                         className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-600 text-slate-700 bg-white"
                                     >
                                         <option value="">Select Time Slot</option>
-                                        <option value="10:00 AM - 12:00 PM">10:00 AM - 12:00 PM</option>
-                                        <option value="12:00 PM - 02:00 PM">12:00 PM - 02:00 PM</option>
-                                        <option value="02:00 PM - 04:00 PM">02:00 PM - 04:00 PM</option>
-                                        <option value="04:00 PM - 06:00 PM">04:00 PM - 06:00 PM</option>
+                                        {availableSlots.map((slot, sIdx) => (
+                                            <option key={sIdx} value={slot}>{slot}</option>
+                                        ))}
                                     </select>
                                 </div>
                             </div>
@@ -353,7 +431,48 @@ const GeneralBookingForm = () => {
                                             <DeleteIcon sx={{ fontSize: 16 }} />
                                         </button>
                                     )}
-                                    <p className="text-[10px] font-black uppercase text-slate-400">Member #{index + 1}</p>
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <p className="text-[10px] font-black uppercase text-slate-400">Member #{index + 1}</p>
+                                        
+                                        {/* Member Profile Category: Adult vs Child Radio Buttons */}
+                                        <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-xl border border-slate-200">
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
+                                                <input 
+                                                    type="radio"
+                                                    name={`memberCategory-${index}`}
+                                                    value="Adult"
+                                                    checked={(member.category || 'Adult') === 'Adult'}
+                                                    onChange={() => handleMemberChange(index, 'category', 'Adult')}
+                                                    className="w-3.5 h-3.5 text-purple-600 focus:ring-purple-500"
+                                                />
+                                                🧑 Adult
+                                            </label>
+                                            <label className="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-700">
+                                                <input 
+                                                    type="radio"
+                                                    name={`memberCategory-${index}`}
+                                                    value="Child"
+                                                    checked={member.category === 'Child'}
+                                                    onChange={() => handleMemberChange(index, 'category', 'Child')}
+                                                    className="w-3.5 h-3.5 text-purple-600 focus:ring-purple-500"
+                                                />
+                                                🧒 Child
+                                            </label>
+                                        </div>
+
+                                        {/* Child Policy Pricing Badge for this member */}
+                                        {isChildPolicyEnabled && (member.category === 'Child' || (Number(member.age) > 0 && Number(member.age) <= childMaxLimit)) && (
+                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                                Number(member.age) <= childFreeLimit
+                                                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                    : 'bg-purple-100 text-purple-700 border border-purple-200'
+                                            }`}>
+                                                {Number(member.age) <= childFreeLimit 
+                                                    ? `🎉 FREE Ticket (Age ≤ ${childFreeLimit})`
+                                                    : `🎟️ Child Ticket: ₹${childPriceSetting > 0 ? childPriceSetting : adultPricePerMember}`}
+                                            </span>
+                                        )}
+                                    </div>
                                     
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                         <div className="sm:col-span-2">
@@ -529,10 +648,31 @@ const GeneralBookingForm = () => {
 
                         {/* Invoice details */}
                         <div className="border-t border-slate-100 pt-4 space-y-2">
-                            <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
-                                <span>Ticket Price ({members.length} x ₹{pricePerMember})</span>
-                                <span>₹{baseAmount}</span>
-                            </div>
+                            {isChildPolicyEnabled ? (
+                                <>
+                                    <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                                        <span>Adult Tickets ({paidAdultsCount} x ₹{adultPricePerMember})</span>
+                                        <span>₹{paidAdultsCount * adultPricePerMember}</span>
+                                    </div>
+                                    {paidChildrenCount > 0 && (
+                                        <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                                            <span>Child Tickets ({paidChildrenCount} x ₹{childPriceSetting > 0 ? childPriceSetting : adultPricePerMember})</span>
+                                            <span>₹{paidChildrenCount * (childPriceSetting > 0 ? childPriceSetting : adultPricePerMember)}</span>
+                                        </div>
+                                    )}
+                                    {freeChildrenCount > 0 && (
+                                        <div className="flex justify-between items-center text-xs text-emerald-600 font-bold">
+                                            <span>Child Tickets (Free, Age ≤ {childFreeLimit}) x {freeChildrenCount}</span>
+                                            <span className="uppercase text-[10px] bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">FREE</span>
+                                        </div>
+                                    )}
+                                </>
+                            ) : (
+                                <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
+                                    <span>Ticket Price ({members.length} x ₹{pricePerMember})</span>
+                                    <span>₹{baseAmount}</span>
+                                </div>
+                            )}
                             {addonDecoration && (
                                 <div className="flex justify-between items-center text-xs text-slate-500 font-bold">
                                     <span>Decoration Service Add-on</span>

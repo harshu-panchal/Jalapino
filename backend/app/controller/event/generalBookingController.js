@@ -39,42 +39,71 @@ export const createBooking = async (req, res) => {
       return handleResponse(res, 404, 'Venue not found');
     }
 
-    // 1. Validate Age Eligibility (e.g. Min Age: 10)
-    // We can use a default of 5 if not configured on the venue
-    const minAge = 5; 
+    const Seller = await import('../../models/seller.js').then((m) => m.default);
+    const seller = await Seller.findById(venue.sellerId);
+
+    // 1. Validate Member details & Age Eligibility
+    const isChildPolicyEnabled = Boolean(seller?.childTicketPolicyEnabled);
+    const childFreeLimit = Number(seller?.childFreeAgeLimit ?? 5);
+    const childMaxLimit = Number(seller?.childMaxAgeLimit ?? 12);
+    const childPriceSetting = Number(seller?.childTicketPrice ?? 0);
+
     for (const m of members) {
-      if (!m.name || !m.age || !m.gender || !m.mobileNumber) {
+      if (!m.name || m.age === undefined || m.age === null || !m.gender || !m.mobileNumber) {
         return handleResponse(res, 400, 'All member details (Name, Age, Gender, Mobile) are required.');
       }
-      if (Number(m.age) < minAge) {
-        return handleResponse(res, 400, `Member ${m.name} is not eligible. Minimum age required is ${minAge} years.`);
+      const ageNum = Number(m.age);
+      if (isNaN(ageNum) || ageNum < 0) {
+        return handleResponse(res, 400, `Valid age is required for member ${m.name}.`);
+      }
+      // If child policy is NOT enabled, maintain previous general minimum age of 1 year
+      if (!isChildPolicyEnabled && ageNum < 1) {
+        return handleResponse(res, 400, `Member ${m.name} must be at least 1 year old.`);
       }
     }
 
     // 2. Validate Capacity Limit
     const targetDate = new Date(bookingDate);
-    const availability = await SellerVenueAvailability.findOne({
+    const startOfDay = new Date(targetDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(targetDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const ticketCapacity = Number(venue.tickets?.[0]?.capacity ?? venue.capacityMax ?? 50);
+    const bookedTicketCount = await MemberTicket.countDocuments({
       venueId,
-      date: targetDate
+      createdAt: { $gte: startOfDay, $lte: endOfDay },
+      status: { $ne: 'Cancelled' }
     });
 
-    const maxCap = venue.capacityMax || 50; // Default capacity limit
-    const bookedCap = availability 
-      ? availability.bookedSlots.filter(s => s === timeSlot).length * 10 // Mock booking count scale or actual count
-      : 0;
-
-    const remainingCap = maxCap - bookedCap;
+    const remainingCap = Math.max(0, ticketCapacity - bookedTicketCount);
+    if (remainingCap <= 0) {
+      return handleResponse(res, 400, 'All tickets for this venue are sold out (Capacity full).');
+    }
     if (members.length > remainingCap) {
-      return handleResponse(res, 400, `Selected time slot is full. Remaining capacity: ${remainingCap}`);
+      return handleResponse(res, 400, `Not enough tickets available. Remaining capacity: ${remainingCap}`);
     }
 
-    // 3. Calculate Total Price
-    // Price can be per ticket/member or a flat venue booking fee. Let's charge per member.
-    const pricePerMember = venue.price || 1000;
+    // 3. Calculate Total Price with Adult / Child Differentiation
+    const adultPricePerMember = Number(venue.tickets?.[0]?.salePrice || venue.tickets?.[0]?.price || venue.price || 1000);
+    let totalTicketAmount = 0;
+
+    for (const m of members) {
+      const isChild = m.category === 'Child' || (Number(m.age) <= childMaxLimit);
+      if (isChild && isChildPolicyEnabled) {
+        if (Number(m.age) <= childFreeLimit) {
+          // Free ticket for children below or equal to free limit
+          totalTicketAmount += 0;
+        } else {
+          // If seller provided specific child ticket price > 0, charge that. Otherwise standard price.
+          totalTicketAmount += childPriceSetting > 0 ? childPriceSetting : adultPricePerMember;
+        }
+      } else {
+        totalTicketAmount += adultPricePerMember;
+      }
+    }
     
     // Add-ons calculation
-    const Seller = await import('../../models/seller.js').then((m) => m.default);
-    const seller = await Seller.findById(venue.sellerId);
     let addonsAmount = 0;
     const selectedAddons = req.body.addons || {};
     const addonDetails = [];
@@ -92,7 +121,7 @@ export const createBooking = async (req, res) => {
       addonDetails.push({ name: 'Catering', price: seller.addonCateringPrice || 0 });
     }
 
-    const totalAmount = (pricePerMember * members.length) + addonsAmount;
+    const totalAmount = totalTicketAmount + addonsAmount;
 
     // 4. Create General Booking record
     const booking = await GeneralBooking.create({
@@ -144,13 +173,14 @@ export const createBooking = async (req, res) => {
       // Generate Tickets & QR Codes for each member
       for (const m of members) {
         const { ticketId, secureQrToken } = generateTicketDetails();
+        const memberCategory = m.category ? m.category : (Number(m.age) <= childMaxLimit ? 'Child' : 'Adult');
         await MemberTicket.create({
           bookingId: booking._id,
           customerId,
           sellerId: venue.sellerId,
           venueId,
           memberName: m.name,
-          category: Number(m.age) >= 18 ? 'Adult' : 'Child',
+          category: memberCategory,
           gender: m.gender,
           age: Number(m.age),
           mobileNumber: m.mobileNumber,
@@ -225,13 +255,14 @@ export const verifyPayment = async (req, res) => {
     // Generate member tickets
     for (const m of members) {
       const { ticketId, secureQrToken } = generateTicketDetails();
+      const memberCategory = m.category ? m.category : (Number(m.age) <= 12 ? 'Child' : 'Adult');
       await MemberTicket.create({
         bookingId: booking._id,
         customerId: booking.customerId,
         sellerId: booking.sellerId,
         venueId: booking.venueId._id,
         memberName: m.name,
-        category: Number(m.age) >= 18 ? 'Adult' : 'Child',
+        category: memberCategory,
         gender: m.gender,
         age: Number(m.age),
         mobileNumber: m.mobileNumber,
@@ -511,6 +542,29 @@ export const reviewAddonService = async (req, res) => {
     await booking.save();
 
     return handleResponse(res, 200, 'Review submitted successfully.', booking);
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+// 10. Get Venue Ticket Live Capacity (Sold and Remaining)
+export const getVenueTicketCapacity = async (req, res) => {
+  try {
+    const { venueId } = req.params;
+    const { date } = req.query;
+
+    const query = { venueId, status: { $ne: 'Cancelled' } };
+    if (date) {
+      const targetDate = new Date(date);
+      const startOfDay = new Date(targetDate);
+      startOfDay.setHours(0, 0, 0, 0);
+      const endOfDay = new Date(targetDate);
+      endOfDay.setHours(23, 59, 59, 999);
+      query.createdAt = { $gte: startOfDay, $lte: endOfDay };
+    }
+
+    const bookedCount = await MemberTicket.countDocuments(query);
+    return handleResponse(res, 200, 'Capacity fetched', { bookedCount });
   } catch (error) {
     return handleResponse(res, 500, error.message);
   }

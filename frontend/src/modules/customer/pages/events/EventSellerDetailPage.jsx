@@ -24,8 +24,10 @@ const resolveProductImageUrl = (path) => (
 );
 
 const getProductPricing = (product) => {
-    const originalPrice = Number(product.price) || 0;
-    const salePrice = Number(product.salePrice) || 0;
+    const variantPrice = product?.selectedVariant?.price ?? product?.price;
+    const variantSalePrice = product?.selectedVariant?.salePrice ?? product?.salePrice;
+    const originalPrice = Number(variantPrice) || 0;
+    const salePrice = Number(variantSalePrice) || 0;
     const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
     return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice };
 };
@@ -255,6 +257,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [failedImages, setFailedImages] = useState(new Set());
     const [isFullScreenImage, setIsFullScreenImage] = useState(false);
     const [modalSelectedVariant, setModalSelectedVariant] = useState(null);
+    const [ticketSoldMap, setTicketSoldMap] = useState({});
 
     const openProductGallery = (product) => {
         const imagesSet = new Set();
@@ -282,8 +285,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         }
 
         if (images.length > 0) {
+            const currentlySelected = selectedProducts.find(p => p._id === product._id);
+            const initialVariant = currentlySelected?.selectedVariant
+                || (product.variants && product.variants.length > 0 ? product.variants[0] : null);
+
             setImagePreview({ images, activeIndex: 0, name: product.name, product: product });
-            setModalSelectedVariant(product.variants && product.variants.length > 0 ? product.variants[0] : null);
+            setModalSelectedVariant(initialVariant);
             setZoomLevel(1);
             setFailedImages(new Set());
             setIsFullScreenImage(false);
@@ -358,15 +365,38 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 const responseData = response.data?.result || response.data?.results || response.data?.data || [];
                 const sellerProducts = Array.isArray(responseData) ? responseData : (responseData.items || []);
                 setProducts(sellerProducts);
+
+                // Fetch dynamic booked ticket capacity for ticket products
+                const ticketProducts = sellerProducts.filter(p => p.tickets?.length > 0);
+                if (ticketProducts.length > 0) {
+                    Promise.all(ticketProducts.map(p =>
+                        axiosInstance.get(`/general-booking/capacity/${p._id}${activeDate ? `?date=${activeDate}` : ''}`)
+                            .then(res => ({ id: p._id, count: res.data?.result?.bookedCount || 0 }))
+                            .catch(() => ({ id: p._id, count: 0 }))
+                    )).then(results => {
+                        const mapping = {};
+                        results.forEach(r => { mapping[r.id] = r.count; });
+                        setTicketSoldMap(mapping);
+                    }).catch(() => {});
+                }
                 try {
                     const savedSelection = JSON.parse(sessionStorage.getItem(selectedProductsStorageKey) || '[]');
-                    const savedSelections = new Map(savedSelection.map(item => [String(item.productId), item]));
-                    setSelectedProducts(sellerProducts
-                        .filter(product => savedSelections.has(String(product._id)))
-                        .map(product => {
-                            const saved = savedSelections.get(String(product._id));
-                            return { ...product, quantity: Number(saved.quantity) || 1, selectedColors: saved.selectedColors || [] };
-                        }));
+                    const productsMap = new Map(sellerProducts.map(p => [String(p._id), p]));
+                    const restored = [];
+                    for (const item of savedSelection) {
+                        const baseProduct = productsMap.get(String(item.productId));
+                        if (baseProduct) {
+                            restored.push({
+                                ...baseProduct,
+                                quantity: Number(item.quantity) || 1,
+                                selectedColors: item.selectedColors || [],
+                                ...(item.selectedVariant ? { selectedVariant: item.selectedVariant } : {}),
+                                ...(item.price !== undefined ? { price: item.price } : {}),
+                                ...(item.salePrice !== undefined ? { salePrice: item.salePrice } : {})
+                            });
+                        }
+                    }
+                    setSelectedProducts(restored);
                 } catch {
                     setSelectedProducts([]);
                 }
@@ -433,7 +463,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         if (isLoadingProducts) return;
         try {
             sessionStorage.setItem(selectedProductsStorageKey, JSON.stringify(
-                selectedProducts.map(({ _id, quantity, selectedColors = [] }) => ({ productId: _id, quantity, selectedColors }))
+                selectedProducts.map(({ _id, quantity, selectedColors = [], selectedVariant, price, salePrice }) => ({
+                    productId: _id,
+                    quantity,
+                    selectedColors,
+                    selectedVariant,
+                    price,
+                    salePrice
+                }))
             ));
         } catch (error) {
             console.warn('Could not preserve selected event products:', error);
@@ -508,18 +545,31 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     const handleProductQuantityChange = (product, change) => {
         setSelectedProducts(prev => {
-            const selectedProduct = prev.find(p => p._id === product._id);
+            const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || 'default';
+            const selectedProduct = prev.find(p => p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey);
             const nextQuantity = (selectedProduct?.quantity || 0) + change;
 
             if (nextQuantity <= 0) {
-                return prev.filter(p => p._id !== product._id);
+                return prev.filter(p => !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey));
             }
 
             if (!selectedProduct) {
                 return [...prev, { ...product, quantity: nextQuantity }];
             }
 
-            return prev.map(p => p._id === product._id ? { ...p, quantity: nextQuantity } : p);
+            return prev.map(p => {
+                const pVariantKey = p.selectedVariant?.sku || p.selectedVariant?.name || 'default';
+                if (p._id === product._id && pVariantKey === variantKey) {
+                    return {
+                        ...p,
+                        quantity: nextQuantity,
+                        ...(product.selectedVariant ? { selectedVariant: product.selectedVariant } : {}),
+                        ...(product.price !== undefined ? { price: product.price } : {}),
+                        ...(product.salePrice !== undefined ? { salePrice: product.salePrice } : {})
+                    };
+                }
+                return p;
+            });
         });
     };
 
@@ -571,7 +621,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 customNotes,
                 customBudget,
                 selectedProducts: selectedProducts.map(p => p._id),
-                selectedProductQuantities: selectedProducts.map(({ _id, quantity }) => ({ productId: _id, quantity })),
+                selectedProductQuantities: selectedProducts.map(({ _id, quantity, selectedVariant }) => ({ productId: _id, quantity, selectedVariant })),
                 selectedProductColors: selectedProducts
                     .filter(product => product.selectedColors?.length)
                     .map(({ _id, name, selectedColors }) => ({ productId: _id, productName: name, colors: selectedColors }))
@@ -1102,8 +1152,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                         ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {products.map(product => {
-                                    const isSelected = selectedProducts.find(p => p._id === product._id);
-                                    const pricing = getProductPricing(product);
+                                    const matchingSelected = selectedProducts.filter(p => p._id === product._id);
+                                    const isSelected = matchingSelected.length > 0;
+                                    const totalQuantity = matchingSelected.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+                                    const totalPrice = matchingSelected.reduce((sum, p) => sum + (getProductPricing(p).unitPrice * (Number(p.quantity) || 1)), 0);
+                                    const totalOriginalPrice = matchingSelected.reduce((sum, p) => sum + (getProductPricing(p).originalPrice * (Number(p.quantity) || 1)), 0);
+                                    const hasAnySalePrice = matchingSelected.some(p => getProductPricing(p).hasSalePrice);
+                                    const defaultPricing = getProductPricing(product);
                                     const productImage = resolveProductImageUrl(product.mainImage || product.galleryImages?.[0]);
                                     return (
                                         <div
@@ -1133,31 +1188,55 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
                                                     />
                                                 </button>
-                                                <div className="min-w-0">
-                                                    <h4 className="font-bold text-sm text-slate-800 truncate">{product.name}</h4>
+                                                <div className="min-w-0 flex-1">
+                                                    <h4 className="font-bold text-sm text-slate-800 truncate">
+                                                        {product.name}
+                                                    </h4>
+                                                    {matchingSelected.length > 0 && matchingSelected.some(p => p.selectedVariant?.name) && (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {matchingSelected.map((item, idx) => item.selectedVariant?.name ? (
+                                                                <span key={item.selectedVariant?.sku || item.selectedVariant?.name || idx} className="text-[10px] font-semibold text-purple-700 bg-purple-100/70 px-1.5 py-0.5 rounded border border-purple-200">
+                                                                    {item.selectedVariant.name} × {item.quantity}
+                                                                </span>
+                                                            ) : null)}
+                                                        </div>
+                                                    )}
                                                     <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{product.description}</p>
                                                     {product.tickets?.length > 0 && (
                                                         <div className="mt-2 space-y-1.5">
-                                                            {product.tickets.map((ticket, ticketIndex) => (
-                                                                <div key={ticket._id || ticketIndex} className="rounded-lg bg-purple-50/70 border border-purple-100 px-2.5 py-2">
-                                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
-                                                                        <span className="font-bold text-slate-700">{ticket.name}</span>
-                                                                        <span className="font-extrabold text-purple-700">₹{Number(ticket.price || 0).toLocaleString('en-IN')}</span>
-                                                                        {ticket.salePrice !== undefined && ticket.salePrice !== null && ticket.salePrice !== "" && (
-                                                                            <span className="text-slate-500">Sale: ₹{Number(ticket.salePrice).toLocaleString('en-IN')}</span>
+                                                            {product.tickets.map((ticket, ticketIndex) => {
+                                                                const soldCount = ticketSoldMap[product._id] || 0;
+                                                                const totalCap = Number(ticket.capacity ?? 0);
+                                                                const remainingCap = Math.max(0, totalCap - soldCount);
+                                                                const isSoldOut = totalCap > 0 && remainingCap <= 0;
+
+                                                                return (
+                                                                    <div key={ticket._id || ticketIndex} className="rounded-lg bg-purple-50/70 border border-purple-100 px-2.5 py-2">
+                                                                        <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                                                                            <span className="font-bold text-slate-800">{ticket.name}</span>
+                                                                            {ticket.capacity !== undefined && ticket.capacity !== null && (
+                                                                                <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
+                                                                                    isSoldOut 
+                                                                                        ? 'bg-red-100 text-red-600 border border-red-200' 
+                                                                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                                }`}>
+                                                                                    {isSoldOut ? 'Sold Out' : `Capacity: ${remainingCap} Left`}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {ticket.instructions && (
+                                                                            <p className="text-[10px] text-slate-600 mt-1 font-medium bg-white/70 p-1.5 rounded border border-purple-100/60">
+                                                                                📋 {ticket.instructions}
+                                                                            </p>
                                                                         )}
-                                                                        {ticket.capacity !== undefined && ticket.capacity !== null && (
-                                                                            <span className="text-slate-500">Capacity: {ticket.capacity}</span>
+                                                                        {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
+                                                                            <p className="text-[10px] text-slate-500 mt-1">
+                                                                                {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
+                                                                            </p>
                                                                         )}
                                                                     </div>
-                                                                    {ticket.instructions && <p className="text-[10px] text-slate-500 mt-0.5">{ticket.instructions}</p>}
-                                                                    {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
-                                                                        <p className="text-[10px] text-slate-500 mt-0.5">
-                                                                            {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
                                                 </div>
@@ -1166,8 +1245,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <div className="mt-3 rounded-xl border border-purple-100 bg-white p-3">
                                                     <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Choose colors for {product.name}</p>
                                                     <div className="flex flex-wrap gap-2">
-                                                        {[...new Set([...product.colors, ...(isSelected.selectedColors || [])])].map((color, colorIndex) => {
-                                                            const isColorSelected = (isSelected.selectedColors || []).includes(color);
+                                                        {[...new Set([...product.colors, ...(matchingSelected[0]?.selectedColors || [])])].map((color, colorIndex) => {
+                                                            const isColorSelected = (matchingSelected[0]?.selectedColors || []).includes(color);
                                                             return (
                                                                 <button
                                                                     key={`${color}-${colorIndex}`}
@@ -1185,7 +1264,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             <input
                                                                 type="color"
                                                                 aria-label={`Choose a custom color for ${product.name}`}
-                                                                value={[...(isSelected.selectedColors || [])].reverse().find(color => /^#[0-9a-f]{6}$/i.test(color)) || '#8b5cf6'}
+                                                                value={[...(matchingSelected[0]?.selectedColors || [])].reverse().find(color => /^#[0-9a-f]{6}$/i.test(color)) || '#8b5cf6'}
                                                                 onChange={(e) => handleProductColorAdd(product._id, e.target.value)}
                                                                 className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
                                                             />
@@ -1196,47 +1275,93 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             )}
                                             <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
                                                 <span className="flex flex-wrap items-center gap-x-2 font-extrabold text-sm text-purple-600">
-                                                    {pricing.hasSalePrice && (
-                                                        <span className="text-xs font-semibold text-slate-400 line-through">
-                                                            ₹{(pricing.originalPrice * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}
-                                                        </span>
+                                                    {isSelected ? (
+                                                        <>
+                                                            {hasAnySalePrice && totalOriginalPrice > totalPrice && (
+                                                                <span className="text-xs font-semibold text-slate-400 line-through">
+                                                                    ₹{totalOriginalPrice.toLocaleString('en-IN')}
+                                                                </span>
+                                                            )}
+                                                            <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+                                                            {totalQuantity > 1 && (
+                                                                <span className="text-[10px] font-semibold text-slate-400">({totalQuantity} items)</span>
+                                                            )}
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {defaultPricing.hasSalePrice && (
+                                                                <span className="text-xs font-semibold text-slate-400 line-through">
+                                                                    ₹{defaultPricing.originalPrice.toLocaleString('en-IN')}
+                                                                </span>
+                                                            )}
+                                                            <span>₹{defaultPricing.unitPrice.toLocaleString('en-IN')}</span>
+                                                        </>
                                                     )}
-                                                    <span>₹{(pricing.unitPrice * (Number(isSelected?.quantity) || 1)).toLocaleString('en-IN')}</span>
-                                                    {isSelected?.quantity > 1 && <span className="text-[10px] font-semibold text-slate-400">({isSelected.quantity} × ₹{pricing.unitPrice.toLocaleString('en-IN')})</span>}
                                                 </span>
                                                 <div className="flex items-center gap-2">
-                                                    {product.tickets?.length > 0 ? (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                const venueObj = {
-                                                                    _id: product._id,
-                                                                    name: product.name || selectedSeller?.shopName || selectedSeller?.name,
-                                                                    price: Number(product.tickets?.[0]?.salePrice || product.tickets?.[0]?.price || product.price || 1000),
-                                                                    sellerId: selectedSeller,
-                                                                    tickets: product.tickets || [],
-                                                                };
-                                                                navigate('/plan-my-event/booking', { state: { venue: venueObj } });
-                                                            }}
-                                                            className="text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95 transition-all flex items-center gap-1.5"
-                                                        >
-                                                            🎟️ Book Tickets
-                                                        </button>
-                                                    ) : (product.isDelivery || product.isRental) ? (isSelected ? (
+                                                    {product.tickets?.length > 0 ? (() => {
+                                                        const soldCount = ticketSoldMap[product._id] || 0;
+                                                        const totalCap = Number(product.tickets[0]?.capacity ?? 0);
+                                                        const remainingCap = Math.max(0, totalCap - soldCount);
+                                                        const isSoldOut = totalCap > 0 && remainingCap <= 0;
+
+                                                        return (
+                                                            <button
+                                                                type="button"
+                                                                disabled={isSoldOut}
+                                                                onClick={() => {
+                                                                    if (isSoldOut) return;
+                                                                    const venueObj = {
+                                                                        _id: product._id,
+                                                                        name: product.name || selectedSeller?.shopName || selectedSeller?.name,
+                                                                        price: Number(product.tickets?.[0]?.salePrice || product.tickets?.[0]?.price || product.price || 1000),
+                                                                        sellerId: selectedSeller,
+                                                                        tickets: product.tickets || [],
+                                                                    };
+                                                                    navigate('/plan-my-event/booking', { 
+                                                                        state: { 
+                                                                            venue: venueObj,
+                                                                            prefilledDate: activeDate || '',
+                                                                            prefilledTimeSlot: activeTime || ''
+                                                                        } 
+                                                                    });
+                                                                }}
+                                                                className={`text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
+                                                                    isSoldOut
+                                                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                                                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95'
+                                                                }`}
+                                                            >
+                                                                {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
+                                                            </button>
+                                                        );
+                                                    })() : (product.isDelivery || product.isRental) ? (isSelected ? (
                                                         <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
                                                             <button
                                                                 type="button"
                                                                 aria-label={`Remove one ${product.name}`}
-                                                                onClick={() => handleProductQuantityChange(product, -1)}
+                                                                onClick={() => {
+                                                                    if (product.variants?.length > 1) {
+                                                                        openProductGallery(product);
+                                                                    } else {
+                                                                        handleProductQuantityChange(matchingSelected[0] || product, -1);
+                                                                    }
+                                                                }}
                                                                 className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
                                                             >
                                                                 <RemoveIcon fontSize="small" />
                                                             </button>
-                                                            <span className="min-w-5 text-center text-xs font-black text-slate-800">{isSelected.quantity}</span>
+                                                            <span className="min-w-5 text-center text-xs font-black text-slate-800">{totalQuantity}</span>
                                                             <button
                                                                 type="button"
                                                                 aria-label={`Add one ${product.name}`}
-                                                                onClick={() => handleProductQuantityChange(product, 1)}
+                                                                onClick={() => {
+                                                                    if (product.variants?.length > 1) {
+                                                                        openProductGallery(product);
+                                                                    } else {
+                                                                        handleProductQuantityChange(matchingSelected[0] || product, 1);
+                                                                    }
+                                                                }}
                                                                 className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
                                                             >
                                                                 <AddIcon fontSize="small" />
@@ -1245,7 +1370,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     ) : (
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleProductQuantityChange(product, 1)}
+                                                            onClick={() => {
+                                                                if (product.variants?.length > 1) {
+                                                                    openProductGallery(product);
+                                                                } else {
+                                                                    handleProductQuantityChange(product, 1);
+                                                                }
+                                                            }}
                                                             className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
                                                         >
                                                             Add Item
@@ -1543,12 +1674,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 <div className="flex justify-between gap-4 text-slate-600">
                                     <span>Guests</span><span className="font-semibold">{activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
                                 </div>
-                                {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map(product => {
+                                {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map((product, pIdx) => {
                                     const quantity = Number(product.quantity) || 1;
                                     const pricing = getProductPricing(product);
+                                    const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || pIdx;
                                     return (
-                                        <div key={product._id} className="flex justify-between gap-4 text-slate-600">
-                                            <span>{product.name} × {quantity}</span>
+                                        <div key={`${product._id}-${variantKey}`} className="flex justify-between gap-4 text-slate-600">
+                                            <span>{product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}</span>
                                             <span className="flex items-center gap-2 font-semibold">
                                                 {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString('en-IN')}</span>}
                                                 <span>₹{(pricing.unitPrice * quantity).toLocaleString('en-IN')}</span>
@@ -1722,16 +1854,19 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     ? modalSelectedVariant.price
                                                     : imagePreview.product?.price || modalPrice
                                             );
-                                            const isItemAdded = selectedProducts.some(p => p._id === imagePreview.product?._id);
+                                            const activeVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                            const selectedProductEntry = selectedProducts.find(p => p._id === imagePreview.product?._id && ((p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === activeVariantKey));
+                                            const isItemAdded = Boolean(selectedProductEntry);
+                                            const itemQuantity = selectedProductEntry?.quantity || 0;
 
                                             return (
                                                 <>
                                                     {/* Top badges */}
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         {modalOriginal > modalPrice && (
-                                                            <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200/60 uppercase tracking-wider">
-                                                                💰 Save ₹{modalOriginal - modalPrice}
-                                                            </div>
+                                                             <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200/60 uppercase tracking-wider">
+                                                                 💰 Save ₹{modalOriginal - modalPrice}
+                                                             </div>
                                                         )}
                                                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
                                                             {imagePreview.product?.category || selectedSeller?.category || 'Service / Item'}
@@ -1755,38 +1890,111 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <div className="flex flex-col">
                                                             <div className="flex items-baseline gap-2">
                                                                 <span className="text-2xl lg:text-3xl font-black text-purple-700 tracking-tight leading-none">
-                                                                    ₹{modalPrice.toLocaleString('en-IN')}
+                                                                    ₹{(modalPrice * (itemQuantity || 1)).toLocaleString('en-IN')}
                                                                 </span>
                                                                 {modalOriginal > modalPrice && (
                                                                     <span className="text-sm text-slate-400 line-through font-semibold">
-                                                                        ₹{modalOriginal.toLocaleString('en-IN')}
+                                                                        ₹{(modalOriginal * (itemQuantity || 1)).toLocaleString('en-IN')}
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            {modalOriginal > modalPrice && (
-                                                                <span className="inline-flex w-fit items-center text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide mt-1">
-                                                                    {Math.round(((modalOriginal - modalPrice) / modalOriginal) * 100)}% off
-                                                                </span>
-                                                            )}
+                                                            <div className="flex items-center gap-2 mt-1">
+                                                                {modalOriginal > modalPrice && (
+                                                                    <span className="inline-flex w-fit items-center text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
+                                                                        {Math.round(((modalOriginal - modalPrice) / modalOriginal) * 100)}% off
+                                                                    </span>
+                                                                )}
+                                                                {itemQuantity > 1 && (
+                                                                    <span className="text-[10px] font-bold text-slate-400">
+                                                                        ({itemQuantity} × ₹{modalPrice.toLocaleString('en-IN')})
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
 
-                                                        <button
-                                                            onClick={() => {
-                                                                handleProductSelection({
-                                                                    ...imagePreview.product,
-                                                                    price: modalPrice,
-                                                                    selectedVariant: modalSelectedVariant
-                                                                });
-                                                                setImagePreview(null);
-                                                            }}
-                                                            className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isItemAdded
-                                                                ? 'bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100'
-                                                                : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
-                                                                }`}
-                                                        >
-                                                            <ShoppingBag size={14} strokeWidth={2.5} />
-                                                            {isItemAdded ? 'Remove Item' : 'Add to Selection'}
-                                                        </button>
+                                                        {imagePreview.product?.tickets?.length > 0 ? (() => {
+                                                            const soldCount = ticketSoldMap[imagePreview.product._id] || 0;
+                                                            const totalCap = Number(imagePreview.product.tickets[0]?.capacity ?? 0);
+                                                            const remainingCap = Math.max(0, totalCap - soldCount);
+                                                            const isSoldOut = totalCap > 0 && remainingCap <= 0;
+
+                                                            return (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={isSoldOut}
+                                                                    onClick={() => {
+                                                                        if (isSoldOut) return;
+                                                                        const venueObj = {
+                                                                            _id: imagePreview.product._id,
+                                                                            name: imagePreview.product.name || selectedSeller?.shopName || selectedSeller?.name,
+                                                                            price: Number(imagePreview.product.tickets?.[0]?.salePrice || imagePreview.product.tickets?.[0]?.price || modalPrice || 1000),
+                                                                            sellerId: selectedSeller,
+                                                                            tickets: imagePreview.product.tickets || [],
+                                                                        };
+                                                                        setImagePreview(null);
+                                                                        navigate('/plan-my-event/booking', { 
+                                                                            state: { 
+                                                                                venue: venueObj,
+                                                                                prefilledDate: activeDate || '',
+                                                                                prefilledTimeSlot: activeTime || ''
+                                                                            } 
+                                                                        });
+                                                                    }}
+                                                                    className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${
+                                                                        isSoldOut
+                                                                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                                                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
+                                                                    }`}
+                                                                >
+                                                                    {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
+                                                                </button>
+                                                            );
+                                                        })() : isItemAdded ? (
+                                                            <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 p-1.5 shadow-sm">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Remove one ${imagePreview.name}`}
+                                                                    onClick={() => handleProductQuantityChange({
+                                                                        ...imagePreview.product,
+                                                                        price: modalPrice,
+                                                                        selectedVariant: modalSelectedVariant
+                                                                    }, -1)}
+                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
+                                                                >
+                                                                    <RemoveIcon fontSize="small" />
+                                                                </button>
+                                                                <span className="min-w-6 text-center text-sm font-black text-slate-800">
+                                                                    {itemQuantity}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Add one ${imagePreview.name}`}
+                                                                    onClick={() => handleProductQuantityChange({
+                                                                        ...imagePreview.product,
+                                                                        price: modalPrice,
+                                                                        selectedVariant: modalSelectedVariant
+                                                                    }, 1)}
+                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all shadow-sm"
+                                                                >
+                                                                    <AddIcon fontSize="small" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    handleProductQuantityChange({
+                                                                        ...imagePreview.product,
+                                                                        price: modalPrice,
+                                                                        selectedVariant: modalSelectedVariant
+                                                                    }, 1);
+                                                                }}
+                                                                className="px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200"
+                                                            >
+                                                                <ShoppingBag size={14} strokeWidth={2.5} />
+                                                                Add to Selection
+                                                            </button>
+                                                        )}
                                                     </div>
 
                                                     {/* Variants Selection (if product has variants) */}
@@ -1837,26 +2045,39 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     {/* Tickets Details (if product has tickets) */}
                                                     {imagePreview.product?.tickets && imagePreview.product.tickets.length > 0 && (
                                                         <div className="space-y-1.5">
-                                                            {imagePreview.product.tickets.map((ticket, ticketIndex) => (
-                                                                <div key={ticket._id || ticketIndex} className="rounded-xl bg-purple-50/70 border border-purple-100 p-3">
-                                                                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
-                                                                        <span className="font-bold text-slate-800">{ticket.name}</span>
-                                                                        <span className="font-extrabold text-purple-700">₹{Number(ticket.price || 0).toLocaleString('en-IN')}</span>
-                                                                        {ticket.salePrice !== undefined && ticket.salePrice !== null && ticket.salePrice !== "" && (
-                                                                            <span className="text-slate-500 font-medium">Sale: ₹{Number(ticket.salePrice).toLocaleString('en-IN')}</span>
+                                                            {imagePreview.product.tickets.map((ticket, ticketIndex) => {
+                                                                const soldCount = ticketSoldMap[imagePreview.product._id] || 0;
+                                                                const totalCap = Number(ticket.capacity ?? 0);
+                                                                const remainingCap = Math.max(0, totalCap - soldCount);
+                                                                const isSoldOut = totalCap > 0 && remainingCap <= 0;
+
+                                                                return (
+                                                                    <div key={ticket._id || ticketIndex} className="rounded-xl bg-purple-50/70 border border-purple-100 p-3">
+                                                                        <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
+                                                                            <span className="font-bold text-slate-800">{ticket.name}</span>
+                                                                            {ticket.capacity !== undefined && ticket.capacity !== null && (
+                                                                                <span className={`px-2.5 py-0.5 rounded-md font-bold text-[11px] ${
+                                                                                    isSoldOut 
+                                                                                        ? 'bg-red-100 text-red-600 border border-red-200' 
+                                                                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                                }`}>
+                                                                                    {isSoldOut ? 'Sold Out' : `Capacity: ${remainingCap} Left`}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {ticket.instructions && (
+                                                                            <p className="text-xs text-slate-600 mt-2 font-medium bg-white/80 p-2 rounded-lg border border-purple-100/60">
+                                                                                📋 {ticket.instructions}
+                                                                            </p>
                                                                         )}
-                                                                        {ticket.capacity !== undefined && ticket.capacity !== null && (
-                                                                            <span className="text-slate-500 font-medium">Capacity: {ticket.capacity}</span>
+                                                                        {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
+                                                                            <p className="text-xs text-slate-500 mt-1.5">
+                                                                                {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
+                                                                            </p>
                                                                         )}
                                                                     </div>
-                                                                    {ticket.instructions && <p className="text-xs text-slate-500 mt-1">{ticket.instructions}</p>}
-                                                                    {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
-                                                                        <p className="text-xs text-slate-500 mt-1">
-                                                                            {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
-                                                                        </p>
-                                                                    )}
-                                                                </div>
-                                                            ))}
+                                                                );
+                                                            })}
                                                         </div>
                                                     )}
 

@@ -9,12 +9,14 @@ import {
   updateTicketDetails,
   cancelTicket,
   completeAddonService,
-  reviewAddonService
+  reviewAddonService,
+  getVenueTicketCapacity
 } from '../controller/event/generalBookingController.js';
 
 const router = express.Router();
 
 // Customer Endpoints
+router.get('/general-booking/capacity/:venueId', getVenueTicketCapacity);
 router.post('/general-booking/create', verifyToken, createBooking);
 router.post('/general-booking/verify', verifyToken, verifyPayment);
 router.get('/general-booking/my-tickets', verifyToken, getMyTickets);

@@ -641,6 +641,22 @@ const sellerSchema = new mongoose.Schema(
     shopClosedDates: [{
       type: String // YYYY-MM-DD format
     }],
+    childTicketPolicyEnabled: {
+      type: Boolean,
+      default: false
+    },
+    childFreeAgeLimit: {
+      type: Number,
+      default: 5 // Children aged <= this number are FREE (no ticket required / 0 price)
+    },
+    childMaxAgeLimit: {
+      type: Number,
+      default: 12 // Upper age limit to be categorized as a Child
+    },
+    childTicketPrice: {
+      type: Number,
+      default: 0 // Optional custom price for children above free limit. If 0, venue default or free logic applies
+    },
     demoTrialDays: {
       type: Number,
       default: 15

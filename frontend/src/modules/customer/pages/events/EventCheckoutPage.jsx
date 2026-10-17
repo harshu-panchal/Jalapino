@@ -11,8 +11,10 @@ import { useSettings } from '@core/context/SettingsContext';
 const CHECKOUT_STATE_KEY = 'jalapino_plan_event_checkout';
 
 const getProductPricing = (product) => {
-    const originalPrice = Number(product.price) || 0;
-    const salePrice = Number(product.salePrice) || 0;
+    const variantPrice = product?.selectedVariant?.price ?? product?.price;
+    const variantSalePrice = product?.selectedVariant?.salePrice ?? product?.salePrice;
+    const originalPrice = Number(variantPrice) || 0;
+    const salePrice = Number(variantSalePrice) || 0;
     const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
     return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice };
 };
@@ -79,6 +81,7 @@ const EventCheckoutPage = () => {
                     productId: product._id,
                     quantity: product.quantity || 1,
                     selectedColors: product.selectedColors || [],
+                    selectedVariant: product.selectedVariant || null,
                 }))
             });
             sessionStorage.removeItem(CHECKOUT_STATE_KEY);
@@ -169,13 +172,17 @@ const EventCheckoutPage = () => {
                                     <span className="font-semibold text-slate-800">{selectedCategories?.length} Services</span>
                                 </div>
                             )}
-                            {selectedProducts.map(product => {
+                            {selectedProducts.map((product, idx) => {
                                 const quantity = Number(product.quantity || 1);
                                 const pricing = getProductPricing(product);
                                 const lineTotal = pricing.unitPrice * quantity;
+                                const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || idx;
                                 return (
-                                    <div key={product._id} className="flex justify-between text-sm">
-                                        <span className="text-slate-500">{product.name} × {quantity}</span>
+                                    <div key={`${product._id}-${variantKey}`} className="flex justify-between text-sm">
+                                        <span className="text-slate-500">
+                                            {product.name}
+                                            {product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
+                                        </span>
                                         <span className="flex items-center gap-2 font-semibold text-slate-800">
                                             {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString()}</span>}
                                             <span>₹{lineTotal.toLocaleString()}</span>

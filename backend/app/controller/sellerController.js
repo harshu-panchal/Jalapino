@@ -362,6 +362,12 @@ export const updateSellerProfile = async (req, res) => {
     if (req.body.advanceBookingBuffer !== undefined) seller.advanceBookingBuffer = Number(req.body.advanceBookingBuffer);
     if (req.body.advanceBookingBufferUnit !== undefined) seller.advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
 
+    // Child Ticket Policy
+    if (req.body.childTicketPolicyEnabled !== undefined) seller.childTicketPolicyEnabled = req.body.childTicketPolicyEnabled === 'true' || req.body.childTicketPolicyEnabled === true;
+    if (req.body.childFreeAgeLimit !== undefined) seller.childFreeAgeLimit = Number(req.body.childFreeAgeLimit);
+    if (req.body.childMaxAgeLimit !== undefined) seller.childMaxAgeLimit = Number(req.body.childMaxAgeLimit);
+    if (req.body.childTicketPrice !== undefined) seller.childTicketPrice = Number(req.body.childTicketPrice);
+
     if (serviceCoverage !== undefined) {
       if (typeof serviceCoverage === "string") {
         try {

@@ -63,6 +63,10 @@ const SellerProfile = () => {
     shopOpeningTime: "09:00 AM",
     shopClosingTime: "09:00 PM",
     advanceBookingBuffer: 0,
+    childTicketPolicyEnabled: false,
+    childFreeAgeLimit: 5,
+    childMaxAgeLimit: 12,
+    childTicketPrice: 0,
     advanceBookingBufferUnit: "days",
   });
 
@@ -114,6 +118,10 @@ const SellerProfile = () => {
         advanceBookingBuffer: data.advanceBookingBuffer || 0,
         advanceBookingBufferUnit: data.advanceBookingBufferUnit || "days",
         advanceBookingBufferTime: data.advanceBookingBufferTime || "12:00",
+        childTicketPolicyEnabled: data.childTicketPolicyEnabled ?? false,
+        childFreeAgeLimit: data.childFreeAgeLimit ?? 5,
+        childMaxAgeLimit: data.childMaxAgeLimit ?? 12,
+        childTicketPrice: data.childTicketPrice ?? 0,
       });
       setKeptBanners(data.banners || []);
     } catch (error) {
@@ -933,7 +941,77 @@ const SellerProfile = () => {
                   )}
                 </div>
               )}
-            </div>
+
+                <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-800">Child Ticket Policy</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Define free age limit and child rules for event bookings</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="sr-only peer"
+                        checked={formData.childTicketPolicyEnabled}
+                        disabled={!isEditing}
+                        onChange={(e) => setFormData({ ...formData, childTicketPolicyEnabled: e.target.checked })}
+                      />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+                    </label>
+                  </div>
+
+                  {formData.childTicketPolicyEnabled && (
+                    <div className="bg-purple-50/40 p-4 rounded-xl border border-purple-100 grid grid-cols-1 sm:grid-cols-3 gap-4 mt-1">
+                      <div>
+                        <label className="block text-[11px] font-black uppercase text-slate-600 mb-1">
+                          Free Ticket Till Age (Years)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="18"
+                          disabled={!isEditing}
+                          value={formData.childFreeAgeLimit ?? 5}
+                          onChange={(e) => setFormData({ ...formData, childFreeAgeLimit: Number(e.target.value) })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-purple-600 disabled:opacity-70"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Children ≤ this age enter FREE (₹0 ticket)</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-black uppercase text-slate-600 mb-1">
+                          Child Max Age Limit (Years)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="18"
+                          disabled={!isEditing}
+                          value={formData.childMaxAgeLimit ?? 12}
+                          onChange={(e) => setFormData({ ...formData, childMaxAgeLimit: Number(e.target.value) })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-purple-600 disabled:opacity-70"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Age ≤ this categorized as Child</p>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-black uppercase text-slate-600 mb-1">
+                          Child Ticket Price (₹)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          disabled={!isEditing}
+                          value={formData.childTicketPrice ?? 0}
+                          onChange={(e) => setFormData({ ...formData, childTicketPrice: Number(e.target.value) })}
+                          className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-purple-600 disabled:opacity-70"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">Leave 0 to use standard ticket price for paid children</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
           </Card>
 
 

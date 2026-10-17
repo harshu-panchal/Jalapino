@@ -21,7 +21,7 @@ const generalBookingSchema = new mongoose.Schema(
     },
     bookingType: {
       type: String,
-      enum: ['Family', 'Group', 'Corporate', 'School', 'Others'],
+      enum: ['Individual', 'Family', 'Group', 'Corporate', 'School', 'Others'],
       required: true,
     },
     bookingDate: {
