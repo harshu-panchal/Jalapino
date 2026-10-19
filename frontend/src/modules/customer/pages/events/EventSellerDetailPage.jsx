@@ -258,6 +258,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [isFullScreenImage, setIsFullScreenImage] = useState(false);
     const [modalSelectedVariant, setModalSelectedVariant] = useState(null);
     const [ticketSoldMap, setTicketSoldMap] = useState({});
+    const [selectedShop, setSelectedShop] = useState(null);
 
     const openProductGallery = (product) => {
         const imagesSet = new Set();
@@ -645,6 +646,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             preferences: collectedPreferences,
             selectedCategories,
             selectedSeller,
+            selectedShop,
             selectedProducts: selectedProducts.filter(p => !p.tickets || p.tickets.length === 0),
         };
         try {
@@ -1134,7 +1136,99 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     )}
 
                     {/* Products Grid */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
+                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                        {/* NO. OF SHOP (AT SAME LOCATION) Excel Format Table for Event Seller */}
+                        {selectedSeller?.capacityEnabled && selectedSeller?.shopsAtLocation?.length > 0 && (
+                            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+                                <div className="bg-[#b4c6e7] py-3.5 px-4 text-center font-black text-xs sm:text-sm md:text-base text-slate-800 tracking-wider border-b border-slate-300">
+                                    NO. OF SHOP (AT SAME LOCATION)
+                                </div>
+                                <div className="overflow-x-auto w-full">
+                                    <table className="w-full text-xs sm:text-sm border-collapse min-w-[580px]">
+                                        <thead>
+                                            <tr className="text-center font-black uppercase text-[11px] sm:text-xs">
+                                                <th className="bg-[#ffff00] border border-slate-300 px-4 py-3 text-slate-900 min-w-[160px]">UNIQUE CODE NO. GENARATE</th>
+                                                <th className="bg-[#5b9bd5] text-white border border-slate-300 px-3 py-3 min-w-[100px]">SHOP NO.</th>
+                                                <th className="bg-[#ed7d31] text-white border border-slate-300 px-3 py-3 min-w-[100px]">MINIMUM</th>
+                                                <th className="bg-[#ffc000] border border-slate-300 px-3 py-3 text-slate-900 min-w-[100px]">MAXIMUM</th>
+                                                <th className="bg-[#d9e1f2] border border-slate-300 px-3 py-3 text-slate-900 min-w-[130px]">SINGLE/MULTIPLE</th>
+                                                <th className="bg-slate-200 border border-slate-300 px-3 py-3 text-slate-800 min-w-[100px]">SELECT</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {selectedSeller.shopsAtLocation.map((shop, idx) => {
+                                                const shopId = shop.uniqueCode || `SHOP_${shop.shopNo || idx + 1}`;
+                                                const isShopActive = (selectedShop?.uniqueCode === shop.uniqueCode) || (selectedShop?.shopNo === shop.shopNo);
+                                                return (
+                                                    <tr 
+                                                        key={idx} 
+                                                        onClick={() => setSelectedShop(isShopActive ? null : shop)}
+                                                        className={`text-center font-bold text-xs sm:text-sm cursor-pointer transition-all ${
+                                                            isShopActive
+                                                                ? 'bg-purple-100/90 ring-2 ring-purple-600 ring-inset'
+                                                                : 'hover:bg-slate-50'
+                                                        }`}
+                                                    >
+                                                        <td className="border border-slate-300 py-3 px-3 uppercase text-purple-700 tracking-wider font-extrabold text-xs sm:text-sm">
+                                                            {shop.uniqueCode || `HALL${String(idx + 1).padStart(2, '0')}`}
+                                                        </td>
+                                                        <td className="border border-slate-300 py-3 px-3 font-bold text-xs sm:text-sm">
+                                                            {shop.shopNo || idx + 1}
+                                                        </td>
+                                                        <td className="border border-slate-300 py-3 px-3 font-semibold text-slate-700 text-xs sm:text-sm">
+                                                            {shop.minimum ?? 0}
+                                                        </td>
+                                                        <td className="border border-slate-300 py-3 px-3 font-semibold text-slate-700 text-xs sm:text-sm">
+                                                            {shop.maximum ?? 0}
+                                                        </td>
+                                                        <td className="border border-slate-300 py-3 px-3">
+                                                            <span className={`inline-block px-3 py-1 rounded-md text-xs font-black uppercase tracking-wider ${
+                                                                shop.bookingType === 'SINGLE'
+                                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                            }`}>
+                                                                {shop.bookingType || 'MULTIPLE'}
+                                                            </span>
+                                                        </td>
+                                                        <td className="border border-slate-300 py-3 px-3">
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setSelectedShop(isShopActive ? null : shop);
+                                                                }}
+                                                                className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
+                                                                    isShopActive
+                                                                        ? 'bg-purple-600 text-white shadow-sm'
+                                                                        : 'bg-slate-100 hover:bg-purple-50 text-slate-700 border border-slate-300'
+                                                                }`}
+                                                            >
+                                                                {isShopActive ? '✓ Selected' : 'Choose'}
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {selectedShop && (
+                                    <div className="bg-purple-50 border-t border-purple-200 py-2.5 px-4 flex items-center justify-between text-xs text-purple-900 font-bold">
+                                        <span>
+                                            📍 Selected Area/Shop: <span className="font-extrabold text-purple-700">{selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`}</span> (Min: {selectedShop.minimum || 1}, Max: {selectedShop.maximum || 'Any'})
+                                        </span>
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setSelectedShop(null)} 
+                                            className="text-purple-600 hover:text-purple-800 text-[11px] underline font-semibold"
+                                        >
+                                            Clear
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4">
                             Select Products & Services
                         </h3>
@@ -1321,6 +1415,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     navigate('/plan-my-event/booking', { 
                                                                         state: { 
                                                                             venue: venueObj,
+                                                                            selectedShop: selectedShop,
                                                                             prefilledDate: activeDate || '',
                                                                             prefilledTimeSlot: activeTime || ''
                                                                         } 
@@ -1674,6 +1769,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 <div className="flex justify-between gap-4 text-slate-600">
                                     <span>Guests</span><span className="font-semibold">{activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
                                 </div>
+                                {selectedShop && (
+                                    <div className="flex justify-between gap-4 text-purple-700 bg-purple-100/60 p-2 rounded-xl font-bold">
+                                        <span>📍 Selected Shop / Area</span>
+                                        <span>{selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`} ({selectedShop.bookingType || 'MULTIPLE'})</span>
+                                    </div>
+                                )}
                                 {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map((product, pIdx) => {
                                     const quantity = Number(product.quantity) || 1;
                                     const pricing = getProductPricing(product);

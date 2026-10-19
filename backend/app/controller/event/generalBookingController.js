@@ -304,7 +304,8 @@ export const getMyTickets = async (req, res) => {
     const customerId = req.user.id;
     const tickets = await MemberTicket.find({ customerId })
       .populate('venueId', 'name mainImage venueAddress venueCity venueState')
-      .populate('sellerId', 'shopName')
+      .populate('sellerId', 'shopName ticketCancellationBufferEnabled ticketCancellationBuffer ticketCancellationBufferUnit')
+      .populate('bookingId', 'bookingDate timeSlot')
       .sort({ createdAt: -1 });
 
     return handleResponse(res, 200, 'Tickets fetched successfully', tickets);
@@ -444,6 +445,48 @@ export const cancelTicket = async (req, res) => {
 
     if (['Checked-In', 'Completed', 'Cancelled'].includes(ticket.status)) {
       return handleResponse(res, 400, `Ticket is already ${ticket.status}`);
+    }
+
+    // Check seller's cancellation buffer policy
+    const Seller = await import('../../models/seller.js').then(m => m.default);
+    const seller = await Seller.findById(ticket.sellerId);
+    if (seller && seller.ticketCancellationBufferEnabled) {
+      const booking = await GeneralBooking.findById(ticket.bookingId);
+      if (booking && booking.bookingDate) {
+        const eventDateObj = new Date(booking.bookingDate);
+        const timeSlotStr = booking.timeSlot;
+        if (timeSlotStr && typeof timeSlotStr === 'string') {
+          const startPart = timeSlotStr.split('-')[0]?.trim();
+          if (startPart) {
+            const match = startPart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (match) {
+              let hours = parseInt(match[1], 10);
+              const minutes = parseInt(match[2], 10);
+              const modifier = match[3].toUpperCase();
+              if (modifier === 'PM' && hours < 12) hours += 12;
+              if (modifier === 'AM' && hours === 12) hours = 0;
+              eventDateObj.setHours(hours, minutes, 0, 0);
+            }
+          }
+        }
+
+        const eventTime = eventDateObj.getTime();
+        const now = Date.now();
+        const diffHours = (eventTime - now) / (1000 * 60 * 60);
+
+        const requiredHours = seller.ticketCancellationBufferUnit === 'hours'
+          ? Number(seller.ticketCancellationBuffer || 0)
+          : Number(seller.ticketCancellationBuffer || 0) * 24;
+
+        if (diffHours < requiredHours) {
+          const unitLabel = seller.ticketCancellationBufferUnit || 'days';
+          return handleResponse(
+            res,
+            400,
+            `Cancellation window has expired. This venue allows cancellation at least ${seller.ticketCancellationBuffer} ${unitLabel} before the event.`
+          );
+        }
+      }
     }
 
     ticket.status = 'Cancelled';

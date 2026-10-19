@@ -269,6 +269,13 @@ const sellerSchema = new mongoose.Schema(
       type: Number,
       default: 1
     },
+    shopsAtLocation: [{
+      uniqueCode: { type: String, trim: true, default: '' },
+      shopNo: { type: String, trim: true, default: '' },
+      minimum: { type: Number, default: 0 },
+      maximum: { type: Number, default: 0 },
+      bookingType: { type: String, enum: ['SINGLE', 'MULTIPLE'], default: 'MULTIPLE' }
+    }],
     businessTimings: {
       start: { type: String, default: "09:00" },
       end: { type: String, default: "22:00" }
@@ -656,6 +663,19 @@ const sellerSchema = new mongoose.Schema(
     childTicketPrice: {
       type: Number,
       default: 0 // Optional custom price for children above free limit. If 0, venue default or free logic applies
+    },
+    ticketCancellationBufferEnabled: {
+      type: Boolean,
+      default: false
+    },
+    ticketCancellationBuffer: {
+      type: Number,
+      default: 1 // Number of days or hours before event customer can cancel
+    },
+    ticketCancellationBufferUnit: {
+      type: String,
+      enum: ['hours', 'days'],
+      default: 'days'
     },
     demoTrialDays: {
       type: Number,

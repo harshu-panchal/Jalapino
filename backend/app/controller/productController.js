@@ -1211,7 +1211,7 @@ export const getProductById = async (req, res) => {
           .populate("headerId", "name")
           .populate("categoryId", "name")
           .populate("subcategoryId", "name")
-          .populate("sellerId", "shopName")
+          .populate("sellerId", "shopName name address ticketSystemEnabled addonDecorationEnabled addonDecorationPrice addonBridalEnabled addonBridalPrice addonCateringEnabled addonCateringPrice acceptsCOD acceptsRazorpay physicalPaymentEnabled paymentQrCode shopTimingsEnabled shopOpeningTime shopClosingTime shopClosedDates childTicketPolicyEnabled childFreeAgeLimit childMaxAge childTicketPrice ticketCancellationBufferEnabled ticketCancellationBuffer ticketCancellationBufferUnit")
           .lean(),
       getTTL("product"),
     );

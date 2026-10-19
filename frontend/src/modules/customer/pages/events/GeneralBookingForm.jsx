@@ -14,6 +14,7 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { generalBookingApi } from '../../services/generalBookingApi';
 import { eventConfigApi } from '../../services/eventConfigApi';
 import { toast } from 'sonner';
+import axiosInstance from '@core/api/axios';
 
 const GeneralBookingForm = () => {
     const navigate = useNavigate();
@@ -34,11 +35,68 @@ const GeneralBookingForm = () => {
     const [addonBridal, setAddonBridal] = useState(false);
     const [addonCatering, setAddonCatering] = useState(false);
 
+    // Helper to format minutes into AM/PM
+    const formatTime12h = (minutes) => {
+        let h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        const period = h >= 12 ? 'PM' : 'AM';
+        h = h % 12 || 12;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+    };
+
+    // Helper to parse '11:30' or '11:30 AM' into total minutes
+    const parseTimeToMinutes = (timeStr) => {
+        if (!timeStr) return null;
+        const cleaned = timeStr.trim();
+        const match12 = cleaned.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+        if (!match12) return null;
+        let hours = parseInt(match12[1], 10);
+        const minutes = parseInt(match12[2], 10);
+        const meridiem = match12[3]?.toUpperCase();
+
+        if (meridiem === 'PM' && hours < 12) hours += 12;
+        if (meridiem === 'AM' && hours === 12) hours = 0;
+        return hours * 60 + minutes;
+    };
+
+    // Preserve venue across page refresh via sessionStorage
+    const [savedVenue, setSavedVenue] = useState(() => {
+        if (venue) {
+            try { sessionStorage.setItem('currentBookingVenue', JSON.stringify(venue)); } catch (e) {}
+            return venue;
+        }
+        try {
+            const stored = sessionStorage.getItem('currentBookingVenue');
+            return stored ? JSON.parse(stored) : null;
+        } catch (e) {
+            return null;
+        }
+    });
+
+    const [fullVenue, setFullVenue] = useState(savedVenue || venue || null);
+    const activeVenue = fullVenue || savedVenue || venue;
+
+    // Fetch complete product/seller data to ensure fresh cancellation buffer and policies
+    useEffect(() => {
+        const vId = venue?._id || savedVenue?._id;
+        if (!vId) return;
+        axiosInstance.get(`/products/${vId}`)
+            .then(res => {
+                const p = res.data?.data || res.data?.result || res.data;
+                if (p) {
+                    setFullVenue(p);
+                    try { sessionStorage.setItem('currentBookingVenue', JSON.stringify(p)); } catch (e) {}
+                }
+            })
+            .catch(err => console.error("Error fetching complete venue seller info:", err));
+    }, [venue?._id, savedVenue?._id]);
+
     // Compute dynamic time slots based on ticket or seller settings
     const availableSlots = React.useMemo(() => {
         // 1. If ticket has custom time slots defined
-        const ticketSlots = venue?.tickets?.[0]?.timeSlots;
-        if (venue?.tickets?.[0]?.timeSlotsEnabled && Array.isArray(ticketSlots) && ticketSlots.length > 0) {
+        const currentVenue = activeVenue || venue;
+        const ticketSlots = currentVenue?.tickets?.[0]?.timeSlots;
+        if (currentVenue?.tickets?.[0]?.timeSlotsEnabled && Array.isArray(ticketSlots) && ticketSlots.length > 0) {
             return ticketSlots.map(s => {
                 const parts = [];
                 if (s.date) parts.push(s.date);
@@ -48,39 +106,69 @@ const GeneralBookingForm = () => {
             }).filter(Boolean);
         }
 
-        // 2. If seller has strict operating hours set by admin / profile
-        const seller = venue?.sellerId;
-        if (seller && (seller.shopTimingsEnabled || seller.shopOpeningTime || seller.shopClosingTime)) {
-            const openTime = seller.shopOpeningTime || "09:00 AM";
-            const closeTime = seller.shopClosingTime || "09:00 PM";
-            return [
-                `${openTime} - ${closeTime}`,
-                "Morning Slot (Opening to Afternoon)",
-                "Evening Slot (Afternoon to Closing)"
-            ];
+        // Check if selected bookingDate is marked as closed/holiday by seller
+        const closedDates = currentVenue?.sellerId?.shopClosedDates || [];
+        if (bookingDate && Array.isArray(closedDates) && closedDates.includes(bookingDate)) {
+            return ["🚫 Shop Closed on this Date (Holiday)"];
         }
 
-        // 3. Fallback standard slots
+        // 2. If seller has strict operating hours set by admin (shopTimingsEnabled)
+        const seller = currentVenue?.sellerId;
+        if (seller && seller.shopTimingsEnabled && (seller.shopOpeningTime || seller.shopClosingTime)) {
+            const openMinutes = parseTimeToMinutes(seller.shopOpeningTime) ?? (10 * 60); // default 10:00 AM
+            const closeMinutes = parseTimeToMinutes(seller.shopClosingTime) ?? (20 * 60); // default 08:00 PM
+
+            if (closeMinutes > openMinutes) {
+                const slots = [];
+                const stepMinutes = 60; // 1-hour interval slots like Swiggy / Zomato
+
+                // If selected date is today, only show upcoming slots
+                const todayStr = new Date().toISOString().split('T')[0];
+                const isToday = bookingDate === todayStr;
+                const now = new Date();
+                const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+                let current = openMinutes;
+                while (current + 30 <= closeMinutes) {
+                    const next = Math.min(current + stepMinutes, closeMinutes);
+                    
+                    // If today, filter out past slots (allow 15 mins buffer)
+                    if (!isToday || current >= currentMinutes - 15) {
+                        slots.push(`${formatTime12h(current)} - ${formatTime12h(next)}`);
+                    }
+                    current = next;
+                }
+
+                // If all slots have passed for today
+                if (isToday && slots.length === 0) {
+                    return ["Shop Closed for Today (Hours Passed)"];
+                }
+
+                if (slots.length > 0) return slots;
+            }
+        }
+
+        // 3. Fallback standard slots for normal sellers (admin didn't enable shopTimingsEnabled)
         return [
             "10:00 AM - 12:00 PM",
             "12:00 PM - 02:00 PM",
             "02:00 PM - 04:00 PM",
             "04:00 PM - 06:00 PM"
         ];
-    }, [venue]);
+    }, [activeVenue, venue, bookingDate]);
 
     useEffect(() => {
-        if (!venue) {
+        if (!activeVenue) {
             toast.error("Please select a venue first.");
             navigate('/plan-my-event/venues');
             return;
         }
-        if (venue.sellerId?.acceptsCOD === false && venue.sellerId?.acceptsRazorpay !== false) {
+        if (activeVenue.sellerId?.acceptsCOD === false && activeVenue.sellerId?.acceptsRazorpay !== false) {
             setPaymentMethod('Razorpay');
-        } else if (venue.sellerId?.acceptsCOD === false && venue.sellerId?.physicalPaymentEnabled) {
+        } else if (activeVenue.sellerId?.acceptsCOD === false && activeVenue.sellerId?.physicalPaymentEnabled) {
             setPaymentMethod('Physical');
         }
-    }, [venue]);
+    }, [activeVenue]);
 
     const handleAddMember = () => {
         setMembers([...members, { name: '', age: '', gender: 'Male', mobileNumber: '', category: 'Adult' }]);
@@ -104,8 +192,10 @@ const GeneralBookingForm = () => {
             return;
         }
 
-        // Validate all member details
-        const isChildPolicy = Boolean(venue?.sellerId?.childTicketPolicyEnabled);
+        const isChildPolicy = Boolean(
+            (venue?.sellerId?.shopTimingsEnabled || activeVenue?.sellerId?.shopTimingsEnabled) &&
+            (venue?.sellerId?.childTicketPolicyEnabled || activeVenue?.sellerId?.childTicketPolicyEnabled)
+        );
         const freeAgeLimit = Number(venue?.sellerId?.childFreeAgeLimit ?? 5);
 
         for (let i = 0; i < members.length; i++) {
@@ -209,10 +299,13 @@ const GeneralBookingForm = () => {
     if (!venue) return null;
 
     const adultPricePerMember = venue.price || 1000;
-    const isChildPolicyEnabled = Boolean(venue?.sellerId?.childTicketPolicyEnabled);
-    const childFreeLimit = Number(venue?.sellerId?.childFreeAgeLimit ?? 5);
-    const childMaxLimit = Number(venue?.sellerId?.childMaxAgeLimit ?? 12);
-    const childPriceSetting = Number(venue?.sellerId?.childTicketPrice ?? 0);
+    const isChildPolicyEnabled = Boolean(
+        (venue?.sellerId?.shopTimingsEnabled || activeVenue?.sellerId?.shopTimingsEnabled) &&
+        (venue?.sellerId?.childTicketPolicyEnabled || activeVenue?.sellerId?.childTicketPolicyEnabled)
+    );
+    const childFreeLimit = Number(venue?.sellerId?.childFreeAgeLimit ?? activeVenue?.sellerId?.childFreeAgeLimit ?? 5);
+    const childMaxLimit = Number(venue?.sellerId?.childMaxAgeLimit ?? activeVenue?.sellerId?.childMaxAgeLimit ?? 12);
+    const childPriceSetting = Number(venue?.sellerId?.childTicketPrice ?? activeVenue?.sellerId?.childTicketPrice ?? 0);
 
     // Calculate member-wise ticket cost
     let paidAdultsCount = 0;
@@ -337,14 +430,19 @@ const GeneralBookingForm = () => {
                                 Booking Schedule & Details
                             </h3>
                             <div className="flex flex-wrap items-center gap-2">
-                                {venue?.sellerId?.shopTimingsEnabled && (
+                                {activeVenue?.sellerId?.shopTimingsEnabled && (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-50 text-[10px] font-bold text-purple-700 border border-purple-100">
-                                        ⏰ Hours: {venue.sellerId.shopOpeningTime || '09:00 AM'} - {venue.sellerId.shopClosingTime || '09:00 PM'}
+                                        ⏰ Hours: {activeVenue.sellerId.shopOpeningTime || '09:00 AM'} - {activeVenue.sellerId.shopClosingTime || '09:00 PM'}
                                     </span>
                                 )}
-                                {venue?.sellerId?.childTicketPolicyEnabled && (
+                                {activeVenue?.sellerId?.shopTimingsEnabled && activeVenue?.sellerId?.childTicketPolicyEnabled && (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-[10px] font-bold text-emerald-700 border border-emerald-100">
-                                        🧒 Child Policy: Free till {venue.sellerId.childFreeAgeLimit ?? 5} yrs
+                                        🧒 Child Policy: Free till {activeVenue.sellerId.childFreeAgeLimit ?? 5} yrs
+                                    </span>
+                                )}
+                                {Boolean(activeVenue?.sellerId?.ticketCancellationBufferEnabled || venue?.sellerId?.ticketCancellationBufferEnabled) && (
+                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-[10px] font-bold text-blue-700 border border-blue-100">
+                                        🛡️ Cancel allowed up to {activeVenue?.sellerId?.ticketCancellationBuffer ?? venue?.sellerId?.ticketCancellationBuffer ?? 1} {activeVenue?.sellerId?.ticketCancellationBufferUnit || venue?.sellerId?.ticketCancellationBufferUnit || 'days'} before
                                     </span>
                                 )}
                             </div>
@@ -380,6 +478,11 @@ const GeneralBookingForm = () => {
                                         className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-purple-600 text-slate-700 bg-white"
                                     />
                                 </div>
+                                {bookingDate && (activeVenue?.sellerId?.shopClosedDates || []).includes(bookingDate) && (
+                                    <p className="text-[11px] font-bold text-rose-600 mt-1 flex items-center gap-1">
+                                        ⚠️ This venue is closed on {bookingDate}. Please pick another date.
+                                    </p>
+                                )}
                             </div>
 
                             <div className="sm:col-span-2">

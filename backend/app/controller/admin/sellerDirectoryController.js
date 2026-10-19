@@ -330,9 +330,13 @@ export const updateSellerDetails = async (req, res) => {
     if (totalCapacity !== undefined) updateData.totalCapacity = Number(totalCapacity);
     if (bookingType !== undefined) updateData.bookingType = bookingType;
     if (numberOfShops !== undefined) updateData.numberOfShops = Number(numberOfShops);
+    if (req.body.shopsAtLocation !== undefined) {
+      updateData.shopsAtLocation = Array.isArray(req.body.shopsAtLocation) ? req.body.shopsAtLocation : [];
+    }
     if (advanceBookingBufferTime !== undefined) updateData.advanceBookingBufferTime = advanceBookingBufferTime;
     if (req.body.shopHolidaysEnabled !== undefined) updateData.shopHolidaysEnabled = req.body.shopHolidaysEnabled;
     if (req.body.shopClosedDates !== undefined) updateData.shopClosedDates = req.body.shopClosedDates;
+    if (req.body.ticketCancellationBufferEnabled !== undefined) updateData.ticketCancellationBufferEnabled = req.body.ticketCancellationBufferEnabled;
 
     const existingSeller = await Seller.findById(id);
     if (!existingSeller) throw new Error("Seller not found");

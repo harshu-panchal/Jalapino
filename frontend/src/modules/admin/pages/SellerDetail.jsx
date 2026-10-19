@@ -198,6 +198,8 @@ const SellerDetail = () => {
                 venueVisitsEnabled: data.venueVisitsEnabled ?? true,
                 isShopActive: data.isShopActive ?? true,
                 shopTimingsEnabled: data.shopTimingsEnabled ?? false,
+                shopHolidaysEnabled: data.shopHolidaysEnabled ?? false,
+                ticketCancellationBufferEnabled: data.ticketCancellationBufferEnabled ?? false,
                 advanceBookingBuffer: data.advanceBookingBuffer ?? 0,
                 advanceBookingBufferUnit: data.advanceBookingBufferUnit || 'days',
                 advanceBookingBufferTime: data.advanceBookingBufferTime || "12",
@@ -209,6 +211,7 @@ const SellerDetail = () => {
                 functionLocationEnabled: data.functionLocationEnabled ?? false,
                 sellerLocationEnabled: data.sellerLocationEnabled ?? false,
                 numberOfShops: data.numberOfShops || 1,
+                shopsAtLocation: Array.isArray(data.shopsAtLocation) ? data.shopsAtLocation : [],
                 videoUploadEnabled: data.videoUploadEnabled ?? false,
                 customerImageReviewEnabled: data.customerImageReviewEnabled ?? false,
                 advanceBookingEnabled: data.advanceBookingEnabled ?? false,
@@ -297,6 +300,8 @@ const SellerDetail = () => {
                 planMyEventEnabled: seller.planMyEventEnabled,
                 isShopActive: seller.isShopActive,
                 shopTimingsEnabled: seller.shopTimingsEnabled,
+                shopHolidaysEnabled: seller.shopHolidaysEnabled,
+                ticketCancellationBufferEnabled: seller.ticketCancellationBufferEnabled,
                 advanceBookingBuffer: seller.advanceBookingBuffer,
                 advanceBookingBufferUnit: seller.advanceBookingBufferUnit,
                 advanceBookingBufferTime: seller.advanceBookingBufferTime,
@@ -319,6 +324,7 @@ const SellerDetail = () => {
                 totalCapacity: seller.totalCapacity,
                 bookingType: seller.bookingType,
                 numberOfShops: seller.numberOfShops,
+                shopsAtLocation: seller.shopsAtLocation || [],
                 minCapacity: seller.minCapacity,
                 maxCapacity: seller.maxCapacity,
                 allowCustomProductEntry: seller.allowCustomProductEntry,
@@ -927,67 +933,23 @@ const SellerDetail = () => {
                                                             </div>
                                                         </div>
 
-                                                        {/* Shop Closed Dates / Holidays */}
-                                                        <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-200">
-                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                                                                Shop Closed Dates / Holidays
-                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Select dates when shop is closed</span>
-                                                            </label>
-                                                            <div className="flex flex-col gap-3">
-                                                                {isEditMode && (
-                                                                    <div className="flex gap-2">
-                                                                        <input 
-                                                                            type="date" 
-                                                                            id={`holiday-input-${seller.id}`}
-                                                                            className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none"
-                                                                        />
-                                                                        <button 
-                                                                            type="button"
-                                                                            onClick={() => {
-                                                                                const input = document.getElementById(`holiday-input-${seller.id}`);
-                                                                                if (!input || !input.value) return;
-                                                                                const dateVal = input.value;
-                                                                                const currentDates = seller.shopClosedDates || [];
-                                                                                if (currentDates.includes(dateVal)) {
-                                                                                    showToast("Date already added", "error");
-                                                                                    return;
-                                                                                }
-                                                                                const newDates = [...currentDates, dateVal].sort();
-                                                                                setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
-                                                                                input.value = '';
-                                                                            }}
-                                                                            className="bg-fuchsia-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-fuchsia-700 transition-colors"
-                                                                        >
-                                                                            Add Date
-                                                                        </button>
-                                                                    </div>
-                                                                )}
-                                                                {(seller.shopClosedDates || []).length > 0 ? (
-                                                                    <div className="flex flex-wrap gap-2 mt-1">
-                                                                        {(seller.shopClosedDates || []).map((date, idx) => (
-                                                                            <div key={idx} className="flex items-center gap-1 bg-rose-50 text-rose-700 border border-rose-200 px-3 py-1 rounded-full text-xs font-medium">
-                                                                                <span>{new Date(date).toLocaleDateString('en-GB')}</span>
-                                                                                {isEditMode && (
-                                                                                    <button 
-                                                                                        type="button"
-                                                                                        onClick={() => {
-                                                                                            const currentDates = seller.shopClosedDates || [];
-                                                                                            const newDates = currentDates.filter(d => d !== date);
-                                                                                            setSeller(prev => ({ ...prev, shopClosedDates: newDates }));
-                                                                                        }}
-                                                                                        className="ml-1 hover:text-rose-900 focus:outline-none"
-                                                                                    >
-                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                                                                    </button>
-                                                                                )}
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                ) : (
-                                                                    <p className="text-xs text-slate-400 italic">No closed dates added</p>
-                                                                )}
-                                                            </div>
-                                                        </div>
+                                                        <PermissionToggle
+                                                            label="Shop Closed Dates / Holidays Management"
+                                                            description="Allow seller to define and manage shop closed dates / holidays in their profile"
+                                                            checked={seller.shopHolidaysEnabled ?? false}
+                                                            disabled={!isEditMode}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={handlePermissionChange('shopHolidaysEnabled')}
+                                                        />
+
+                                                        <PermissionToggle
+                                                            label="Ticket Cancellation Buffer Settings"
+                                                            description="Allow seller to define how many days/hours before event customer can cancel ticket"
+                                                            checked={seller.ticketCancellationBufferEnabled ?? false}
+                                                            disabled={!isEditMode}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={handlePermissionChange('ticketCancellationBufferEnabled')}
+                                                        />
 
                                                         <div className="mt-4 pt-4 border-t border-slate-200 flex flex-col gap-3">
                                                             <PermissionToggle
@@ -1143,80 +1105,18 @@ const SellerDetail = () => {
                                                     </div>
                                                 )}
 
-                                                {/* Capacity Settings */}
+                                                {/* Capacity Settings Permission Toggle */}
                                                 <div className="flex flex-col gap-4 mb-4 pb-4 border-b border-dashed border-slate-200/80 bg-slate-50/50 p-4 rounded-xl border border-slate-100 col-span-1 md:col-span-2">
                                                     <h6 className="text-[10px] font-black text-slate-500 uppercase tracking-widest">CAPACITY TYPE</h6>
                                                     
                                                     <PermissionToggle
                                                         label="AT Same Location Seller Capacity"
-                                                        description="Show capacity on Seller Banner UI"
+                                                        description="Allow seller to define and manage shops/capacity at same location in their profile"
                                                         checked={seller.capacityEnabled}
                                                         disabled={!isEditMode}
                                                         activeColor="bg-amber-500" hoverColor="group-hover:text-amber-600"
                                                         onChange={handlePermissionChange('capacityEnabled')}
                                                     />
-
-                                                    {seller.capacityEnabled && (
-                                                        <div className="flex flex-col gap-3 mt-2 pl-4 border-l-2 border-amber-200">
-                                                            <div className="flex items-center gap-4">
-                                                                <div className="flex flex-col gap-1 flex-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Total Product Capacity</label>
-                                                                    <input type="number" min="0"
-                                                                        value={seller.totalCapacity ?? 0}
-                                                                        disabled={!isEditMode}
-                                                                        onChange={(e) => setSeller(prev => ({ ...prev, totalCapacity: Number(e.target.value) }))}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                    />
-                                                                </div>
-                                                                
-                                                                <div className="flex flex-col gap-1 flex-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Booking Type</label>
-                                                                    <select
-                                                                        value={seller.bookingType || 'one_time'}
-                                                                        disabled={!isEditMode}
-                                                                        onChange={(e) => setSeller(prev => ({ ...prev, bookingType: e.target.value }))}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none bg-white disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                    >
-                                                                        <option value="one_time">One Time</option>
-                                                                        <option value="multiple_time">Multiple Time</option>
-                                                                    </select>
-                                                                </div>
-                                                            </div>
-                                                            
-                                                            <div className="flex items-center gap-4 mt-3">
-                                                                <div className="flex flex-col gap-1 flex-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Number of Shops</label>
-                                                                    <input type="number" min="1"
-                                                                        value={seller.numberOfShops || 1}
-                                                                        disabled={!isEditMode}
-                                                                        onChange={(e) => setSeller(prev => ({ ...prev, numberOfShops: Number(e.target.value) }))}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                    />
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="flex items-center gap-4 mt-3">
-                                                                <div className="flex flex-col gap-1 flex-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Minimum Capacity</label>
-                                                                    <input type="number" min="0"
-                                                                        value={seller.minCapacity ?? 0}
-                                                                        disabled={!isEditMode}
-                                                                        onChange={(e) => setSeller(prev => ({ ...prev, minCapacity: Number(e.target.value) }))}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                    />
-                                                                </div>
-                                                                <div className="flex flex-col gap-1 flex-1">
-                                                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Maximum Capacity</label>
-                                                                    <input type="number" min="0"
-                                                                        value={seller.maxCapacity ?? 0}
-                                                                        disabled={!isEditMode}
-                                                                        onChange={(e) => setSeller(prev => ({ ...prev, maxCapacity: Number(e.target.value) }))}
-                                                                        className="border border-slate-200 rounded-lg px-3 py-1.5 text-xs focus:ring-1 focus:ring-amber-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                    />
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    )}
                                                 </div>
 
                                                 <PermissionToggle

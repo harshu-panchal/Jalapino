@@ -37,6 +37,7 @@ const EventCheckoutPage = () => {
     const selectedCategories = state?.selectedCategories;
     const selectedSeller = state?.selectedSeller;
     const selectedPackage = state?.selectedPackage;
+    const selectedShop = state?.selectedShop;
     const selectedProducts = Array.isArray(state?.selectedProducts) ? state.selectedProducts : [];
 
     useEffect(() => {
@@ -158,6 +159,14 @@ const EventCheckoutPage = () => {
                                 <span className="text-slate-500">Guests</span>
                                 <span className="font-semibold text-slate-800">{eventData?.guestCount} People</span>
                             </div>
+                            {selectedShop && (
+                                <div className="flex justify-between items-center bg-purple-50 p-2.5 rounded-xl border border-purple-200">
+                                    <span className="text-purple-900 font-bold text-xs">📍 Selected Shop/Area</span>
+                                    <span className="font-extrabold text-purple-700 text-xs">
+                                        {selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`} {selectedShop.bookingType ? `(${selectedShop.bookingType})` : ''}
+                                    </span>
+                                </div>
+                            )}
                             {selectedPackage ? (
                                 <div className="flex justify-between border-t pt-3 mt-3">
                                     <span className="text-slate-500">Selected Package</span>

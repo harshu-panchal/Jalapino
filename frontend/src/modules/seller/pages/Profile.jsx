@@ -58,6 +58,7 @@ const SellerProfile = () => {
     totalCapacity: 100,
     bookingType: 'multiple_time',
     numberOfShops: 1,
+    shopsAtLocation: [],
     isShopActive: true,
     shopTimingsEnabled: false,
     shopOpeningTime: "09:00 AM",
@@ -68,6 +69,9 @@ const SellerProfile = () => {
     childMaxAgeLimit: 12,
     childTicketPrice: 0,
     advanceBookingBufferUnit: "days",
+    ticketCancellationBuffer: 1,
+    ticketCancellationBufferUnit: "days",
+    shopClosedDates: [],
   });
 
   const [newZoneName, setNewZoneName] = useState("");
@@ -111,6 +115,7 @@ const SellerProfile = () => {
         totalCapacity: data.totalCapacity || 100,
         bookingType: data.bookingType || 'multiple_time',
         numberOfShops: data.numberOfShops || 1,
+        shopsAtLocation: Array.isArray(data.shopsAtLocation) ? data.shopsAtLocation : [],
         isShopActive: data.isShopActive ?? true,
         shopTimingsEnabled: data.shopTimingsEnabled ?? false,
         shopOpeningTime: data.shopOpeningTime || "09:00 AM",
@@ -122,6 +127,9 @@ const SellerProfile = () => {
         childFreeAgeLimit: data.childFreeAgeLimit ?? 5,
         childMaxAgeLimit: data.childMaxAgeLimit ?? 12,
         childTicketPrice: data.childTicketPrice ?? 0,
+        ticketCancellationBuffer: data.ticketCancellationBuffer ?? 1,
+        ticketCancellationBufferUnit: data.ticketCancellationBufferUnit || "days",
+        shopClosedDates: data.shopClosedDates || [],
       });
       setKeptBanners(data.banners || []);
     } catch (error) {
@@ -381,7 +389,7 @@ const SellerProfile = () => {
         paymentQrCode: formData.paymentQrCode,
       }).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
-          if (key === "serviceCoverage" || key === "customZones") {
+          if (key === "serviceCoverage" || key === "customZones" || key === "shopClosedDates" || key === "shopsAtLocation") {
             payload.append(key, JSON.stringify(value));
           } else {
             payload.append(key, value);
@@ -683,6 +691,204 @@ const SellerProfile = () => {
                   </div>
                 </div>
 
+                {profile?.capacityEnabled ? (
+                  <div className="col-span-1 md:col-span-2 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-700 ml-1">
+                        NO. OF SHOP (AT SAME LOCATION)
+                      </label>
+                      {isEditing && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = formData.shopsAtLocation || [];
+                            const nextIndex = current.length + 1;
+                            const newShop = {
+                              uniqueCode: "",
+                              shopNo: nextIndex,
+                              minimum: "",
+                              maximum: "",
+                              bookingType: "MULTIPLE"
+                            };
+                            setFormData(prev => ({
+                              ...prev,
+                              shopsAtLocation: [...(prev.shopsAtLocation || []), newShop],
+                              numberOfShops: (prev.shopsAtLocation?.length || 0) + 1
+                            }));
+                          }}
+                          className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs rounded-lg transition-all flex items-center gap-1 shadow-sm"
+                        >
+                          + Add Shop
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="border border-slate-300 rounded-2xl overflow-hidden shadow-md bg-white">
+                      <div className="bg-[#b4c6e7] py-3.5 px-4 text-center font-black text-xs sm:text-sm md:text-base text-slate-800 tracking-wider border-b border-slate-300">
+                        NO. OF SHOP (AT SAME LOCATION)
+                      </div>
+                      <div className="overflow-x-auto w-full">
+                        <table className="w-full text-xs sm:text-sm border-collapse min-w-[620px]">
+                          <thead>
+                            <tr className="text-center font-black uppercase text-[11px] sm:text-xs">
+                              <th className="bg-[#ffff00] border border-slate-300 px-4 py-3 text-slate-900 min-w-[170px]">UNIQUE CODE NO. GENARATE</th>
+                              <th className="bg-[#5b9bd5] text-white border border-slate-300 px-3 py-3 min-w-[100px]">SHOP NO.</th>
+                              <th className="bg-[#ed7d31] text-white border border-slate-300 px-3 py-3 min-w-[110px]">MINIMUM</th>
+                              <th className="bg-[#ffc000] border border-slate-300 px-3 py-3 text-slate-900 min-w-[110px]">MAXIMUM</th>
+                              <th className="bg-[#d9e1f2] border border-slate-300 px-3 py-3 text-slate-900 min-w-[140px]">SINGLE/MULTIPLE</th>
+                              {isEditing && (
+                                <th className="bg-slate-200 border border-slate-300 px-2 py-3 text-slate-700 w-14 text-center">ACTION</th>
+                              )}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {(!formData.shopsAtLocation || formData.shopsAtLocation.length === 0) ? (
+                              <tr>
+                                <td colSpan={isEditing ? 6 : 5} className="py-6 text-center text-slate-400 font-semibold italic border border-slate-300">
+                                  No shops configured yet. {isEditing ? "Click '+ Add Shop' above to add." : ""}
+                                </td>
+                              </tr>
+                            ) : (
+                              formData.shopsAtLocation.map((shop, idx) => (
+                                <tr key={idx} className="hover:bg-slate-50 text-center font-bold text-slate-800 text-xs sm:text-sm">
+                                  <td className="border border-slate-300 py-3 px-3">
+                                    {isEditing ? (
+                                      <input
+                                        type="text"
+                                        value={shop.uniqueCode || ""}
+                                        placeholder={`HALL${String(idx + 1).padStart(2, '0')}`}
+                                        onChange={(e) => {
+                                          const val = e.target.value.toUpperCase();
+                                          setFormData(prev => {
+                                            const list = [...(prev.shopsAtLocation || [])];
+                                            list[idx] = { ...list[idx], uniqueCode: val };
+                                            return { ...prev, shopsAtLocation: list };
+                                          });
+                                        }}
+                                        className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold uppercase text-purple-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                      />
+                                    ) : (
+                                      <span className="uppercase text-purple-700 tracking-wider font-extrabold text-xs sm:text-sm">
+                                        {shop.uniqueCode || `HALL${String(idx + 1).padStart(2, '0')}`}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 py-3 px-3">
+                                    {isEditing ? (
+                                      <input
+                                        type="number"
+                                        value={shop.shopNo || idx + 1}
+                                        onChange={(e) => {
+                                          const val = Number(e.target.value);
+                                          setFormData(prev => {
+                                            const list = [...(prev.shopsAtLocation || [])];
+                                            list[idx] = { ...list[idx], shopNo: val };
+                                            return { ...prev, shopsAtLocation: list };
+                                          });
+                                        }}
+                                        className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                      />
+                                    ) : (
+                                      <span className="font-bold text-xs sm:text-sm">{shop.shopNo || idx + 1}</span>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 py-3 px-3">
+                                    {isEditing ? (
+                                      <input
+                                        type="number"
+                                        value={shop.minimum ?? ""}
+                                        placeholder="Min"
+                                        onChange={(e) => {
+                                          const val = e.target.value === "" ? "" : Number(e.target.value);
+                                          setFormData(prev => {
+                                            const list = [...(prev.shopsAtLocation || [])];
+                                            list[idx] = { ...list[idx], minimum: val };
+                                            return { ...prev, shopsAtLocation: list };
+                                          });
+                                        }}
+                                        className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                      />
+                                    ) : (
+                                      <span className="font-semibold text-slate-700 text-xs sm:text-sm">{shop.minimum ?? 0}</span>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 py-3 px-3">
+                                    {isEditing ? (
+                                      <input
+                                        type="number"
+                                        value={shop.maximum ?? ""}
+                                        placeholder="Max"
+                                        onChange={(e) => {
+                                          const val = e.target.value === "" ? "" : Number(e.target.value);
+                                          setFormData(prev => {
+                                            const list = [...(prev.shopsAtLocation || [])];
+                                            list[idx] = { ...list[idx], maximum: val };
+                                            return { ...prev, shopsAtLocation: list };
+                                          });
+                                        }}
+                                        className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                      />
+                                    ) : (
+                                      <span className="font-semibold text-slate-700 text-xs sm:text-sm">{shop.maximum ?? 0}</span>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 py-3 px-3">
+                                    {isEditing ? (
+                                      <select
+                                        value={shop.bookingType || "MULTIPLE"}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setFormData(prev => {
+                                            const list = [...(prev.shopsAtLocation || [])];
+                                            list[idx] = { ...list[idx], bookingType: val };
+                                            return { ...prev, shopsAtLocation: list };
+                                          });
+                                        }}
+                                        className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                                      >
+                                        <option value="MULTIPLE">MULTIPLE</option>
+                                        <option value="SINGLE">SINGLE</option>
+                                      </select>
+                                    ) : (
+                                      <span className={`inline-block px-3 py-1 rounded-md text-xs font-black uppercase tracking-wider ${
+                                        shop.bookingType === 'SINGLE'
+                                          ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                          : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      }`}>
+                                        {shop.bookingType || 'MULTIPLE'}
+                                      </span>
+                                    )}
+                                  </td>
+                                  {isEditing && (
+                                    <td className="border border-slate-300 py-1.5 px-2 text-center">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setFormData(prev => {
+                                            const list = (prev.shopsAtLocation || []).filter((_, i) => i !== idx);
+                                            return {
+                                              ...prev,
+                                              shopsAtLocation: list,
+                                              numberOfShops: list.length
+                                            };
+                                          });
+                                        }}
+                                        className="text-red-500 hover:text-red-700 font-black text-sm px-1.5 py-0.5 hover:bg-red-50 rounded"
+                                        title="Delete Shop"
+                                      >
+                                        ✕
+                                      </button>
+                                    </td>
+                                  )}
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
                 <div className="space-y-3">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                     Number of Shops (At Same Location)
@@ -703,6 +909,7 @@ const SellerProfile = () => {
                     />
                   </div>
                 </div>
+                )}
 
                 <div className="space-y-3">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
@@ -831,7 +1038,7 @@ const SellerProfile = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2 border-t border-slate-200 mt-2">
                     <div className="space-y-3">
                       <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
-                        Opening Time
+                        Opening Time ({formData.shopOpeningTime || "10:00 AM"})
                       </label>
                       <input
                         type="time"
@@ -864,7 +1071,7 @@ const SellerProfile = () => {
                     </div>
                     <div className="space-y-3">
                       <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
-                        Closing Time
+                        Closing Time ({formData.shopClosingTime || "11:00 PM"})
                       </label>
                       <input
                         type="time"
@@ -924,17 +1131,84 @@ const SellerProfile = () => {
                 </div>
               )}
 
-              {profile?.shopHolidaysEnabled && (
+              {profile?.ticketCancellationBufferEnabled && (
+                <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
+                  <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
+                    Ticket Cancellation Window
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-0.5 rounded-full">Customer can cancel before event</span>
+                  </label>
+                  <p className="text-xs text-slate-500">Allow customers to cancel their ticket up to this much time before the booked event date/time.</p>
+                  <div className="flex gap-4 w-full md:max-w-xs mt-1 items-center">
+                    <input type="number" min="0"
+                      value={formData.ticketCancellationBuffer ?? 1}
+                      onChange={(e) => setFormData({ ...formData, ticketCancellationBuffer: Number(e.target.value) })}
+                      disabled={!isEditing}
+                      className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                    />
+                    <select
+                      value={formData.ticketCancellationBufferUnit || "days"}
+                      onChange={(e) => setFormData({ ...formData, ticketCancellationBufferUnit: e.target.value })}
+                      disabled={!isEditing}
+                      className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 outline-none disabled:opacity-70"
+                    >
+                      <option value="hours">Hours</option>
+                      <option value="days">Days</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {Boolean(profile?.shopHolidaysEnabled) && (
                 <div className="flex flex-col gap-2 mt-4 pt-4 border-t border-slate-100">
                   <label className="text-sm font-bold text-slate-800 flex items-center justify-between">
                     Shop Closed Dates / Holidays
-                    <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Dates when shop is closed</span>
+                    <span className="text-[10px] font-bold text-fuchsia-600 bg-fuchsia-50 border border-fuchsia-100 px-2.5 py-0.5 rounded-full">Dates when shop is closed</span>
                   </label>
-                  {profile?.shopClosedDates?.length > 0 && (
+                  <div className="flex gap-2 mt-2">
+                    <input
+                      type="date"
+                      id="seller-holiday-input"
+                      min={new Date().toISOString().split('T')[0]}
+                      className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium outline-none focus:border-purple-600 bg-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const input = document.getElementById('seller-holiday-input');
+                        if (!input || !input.value) return;
+                        const dateVal = input.value;
+                        const currentDates = formData.shopClosedDates || profile?.shopClosedDates || [];
+                        if (currentDates.includes(dateVal)) {
+                          toast.error("Date already added");
+                          return;
+                        }
+                        const newDates = [...currentDates, dateVal].sort();
+                        setFormData({ ...formData, shopClosedDates: newDates });
+                        input.value = '';
+                      }}
+                      className="px-4 py-2 bg-purple-600 text-white rounded-lg text-xs font-black uppercase hover:bg-purple-700 transition-colors shadow-sm"
+                    >
+                      Add Date
+                    </button>
+                  </div>
+
+
+                  {Boolean(profile?.shopClosedDates?.length > 0 || formData?.shopClosedDates?.length > 0) && (
                     <div className="flex flex-wrap gap-2 mt-1">
-                      {profile.shopClosedDates.map((date, idx) => (
+                      {(formData.shopClosedDates?.length > 0 ? formData.shopClosedDates : (profile?.shopClosedDates || [])).map((date, idx) => (
                         <span key={idx} className="px-3 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded-full text-xs font-medium">
-                          {new Date(date).toLocaleDateString('en-GB')}
+                          📅 {date}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const base = formData.shopClosedDates?.length > 0 ? formData.shopClosedDates : (profile?.shopClosedDates || []);
+                              const newDates = base.filter((_, i) => i !== idx);
+                              setFormData({ ...formData, shopClosedDates: newDates });
+                            }}
+                            className="ml-1 text-rose-500 hover:text-rose-800 font-bold"
+                          >
+                            ✕
+                          </button>
                         </span>
                       ))}
                     </div>
@@ -942,6 +1216,7 @@ const SellerProfile = () => {
                 </div>
               )}
 
+              {Boolean(formData.shopTimingsEnabled || profile?.shopTimingsEnabled) && (
                 <div className="flex flex-col gap-3 mt-4 pt-4 border-t border-slate-100">
                   <div className="flex items-center justify-between">
                     <div>
@@ -1011,7 +1286,9 @@ const SellerProfile = () => {
                     </div>
                   )}
                 </div>
+              )}
               </div>
+
           </Card>
 
 

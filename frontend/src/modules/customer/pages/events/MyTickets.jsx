@@ -74,7 +74,8 @@ const MyTickets = () => {
                 toast.success("Ticket cancelled successfully!");
                 fetchTickets();
             } catch (err) {
-                toast.error("Failed to cancel ticket");
+                const message = err.response?.data?.message || err.message || "Failed to cancel ticket";
+                toast.error(message);
             }
         }
     };
@@ -167,22 +168,69 @@ const MyTickets = () => {
                                         </p>
                                     </div>
                                     
-                                    {['Confirmed', 'Pending'].includes(ticket.status) && (
-                                        <div className="flex gap-3 pt-2">
-                                            <button 
-                                                onClick={() => handleOpenEditModal(ticket)}
-                                                className="px-4 py-2 border border-purple-200 text-purple-600 text-[10px] font-black rounded-xl hover:bg-purple-50 transition-colors uppercase tracking-wider"
-                                            >
-                                                Edit Details
-                                            </button>
-                                            <button 
-                                                onClick={() => handleCancelTicket(ticket._id)}
-                                                className="px-4 py-2 border border-rose-100 text-rose-500 text-[10px] font-black rounded-xl hover:bg-rose-50 transition-colors uppercase tracking-wider"
-                                            >
-                                                Cancel Ticket
-                                            </button>
-                                        </div>
-                                    )}
+                                    {['Confirmed', 'Pending'].includes(ticket.status) && (() => {
+                                        let canCancel = true;
+                                        let reasonMsg = '';
+                                        const seller = ticket.sellerId;
+                                        const bookingDate = ticket.bookingId?.bookingDate;
+
+                                        if (seller?.ticketCancellationBufferEnabled && bookingDate) {
+                                            const eventDateObj = new Date(bookingDate);
+                                            const timeSlotStr = ticket.bookingId?.timeSlot;
+                                            if (timeSlotStr && typeof timeSlotStr === 'string') {
+                                                const startPart = timeSlotStr.split('-')[0]?.trim();
+                                                if (startPart) {
+                                                    const match = startPart.match(/(\d+):(\d+)\s*(AM|PM)/i);
+                                                    if (match) {
+                                                        let hours = parseInt(match[1], 10);
+                                                        const minutes = parseInt(match[2], 10);
+                                                        const modifier = match[3].toUpperCase();
+                                                        if (modifier === 'PM' && hours < 12) hours += 12;
+                                                        if (modifier === 'AM' && hours === 12) hours = 0;
+                                                        eventDateObj.setHours(hours, minutes, 0, 0);
+                                                    }
+                                                }
+                                            }
+                                            const eventTime = eventDateObj.getTime();
+                                            const diffHours = (eventTime - Date.now()) / (1000 * 60 * 60);
+                                            const reqHours = seller.ticketCancellationBufferUnit === 'hours'
+                                                ? Number(seller.ticketCancellationBuffer || 0)
+                                                : Number(seller.ticketCancellationBuffer || 0) * 24;
+
+                                            if (diffHours < reqHours) {
+                                                canCancel = false;
+                                                reasonMsg = `Cancellation closed (${seller.ticketCancellationBuffer} ${seller.ticketCancellationBufferUnit || 'days'} prior required)`;
+                                            }
+                                        }
+
+                                        return (
+                                            <div className="flex flex-col gap-2 pt-2">
+                                                <div className="flex gap-3 items-center">
+                                                    <button 
+                                                        onClick={() => handleOpenEditModal(ticket)}
+                                                        className="px-4 py-2 border border-purple-200 text-purple-600 text-[10px] font-black rounded-xl hover:bg-purple-50 transition-colors uppercase tracking-wider"
+                                                    >
+                                                        Edit Details
+                                                    </button>
+                                                    {canCancel ? (
+                                                        <button 
+                                                            onClick={() => handleCancelTicket(ticket._id)}
+                                                            className="px-4 py-2 border border-rose-100 text-rose-500 text-[10px] font-black rounded-xl hover:bg-rose-50 transition-colors uppercase tracking-wider"
+                                                        >
+                                                            Cancel Ticket
+                                                        </button>
+                                                    ) : (
+                                                        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200">
+                                                            🚫 Cancellation Closed
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {reasonMsg && (
+                                                    <p className="text-[10px] text-rose-500 font-semibold">{reasonMsg}</p>
+                                                )}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* QR Code Display Section */}

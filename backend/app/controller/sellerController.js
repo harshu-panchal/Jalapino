@@ -344,6 +344,15 @@ export const updateSellerProfile = async (req, res) => {
     if (req.body.totalCapacity !== undefined) seller.totalCapacity = Number(req.body.totalCapacity);
     if (req.body.bookingType !== undefined) seller.bookingType = req.body.bookingType;
     if (req.body.numberOfShops !== undefined) seller.numberOfShops = Number(req.body.numberOfShops);
+    if (req.body.shopsAtLocation !== undefined) {
+      try {
+        seller.shopsAtLocation = typeof req.body.shopsAtLocation === 'string'
+          ? JSON.parse(req.body.shopsAtLocation)
+          : req.body.shopsAtLocation;
+      } catch (e) {
+        seller.shopsAtLocation = [];
+      }
+    }
 
     if (req.body.addonDecorationEnabled !== undefined) seller.addonDecorationEnabled = req.body.addonDecorationEnabled === 'true' || req.body.addonDecorationEnabled === true;
     if (req.body.addonDecorationPrice !== undefined) seller.addonDecorationPrice = Number(req.body.addonDecorationPrice);
@@ -361,12 +370,25 @@ export const updateSellerProfile = async (req, res) => {
     if (shopClosingTime !== undefined) seller.shopClosingTime = shopClosingTime;
     if (req.body.advanceBookingBuffer !== undefined) seller.advanceBookingBuffer = Number(req.body.advanceBookingBuffer);
     if (req.body.advanceBookingBufferUnit !== undefined) seller.advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
+    if (req.body.shopClosedDates !== undefined) {
+      try {
+        seller.shopClosedDates = typeof req.body.shopClosedDates === 'string' 
+          ? JSON.parse(req.body.shopClosedDates) 
+          : req.body.shopClosedDates;
+      } catch (e) {
+        seller.shopClosedDates = [];
+      }
+    }
 
     // Child Ticket Policy
     if (req.body.childTicketPolicyEnabled !== undefined) seller.childTicketPolicyEnabled = req.body.childTicketPolicyEnabled === 'true' || req.body.childTicketPolicyEnabled === true;
     if (req.body.childFreeAgeLimit !== undefined) seller.childFreeAgeLimit = Number(req.body.childFreeAgeLimit);
     if (req.body.childMaxAgeLimit !== undefined) seller.childMaxAgeLimit = Number(req.body.childMaxAgeLimit);
     if (req.body.childTicketPrice !== undefined) seller.childTicketPrice = Number(req.body.childTicketPrice);
+
+    // Ticket Cancellation Buffer (Seller defined)
+    if (req.body.ticketCancellationBuffer !== undefined) seller.ticketCancellationBuffer = Number(req.body.ticketCancellationBuffer);
+    if (req.body.ticketCancellationBufferUnit !== undefined) seller.ticketCancellationBufferUnit = req.body.ticketCancellationBufferUnit;
 
     if (serviceCoverage !== undefined) {
       if (typeof serviceCoverage === "string") {
