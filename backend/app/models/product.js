@@ -129,10 +129,37 @@ const productSchema = new mongoose.Schema(
                 salePrice: Number,
                 stock: Number,
                 sku: String,
+                uniqueCode: { type: String, trim: true, default: "" },
+                shopNo: { type: String, trim: true, default: "" },
+                minimum: { type: Number, default: 0 },
+                maximum: { type: Number, default: 0 },
+                capacityType: { type: String, default: "" },
+                totalCapacity: { type: Number, default: 0 },
+                bookingType: { type: String, default: "" },
                 hasBrandName: { type: Boolean, default: false },
                 brand: { type: String, trim: true, default: "" },
                 hasIngredients: { type: Boolean, default: false },
                 ingredients: { type: String, trim: true, default: "" },
+                hasAddOn: { type: Boolean, default: false },
+                addOnType: { type: String, enum: ["fixed", "click_box"], default: "fixed" },
+                addOns: [
+                    {
+                        name: { type: String, trim: true, default: "" },
+                        price: { type: Number, default: 0 }
+                    }
+                ],
+                fixedAddOns: [
+                    {
+                        name: { type: String, trim: true, default: "" },
+                        price: { type: Number, default: 0 }
+                    }
+                ],
+                clickBoxAddOns: [
+                    {
+                        name: { type: String, trim: true, default: "" },
+                        price: { type: Number, default: 0 }
+                    }
+                ],
             }
         ],
         tickets: [

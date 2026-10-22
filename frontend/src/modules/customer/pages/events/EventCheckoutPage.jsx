@@ -11,12 +11,49 @@ import { useSettings } from '@core/context/SettingsContext';
 const CHECKOUT_STATE_KEY = 'jalapino_plan_event_checkout';
 
 const getProductPricing = (product) => {
-    const variantPrice = product?.selectedVariant?.price ?? product?.price;
-    const variantSalePrice = product?.selectedVariant?.salePrice ?? product?.salePrice;
-    const originalPrice = Number(variantPrice) || 0;
-    const salePrice = Number(variantSalePrice) || 0;
+    let basePrice = product?.selectedVariant?.price ?? product?.price;
+    let baseSalePrice = product?.selectedVariant?.salePrice ?? product?.salePrice;
+    let originalPrice = Number(basePrice) || 0;
+    let salePrice = Number(baseSalePrice) || 0;
+
+    const activeVariant = product?.selectedVariant || product?.variants?.[0];
+    const hasAddOn = Boolean(activeVariant?.hasAddOn || product?.hasAddOn);
+    const addOnType = activeVariant?.addOnType || product?.addOnType || 'fixed';
+
+    // 1. Fixed add-ons (TOGAL 1: Price fixed - automatically included if hasAddOn is true)
+    let fixedList = [];
+    if (activeVariant?.fixedAddOns && activeVariant.fixedAddOns.length > 0) {
+        fixedList = activeVariant.fixedAddOns;
+    } else if (product?.fixedAddOns && product.fixedAddOns.length > 0) {
+        fixedList = product.fixedAddOns;
+    } else if (addOnType === 'fixed' && (activeVariant?.addOns?.length > 0 || product?.addOns?.length > 0)) {
+        fixedList = activeVariant?.addOns || product?.addOns || [];
+    }
+    const validFixedList = fixedList.filter(item => item && (item.name?.trim() || item.price > 0));
+
+    let fixedExtra = 0;
+    if (hasAddOn && validFixedList.length > 0) {
+        fixedExtra = validFixedList.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    }
+
+    // 2. Click-box add-ons (TOGAL 2: Price click on box - optional, included when selected)
+    let selectedClickBoxExtra = 0;
+    if (product?.selectedAddOns && Array.isArray(product.selectedAddOns)) {
+        const fixedNames = new Set(validFixedList.map(f => f.name?.trim().toLowerCase()));
+        selectedClickBoxExtra = product.selectedAddOns
+            .filter(item => !fixedNames.has(item.name?.trim().toLowerCase()))
+            .reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    }
+
+    const totalAddOnExtra = fixedExtra + selectedClickBoxExtra;
+
+    originalPrice += totalAddOnExtra;
+    if (salePrice > 0) {
+        salePrice += totalAddOnExtra;
+    }
+
     const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
-    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice };
+    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra };
 };
 
 const readSavedCheckoutState = () => {
@@ -187,15 +224,26 @@ const EventCheckoutPage = () => {
                                 const lineTotal = pricing.unitPrice * quantity;
                                 const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || idx;
                                 return (
-                                    <div key={`${product._id}-${variantKey}`} className="flex justify-between text-sm">
-                                        <span className="text-slate-500">
-                                            {product.name}
-                                            {product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
-                                        </span>
-                                        <span className="flex items-center gap-2 font-semibold text-slate-800">
-                                            {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString()}</span>}
-                                            <span>₹{lineTotal.toLocaleString()}</span>
-                                        </span>
+                                    <div key={`${product._id}-${variantKey}`} className="flex flex-col text-sm">
+                                        <div className="flex justify-between">
+                                            <span className="text-slate-500">
+                                                {product.name}
+                                                {product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
+                                            </span>
+                                            <span className="flex items-center gap-2 font-semibold text-slate-800">
+                                                {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString()}</span>}
+                                                <span>₹{lineTotal.toLocaleString()}</span>
+                                            </span>
+                                        </div>
+                                        {product.selectedAddOns?.length > 0 && (
+                                            <div className="flex flex-wrap gap-1 text-[11px] text-purple-700 pl-2 mt-0.5">
+                                                {product.selectedAddOns.map((ad, aIndex) => (
+                                                    <span key={aIndex} className="bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded">
+                                                        + {ad.name} (₹{ad.price})
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}

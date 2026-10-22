@@ -349,6 +349,35 @@ export const updateSellerProfile = async (req, res) => {
         seller.shopsAtLocation = typeof req.body.shopsAtLocation === 'string'
           ? JSON.parse(req.body.shopsAtLocation)
           : req.body.shopsAtLocation;
+
+        if (Array.isArray(seller.shopsAtLocation) && seller.shopsAtLocation.length > 0) {
+          let prodCapTotal = 0;
+          let hasProdCap = false;
+          let shopCapMax = 0;
+          let hasShopCap = false;
+
+          seller.shopsAtLocation.forEach(s => {
+            const isProd = String(s.capacityType || '').trim().toUpperCase() === 'PRODUCT CAPECITY';
+            const capVal = Number(s.totalCapacity ?? s.maximum ?? 0);
+            const maxVal = Number(s.maximum ?? 0);
+            const rowVal = capVal || maxVal || 0;
+
+            if (isProd) {
+              hasProdCap = true;
+              prodCapTotal += rowVal;
+            } else {
+              hasShopCap = true;
+              if (rowVal > shopCapMax) shopCapMax = rowVal;
+            }
+          });
+
+          if (hasProdCap) {
+            seller.totalCapacity = prodCapTotal;
+          }
+          if (hasShopCap) {
+            seller.maxGuestCapacity = shopCapMax;
+          }
+        }
       } catch (e) {
         seller.shopsAtLocation = [];
       }
@@ -368,8 +397,18 @@ export const updateSellerProfile = async (req, res) => {
     if (shopTimingsEnabled !== undefined) seller.shopTimingsEnabled = shopTimingsEnabled === 'true' || shopTimingsEnabled === true;
     if (shopOpeningTime !== undefined) seller.shopOpeningTime = shopOpeningTime;
     if (shopClosingTime !== undefined) seller.shopClosingTime = shopClosingTime;
-    if (req.body.advanceBookingBuffer !== undefined) seller.advanceBookingBuffer = Number(req.body.advanceBookingBuffer);
-    if (req.body.advanceBookingBufferUnit !== undefined) seller.advanceBookingBufferUnit = req.body.advanceBookingBufferUnit;
+    if (req.body.advanceBookingBuffer !== undefined) {
+      const bufVal = Array.isArray(req.body.advanceBookingBuffer) ? req.body.advanceBookingBuffer[req.body.advanceBookingBuffer.length - 1] : req.body.advanceBookingBuffer;
+      seller.advanceBookingBuffer = isNaN(Number(bufVal)) ? 0 : Number(bufVal);
+    }
+    if (req.body.advanceBookingBufferUnit !== undefined) {
+      const unitVal = Array.isArray(req.body.advanceBookingBufferUnit) ? req.body.advanceBookingBufferUnit[req.body.advanceBookingBufferUnit.length - 1] : req.body.advanceBookingBufferUnit;
+      seller.advanceBookingBufferUnit = String(unitVal || "days");
+    }
+    if (req.body.advanceBookingBufferTime !== undefined) {
+      const timeVal = Array.isArray(req.body.advanceBookingBufferTime) ? req.body.advanceBookingBufferTime[req.body.advanceBookingBufferTime.length - 1] : req.body.advanceBookingBufferTime;
+      seller.advanceBookingBufferTime = String(timeVal || "12");
+    }
     if (req.body.shopClosedDates !== undefined) {
       try {
         seller.shopClosedDates = typeof req.body.shopClosedDates === 'string' 

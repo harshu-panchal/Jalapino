@@ -16,7 +16,7 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import EventIcon from '@mui/icons-material/Event';
 import { customerApi } from '../../services/customerApi';
-import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'sonner';
 import { ArrowLeft, Heart, ShoppingBag, Clock, Search, Star, MessageSquare } from 'lucide-react';
 
 const resolveProductImageUrl = (path) => (
@@ -24,12 +24,52 @@ const resolveProductImageUrl = (path) => (
 );
 
 const getProductPricing = (product) => {
-    const variantPrice = product?.selectedVariant?.price ?? product?.price;
-    const variantSalePrice = product?.selectedVariant?.salePrice ?? product?.salePrice;
-    const originalPrice = Number(variantPrice) || 0;
-    const salePrice = Number(variantSalePrice) || 0;
+    // If unitPrice or price was directly calculated and stored with add-on
+    let basePrice = product?.selectedVariant?.price ?? product?.price;
+    let baseSalePrice = product?.selectedVariant?.salePrice ?? product?.salePrice;
+    let originalPrice = Number(basePrice) || 0;
+    let salePrice = Number(baseSalePrice) || 0;
+
+    // Check add-ons
+    const activeVariant = product?.selectedVariant || product?.variants?.[0];
+    const hasAddOn = Boolean(activeVariant?.hasAddOn || product?.hasAddOn);
+    const addOnType = activeVariant?.addOnType || product?.addOnType || 'fixed';
+
+    // 1. Fixed add-ons (TOGAL 1: Price fixed - automatically included if hasAddOn is true)
+    let fixedList = [];
+    if (Array.isArray(activeVariant?.fixedAddOns)) {
+        fixedList = activeVariant.fixedAddOns;
+    } else if (Array.isArray(product?.fixedAddOns)) {
+        fixedList = product.fixedAddOns;
+    } else if (addOnType === 'fixed' && (activeVariant?.addOns?.length > 0 || product?.addOns?.length > 0)) {
+        fixedList = activeVariant?.addOns || product?.addOns || [];
+    }
+    const validFixedList = fixedList.filter(item => item && (item.name?.trim() || item.price > 0));
+
+    let fixedExtra = 0;
+    if (hasAddOn && validFixedList.length > 0) {
+        fixedExtra = validFixedList.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    }
+
+    // 2. Click-box add-ons (TOGAL 2: Price click on box - optional, included when selected)
+    let selectedClickBoxExtra = 0;
+    if (product?.selectedAddOns && Array.isArray(product.selectedAddOns)) {
+        // Only sum items from selectedAddOns that are not already counted in fixedExtra
+        const fixedNames = new Set(validFixedList.map(f => f.name?.trim().toLowerCase()));
+        selectedClickBoxExtra = product.selectedAddOns
+            .filter(item => !fixedNames.has(item.name?.trim().toLowerCase()))
+            .reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    }
+
+    const totalAddOnExtra = fixedExtra + selectedClickBoxExtra;
+
+    originalPrice += totalAddOnExtra;
+    if (salePrice > 0) {
+        salePrice += totalAddOnExtra;
+    }
+
     const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
-    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice };
+    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra };
 };
 
 const EventSellerDetailPage = ({ embeddedState, onBack }) => {
@@ -161,6 +201,20 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const isSavingInfo = currentState.savingInfo !== undefined ? currentState.savingInfo : localSavingInfo;
     const isSavedInfo = currentState.savedInfo !== undefined ? currentState.savedInfo : localSavedInfo;
 
+    // Calculate minimum allowed booking date based on seller's advanceBookingBuffer
+    const minBookingDate = React.useMemo(() => {
+        if (!selectedSeller?.advanceBookingBufferEnabled) {
+            return new Date().toISOString().split('T')[0];
+        }
+        const buffer = Number(selectedSeller.advanceBookingBuffer) || 0;
+        const unit = selectedSeller.advanceBookingBufferUnit || 'days';
+        const extraHours = (unit === 'days' && selectedSeller.advanceBookingBufferTime) ? (Number(selectedSeller.advanceBookingBufferTime) || 0) : 0;
+        const totalHours = (unit === 'hours' ? buffer : buffer * 24) + extraHours;
+
+        const minTime = new Date(Date.now() + totalHours * 60 * 60 * 1000);
+        return minTime.toISOString().split('T')[0];
+    }, [selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferUnit, selectedSeller?.advanceBookingBufferTime]);
+
     // Ensure the current booking type is valid for active permissions, else fallback to defaultBookingType
     const effectiveBookingType = (
         (activeEventInfo.bookingType === 'corporate' && isCorporateContactEnabled) ||
@@ -259,6 +313,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [modalSelectedVariant, setModalSelectedVariant] = useState(null);
     const [ticketSoldMap, setTicketSoldMap] = useState({});
     const [selectedShop, setSelectedShop] = useState(null);
+    const [sellerBookedSlots, setSellerBookedSlots] = useState([]);
+    const [selectedAddOns, setSelectedAddOns] = useState({});
 
     const openProductGallery = (product) => {
         const imagesSet = new Set();
@@ -289,6 +345,23 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             const currentlySelected = selectedProducts.find(p => p._id === product._id);
             const initialVariant = currentlySelected?.selectedVariant
                 || (product.variants && product.variants.length > 0 ? product.variants[0] : null);
+
+            if (currentlySelected?.selectedAddOns && Array.isArray(currentlySelected.selectedAddOns)) {
+                const key = `${product._id}_${initialVariant?.sku || initialVariant?.name || 'default'}`;
+                // Only load optional/click-box add-ons that actually still exist on the variant
+                const availableClickBoxNames = new Set((initialVariant?.clickBoxAddOns || product.clickBoxAddOns || []).map(a => a.name?.trim().toLowerCase()));
+                const optionalAddOns = currentlySelected.selectedAddOns.filter(a => !a.isFixed && availableClickBoxNames.has(a.name?.trim().toLowerCase()));
+                setSelectedAddOns(prev => ({
+                    ...prev,
+                    [key]: optionalAddOns
+                }));
+            } else {
+                const key = `${product._id}_${initialVariant?.sku || initialVariant?.name || 'default'}`;
+                setSelectedAddOns(prev => ({
+                    ...prev,
+                    [key]: []
+                }));
+            }
 
             setImagePreview({ images, activeIndex: 0, name: product.name, product: product });
             setModalSelectedVariant(initialVariant);
@@ -387,13 +460,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     for (const item of savedSelection) {
                         const baseProduct = productsMap.get(String(item.productId));
                         if (baseProduct) {
+                            const activeVariant = item.selectedVariant 
+                                ? baseProduct.variants?.find(v => (v.sku || v.name) === (item.selectedVariant.sku || item.selectedVariant.name)) || item.selectedVariant
+                                : baseProduct.variants?.[0];
+                            const availableAddOnNames = new Set([
+                                ...(activeVariant?.fixedAddOns || baseProduct.fixedAddOns || []).map(a => a.name?.trim().toLowerCase()),
+                                ...(activeVariant?.clickBoxAddOns || baseProduct.clickBoxAddOns || []).map(a => a.name?.trim().toLowerCase())
+                            ]);
+                            const sanitizedAddOns = Array.isArray(item.selectedAddOns)
+                                ? item.selectedAddOns.filter(a => availableAddOnNames.has(a.name?.trim().toLowerCase()))
+                                : [];
+
                             restored.push({
                                 ...baseProduct,
                                 quantity: Number(item.quantity) || 1,
                                 selectedColors: item.selectedColors || [],
-                                ...(item.selectedVariant ? { selectedVariant: item.selectedVariant } : {}),
+                                ...(activeVariant ? { selectedVariant: activeVariant } : {}),
                                 ...(item.price !== undefined ? { price: item.price } : {}),
-                                ...(item.salePrice !== undefined ? { salePrice: item.salePrice } : {})
+                                ...(item.salePrice !== undefined ? { salePrice: item.salePrice } : {}),
+                                selectedAddOns: sanitizedAddOns
                             });
                         }
                     }
@@ -460,17 +545,32 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         };
     }, [eventData, selectedSeller, navigate, user, selectedProductsStorageKey]);
 
+    // Fetch booked time slots for this seller on activeDate
+    useEffect(() => {
+        if (!selectedSeller?._id || !activeDate) {
+            setSellerBookedSlots([]);
+            return;
+        }
+        axiosInstance.get(`/events/slots/${selectedSeller._id}?date=${activeDate}`)
+            .then(res => {
+                const slots = res.data?.result?.bookedSlots || [];
+                setSellerBookedSlots(Array.isArray(slots) ? slots : []);
+            })
+            .catch(() => setSellerBookedSlots([]));
+    }, [selectedSeller?._id, activeDate]);
+
     useEffect(() => {
         if (isLoadingProducts) return;
         try {
             sessionStorage.setItem(selectedProductsStorageKey, JSON.stringify(
-                selectedProducts.map(({ _id, quantity, selectedColors = [], selectedVariant, price, salePrice }) => ({
+                selectedProducts.map(({ _id, quantity, selectedColors = [], selectedVariant, price, salePrice, selectedAddOns = [] }) => ({
                     productId: _id,
                     quantity,
                     selectedColors,
                     selectedVariant,
                     price,
-                    salePrice
+                    salePrice,
+                    selectedAddOns
                 }))
             ));
         } catch (error) {
@@ -544,40 +644,130 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         setChatInput('');
     };
 
+    const getProductCapacityConfig = (product, variant) => {
+        if (!selectedSeller?.capacityEnabled) return null;
+        const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
+        const variantCode = variant?.uniqueCode || product?.uniqueCode;
+        const matchedShop = shops.find(s => s.uniqueCode && variantCode && s.uniqueCode === variantCode)
+            || shops.find(s => String(s.shopNo) === String(variant?.shopNo || product?.shopNo))
+            || shops[0];
+
+        const minimum = Number(variant?.minimum ?? product?.minimum ?? matchedShop?.minimum ?? 0);
+        const maximum = Number(variant?.maximum ?? product?.maximum ?? matchedShop?.maximum ?? 0);
+        const totalCap = Number(variant?.totalCapacity ?? product?.totalCapacity ?? matchedShop?.totalCapacity ?? 0);
+        const maxLimit = maximum > 0 ? maximum : (totalCap > 0 ? totalCap : 0);
+        const bookingType = String(variant?.bookingType || product?.bookingType || matchedShop?.bookingType || 'MULTIPLE').toUpperCase();
+        const capacityType = String(variant?.capacityType || product?.capacityType || matchedShop?.capacityType || 'SHOP CAPECITY').toUpperCase();
+
+        return {
+            enabled: true,
+            minimum: minimum > 0 ? minimum : 1,
+            maximum: maxLimit,
+            bookingType,
+            capacityType,
+            uniqueCode: variantCode || matchedShop?.uniqueCode || ''
+        };
+    };
+
+    const getFixedAddOnsForProduct = (product, variant) => {
+        const activeVariant = variant || product?.selectedVariant || product?.variants?.[0];
+        const hasAddOn = Boolean(activeVariant?.hasAddOn || product?.hasAddOn);
+        if (!hasAddOn) return [];
+
+        let fixedList = [];
+        if (Array.isArray(activeVariant?.fixedAddOns)) {
+            fixedList = activeVariant.fixedAddOns;
+        } else if (Array.isArray(product?.fixedAddOns)) {
+            fixedList = product.fixedAddOns;
+        } else if ((activeVariant?.addOnType || product?.addOnType) === 'fixed') {
+            fixedList = activeVariant?.addOns || product?.addOns || [];
+        }
+        return fixedList
+            .filter(item => item && (item.name?.trim() || item.price > 0))
+            .map(a => ({ ...a, isFixed: true }));
+    };
+
     const handleProductQuantityChange = (product, change) => {
+        const capConfig = getProductCapacityConfig(product, product.selectedVariant);
+
         setSelectedProducts(prev => {
             const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || 'default';
             const selectedProduct = prev.find(p => p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey);
-            const nextQuantity = (selectedProduct?.quantity || 0) + change;
+            const currentQty = selectedProduct?.quantity || 0;
 
-            if (nextQuantity <= 0) {
-                return prev.filter(p => !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey));
+            if (currentQty === 0 && change > 0) {
+                const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                const autoFixedAddOns = getFixedAddOnsForProduct(product, product.selectedVariant);
+                const existingAddOns = Array.isArray(product.selectedAddOns) ? product.selectedAddOns : [];
+                // Merge if not already present
+                const fixedNames = new Set(existingAddOns.map(a => a.name?.trim().toLowerCase()));
+                const mergedAddOns = [
+                    ...existingAddOns,
+                    ...autoFixedAddOns.filter(f => !fixedNames.has(f.name?.trim().toLowerCase()))
+                ];
+                return [...prev, { ...product, quantity: initialQty, selectedAddOns: mergedAddOns }];
             }
 
-            if (!selectedProduct) {
-                return [...prev, { ...product, quantity: nextQuantity }];
-            }
-
-            return prev.map(p => {
-                const pVariantKey = p.selectedVariant?.sku || p.selectedVariant?.name || 'default';
-                if (p._id === product._id && pVariantKey === variantKey) {
-                    return {
-                        ...p,
-                        quantity: nextQuantity,
-                        ...(product.selectedVariant ? { selectedVariant: product.selectedVariant } : {}),
-                        ...(product.price !== undefined ? { price: product.price } : {}),
-                        ...(product.salePrice !== undefined ? { salePrice: product.salePrice } : {})
-                    };
+            if (change > 0) {
+                if (capConfig && capConfig.bookingType === 'SINGLE') {
+                    toast.error("Single booking allowed for this product/shop.");
+                    return prev;
                 }
-                return p;
-            });
+                if (capConfig && capConfig.maximum > 0 && (currentQty + change) > capConfig.maximum) {
+                    toast.error(`Maximum allowed capacity is ${capConfig.maximum}`);
+                    return prev;
+                }
+                const nextQuantity = currentQty + change;
+                return prev.map(p => {
+                    const pVariantKey = p.selectedVariant?.sku || p.selectedVariant?.name || 'default';
+                    if (p._id === product._id && pVariantKey === variantKey) {
+                        return {
+                            ...p,
+                            quantity: nextQuantity,
+                            selectedAddOns: product.selectedAddOns !== undefined ? product.selectedAddOns : p.selectedAddOns,
+                            price: product.price !== undefined ? product.price : p.price
+                        };
+                    }
+                    return p;
+                });
+            } else if (change < 0) {
+                if (capConfig && capConfig.minimum > 1 && currentQty <= capConfig.minimum) {
+                    // Clicking minus at minimum removes the item
+                    return prev.filter(p => !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey));
+                }
+                const nextQuantity = currentQty + change;
+                if (nextQuantity <= 0) {
+                    return prev.filter(p => !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey));
+                }
+                return prev.map(p => {
+                    const pVariantKey = p.selectedVariant?.sku || p.selectedVariant?.name || 'default';
+                    if (p._id === product._id && pVariantKey === variantKey) {
+                        return { ...p, quantity: nextQuantity };
+                    }
+                    return p;
+                });
+            }
+
+            return prev;
         });
     };
 
     const handleProductSelection = (product) => {
-        setSelectedProducts(prev => prev.some(p => p._id === product._id)
-            ? prev.filter(p => p._id !== product._id)
-            : [...prev, { ...product, quantity: 1, selectedColors: [] }]);
+        const activeVariant = product.selectedVariant || product.variants?.[0];
+        const capConfig = getProductCapacityConfig(product, activeVariant);
+        const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+        const autoFixedAddOns = getFixedAddOnsForProduct(product, activeVariant);
+        const existingAddOns = Array.isArray(product.selectedAddOns) ? product.selectedAddOns : [];
+        const fixedNames = new Set(existingAddOns.map(a => a.name?.trim().toLowerCase()));
+        const mergedAddOns = [
+            ...existingAddOns,
+            ...autoFixedAddOns.filter(f => !fixedNames.has(f.name?.trim().toLowerCase()))
+        ];
+
+        const variantKey = activeVariant?.sku || activeVariant?.name || 'default';
+        setSelectedProducts(prev => prev.some(p => p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey)
+            ? prev.filter(p => !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey))
+            : [...prev, { ...product, selectedVariant: activeVariant, quantity: initialQty, selectedColors: [], selectedAddOns: mergedAddOns }]);
     };
 
     const handleProductColorToggle = (productId, color) => {
@@ -622,7 +812,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 customNotes,
                 customBudget,
                 selectedProducts: selectedProducts.map(p => p._id),
-                selectedProductQuantities: selectedProducts.map(({ _id, quantity, selectedVariant }) => ({ productId: _id, quantity, selectedVariant })),
+                selectedProductQuantities: selectedProducts.map(({ _id, quantity, selectedVariant, selectedAddOns }) => ({ productId: _id, quantity, selectedVariant, selectedAddOns })),
                 selectedProductColors: selectedProducts
                     .filter(product => product.selectedColors?.length)
                     .map(({ _id, name, selectedColors }) => ({ productId: _id, productName: name, colors: selectedColors }))
@@ -762,7 +952,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 type="date"
                                                 value={multiInputDate}
                                                 onChange={e => setMultiInputDate(e.target.value)}
-                                                min={new Date().toISOString().split('T')[0]}
+                                                min={minBookingDate}
                                                 className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                             />
                                         </div>
@@ -840,7 +1030,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 type="date"
                                                 value={activeDate}
                                                 onChange={e => handleDateChange(e.target.value)}
-                                                min={new Date().toISOString().split('T')[0]}
+                                                min={minBookingDate}
                                                 className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                             />
                                         </div>
@@ -850,7 +1040,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 type="date"
                                                 value={activeEndDate}
                                                 onChange={e => handleEndDateChange(e.target.value)}
-                                                min={activeDate || new Date().toISOString().split('T')[0]}
+                                                min={activeDate || minBookingDate}
                                                 className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                             />
                                         </div>
@@ -863,9 +1053,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                                                 >
                                                     <option value="">-- Select Slot --</option>
-                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => (
-                                                        <option key={slot} value={slot}>{slot}</option>
-                                                    ))}
+                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => {
+                                                        const isBooked = sellerBookedSlots.includes(slot);
+                                                        return (
+                                                            <option key={slot} value={slot} disabled={isBooked} className={isBooked ? "text-red-500 bg-slate-100 font-semibold" : ""}>
+                                                                {slot} {isBooked ? "(Already Booked)" : ""}
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
                                             </div>
                                         )}
@@ -891,7 +1086,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 type="date"
                                                 value={activeDate}
                                                 onChange={e => handleDateChange(e.target.value)}
-                                                min={new Date().toISOString().split('T')[0]}
+                                                min={minBookingDate}
                                                 className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                             />
                                         </div>
@@ -904,9 +1099,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                                                 >
                                                     <option value="">-- Select Slot --</option>
-                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => (
-                                                        <option key={slot} value={slot}>{slot}</option>
-                                                    ))}
+                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => {
+                                                        const isBooked = sellerBookedSlots.includes(slot);
+                                                        return (
+                                                            <option key={slot} value={slot} disabled={isBooked} className={isBooked ? "text-red-500 bg-slate-100 font-semibold" : ""}>
+                                                                {slot} {isBooked ? "(Already Booked)" : ""}
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
                                             </div>
                                         )}
@@ -1137,97 +1337,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                     {/* Products Grid */}
                     <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
-                        {/* NO. OF SHOP (AT SAME LOCATION) Excel Format Table for Event Seller */}
-                        {selectedSeller?.capacityEnabled && selectedSeller?.shopsAtLocation?.length > 0 && (
-                            <div className="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                                <div className="bg-[#b4c6e7] py-3.5 px-4 text-center font-black text-xs sm:text-sm md:text-base text-slate-800 tracking-wider border-b border-slate-300">
-                                    NO. OF SHOP (AT SAME LOCATION)
-                                </div>
-                                <div className="overflow-x-auto w-full">
-                                    <table className="w-full text-xs sm:text-sm border-collapse min-w-[580px]">
-                                        <thead>
-                                            <tr className="text-center font-black uppercase text-[11px] sm:text-xs">
-                                                <th className="bg-[#ffff00] border border-slate-300 px-4 py-3 text-slate-900 min-w-[160px]">UNIQUE CODE NO. GENARATE</th>
-                                                <th className="bg-[#5b9bd5] text-white border border-slate-300 px-3 py-3 min-w-[100px]">SHOP NO.</th>
-                                                <th className="bg-[#ed7d31] text-white border border-slate-300 px-3 py-3 min-w-[100px]">MINIMUM</th>
-                                                <th className="bg-[#ffc000] border border-slate-300 px-3 py-3 text-slate-900 min-w-[100px]">MAXIMUM</th>
-                                                <th className="bg-[#d9e1f2] border border-slate-300 px-3 py-3 text-slate-900 min-w-[130px]">SINGLE/MULTIPLE</th>
-                                                <th className="bg-slate-200 border border-slate-300 px-3 py-3 text-slate-800 min-w-[100px]">SELECT</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {selectedSeller.shopsAtLocation.map((shop, idx) => {
-                                                const shopId = shop.uniqueCode || `SHOP_${shop.shopNo || idx + 1}`;
-                                                const isShopActive = (selectedShop?.uniqueCode === shop.uniqueCode) || (selectedShop?.shopNo === shop.shopNo);
-                                                return (
-                                                    <tr 
-                                                        key={idx} 
-                                                        onClick={() => setSelectedShop(isShopActive ? null : shop)}
-                                                        className={`text-center font-bold text-xs sm:text-sm cursor-pointer transition-all ${
-                                                            isShopActive
-                                                                ? 'bg-purple-100/90 ring-2 ring-purple-600 ring-inset'
-                                                                : 'hover:bg-slate-50'
-                                                        }`}
-                                                    >
-                                                        <td className="border border-slate-300 py-3 px-3 uppercase text-purple-700 tracking-wider font-extrabold text-xs sm:text-sm">
-                                                            {shop.uniqueCode || `HALL${String(idx + 1).padStart(2, '0')}`}
-                                                        </td>
-                                                        <td className="border border-slate-300 py-3 px-3 font-bold text-xs sm:text-sm">
-                                                            {shop.shopNo || idx + 1}
-                                                        </td>
-                                                        <td className="border border-slate-300 py-3 px-3 font-semibold text-slate-700 text-xs sm:text-sm">
-                                                            {shop.minimum ?? 0}
-                                                        </td>
-                                                        <td className="border border-slate-300 py-3 px-3 font-semibold text-slate-700 text-xs sm:text-sm">
-                                                            {shop.maximum ?? 0}
-                                                        </td>
-                                                        <td className="border border-slate-300 py-3 px-3">
-                                                            <span className={`inline-block px-3 py-1 rounded-md text-xs font-black uppercase tracking-wider ${
-                                                                shop.bookingType === 'SINGLE'
-                                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                            }`}>
-                                                                {shop.bookingType || 'MULTIPLE'}
-                                                            </span>
-                                                        </td>
-                                                        <td className="border border-slate-300 py-3 px-3">
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setSelectedShop(isShopActive ? null : shop);
-                                                                }}
-                                                                className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider transition-all ${
-                                                                    isShopActive
-                                                                        ? 'bg-purple-600 text-white shadow-sm'
-                                                                        : 'bg-slate-100 hover:bg-purple-50 text-slate-700 border border-slate-300'
-                                                                }`}
-                                                            >
-                                                                {isShopActive ? '✓ Selected' : 'Choose'}
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                );
-                                            })}
-                                        </tbody>
-                                    </table>
-                                </div>
-                                {selectedShop && (
-                                    <div className="bg-purple-50 border-t border-purple-200 py-2.5 px-4 flex items-center justify-between text-xs text-purple-900 font-bold">
-                                        <span>
-                                            📍 Selected Area/Shop: <span className="font-extrabold text-purple-700">{selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`}</span> (Min: {selectedShop.minimum || 1}, Max: {selectedShop.maximum || 'Any'})
-                                        </span>
-                                        <button 
-                                            type="button" 
-                                            onClick={() => setSelectedShop(null)} 
-                                            className="text-purple-600 hover:text-purple-800 text-[11px] underline font-semibold"
-                                        >
-                                            Clear
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        )}
+
 
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4">
                             Select Products & Services
@@ -1295,7 +1405,41 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             ) : null)}
                                                         </div>
                                                     )}
+                                                    {matchingSelected.length > 0 && matchingSelected.some(p => p.selectedAddOns?.length > 0) ? (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {matchingSelected.flatMap(p => p.selectedAddOns || []).map((addon, aIdx) => (
+                                                                <span key={aIdx} className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                                                    + {addon.name} (₹{addon.price})
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    ) : (() => {
+                                                        const autoFixed = getFixedAddOnsForProduct(product);
+                                                        if (autoFixed.length > 0) {
+                                                            return (
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {autoFixed.map((addon, aIdx) => (
+                                                                        <span key={aIdx} className="text-[9px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                                                                            ✨ Incl: {addon.name} (+₹{addon.price})
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            );
+                                                        }
+                                                        return null;
+                                                    })()}
                                                     <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{product.description}</p>
+                                                    {(() => {
+                                                        const cap = getProductCapacityConfig(product, product.variants?.[0]);
+                                                        if (!cap || !selectedSeller?.capacityEnabled) return null;
+                                                        return (
+                                                            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded">
+                                                                    Cap: {cap.minimum} - {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })()}
                                                     {product.tickets?.length > 0 && (
                                                         <div className="mt-2 space-y-1.5">
                                                             {product.tickets.map((ticket, ticketIndex) => {
@@ -1466,7 +1610,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <button
                                                             type="button"
                                                             onClick={() => {
-                                                                if (product.variants?.length > 1) {
+                                                                if (product.variants?.length > 1 || product.hasAddOn || product.variants?.[0]?.hasAddOn) {
                                                                     openProductGallery(product);
                                                                 } else {
                                                                     handleProductQuantityChange(product, 1);
@@ -1479,7 +1623,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     )) : (
                                                         <button
                                                             type="button"
-                                                            onClick={() => handleProductSelection(product)}
+                                                            onClick={() => {
+                                                                if (isSelected) {
+                                                                    handleProductSelection(product);
+                                                                } else if (product.variants?.length > 1 || product.hasAddOn || product.variants?.[0]?.hasAddOn) {
+                                                                    openProductGallery(product);
+                                                                } else {
+                                                                    handleProductSelection(product);
+                                                                }
+                                                            }}
                                                             className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 transition-all ${isSelected ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600'}`}
                                                         >
                                                             {isSelected ? 'Remove Item' : 'Add Item'}
@@ -1780,12 +1932,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     const pricing = getProductPricing(product);
                                     const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || pIdx;
                                     return (
-                                        <div key={`${product._id}-${variantKey}`} className="flex justify-between gap-4 text-slate-600">
-                                            <span>{product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}</span>
-                                            <span className="flex items-center gap-2 font-semibold">
-                                                {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString('en-IN')}</span>}
-                                                <span>₹{(pricing.unitPrice * quantity).toLocaleString('en-IN')}</span>
-                                            </span>
+                                        <div key={`${product._id}-${variantKey}`} className="flex flex-col gap-0.5 text-slate-600">
+                                            <div className="flex justify-between gap-4">
+                                                <span>
+                                                    {product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
+                                                </span>
+                                                <span className="flex items-center gap-2 font-semibold">
+                                                    {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString('en-IN')}</span>}
+                                                    <span>₹{(pricing.unitPrice * quantity).toLocaleString('en-IN')}</span>
+                                                </span>
+                                            </div>
+                                            {product.selectedAddOns?.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 text-[10px] text-purple-700 pl-2">
+                                                    {product.selectedAddOns.map((ad, aIndex) => (
+                                                        <span key={aIndex} className="bg-purple-100/70 px-1.5 py-0.2 rounded">
+                                                            + {ad.name} (₹{ad.price})
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     );
                                 })}
@@ -1945,21 +2110,69 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 <div className="flex-1 flex flex-col bg-white md:overflow-y-auto md:max-h-full">
                                     <div className="p-4 sm:p-6 lg:p-7 space-y-4 flex-1">
                                         {(() => {
-                                            const modalPrice = Number(
+                                            const activeVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                            const rawBasePrice = Number(
                                                 (modalSelectedVariant && (modalSelectedVariant.salePrice || modalSelectedVariant.price))
                                                     ? (modalSelectedVariant.salePrice || modalSelectedVariant.price)
                                                     : imagePreview.product?.salePrice || imagePreview.product?.price || 0
                                             );
-                                            const modalOriginal = Number(
+                                            const rawOriginal = Number(
                                                 (modalSelectedVariant && modalSelectedVariant.price && modalSelectedVariant.salePrice)
                                                     ? modalSelectedVariant.price
-                                                    : imagePreview.product?.price || modalPrice
+                                                    : imagePreview.product?.price || rawBasePrice
                                             );
-                                            const activeVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+
+                                            // ADD ON calculation
+                                            const hasAddOn = Boolean(modalSelectedVariant?.hasAddOn || imagePreview.product?.hasAddOn);
+                                            
+                                            // 1. Fixed add-ons (TOGAL 1: Price fixed)
+                                            let fixedList = [];
+                                            if (Array.isArray(modalSelectedVariant?.fixedAddOns)) {
+                                                fixedList = modalSelectedVariant.fixedAddOns;
+                                            } else if (Array.isArray(imagePreview.product?.fixedAddOns)) {
+                                                fixedList = imagePreview.product.fixedAddOns;
+                                            } else if ((modalSelectedVariant?.addOnType || imagePreview.product?.addOnType) === 'fixed') {
+                                                fixedList = modalSelectedVariant?.addOns || imagePreview.product?.addOns || [];
+                                            }
+                                            const validFixedList = fixedList.filter(item => item && (item.name?.trim() || item.price > 0));
+
+                                            // 2. Click-box add-ons (TOGAL 2: Price click on box)
+                                            let clickBoxList = [];
+                                            if (Array.isArray(modalSelectedVariant?.clickBoxAddOns)) {
+                                                clickBoxList = modalSelectedVariant.clickBoxAddOns;
+                                            } else if (Array.isArray(imagePreview.product?.clickBoxAddOns)) {
+                                                clickBoxList = imagePreview.product.clickBoxAddOns;
+                                            } else if ((modalSelectedVariant?.addOnType || imagePreview.product?.addOnType) === 'click_box') {
+                                                clickBoxList = modalSelectedVariant?.addOns || imagePreview.product?.addOns || [];
+                                            }
+                                            const validClickBoxList = clickBoxList.filter(item => item && (item.name?.trim() || item.price > 0));
+
+                                            // Chosen click-box add-ons by customer
+                                            const currentChosenAddOns = selectedAddOns[`${imagePreview.product?._id}_${activeVariantKey}`] || [];
+
+                                            let fixedExtra = 0;
+                                            if (hasAddOn && validFixedList.length > 0) {
+                                                fixedExtra = validFixedList.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                                            }
+
+                                            let clickBoxExtra = 0;
+                                            if (hasAddOn && currentChosenAddOns.length > 0) {
+                                                clickBoxExtra = currentChosenAddOns.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+                                            }
+
+                                            const totalAddOnExtra = fixedExtra + clickBoxExtra;
+                                            const modalPrice = rawBasePrice + totalAddOnExtra;
+                                            const modalOriginal = rawOriginal + totalAddOnExtra;
+
+                                            // Combined add-ons to save with selected product: auto-included fixed + checked click-box
+                                            const combinedAppliedAddOns = [
+                                                ...(hasAddOn ? validFixedList.map(a => ({ ...a, isFixed: true })) : []),
+                                                ...currentChosenAddOns.map(a => ({ ...a, isFixed: false }))
+                                            ];
+
                                             const selectedProductEntry = selectedProducts.find(p => p._id === imagePreview.product?._id && ((p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === activeVariantKey));
                                             const isItemAdded = Boolean(selectedProductEntry);
                                             const itemQuantity = selectedProductEntry?.quantity || 0;
-
                                             return (
                                                 <>
                                                     {/* Top badges */}
@@ -1972,6 +2185,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
                                                             {imagePreview.product?.category || selectedSeller?.category || 'Service / Item'}
                                                         </span>
+                                                        {(() => {
+                                                            const cap = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                            if (!cap || !selectedSeller?.capacityEnabled) return null;
+                                                            return (
+                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
+                                                                    👥 Cap: {cap.minimum} - {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </div>
 
                                                     {/* Product Title & Unit */}
@@ -2051,44 +2273,107 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 </button>
                                                             );
                                                         })() : isItemAdded ? (
-                                                            <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 p-1.5 shadow-sm">
-                                                                <button
-                                                                    type="button"
-                                                                    aria-label={`Remove one ${imagePreview.name}`}
-                                                                    onClick={() => handleProductQuantityChange({
-                                                                        ...imagePreview.product,
-                                                                        price: modalPrice,
-                                                                        selectedVariant: modalSelectedVariant
-                                                                    }, -1)}
-                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
-                                                                >
-                                                                    <RemoveIcon fontSize="small" />
-                                                                </button>
-                                                                <span className="min-w-6 text-center text-sm font-black text-slate-800">
-                                                                    {itemQuantity}
-                                                                </span>
-                                                                <button
-                                                                    type="button"
-                                                                    aria-label={`Add one ${imagePreview.name}`}
-                                                                    onClick={() => handleProductQuantityChange({
-                                                                        ...imagePreview.product,
-                                                                        price: modalPrice,
-                                                                        selectedVariant: modalSelectedVariant
-                                                                    }, 1)}
-                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 transition-all shadow-sm"
-                                                                >
-                                                                    <AddIcon fontSize="small" />
-                                                                </button>
-                                                            </div>
+                                                            (imagePreview.product.isDelivery || imagePreview.product.isRental) ? (
+                                                                <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 p-1.5 shadow-sm">
+                                                                    <button
+                                                                        onClick={() => handleProductQuantityChange({
+                                                                            ...imagePreview.product,
+                                                                            price: modalPrice,
+                                                                            selectedVariant: modalSelectedVariant,
+                                                                            selectedAddOns: combinedAppliedAddOns
+                                                                        }, -1)}
+                                                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
+                                                                    >
+                                                                        <RemoveIcon fontSize="small" />
+                                                                    </button>
+                                                                    <span className="min-w-6 text-center text-sm font-black text-slate-800">
+                                                                        {itemQuantity}
+                                                                    </span>
+                                                                    <button
+                                                                        type="button"
+                                                                        aria-label={`Add one ${imagePreview.name}`}
+                                                                        disabled={(() => {
+                                                                            const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                            if (capConfig && capConfig.bookingType === 'SINGLE') return true;
+                                                                            if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) return true;
+                                                                            return false;
+                                                                        })()}
+                                                                        onClick={() => handleProductQuantityChange({
+                                                                            ...imagePreview.product,
+                                                                            price: modalPrice,
+                                                                            selectedVariant: modalSelectedVariant,
+                                                                            selectedAddOns: combinedAppliedAddOns
+                                                                        }, 1)}
+                                                                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm ${
+                                                                            (() => {
+                                                                                const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                                if (capConfig && (capConfig.bookingType === 'SINGLE' || (capConfig.maximum > 0 && itemQuantity >= capConfig.maximum))) {
+                                                                                    return 'bg-slate-200 text-slate-400 cursor-not-allowed';
+                                                                                }
+                                                                                return 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700';
+                                                                            })()
+                                                                        }`}
+                                                                    >
+                                                                        <AddIcon fontSize="small" />
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex items-center gap-2">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setImagePreview(null);
+                                                                        }}
+                                                                        className="px-4 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200"
+                                                                    >
+                                                                        Save & Done
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleProductSelection({
+                                                                            ...imagePreview.product,
+                                                                            price: modalPrice,
+                                                                            selectedVariant: modalSelectedVariant,
+                                                                            selectedAddOns: combinedAppliedAddOns
+                                                                        })}
+                                                                        className="px-3 py-2.5 rounded-xl font-bold uppercase tracking-wider text-[10px] text-red-500 hover:bg-red-50 transition-all border border-red-200"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                </div>
+                                                            )
                                                         ) : (
                                                             <button
                                                                 type="button"
                                                                 onClick={() => {
-                                                                    handleProductQuantityChange({
-                                                                        ...imagePreview.product,
-                                                                        price: modalPrice,
-                                                                        selectedVariant: modalSelectedVariant
-                                                                    }, 1);
+                                                                    const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                    const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                                                                    const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                                                    
+                                                                    setSelectedProducts(prev => {
+                                                                        const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
+                                                                        if (existingIdx >= 0) {
+                                                                            const updated = [...prev];
+                                                                            updated[existingIdx] = {
+                                                                                ...updated[existingIdx],
+                                                                                selectedVariant: modalSelectedVariant,
+                                                                                selectedAddOns: combinedAppliedAddOns,
+                                                                                price: modalPrice
+                                                                            };
+                                                                            return updated;
+                                                                        }
+                                                                        return [
+                                                                            ...prev,
+                                                                            {
+                                                                                ...imagePreview.product,
+                                                                                quantity: initialQty,
+                                                                                selectedVariant: modalSelectedVariant,
+                                                                                selectedAddOns: combinedAppliedAddOns,
+                                                                                price: modalPrice
+                                                                            }
+                                                                        ];
+                                                                    });
+                                                                    setImagePreview(null);
                                                                 }}
                                                                 className="px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200"
                                                             >
@@ -2111,7 +2396,26 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         <button
                                                                             key={idx}
                                                                             type="button"
-                                                                            onClick={() => setModalSelectedVariant(v)}
+                                                                            onClick={() => {
+                                                                                setModalSelectedVariant(v);
+                                                                                const vKey = `${imagePreview.product?._id}_${v.sku || v.name || 'default'}`;
+                                                                                const existingForVariant = selectedProducts.find(
+                                                                                    p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === (v.sku || v.name || 'default')
+                                                                                );
+                                                                                if (existingForVariant?.selectedAddOns) {
+                                                                                    const availableClickBoxNames = new Set((v.clickBoxAddOns || []).map(a => a.name?.trim().toLowerCase()));
+                                                                                    const optionalOnly = existingForVariant.selectedAddOns.filter(a => !a.isFixed && availableClickBoxNames.has(a.name?.trim().toLowerCase()));
+                                                                                    setSelectedAddOns(prev => ({
+                                                                                        ...prev,
+                                                                                        [vKey]: optionalOnly
+                                                                                    }));
+                                                                                } else {
+                                                                                    setSelectedAddOns(prev => ({
+                                                                                        ...prev,
+                                                                                        [vKey]: []
+                                                                                    }));
+                                                                                }
+                                                                            }}
                                                                             className={`px-4 py-2 font-bold rounded-lg text-xs transition-all border-2 ${isVariantActive
                                                                                 ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
                                                                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
@@ -2122,6 +2426,135 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     );
                                                                 })}
                                                             </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Dynamic ADD ON for Selected Variant */}
+                                                    {hasAddOn && (validFixedList.length > 0 || validClickBoxList.length > 0) && (
+                                                        <div className="space-y-3">
+                                                            {/* 1. Fixed Add-ons (TOGAL 1: Included automatically) */}
+                                                            {validFixedList.length > 0 && (
+                                                                <div className="bg-purple-50/50 rounded-xl p-3.5 border border-purple-200/80 space-y-2">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h4 className="text-[10px] font-black text-purple-900 uppercase tracking-widest flex items-center gap-1.5">
+                                                                            <span>✨ Included Add-on (Fixed)</span>
+                                                                            <span className="text-[9px] font-bold text-purple-600 lowercase bg-purple-100/70 px-2 py-0.5 rounded-full">
+                                                                                auto-included
+                                                                            </span>
+                                                                        </h4>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        {validFixedList.map((item, idx) => (
+                                                                            <div
+                                                                                key={idx}
+                                                                                className="flex items-center justify-between p-2.5 rounded-lg border bg-white/90 border-purple-200 shadow-xs"
+                                                                            >
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <span className="text-[11px] text-purple-600">🔘</span>
+                                                                                    <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                                                                                        {item.name}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <span className="text-xs font-black text-purple-700">
+                                                                                    +₹{Number(item.price || 0).toLocaleString('en-IN')}
+                                                                                </span>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+
+                                                            {/* 2. Optional Click-box Add-ons (TOGAL 2: Click to add) */}
+                                                            {validClickBoxList.length > 0 && (
+                                                                <div className="bg-purple-50/40 rounded-xl p-3.5 border border-purple-200/80 space-y-2">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <h4 className="text-[10px] font-black text-purple-900 uppercase tracking-widest flex items-center gap-1.5">
+                                                                            <span>✨ Optional Add-on (Click to Add)</span>
+                                                                            <span className="text-[9px] font-bold text-purple-600 lowercase bg-purple-100/70 px-2 py-0.5 rounded-full">
+                                                                                optional (select to add)
+                                                                            </span>
+                                                                        </h4>
+                                                                    </div>
+                                                                    <div className="space-y-1.5">
+                                                                        {validClickBoxList.map((item, idx) => {
+                                                                            const isChecked = currentChosenAddOns.some(a => a.name === item.name);
+                                                                            return (
+                                                                                <div
+                                                                                    key={idx}
+                                                                                    onClick={() => {
+                                                                                        const key = `${imagePreview.product?._id}_${activeVariantKey}`;
+                                                                                        const exists = currentChosenAddOns.some(a => a.name === item.name);
+                                                                                        const updatedChosen = exists
+                                                                                            ? currentChosenAddOns.filter(a => a.name !== item.name)
+                                                                                            : [...currentChosenAddOns, item];
+
+                                                                                        // 1. Update local state
+                                                                                        setSelectedAddOns(prev => ({
+                                                                                            ...prev,
+                                                                                            [key]: updatedChosen
+                                                                                        }));
+
+                                                                                        // 2. Calculate updated price & applied add-ons
+                                                                                        const nextCombinedAddOns = [
+                                                                                            ...(hasAddOn ? validFixedList.map(a => ({ ...a, isFixed: true })) : []),
+                                                                                            ...updatedChosen.map(a => ({ ...a, isFixed: false }))
+                                                                                        ];
+                                                                                        const nextTotalExtra = fixedExtra + updatedChosen.reduce((sum, itm) => sum + (Number(itm.price) || 0), 0);
+                                                                                        const nextUnitPrice = rawBasePrice + nextTotalExtra;
+
+                                                                                        // 3. Immediately sync into selectedProducts
+                                                                                        setSelectedProducts(prev => {
+                                                                                            const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === activeVariantKey);
+                                                                                            if (existingIdx >= 0) {
+                                                                                                const updated = [...prev];
+                                                                                                updated[existingIdx] = {
+                                                                                                    ...updated[existingIdx],
+                                                                                                    selectedAddOns: nextCombinedAddOns,
+                                                                                                    price: nextUnitPrice
+                                                                                                };
+                                                                                                return updated;
+                                                                                            } else {
+                                                                                                const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                                                const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                                                                                                return [
+                                                                                                    ...prev,
+                                                                                                    {
+                                                                                                        ...imagePreview.product,
+                                                                                                        quantity: initialQty,
+                                                                                                        selectedVariant: modalSelectedVariant,
+                                                                                                        selectedAddOns: nextCombinedAddOns,
+                                                                                                        price: nextUnitPrice
+                                                                                                    }
+                                                                                                ];
+                                                                                            }
+                                                                                        });
+                                                                                    }}
+                                                                                    className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${
+                                                                                        isChecked
+                                                                                            ? 'bg-purple-100/70 border-purple-400 shadow-sm'
+                                                                                            : 'bg-white border-slate-200 hover:border-purple-300'
+                                                                                    }`}
+                                                                                >
+                                                                                    <div className="flex items-center gap-2">
+                                                                                        <input
+                                                                                            type="checkbox"
+                                                                                            checked={isChecked}
+                                                                                            onChange={() => {}}
+                                                                                            className="h-4 w-4 text-purple-600 rounded border-slate-300 focus:ring-purple-400 pointer-events-none"
+                                                                                        />
+                                                                                        <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">
+                                                                                            {item.name}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                    <span className="text-xs font-black text-purple-700">
+                                                                                        +₹{Number(item.price || 0).toLocaleString('en-IN')}
+                                                                                    </span>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
 

@@ -200,6 +200,7 @@ const SellerDetail = () => {
                 shopTimingsEnabled: data.shopTimingsEnabled ?? false,
                 shopHolidaysEnabled: data.shopHolidaysEnabled ?? false,
                 ticketCancellationBufferEnabled: data.ticketCancellationBufferEnabled ?? false,
+                advanceBookingBufferEnabled: data.advanceBookingBufferEnabled ?? false,
                 advanceBookingBuffer: data.advanceBookingBuffer ?? 0,
                 advanceBookingBufferUnit: data.advanceBookingBufferUnit || 'days',
                 advanceBookingBufferTime: data.advanceBookingBufferTime || "12",
@@ -302,6 +303,7 @@ const SellerDetail = () => {
                 shopTimingsEnabled: seller.shopTimingsEnabled,
                 shopHolidaysEnabled: seller.shopHolidaysEnabled,
                 ticketCancellationBufferEnabled: seller.ticketCancellationBufferEnabled,
+                advanceBookingBufferEnabled: seller.advanceBookingBufferEnabled,
                 advanceBookingBuffer: seller.advanceBookingBuffer,
                 advanceBookingBufferUnit: seller.advanceBookingBufferUnit,
                 advanceBookingBufferTime: seller.advanceBookingBufferTime,
@@ -890,48 +892,16 @@ const SellerDetail = () => {
                                                             onChange={handlePermissionChange('shopTimingsEnabled')}
                                                         />
 
-                                                        <div className="flex flex-col gap-2 mt-2">
-                                                            <label className="text-xs font-bold text-slate-700 flex items-center justify-between">
-                                                                Advance Booking Buffer
-                                                                <span className="text-[10px] font-normal text-slate-500 bg-slate-200/50 px-2 py-0.5 rounded-full">Minimum time before booking</span>
-                                                            </label>
-                                                            <div className="flex flex-wrap gap-2 w-full">
-                                                                <input type="number" min="0"
-                                                                    value={seller.advanceBookingBuffer ?? 0}
-                                                                    disabled={!isEditMode}
-                                                                    onChange={(e) => {
-                                                                        const val = Number(e.target.value);
-                                                                        setSeller(prev => ({ ...prev, advanceBookingBuffer: val }));
-                                                                    }}
-                                                                    className="flex-1 min-w-[60px] border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                />
-                                                                <select
-                                                                    value={seller.advanceBookingBufferUnit || 'days'}
-                                                                    disabled={!isEditMode}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        setSeller(prev => ({ ...prev, advanceBookingBufferUnit: val }));
-                                                                    }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-slate-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                >
-                                                                    <option value="days">Days</option>
-                                                                    <option value="hours">Hours</option>
-                                                                </select>
-                                                                <input
-                                                                    type="number"
-                                                                    min="0"
-                                                                    max="23"
-                                                                    placeholder="Hrs"
-                                                                    value={seller.advanceBookingBufferTime || "12"}
-                                                                    disabled={!isEditMode}
-                                                                    onChange={(e) => {
-                                                                        const val = e.target.value;
-                                                                        setSeller(prev => ({ ...prev, advanceBookingBufferTime: val }));
-                                                                    }}
-                                                                    className="border border-slate-200 rounded-lg px-2 py-2 text-sm focus:ring-1 focus:ring-fuchsia-500 outline-none bg-white w-16 disabled:bg-slate-100 disabled:cursor-not-allowed"
-                                                                />
-                                                            </div>
-                                                        </div>
+                                                        <PermissionToggle
+                                                            label="Advance Booking Buffer Settings"
+                                                            description="Allow seller to define minimum time required before booking in their profile"
+                                                            checked={seller.advanceBookingBufferEnabled ?? false}
+                                                            disabled={!isEditMode}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={handlePermissionChange('advanceBookingBufferEnabled')}
+                                                        />
+
+
 
                                                         <PermissionToggle
                                                             label="Shop Closed Dates / Holidays Management"

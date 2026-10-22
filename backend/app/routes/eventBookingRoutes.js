@@ -1,10 +1,11 @@
 import express from 'express';
-import { createEventBooking, getMyEventBookings, getEventBookingDetails, updateEventBooking, deleteEventBooking, processPaymentForBooking, completeEventBooking, getAlternativeSellers, reassignSeller } from '../controller/eventBookingController.js';
+import { createEventBooking, getMyEventBookings, getEventBookingDetails, updateEventBooking, deleteEventBooking, processPaymentForBooking, completeEventBooking, getAlternativeSellers, reassignSeller, getSellerBookedSlots } from '../controller/eventBookingController.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
 // Customer routes
+router.get('/slots/:sellerId', getSellerBookedSlots);
 router.post('/book', verifyToken, createEventBooking);
 router.get('/my-bookings', verifyToken, getMyEventBookings);
 router.get('/:id', verifyToken, getEventBookingDetails);

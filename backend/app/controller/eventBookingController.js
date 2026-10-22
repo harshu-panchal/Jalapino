@@ -455,3 +455,53 @@ export const reassignSeller = async (req, res) => {
         return handleResponse(res, 500, 'Failed to reassign seller');
     }
 };
+
+export const getSellerBookedSlots = async (req, res) => {
+    try {
+        const { sellerId } = req.params;
+        const { date } = req.query;
+
+        if (!sellerId || !date) {
+            return handleResponse(res, 400, "Seller ID and date are required");
+        }
+
+        const targetDate = new Date(date);
+        const startOfDay = new Date(targetDate);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(targetDate);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Find confirmed/pending bookings for this seller on targetDate
+        const bookings = await EventBooking.find({
+            "services.seller": sellerId,
+            eventDate: { $gte: startOfDay, $lte: endOfDay },
+            overallStatus: { $nin: ['CANCELLED', 'REJECTED'] }
+        }).select('eventTime multipleEvents');
+
+        const bookedSlots = new Set();
+        bookings.forEach(b => {
+            if (b.eventTime) bookedSlots.add(b.eventTime);
+            if (Array.isArray(b.multipleEvents)) {
+                b.multipleEvents.forEach(me => {
+                    if (me.time) bookedSlots.add(me.time);
+                });
+            }
+        });
+
+        // Also check SellerVenueAvailability if any venue belongs to seller
+        const venueAvailability = await (await import('../models/event/SellerVenueAvailability.js')).default.findOne({
+            sellerId,
+            date: { $gte: startOfDay, $lte: endOfDay }
+        }).select('bookedSlots');
+
+        if (venueAvailability && Array.isArray(venueAvailability.bookedSlots)) {
+            venueAvailability.bookedSlots.forEach(s => bookedSlots.add(s));
+        }
+
+        return handleResponse(res, 200, "Booked slots fetched successfully", {
+            bookedSlots: Array.from(bookedSlots)
+        });
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};

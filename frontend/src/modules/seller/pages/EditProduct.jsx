@@ -116,29 +116,199 @@ const MultiInput = ({ value, onChange, placeholder }) => {
   );
 };
 
-const VariantDetails = ({ variant, onChange }) => (
-  <div className="col-span-12 border-t border-slate-200 pt-3 mt-1 space-y-4">
-    <div className="flex items-center justify-between">
-      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Brand Name & Ingredients</label>
-      <ToggleSwitch checked={variant.hasBrandName || variant.hasIngredients} label="Toggle Brand Name & Ingredients" onChange={() => {
-        const nextVal = !(variant.hasBrandName || variant.hasIngredients);
-        onChange("multiple", { hasBrandName: nextVal, hasIngredients: nextVal });
-      }} />
-    </div>
-    {(variant.hasBrandName || variant.hasIngredients) && (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Brand Name</label>
-          <MultiInput value={variant.brand} onChange={(val) => onChange("brand", val)} placeholder="Enter brand name" />
+const VariantDetails = ({ variant, onChange }) => {
+  const currentTab = variant.addOnType || "fixed";
+
+  // Separate lists for Toggle 1 (fixed) and Toggle 2 (click_box)
+  const fixedList = Array.isArray(variant.fixedAddOns) && variant.fixedAddOns.length > 0
+    ? variant.fixedAddOns
+    : (variant.addOnType === 'fixed' && Array.isArray(variant.addOns) && variant.addOns.length > 0 ? variant.addOns : [{ name: "", price: "" }]);
+
+  const clickBoxList = Array.isArray(variant.clickBoxAddOns) && variant.clickBoxAddOns.length > 0
+    ? variant.clickBoxAddOns
+    : (variant.addOnType === 'click_box' && Array.isArray(variant.addOns) && variant.addOns.length > 0 ? variant.addOns : [{ name: "", price: "" }]);
+
+  const currentAddOns = currentTab === "fixed" ? fixedList : clickBoxList;
+
+  const handleAddOnItemChange = (idx, field, val) => {
+    const list = [...currentAddOns];
+    list[idx] = { ...list[idx], [field]: val };
+    if (currentTab === "fixed") {
+      onChange("multiple", {
+        fixedAddOns: list,
+        addOns: list
+      });
+    } else {
+      onChange("multiple", {
+        clickBoxAddOns: list,
+        addOns: list
+      });
+    }
+  };
+
+  const handleAddAddOnItem = () => {
+    const nextList = [...currentAddOns, { name: "", price: "" }];
+    if (currentTab === "fixed") {
+      onChange("multiple", { fixedAddOns: nextList, addOns: nextList });
+    } else {
+      onChange("multiple", { clickBoxAddOns: nextList, addOns: nextList });
+    }
+  };
+
+  const handleRemoveAddOnItem = (idx) => {
+    const filtered = currentAddOns.filter((_, i) => i !== idx);
+    const nextList = filtered.length > 0 ? filtered : [{ name: "", price: "" }];
+    if (currentTab === "fixed") {
+      onChange("multiple", { fixedAddOns: nextList, addOns: nextList });
+    } else {
+      onChange("multiple", { clickBoxAddOns: nextList, addOns: nextList });
+    }
+  };
+
+  return (
+    <div className="col-span-12 border-t border-slate-200 pt-3 mt-1 space-y-4">
+      {/* ADD ON SECTION (ABOVE BRAND & INGREDIENTS) */}
+      <div className="border border-purple-200 bg-purple-50/40 rounded-2xl p-3.5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <label className="text-[10px] font-black text-purple-900 uppercase tracking-widest block">
+              ADD ON
+            </label>
+            <p className="text-[9px] font-bold text-purple-600">
+              TOGAL 1( PRICE FIXED) / TOGAL 2(PRICE CLICK ON BOX)
+            </p>
+          </div>
+          <ToggleSwitch
+            checked={Boolean(variant.hasAddOn)}
+            label="Toggle ADD ON"
+            onChange={() => {
+              const nextVal = !variant.hasAddOn;
+              onChange("multiple", {
+                hasAddOn: nextVal,
+                addOnType: currentTab,
+                fixedAddOns: fixedList,
+                clickBoxAddOns: clickBoxList,
+                addOns: currentTab === "fixed" ? fixedList : clickBoxList
+              });
+            }}
+          />
         </div>
-        <div className="space-y-2">
-          <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Ingredients</label>
-          <MultiInput value={variant.ingredients} onChange={(val) => onChange("ingredients", val)} placeholder="Enter ingredients" />
-        </div>
+
+        {variant.hasAddOn && (
+          <div className="space-y-3 pt-1 border-t border-purple-100">
+            {/* Toggle 1 & Toggle 2 Selector */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("multiple", {
+                    addOnType: "fixed",
+                    addOns: fixedList
+                  });
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  currentTab === "fixed"
+                    ? "bg-purple-700 text-white shadow-sm ring-2 ring-purple-300"
+                    : "bg-white text-slate-700 hover:bg-purple-50 border border-slate-200"
+                }`}
+              >
+                <span>🔘 TOGAL 1 (PRICE FIXED)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  onChange("multiple", {
+                    addOnType: "click_box",
+                    addOns: clickBoxList
+                  });
+                }}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
+                  currentTab === "click_box"
+                    ? "bg-purple-700 text-white shadow-sm ring-2 ring-purple-300"
+                    : "bg-white text-slate-700 hover:bg-purple-50 border border-slate-200"
+                }`}
+              >
+                <span>☑️ TOGAL 2 (PRICE CLICK ON BOX)</span>
+              </button>
+            </div>
+
+            {/* Addon Items List (NAME, PRICE, + Button) */}
+            <div className="space-y-2 bg-white p-3 rounded-xl border border-purple-100">
+              <div className="grid grid-cols-12 gap-2 text-[9px] font-black text-slate-500 uppercase tracking-widest px-1">
+                <span className="col-span-7">NAME</span>
+                <span className="col-span-4">PRICE</span>
+                <span className="col-span-1 text-center">ACTION</span>
+              </div>
+              {currentAddOns.map((item, aIdx) => (
+                <div key={aIdx} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-7">
+                    <input
+                      type="text"
+                      value={item.name || ""}
+                      onChange={(e) => handleAddOnItemChange(aIdx, "name", e.target.value)}
+                      placeholder={currentTab === "fixed" ? "e.g. CLEANING CHARGE" : "e.g. EXTRA LIGHTING"}
+                      className="w-full px-3 py-1.5 bg-slate-50 ring-1 ring-slate-200 rounded-lg text-xs font-bold text-slate-800 outline-none focus:ring-2 focus:ring-purple-400 uppercase"
+                    />
+                  </div>
+                  <div className="col-span-3 sm:col-span-4">
+                    <input
+                      type="number"
+                      value={item.price ?? ""}
+                      onChange={(e) => handleAddOnItemChange(aIdx, "price", e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="500"
+                      className="w-full px-3 py-1.5 bg-slate-50 ring-1 ring-slate-200 rounded-lg text-xs font-bold text-purple-700 outline-none focus:ring-2 focus:ring-purple-400"
+                    />
+                  </div>
+                  <div className="col-span-2 sm:col-span-1 flex items-center justify-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveAddOnItem(aIdx)}
+                      className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg transition-all"
+                      title="Remove add-on"
+                    >
+                      <HiOutlineMinus className="w-4 h-4" />
+                    </button>
+                    {aIdx === currentAddOns.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={handleAddAddOnItem}
+                        className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center bg-purple-600 hover:bg-purple-700 text-white rounded-lg shadow-sm transition-all"
+                        title="Add more add-ons"
+                      >
+                        <HiOutlinePlus className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    )}
-  </div>
-);
+
+      {/* BRAND NAME & INGREDIENTS SECTION */}
+      <div className="flex items-center justify-between">
+        <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Brand Name & Ingredients</label>
+        <ToggleSwitch checked={variant.hasBrandName || variant.hasIngredients} label="Toggle Brand Name & Ingredients" onChange={() => {
+          const nextVal = !(variant.hasBrandName || variant.hasIngredients);
+          onChange("multiple", { hasBrandName: nextVal, hasIngredients: nextVal });
+        }} />
+      </div>
+      {(variant.hasBrandName || variant.hasIngredients) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Brand Name</label>
+            <MultiInput value={variant.brand} onChange={(val) => onChange("brand", val)} placeholder="Enter brand name" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Ingredients</label>
+            <MultiInput value={variant.ingredients} onChange={(val) => onChange("ingredients", val)} placeholder="Enter ingredients" />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EditProduct = () => {
   const navigate = useNavigate();
@@ -1419,6 +1589,48 @@ const EditProduct = () => {
                           className="w-full px-3 py-2 bg-brand-50 ring-1 ring-brand-100 border-none rounded-xl text-xs font-bold text-brand-700 outline-none focus:ring-2 focus:ring-brand-200"
                         />
                       </div>
+
+                      {/* Click Unique Code Box (Next to Sale / Dedicated Box) */}
+                      {((sellerBookingProfile?.capacityEnabled || user?.capacityEnabled) && (sellerBookingProfile?.shopsAtLocation?.length > 0 || user?.shopsAtLocation?.length > 0)) && (
+                        <div className="col-span-6 md:col-span-2 space-y-1">
+                          <label className="text-[8px] font-bold text-purple-700 uppercase tracking-widest ml-1">
+                            Click Unique Code
+                          </label>
+                          <select
+                            value={variant.uniqueCode || ""}
+                            onChange={(e) => {
+                              const selectedCode = e.target.value;
+                              const shops = sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || [];
+                              const matchedShop = shops.find(s => (s.uniqueCode || `SHOP_${s.shopNo}`) === selectedCode);
+                              setFormData(prev => {
+                                const updated = [...prev.variants];
+                                updated[index] = {
+                                  ...updated[index],
+                                  uniqueCode: selectedCode,
+                                  shopNo: matchedShop?.shopNo || "",
+                                  minimum: matchedShop?.minimum ?? 0,
+                                  maximum: matchedShop?.maximum ?? 0,
+                                  capacityType: matchedShop?.capacityType || "SHOP CAPECITY",
+                                  totalCapacity: matchedShop?.totalCapacity ?? 0,
+                                  bookingType: matchedShop?.bookingType || "MULTIPLE",
+                                };
+                                return { ...prev, variants: updated };
+                              });
+                            }}
+                            className="w-full px-3 py-2 bg-purple-50 ring-1 ring-purple-200 border-none rounded-xl text-xs font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer uppercase"
+                          >
+                            <option value="">Select Code</option>
+                            {(sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || []).map((shop, sIdx) => {
+                              const codeVal = shop.uniqueCode || `SHOP_${shop.shopNo || sIdx + 1}`;
+                              return (
+                                <option key={sIdx} value={codeVal}>
+                                  {codeVal} {shop.shopNo ? `(Shop ${shop.shopNo})` : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
                       <div className="col-span-6 md:col-span-2 space-y-1">
                         <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
                           Stock
@@ -1483,6 +1695,30 @@ const EditProduct = () => {
                         }
                         setFormData({ ...formData, variants: next });
                       }} />
+
+                      {/* Dynamic Shop Information Preview for this Variant */}
+                      {variant.uniqueCode && (
+                        <div className="col-span-12 bg-purple-50/70 border border-purple-200 rounded-xl p-3 flex flex-wrap items-center gap-3 text-xs">
+                          <span className="font-extrabold text-purple-700 uppercase tracking-wider flex items-center gap-1">
+                            📍 {variant.uniqueCode}
+                          </span>
+                          <span className="text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-purple-100">
+                            Shop No: <strong className="text-slate-800">{variant.shopNo || 1}</strong>
+                          </span>
+                          <span className="text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-purple-100">
+                            Capacity: <strong className="text-slate-800">{variant.minimum ?? 0} - {variant.maximum ?? 0}</strong>
+                          </span>
+                          <span className="text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-purple-100">
+                            Type: <strong className="text-slate-800">{variant.capacityType || "SHOP CAPECITY"}</strong>
+                          </span>
+                          <span className="text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-purple-100">
+                            Total Capacity: <strong className="text-slate-800">{variant.totalCapacity ?? 0}</strong>
+                          </span>
+                          <span className="text-slate-600 font-semibold bg-white px-2 py-0.5 rounded border border-purple-100 uppercase">
+                            Booking: <strong className="text-purple-700">{variant.bookingType || "MULTIPLE"}</strong>
+                          </span>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

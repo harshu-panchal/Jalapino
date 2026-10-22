@@ -649,6 +649,7 @@ const PlanMyEventPage = () => {
 
 
         smartFilteredSellers = smartFilteredSellers.filter(s => {
+            if (!s.advanceBookingBufferEnabled) return true;
             if (!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) return true;
 
             const requiredHours = s.advanceBookingBufferUnit === 'hours'

@@ -274,6 +274,8 @@ const sellerSchema = new mongoose.Schema(
       shopNo: { type: String, trim: true, default: '' },
       minimum: { type: Number, default: 0 },
       maximum: { type: Number, default: 0 },
+      capacityType: { type: String, default: 'SHOP CAPECITY' },
+      totalCapacity: { type: Number, default: 0 },
       bookingType: { type: String, enum: ['SINGLE', 'MULTIPLE'], default: 'MULTIPLE' }
     }],
     businessTimings: {

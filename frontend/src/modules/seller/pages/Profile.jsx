@@ -75,6 +75,44 @@ const SellerProfile = () => {
   });
 
   const [newZoneName, setNewZoneName] = useState("");
+  const syncCapacitiesFromShops = (shops) => {
+    if (!Array.isArray(shops) || shops.length === 0) return { shopsAtLocation: shops };
+    let prodCapTotal = 0;
+    let hasProdCap = false;
+    let shopCapMax = 0;
+    let hasShopCap = false;
+
+    // For each row, row capacity is its maximum
+    const updatedShops = shops.map(s => {
+      const isProd = String(s.capacityType || '').trim().toUpperCase() === 'PRODUCT CAPECITY';
+      const maxVal = Number(s.maximum ?? 0);
+      const rowTotal = maxVal > 0 ? maxVal : (Number(s.totalCapacity) || 0);
+
+      if (isProd) {
+        hasProdCap = true;
+        prodCapTotal += rowTotal; // Product capacity: sum of all product rows (e.g. 500 + 50 = 550)
+      } else {
+        hasShopCap = true;
+        if (rowTotal > shopCapMax) {
+          shopCapMax = rowTotal; // Store capacity: only the maximum of all store rows (e.g. max of 500 & 50 is 500)
+        }
+      }
+
+      return {
+        ...s,
+        totalCapacity: rowTotal
+      };
+    });
+
+    const updates = { shopsAtLocation: updatedShops };
+    if (hasProdCap) {
+      updates.totalCapacity = prodCapTotal;
+    }
+    if (hasShopCap) {
+      updates.maxGuestCapacity = shopCapMax;
+    }
+    return updates;
+  };
   const [newZoneCity, setNewZoneCity] = useState("");
   const [newAreaInput, setNewAreaInput] = useState("");
   const [editingZoneIndex, setEditingZoneIndex] = useState(null);
@@ -132,6 +170,10 @@ const SellerProfile = () => {
         shopClosedDates: data.shopClosedDates || [],
       });
       setKeptBanners(data.banners || []);
+      if (Array.isArray(data.shopsAtLocation) && data.shopsAtLocation.length > 0) {
+        const synced = syncCapacitiesFromShops(data.shopsAtLocation);
+        setFormData(prev => ({ ...prev, ...synced }));
+      }
     } catch (error) {
       toast.error("Failed to fetch profile");
     } finally {
@@ -397,7 +439,10 @@ const SellerProfile = () => {
         }
       });
 
-      payload.append("keptBanners", JSON.stringify(keptBanners));
+      payload.set("advanceBookingBuffer", String(Number(formData.advanceBookingBuffer) || 0));
+      payload.set("advanceBookingBufferUnit", String(formData.advanceBookingBufferUnit || "days"));
+      payload.set("advanceBookingBufferTime", String(formData.advanceBookingBufferTime || "12"));
+      payload.set("keptBanners", JSON.stringify(keptBanners));
       uploadedBanners.forEach(file => {
         payload.append("banners", file);
       });
@@ -708,6 +753,8 @@ const SellerProfile = () => {
                               shopNo: nextIndex,
                               minimum: "",
                               maximum: "",
+                              capacityType: "SHOP CAPECITY",
+                              totalCapacity: "",
                               bookingType: "MULTIPLE"
                             };
                             setFormData(prev => ({
@@ -735,6 +782,8 @@ const SellerProfile = () => {
                               <th className="bg-[#5b9bd5] text-white border border-slate-300 px-3 py-3 min-w-[100px]">SHOP NO.</th>
                               <th className="bg-[#ed7d31] text-white border border-slate-300 px-3 py-3 min-w-[110px]">MINIMUM</th>
                               <th className="bg-[#ffc000] border border-slate-300 px-3 py-3 text-slate-900 min-w-[110px]">MAXIMUM</th>
+                              <th className="bg-[#fce4d6] border border-slate-300 px-4 py-3 text-slate-900 min-w-[210px] whitespace-nowrap">P CAPECITY/S CAPECITY</th>
+                              <th className="bg-[#fce4d6] border border-slate-300 px-3 py-3 text-slate-900 min-w-[130px]">TOTAL CAPECITY</th>
                               <th className="bg-[#d9e1f2] border border-slate-300 px-3 py-3 text-slate-900 min-w-[140px]">SINGLE/MULTIPLE</th>
                               {isEditing && (
                                 <th className="bg-slate-200 border border-slate-300 px-2 py-3 text-slate-700 w-14 text-center">ACTION</th>
@@ -744,7 +793,7 @@ const SellerProfile = () => {
                           <tbody>
                             {(!formData.shopsAtLocation || formData.shopsAtLocation.length === 0) ? (
                               <tr>
-                                <td colSpan={isEditing ? 6 : 5} className="py-6 text-center text-slate-400 font-semibold italic border border-slate-300">
+                                <td colSpan={isEditing ? 8 : 7} className="py-6 text-center text-slate-400 font-semibold italic border border-slate-300">
                                   No shops configured yet. {isEditing ? "Click '+ Add Shop' above to add." : ""}
                                 </td>
                               </tr>
@@ -822,14 +871,55 @@ const SellerProfile = () => {
                                           const val = e.target.value === "" ? "" : Number(e.target.value);
                                           setFormData(prev => {
                                             const list = [...(prev.shopsAtLocation || [])];
-                                            list[idx] = { ...list[idx], maximum: val };
-                                            return { ...prev, shopsAtLocation: list };
+                                            list[idx] = { 
+                                              ...list[idx], 
+                                              maximum: val,
+                                              totalCapacity: val
+                                            };
+                                            const synced = syncCapacitiesFromShops(list);
+                                            return { ...prev, ...synced };
                                           });
                                         }}
                                         className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold text-slate-700 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
                                       />
                                     ) : (
                                       <span className="font-semibold text-slate-700 text-xs sm:text-sm">{shop.maximum ?? 0}</span>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 py-3 px-2 min-w-[210px]">
+                                    {isEditing ? (
+                                      <select
+                                        value={shop.capacityType || "SHOP CAPECITY"}
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          setFormData(prev => {
+                                            const list = [...(prev.shopsAtLocation || [])];
+                                            list[idx] = { ...list[idx], capacityType: val };
+                                            const synced = syncCapacitiesFromShops(list);
+                                            return { ...prev, ...synced };
+                                          });
+                                        }}
+                                        className="w-full text-center py-2 px-2 border border-slate-300 rounded-lg font-bold text-[11px] sm:text-xs focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white uppercase tracking-tight whitespace-nowrap cursor-pointer"
+                                      >
+                                        <option value="SHOP CAPECITY">SHOP CAPECITY</option>
+                                        <option value="PRODUCT CAPECITY">PRODUCT CAPECITY</option>
+                                      </select>
+                                    ) : (
+                                      <span className="font-bold text-xs sm:text-sm text-slate-800 uppercase tracking-wide whitespace-nowrap">
+                                        {shop.capacityType || "SHOP CAPECITY"}
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="border border-slate-300 py-3 px-3">
+                                    {isEditing ? (
+                                      <input
+                                        type="number"
+                                        value={shop.totalCapacity ?? shop.maximum ?? 0}
+                                        readOnly
+                                        className="w-full text-center py-2 px-3 border border-slate-300 rounded-lg font-bold text-slate-700 text-xs sm:text-sm bg-slate-50 cursor-not-allowed select-none"
+                                      />
+                                    ) : (
+                                      <span className="font-semibold text-slate-700 text-xs sm:text-sm">{shop.totalCapacity ?? 0}</span>
                                     )}
                                   </td>
                                   <td className="border border-slate-300 py-3 px-3">
@@ -866,10 +956,12 @@ const SellerProfile = () => {
                                         onClick={() => {
                                           setFormData(prev => {
                                             const list = (prev.shopsAtLocation || []).filter((_, i) => i !== idx);
+                                            const synced = syncCapacitiesFromShops(list);
                                             return {
                                               ...prev,
                                               shopsAtLocation: list,
-                                              numberOfShops: list.length
+                                              numberOfShops: list.length,
+                                              ...synced
                                             };
                                           });
                                         }}
@@ -884,6 +976,25 @@ const SellerProfile = () => {
                               ))
                             )}
                           </tbody>
+                          {formData.shopsAtLocation && formData.shopsAtLocation.length > 0 && (
+                            <tfoot>
+                              <tr className="bg-gradient-to-r from-amber-50 to-orange-50 font-black border-t-2 border-slate-300 text-xs sm:text-sm text-slate-800">
+                                <td colSpan={4} className="border border-slate-300 py-3 px-4 text-right uppercase tracking-wider text-slate-700">
+                                  Calculated Totals:
+                                </td>
+                                <td colSpan={isEditing ? 4 : 3} className="border border-slate-300 py-3 px-4 text-left">
+                                  <div className="flex flex-wrap items-center gap-4">
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-amber-100/80 text-amber-900 border border-amber-300 rounded-md font-extrabold text-xs">
+                                      📦 Total Product Capacity: <strong className="text-sm text-black">{formData.totalCapacity ?? 0}</strong>
+                                    </span>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-100/80 text-blue-900 border border-blue-300 rounded-md font-extrabold text-xs">
+                                      👥 Total Store Capacity: <strong className="text-sm text-black">{formData.maxGuestCapacity ?? 0}</strong>
+                                    </span>
+                                  </div>
+                                </td>
+                              </tr>
+                            </tfoot>
+                          )}
                         </table>
                       </div>
                     </div>
@@ -1113,8 +1224,9 @@ const SellerProfile = () => {
                   </label>
                   <div className="flex gap-4 w-full md:max-w-xs mt-2 items-center">
                     <input type="number" min="0"
-                      value={formData.advanceBookingBuffer ?? 0}
-                      onChange={(e) => setFormData({ ...formData, advanceBookingBuffer: Number(e.target.value) })}
+                      name="advanceBookingBuffer"
+                      value={formData.advanceBookingBuffer ?? ""}
+                      onChange={(e) => setFormData(prev => ({ ...prev, advanceBookingBuffer: e.target.value === "" ? "" : Number(e.target.value) }))}
                       disabled={!isEditing}
                       className="flex-1 border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
                     />
@@ -1124,9 +1236,22 @@ const SellerProfile = () => {
                       disabled={!isEditing}
                       className="border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 outline-none disabled:opacity-70"
                     >
-                      <option value="hours">Hours</option>
                       <option value="days">Days</option>
+                      <option value="hours">Hours</option>
                     </select>
+                    {formData.advanceBookingBufferUnit === "days" && (
+                      <input
+                        type="number"
+                        min="0"
+                        max="23"
+                        placeholder="Hrs"
+                        title="Additional hours buffer"
+                        value={formData.advanceBookingBufferTime ?? "12"}
+                        onChange={(e) => setFormData({ ...formData, advanceBookingBufferTime: e.target.value })}
+                        disabled={!isEditing}
+                        className="w-20 border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
+                      />
+                    )}
                   </div>
                 </div>
               )}
