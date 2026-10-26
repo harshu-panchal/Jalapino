@@ -622,6 +622,19 @@ const PlanMyEventPage = () => {
         fetchBookings();
     }, [filterDate, sellers]);
 
+    useEffect(() => {
+        if (!selectedSellerDetail?._id || sellers.length === 0) return;
+        const fresh = sellers.find(s => String(s._id) === String(selectedSellerDetail._id));
+        if (fresh && (
+            fresh.advanceBookingBuffer !== selectedSellerDetail.advanceBookingBuffer ||
+            fresh.advanceBookingBufferUnit !== selectedSellerDetail.advanceBookingBufferUnit ||
+            fresh.advanceBookingBufferTime !== selectedSellerDetail.advanceBookingBufferTime ||
+            fresh.advanceBookingBufferAfter !== selectedSellerDetail.advanceBookingBufferAfter
+        )) {
+            setSelectedSellerDetail(fresh);
+        }
+    }, [sellers, selectedSellerDetail]);
+
     /* ── filtered sellers (by global search & smart filtering) ── */
     let smartFilteredSellers = sellers.filter(s => {
         if (String(s.isShopActive) === 'false') return false;
@@ -650,14 +663,16 @@ const PlanMyEventPage = () => {
 
         smartFilteredSellers = smartFilteredSellers.filter(s => {
             if (!s.advanceBookingBufferEnabled) return true;
-            if (!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) return true;
+            if ((!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) && (!s.advanceBookingBufferAfter || s.advanceBookingBufferAfter <= 0)) return true;
 
             const requiredHours = s.advanceBookingBufferUnit === 'hours'
                 ? s.advanceBookingBuffer
                 : s.advanceBookingBuffer * 24;
 
 
-            return hoursDiff >= requiredHours;
+            const beforePassed = (!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) || (hoursDiff >= requiredHours);
+            const afterPassed = (!s.advanceBookingBufferAfter || s.advanceBookingBufferAfter <= 0) || (((selectedTime - currentTime) / (1000 * 60 * 60 * 24)) <= s.advanceBookingBufferAfter);
+            return beforePassed && afterPassed;
         });
     }
 

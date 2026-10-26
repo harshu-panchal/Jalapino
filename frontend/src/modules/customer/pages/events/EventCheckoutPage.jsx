@@ -47,13 +47,9 @@ const getProductPricing = (product) => {
 
     const totalAddOnExtra = fixedExtra + selectedClickBoxExtra;
 
-    originalPrice += totalAddOnExtra;
-    if (salePrice > 0) {
-        salePrice += totalAddOnExtra;
-    }
-
     const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
-    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra };
+    const baseUnitPrice = hasSalePrice ? salePrice : originalPrice;
+    return { originalPrice, unitPrice: baseUnitPrice + totalAddOnExtra, baseUnitPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra, totalAddOnExtra };
 };
 
 const readSavedCheckoutState = () => {
@@ -97,9 +93,9 @@ const EventCheckoutPage = () => {
         ? selectedPackage.pricing * (parseInt(eventData?.guestCount, 10) || 1)
         : parseInt(eventData?.budget, 10) || 0;
     const selectedProductsSubtotal = selectedProducts.reduce((sum, product) => {
-        const price = getProductPricing(product).unitPrice;
+        const pr = getProductPricing(product);
         const quantity = Number(product.quantity || 1);
-        return sum + (price * quantity);
+        return sum + (pr.baseUnitPrice * quantity) + pr.totalAddOnExtra;
     }, 0);
     const totalAmount = baseAmount + selectedProductsSubtotal;
 
@@ -125,7 +121,7 @@ const EventCheckoutPage = () => {
             sessionStorage.removeItem(CHECKOUT_STATE_KEY);
             sessionStorage.removeItem(`jalapino_plan_event_products_${selectedSeller._id}`);
             toast.success("Request Sent! Awaiting Seller Approval.", { id: 'booking' });
-            navigate('/orders'); // Go to orders page
+            navigate('/orders?tab=events', { state: { tab: 'events' } }); // Go to orders page with Events tab active
         } catch (error) {
             const apiMessage = error?.response?.data?.message || "Failed to send request.";
             toast.error(apiMessage, { id: 'booking' });

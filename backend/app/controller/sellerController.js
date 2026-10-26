@@ -409,6 +409,20 @@ export const updateSellerProfile = async (req, res) => {
       const timeVal = Array.isArray(req.body.advanceBookingBufferTime) ? req.body.advanceBookingBufferTime[req.body.advanceBookingBufferTime.length - 1] : req.body.advanceBookingBufferTime;
       seller.advanceBookingBufferTime = String(timeVal || "12");
     }
+    if (req.body.advanceBookingBufferAfter !== undefined) {
+      const afterVal = Array.isArray(req.body.advanceBookingBufferAfter) ? req.body.advanceBookingBufferAfter[req.body.advanceBookingBufferAfter.length - 1] : req.body.advanceBookingBufferAfter;
+      seller.advanceBookingBufferAfter = isNaN(Number(afterVal)) ? 0 : Number(afterVal);
+    }
+    if (req.body.customTimeSlots !== undefined) {
+      try {
+        seller.customTimeSlots = typeof req.body.customTimeSlots === 'string'
+          ? JSON.parse(req.body.customTimeSlots)
+          : req.body.customTimeSlots;
+        if (!Array.isArray(seller.customTimeSlots)) seller.customTimeSlots = [];
+      } catch (e) {
+        seller.customTimeSlots = [];
+      }
+    }
     if (req.body.shopClosedDates !== undefined) {
       try {
         seller.shopClosedDates = typeof req.body.shopClosedDates === 'string' 

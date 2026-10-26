@@ -5,7 +5,7 @@ import { emitCustomerNotification } from '../modules/notifications/notification.
 // Get all event requests for the logged-in seller
 export const getEventRequests = async (req, res) => {
     try {
-        const sellerId = req.user.id || req.user._id;
+        const sellerId = req.user.sellerId || req.user.id || req.user._id;
 
         // Find all bookings where this seller is part of the services array
         const bookings = await EventBooking.find({
@@ -40,7 +40,7 @@ export const getEventRequests = async (req, res) => {
 // Accept or Reject an event request
 export const updateRequestStatus = async (req, res) => {
     try {
-        const sellerId = req.user.id || req.user._id;
+        const sellerId = req.user.sellerId || req.user.id || req.user._id;
         const bookingId = req.params.id;
         const { status, sellerNotes } = req.body; // status should be 'ACCEPTED' or 'REJECTED'
 

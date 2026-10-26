@@ -72,9 +72,12 @@ const SellerProfile = () => {
     ticketCancellationBuffer: 1,
     ticketCancellationBufferUnit: "days",
     shopClosedDates: [],
+    customTimeSlots: [],
   });
 
   const [newZoneName, setNewZoneName] = useState("");
+  const [newSlotFrom, setNewSlotFrom] = useState("10:00");
+  const [newSlotTo, setNewSlotTo] = useState("11:00");
   const syncCapacitiesFromShops = (shops) => {
     if (!Array.isArray(shops) || shops.length === 0) return { shopsAtLocation: shops };
     let prodCapTotal = 0;
@@ -161,6 +164,7 @@ const SellerProfile = () => {
         advanceBookingBuffer: data.advanceBookingBuffer || 0,
         advanceBookingBufferUnit: data.advanceBookingBufferUnit || "days",
         advanceBookingBufferTime: data.advanceBookingBufferTime || "12:00",
+        advanceBookingBufferAfter: data.advanceBookingBufferAfter || 0,
         childTicketPolicyEnabled: data.childTicketPolicyEnabled ?? false,
         childFreeAgeLimit: data.childFreeAgeLimit ?? 5,
         childMaxAgeLimit: data.childMaxAgeLimit ?? 12,
@@ -168,6 +172,7 @@ const SellerProfile = () => {
         ticketCancellationBuffer: data.ticketCancellationBuffer ?? 1,
         ticketCancellationBufferUnit: data.ticketCancellationBufferUnit || "days",
         shopClosedDates: data.shopClosedDates || [],
+        customTimeSlots: Array.isArray(data.customTimeSlots) ? data.customTimeSlots : [],
       });
       setKeptBanners(data.banners || []);
       if (Array.isArray(data.shopsAtLocation) && data.shopsAtLocation.length > 0) {
@@ -431,7 +436,7 @@ const SellerProfile = () => {
         paymentQrCode: formData.paymentQrCode,
       }).forEach(([key, value]) => {
         if (value !== null && value !== undefined && value !== "") {
-          if (key === "serviceCoverage" || key === "customZones" || key === "shopClosedDates" || key === "shopsAtLocation") {
+          if (key === "serviceCoverage" || key === "customZones" || key === "shopClosedDates" || key === "shopsAtLocation" || key === "customTimeSlots") {
             payload.append(key, JSON.stringify(value));
           } else {
             payload.append(key, value);
@@ -442,6 +447,7 @@ const SellerProfile = () => {
       payload.set("advanceBookingBuffer", String(Number(formData.advanceBookingBuffer) || 0));
       payload.set("advanceBookingBufferUnit", String(formData.advanceBookingBufferUnit || "days"));
       payload.set("advanceBookingBufferTime", String(formData.advanceBookingBufferTime || "12"));
+      payload.set("advanceBookingBufferAfter", String(Number(formData.advanceBookingBufferAfter) || 0));
       payload.set("keptBanners", JSON.stringify(keptBanners));
       uploadedBanners.forEach(file => {
         payload.append("banners", file);
@@ -673,7 +679,7 @@ const SellerProfile = () => {
                 )}
 
 
-                <div className="space-y-3">
+                <div className="space-y-3 hidden">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                     Min Guest Capacity
                   </label>
@@ -694,7 +700,7 @@ const SellerProfile = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 hidden">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                     Max Guest Capacity
                   </label>
@@ -715,7 +721,7 @@ const SellerProfile = () => {
                   </div>
                 </div>
 
-                <div className="space-y-3">
+                <div className="space-y-3 hidden">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                     Total Product Capacity
                   </label>
@@ -1252,6 +1258,26 @@ const SellerProfile = () => {
                         className="w-20 border-2 border-transparent bg-slate-50 rounded-lg px-3 py-3 text-sm font-bold text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70"
                       />
                     )}
+                  </div>
+                  <div className="flex gap-4 w-full md:max-w-xs mt-2 items-center">
+                    <div className="flex-1 flex flex-col gap-1">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">After Date (Max Days Advance)</span>
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="e.g. 60"
+                        name="advanceBookingBufferAfter"
+                        value={formData.advanceBookingBufferAfter ?? ""}
+                        onChange={(e) => setFormData(prev => ({ ...prev, advanceBookingBufferAfter: e.target.value === "" ? "" : Number(e.target.value) }))}
+                        disabled={!isEditing}
+                        className="w-full border-2 border-transparent bg-slate-50 rounded-lg px-4 py-3 text-sm focus:bg-white focus:border-slate-100 outline-none transition-all disabled:opacity-70 font-bold text-slate-700"
+                      />
+                    </div>
+                    <div className="pt-5">
+                      <span className="px-3 py-3 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 block">
+                        Days
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -1942,6 +1968,101 @@ const SellerProfile = () => {
                   </div>
                 ))}
               </div>
+              {/* Seller Configured Time Slots */}
+              {(profile?.showStandardDateTimeSlot || profile?.showAdvancedDateTimeSlot) && (
+                <div className="mt-4 pt-4 border-t border-violet-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-violet-950 uppercase tracking-wider">Your Time Slots</p>
+                      <p className="text-[10px] text-violet-600 font-medium">Slots available for customers to book</p>
+                    </div>
+                    <span className="text-[10px] font-bold text-violet-700 bg-violet-100 px-2 py-0.5 rounded-full">
+                      {(formData.customTimeSlots || []).length} slots
+                    </span>
+                  </div>
+
+                  {/* List of Slots */}
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
+                    {(formData.customTimeSlots && formData.customTimeSlots.length > 0) ? (
+                      formData.customTimeSlots.map((slot, sIdx) => (
+                        <div key={sIdx} className="flex items-center gap-1.5 bg-white border border-violet-200 text-violet-900 px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm">
+                          <span>🕐 {slot}</span>
+                          {isEditing && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  customTimeSlots: prev.customTimeSlots.filter((_, idx) => idx !== sIdx)
+                                }));
+                              }}
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded p-0.5 text-xs font-black ml-1 transition-colors"
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-xs text-slate-400 italic">No custom slots added yet (using default store hours).</p>
+                    )}
+                  </div>
+
+                  {/* Add Slot Controls when Editing */}
+                  {isEditing && (
+                    <div className="bg-white p-3 rounded-xl border border-violet-200 space-y-2 mt-2">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-violet-800">+ Add Time Slot</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 flex flex-col gap-0.5">
+                          <span className="text-[9px] text-slate-500 font-bold uppercase">From</span>
+                          <input
+                            type="time"
+                            value={newSlotFrom}
+                            onChange={(e) => setNewSlotFrom(e.target.value)}
+                            className="w-full text-xs font-bold p-1.5 border border-slate-200 rounded-lg outline-none focus:border-violet-400"
+                          />
+                        </div>
+                        <span className="text-slate-400 font-bold mt-3">-</span>
+                        <div className="flex-1 flex flex-col gap-0.5">
+                          <span className="text-[9px] text-slate-500 font-bold uppercase">To</span>
+                          <input
+                            type="time"
+                            value={newSlotTo}
+                            onChange={(e) => setNewSlotTo(e.target.value)}
+                            className="w-full text-xs font-bold p-1.5 border border-slate-200 rounded-lg outline-none focus:border-violet-400"
+                          />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!newSlotFrom || !newSlotTo) return;
+                          const formatTime = (t24) => {
+                            let [h, m] = t24.split(':');
+                            h = parseInt(h, 10);
+                            const ampm = h >= 12 ? 'PM' : 'AM';
+                            h = h % 12;
+                            h = h ? h : 12;
+                            return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+                          };
+                          const slotStr = `${formatTime(newSlotFrom)} - ${formatTime(newSlotTo)}`;
+                          if ((formData.customTimeSlots || []).includes(slotStr)) {
+                            toast.error("This slot already exists");
+                            return;
+                          }
+                          setFormData(prev => ({
+                            ...prev,
+                            customTimeSlots: [...(prev.customTimeSlots || []), slotStr]
+                          }));
+                        }}
+                        className="w-full mt-2 py-1.5 bg-violet-600 hover:bg-violet-700 text-white rounded-lg text-xs font-bold shadow-sm transition-all flex items-center justify-center gap-1"
+                      >
+                        + Add Slot
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           )}
 

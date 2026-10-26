@@ -11,7 +11,8 @@ const EventRequests = () => {
     const fetchRequests = async () => {
         try {
             const res = await sellerApi.getEventRequests();
-            setRequests(res.data.data || []);
+            const list = res.data?.results || res.data?.data || res.data?.result || [];
+            setRequests(Array.isArray(list) ? list : []);
         } catch (err) {
             toast.error("Failed to load event requests");
         } finally {

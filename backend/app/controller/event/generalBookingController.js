@@ -89,9 +89,15 @@ export const createBooking = async (req, res) => {
     let totalTicketAmount = 0;
 
     for (const m of members) {
-      const isChild = m.category === 'Child' || (Number(m.age) <= childMaxLimit);
+      const ageNum = Number(m.age);
+      // A member is only a child if age is within childMaxLimit
+      const isChild = isChildPolicyEnabled && (
+        (m.category === 'Child' && (isNaN(ageNum) || ageNum <= childMaxLimit)) ||
+        (!isNaN(ageNum) && ageNum > 0 && ageNum <= childMaxLimit)
+      ) && (!isNaN(ageNum) ? ageNum <= childMaxLimit : true);
+
       if (isChild && isChildPolicyEnabled) {
-        if (Number(m.age) <= childFreeLimit) {
+        if (!isNaN(ageNum) && ageNum <= childFreeLimit) {
           // Free ticket for children below or equal to free limit
           totalTicketAmount += 0;
         } else {

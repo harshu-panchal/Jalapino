@@ -397,6 +397,10 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    customTimeSlots: {
+      type: [String],
+      default: []
+    },
     showAdvancedDateTime: {
       type: Boolean,
       default: false
@@ -468,6 +472,10 @@ const sellerSchema = new mongoose.Schema(
     advanceBookingBufferTime: {
       type: String,
       default: "12"
+    },
+    advanceBookingBufferAfter: {
+      type: Number,
+      default: 0
     },
     addonDecorationEnabled: {
       type: Boolean,
@@ -638,6 +646,10 @@ const sellerSchema = new mongoose.Schema(
     advanceBookingBufferTime: {
       type: String,
       default: "12:00 PM"
+    },
+    advanceBookingBufferAfter: {
+      type: Number,
+      default: 0
     },
     demoTrialEnabled: {
       type: Boolean,

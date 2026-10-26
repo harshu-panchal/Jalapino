@@ -174,7 +174,30 @@ export const searchEventSellers = async (req, res) => {
         });
 
         if (availability && availability.holidayFlag) {
-          continue; // Seller is on holiday
+          continue; // Holiday check
+        }
+
+        // Check Advance Booking Buffer (Minimum Before Notice & Maximum After Days)
+        if (seller.advanceBookingBufferEnabled) {
+          const currentTime = Date.now();
+          const targetTime = new Date(date).getTime();
+          const hoursDiff = (targetTime - currentTime) / (1000 * 60 * 60);
+          const daysDiff = (targetTime - currentTime) / (1000 * 60 * 60 * 24);
+
+          if (seller.advanceBookingBuffer && seller.advanceBookingBuffer > 0) {
+            const requiredHours = seller.advanceBookingBufferUnit === 'hours'
+              ? seller.advanceBookingBuffer
+              : seller.advanceBookingBuffer * 24;
+            if (hoursDiff < requiredHours) {
+              continue; // Exclude: event is too soon, buffer not satisfied
+            }
+          }
+
+          if (seller.advanceBookingBufferAfter && seller.advanceBookingBufferAfter > 0) {
+            if (daysDiff > seller.advanceBookingBufferAfter) {
+              continue; // Exclude: event is too far in advance
+            }
+          }
         }
 
         // Check max capacity vs current booked capacity

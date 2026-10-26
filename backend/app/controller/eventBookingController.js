@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Setting from '../models/setting.js';
 import EventBooking from '../models/event/EventBooking.js';
 import EventReservation from '../models/event/EventReservation.js';
@@ -5,6 +6,7 @@ import EventPayout from '../models/event/EventPayout.js';
 import SellerCalendar from '../models/event/SellerCalendar.js';
 import Seller from '../models/seller.js';
 import Product from '../models/product.js';
+import EventCategory from '../models/event/EventCategory.js';
 import handleResponse from '../utils/helper.js';
 import { emitSellerNotification, emitCustomerNotification } from '../modules/notifications/notification.service.js';
 
@@ -147,9 +149,28 @@ export const createEventBooking = async (req, res) => {
         const bookingId = `EVT-${Date.now()}`;
 
         // Map categories to services format
-        const services = (selectedCategories || []).map(cat => {
-            const catId = typeof cat === 'object' ? (cat._id || cat.id) : cat;
-            const catPreferences = preferences ? preferences[catId] : {};
+        const resolvedCategories = await Promise.all((selectedCategories || []).map(async (cat) => {
+            const rawCatId = typeof cat === 'object' ? (cat?._id || cat?.id || cat?.name) : cat;
+            let resolvedId = null;
+
+            if (rawCatId && mongoose.Types.ObjectId.isValid(rawCatId)) {
+                resolvedId = rawCatId;
+            } else if (rawCatId && typeof rawCatId === 'string') {
+                // If category name (e.g., "WaterPark") was sent instead of ObjectId, find its ObjectId
+                const matchedCategory = await EventCategory.findOne({ name: new RegExp(`^${rawCatId.trim()}$`, 'i') }).select('_id');
+                if (matchedCategory) {
+                    resolvedId = matchedCategory._id;
+                }
+            }
+
+            return {
+                rawKey: rawCatId,
+                categoryId: resolvedId
+            };
+        }));
+
+        const services = resolvedCategories.map(({ rawKey, categoryId }) => {
+            const catPreferences = preferences ? (preferences[categoryId] || preferences[rawKey]) : {};
             const bookingPreferences = { ...(catPreferences || {}) };
             const selectedProductColors = selectedProductLines
                 .filter(line => line.selectedColors.length > 0)
@@ -164,7 +185,7 @@ export const createEventBooking = async (req, res) => {
 
             return {
                 seller: sellerId,
-                category: catId || null,
+                category: categoryId || null,
                 preferences: Object.keys(bookingPreferences).map(key => ({
                     fieldName: key,
                     value: bookingPreferences[key]

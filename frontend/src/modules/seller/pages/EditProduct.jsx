@@ -206,11 +206,10 @@ const VariantDetails = ({ variant, onChange }) => {
                     addOns: fixedList
                   });
                 }}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                  currentTab === "fixed"
-                    ? "bg-purple-700 text-white shadow-sm ring-2 ring-purple-300"
-                    : "bg-white text-slate-700 hover:bg-purple-50 border border-slate-200"
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${currentTab === "fixed"
+                  ? "bg-purple-700 text-white shadow-sm ring-2 ring-purple-300"
+                  : "bg-white text-slate-700 hover:bg-purple-50 border border-slate-200"
+                  }`}
               >
                 <span>🔘 TOGAL 1 (PRICE FIXED)</span>
               </button>
@@ -222,11 +221,10 @@ const VariantDetails = ({ variant, onChange }) => {
                     addOns: clickBoxList
                   });
                 }}
-                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${
-                  currentTab === "click_box"
-                    ? "bg-purple-700 text-white shadow-sm ring-2 ring-purple-300"
-                    : "bg-white text-slate-700 hover:bg-purple-50 border border-slate-200"
-                }`}
+                className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 ${currentTab === "click_box"
+                  ? "bg-purple-700 text-white shadow-sm ring-2 ring-purple-300"
+                  : "bg-white text-slate-700 hover:bg-purple-50 border border-slate-200"
+                  }`}
               >
                 <span>☑️ TOGAL 2 (PRICE CLICK ON BOX)</span>
               </button>
@@ -1085,13 +1083,13 @@ const EditProduct = () => {
                         <div className="flex flex-wrap gap-4">
                           {[
                             { id: "self_delivery", label: "Self Delivery" },
-                            { id: "hyperlocal", label: "Hyperlocal service delivery" },
-                            { id: "pan_india", label: "Pan India (Courier Delivery)" },
+                            { id: "hyperlocal_service", label: "Hyperlocal service delivery" },
+                            { id: "pan_india_courier", label: "Pan India (Courier Delivery)" },
                             { id: "jalapino_rider", label: "Jalpaino Rider Delivery" },
                             { id: "none", label: "No Delivery (In-Store Pickup Only)" },
                           ].map((option) => {
-                            const alwaysAllowed = ["none", "self_delivery", "jalapino_rider", "pan_india"];
-                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || alwaysAllowed.includes(option.id);
+                            const alwaysAllowed = ["none", "self_delivery", "jalapino_rider", "pan_india", "pan_india_courier", "hyperlocal_service"];
+                            const isAllowedBySeller = user?.serviceCoverage?.includes(option.id) || user?.serviceCoverage?.includes("hyperlocal") || user?.serviceCoverage?.includes("pan_india") || alwaysAllowed.includes(option.id);
                             if (!isAllowedBySeller) return null;
                             const isSelected = formData.deliveryCoverage.includes(option.id);
                             return (
@@ -1226,37 +1224,7 @@ const EditProduct = () => {
 
 
 
-                    <div className="space-y-1.5 flex flex-col">
-                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Minimum Order Qty</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={formData.minOrderQty}
-                        onChange={(e) => setFormData({ ...formData, minOrderQty: parseInt(e.target.value) || 1 })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                      />
-                    </div>
-                    <div className="space-y-1.5 flex flex-col">
-                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Maximum Order Qty (Optional)</label>
-                      <input
-                        type="number"
-                        min="1"
-                        value={formData.maxOrderQty}
-                        onChange={(e) => setFormData({ ...formData, maxOrderQty: parseInt(e.target.value) || "" })}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                        placeholder="e.g. 100"
-                      />
-                    </div>
-                    <div className="space-y-1.5 flex flex-col">
-                      <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Advance Order Setting</label>
-                      <input
-                        value={profileAdvanceOrderSetting || formData.advanceOrderSetting}
-                        onChange={(e) => setFormData({ ...formData, advanceOrderSetting: e.target.value })}
-                        readOnly={Boolean(profileAdvanceOrderSetting)}
-                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-                        placeholder="e.g. Order 48 hrs prior"
-                      />
-                    </div>
+
                   </div>
                   <div className="space-y-1.5 flex flex-col mt-4">
                     <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">Cancellation & Refund Process</label>
@@ -1370,10 +1338,10 @@ const EditProduct = () => {
                 <div className="space-y-1.5 flex flex-col">
                   <div className="flex items-center justify-between ml-1 mb-2">
                     <label className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">
-                    Product Colors (Optional)
+                      Product Colors (Optional)
                     </label>
-                    <ToggleSwitch 
-                      checked={formData.hasCustomColors} 
+                    <ToggleSwitch
+                      checked={formData.hasCustomColors}
                       onChange={() => setFormData({ ...formData, hasCustomColors: !formData.hasCustomColors })}
                       label="Toggle Custom Colors"
                     />
@@ -1407,43 +1375,43 @@ const EditProduct = () => {
                     </div>
                     {formData.hasCustomColors && (
                       <div className="flex gap-2 items-center">
-                      <input
-                        type="color"
-                        id="visualColorPicker"
-                        className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
-                        defaultValue="#000000"
-                      />
-                      <input
-                        type="text"
-                        id="customColorInput"
-                        placeholder="Type custom color or select hex..."
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            const val = e.target.value.trim() || document.getElementById("visualColorPicker").value;
+                        <input
+                          type="color"
+                          id="visualColorPicker"
+                          className="w-10 h-10 p-1 bg-white ring-1 ring-slate-200 border-none rounded-lg cursor-pointer"
+                          defaultValue="#000000"
+                        />
+                        <input
+                          type="text"
+                          id="customColorInput"
+                          placeholder="Type custom color or select hex..."
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              const val = e.target.value.trim() || document.getElementById("visualColorPicker").value;
+                              if (val && !formData.colors.includes(val)) {
+                                setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
+                              }
+                              e.target.value = '';
+                            }
+                          }}
+                          className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const input = document.getElementById("customColorInput");
+                            const picker = document.getElementById("visualColorPicker");
+                            const val = input.value.trim() || picker.value;
                             if (val && !formData.colors.includes(val)) {
                               setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
                             }
-                            e.target.value = '';
-                          }
-                        }}
-                        className="flex-1 px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-lg text-xs font-semibold outline-none focus:ring-2 focus:ring-brand-500"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const input = document.getElementById("customColorInput");
-                          const picker = document.getElementById("visualColorPicker");
-                          const val = input.value.trim() || picker.value;
-                          if (val && !formData.colors.includes(val)) {
-                            setFormData(prev => ({ ...prev, colors: [...prev.colors, val] }));
-                          }
-                          input.value = '';
-                        }}
-                        className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
-                      >
-                        ADD
-                      </button>
+                            input.value = '';
+                          }}
+                          className="px-4 py-2 bg-slate-900 text-white rounded-lg text-xs font-bold"
+                        >
+                          ADD
+                        </button>
                       </div>
                     )}
                     {formData.colors.length > 0 && (
@@ -1590,62 +1558,117 @@ const EditProduct = () => {
                         />
                       </div>
 
-                      {/* Click Unique Code Box (Next to Sale / Dedicated Box) */}
+                      {/* Click Unique Code Toggle & Input */}
                       {((sellerBookingProfile?.capacityEnabled || user?.capacityEnabled) && (sellerBookingProfile?.shopsAtLocation?.length > 0 || user?.shopsAtLocation?.length > 0)) && (
-                        <div className="col-span-6 md:col-span-2 space-y-1">
-                          <label className="text-[8px] font-bold text-purple-700 uppercase tracking-widest ml-1">
-                            Click Unique Code
+                        <div className="col-span-12 md:col-span-3 space-y-1.5 p-2.5 bg-purple-50/50 rounded-xl border border-purple-100">
+                          <div className="flex items-center justify-between">
+                            <label className="text-[9px] font-black text-purple-800 uppercase tracking-wider">
+                              Unique Code
+                            </label>
+                            <ToggleSwitch
+                              checked={Boolean(variant.hasUniqueCode ?? Boolean(variant.uniqueCode))}
+                              label="Toggle Unique Code"
+                              onChange={() => {
+                                const isCurrentlyOn = Boolean(variant.hasUniqueCode ?? Boolean(variant.uniqueCode));
+                                const nextVal = !isCurrentlyOn;
+                                setFormData(prev => {
+                                  const updated = [...prev.variants];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    hasUniqueCode: nextVal,
+                                    ...(nextVal ? {} : {
+                                      uniqueCode: "",
+                                      shopNo: "",
+                                      minimum: 0,
+                                      maximum: 0,
+                                      capacityType: "SHOP CAPECITY",
+                                      totalCapacity: 0,
+                                      bookingType: "MULTIPLE"
+                                    })
+                                  };
+                                  return { ...prev, variants: updated };
+                                });
+                              }}
+                            />
+                          </div>
+                          {(variant.hasUniqueCode ?? Boolean(variant.uniqueCode)) && (
+                            <select
+                              value={variant.uniqueCode || ""}
+                              onChange={(e) => {
+                                const selectedCode = e.target.value;
+                                const shops = sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || [];
+                                const matchedShop = shops.find(s => (s.uniqueCode || `SHOP_${s.shopNo}`) === selectedCode);
+                                const capVal = matchedShop ? (matchedShop.maximum || matchedShop.totalCapacity || matchedShop.minimum || 0) : 0;
+                                setFormData(prev => {
+                                  const updated = [...prev.variants];
+                                  updated[index] = {
+                                    ...updated[index],
+                                    name: updated[index].name?.trim() ? updated[index].name : (selectedCode || ""),
+                                    uniqueCode: selectedCode,
+                                    shopNo: matchedShop?.shopNo || "",
+                                    minimum: matchedShop?.minimum ?? 0,
+                                    maximum: matchedShop?.maximum ?? 0,
+                                    capacityType: matchedShop?.capacityType || "SHOP CAPECITY",
+                                    totalCapacity: matchedShop?.totalCapacity ?? 0,
+                                    bookingType: matchedShop?.bookingType || "MULTIPLE",
+                                    ...(capVal > 0 ? { stock: String(capVal), hasStock: true } : {})
+                                  };
+                                  return { ...prev, variants: updated };
+                                });
+                              }}
+                              className="w-full px-2.5 py-1.5 bg-white ring-1 ring-purple-200 border-none rounded-lg text-xs font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer uppercase"
+                            >
+                              <option value="">Select Code</option>
+                              {(sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || []).map((shop, sIdx) => {
+                                const codeVal = shop.uniqueCode || `SHOP_${shop.shopNo || sIdx + 1}`;
+                                return (
+                                  <option key={sIdx} value={codeVal}>
+                                    {codeVal} {shop.shopNo ? `(Shop ${shop.shopNo})` : ''}
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          )}
+                        </div>
+                      )}
+                      <div className="col-span-6 md:col-span-2 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[9px] font-black text-slate-700 uppercase tracking-wider">
+                            Stock
                           </label>
-                          <select
-                            value={variant.uniqueCode || ""}
-                            onChange={(e) => {
-                              const selectedCode = e.target.value;
-                              const shops = sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || [];
-                              const matchedShop = shops.find(s => (s.uniqueCode || `SHOP_${s.shopNo}`) === selectedCode);
+                          <ToggleSwitch
+                            checked={Boolean(variant.hasStock ?? (variant.stock !== undefined && variant.stock !== "" && Number(variant.stock) > 0))}
+                            label="Toggle Stock"
+                            onChange={() => {
+                              const isCurrentlyOn = Boolean(variant.hasStock ?? (variant.stock !== undefined && variant.stock !== "" && Number(variant.stock) > 0));
+                              const nextVal = !isCurrentlyOn;
                               setFormData(prev => {
                                 const updated = [...prev.variants];
                                 updated[index] = {
                                   ...updated[index],
-                                  uniqueCode: selectedCode,
-                                  shopNo: matchedShop?.shopNo || "",
-                                  minimum: matchedShop?.minimum ?? 0,
-                                  maximum: matchedShop?.maximum ?? 0,
-                                  capacityType: matchedShop?.capacityType || "SHOP CAPECITY",
-                                  totalCapacity: matchedShop?.totalCapacity ?? 0,
-                                  bookingType: matchedShop?.bookingType || "MULTIPLE",
+                                  hasStock: nextVal,
+                                  stock: nextVal ? (updated[index].stock || "10") : ""
                                 };
                                 return { ...prev, variants: updated };
                               });
                             }}
-                            className="w-full px-3 py-2 bg-purple-50 ring-1 ring-purple-200 border-none rounded-xl text-xs font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer uppercase"
-                          >
-                            <option value="">Select Code</option>
-                            {(sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || []).map((shop, sIdx) => {
-                              const codeVal = shop.uniqueCode || `SHOP_${shop.shopNo || sIdx + 1}`;
-                              return (
-                                <option key={sIdx} value={codeVal}>
-                                  {codeVal} {shop.shopNo ? `(Shop ${shop.shopNo})` : ''}
-                                </option>
-                              );
-                            })}
-                          </select>
+                          />
                         </div>
-                      )}
-                      <div className="col-span-6 md:col-span-2 space-y-1">
-                        <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
-                          Stock
-                        </label>
-                        <input
-                          type="number"
-                          value={variant.stock}
-                          onChange={(e) => {
-                            const newVariants = [...formData.variants];
-                            newVariants[index].stock = e.target.value;
-                            setFormData({ ...formData, variants: newVariants });
-                          }}
-                          placeholder="10"
-                          className="w-full px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10"
-                        />
+                        {(variant.hasStock ?? (variant.stock !== undefined && variant.stock !== "" && Number(variant.stock) > 0)) && (
+
+
+                          <input
+                            type="number"
+                            value={variant.stock}
+                            onChange={(e) => {
+                              const newVariants = [...formData.variants];
+                              newVariants[index].stock = e.target.value;
+                              setFormData({ ...formData, variants: newVariants });
+                            }}
+                            placeholder="10"
+                            className="w-full px-3 py-2 bg-white ring-1 ring-slate-200 border-none rounded-xl text-xs font-bold outline-none focus:ring-2 focus:ring-primary/10"
+                          />
+                        )}
                       </div>
                       <div className="col-span-5 md:col-span-2 space-y-1">
                         <label className="text-xs font-bold text-slate-600 uppercase tracking-widest ml-1">
@@ -1689,9 +1712,9 @@ const EditProduct = () => {
                       <VariantDetails variant={variant} onChange={(field, value) => {
                         const next = [...formData.variants];
                         if (field === "multiple") {
-                           next[index] = { ...next[index], ...value };
+                          next[index] = { ...next[index], ...value };
                         } else {
-                           next[index] = { ...next[index], [field]: value };
+                          next[index] = { ...next[index], [field]: value };
                         }
                         setFormData({ ...formData, variants: next });
                       }} />
@@ -1812,6 +1835,42 @@ const EditProduct = () => {
                           className="w-full px-3 py-2 bg-brand-50 ring-1 ring-brand-100 border-none rounded-xl text-xs font-bold text-brand-700 outline-none focus:ring-2 focus:ring-brand-200"
                         />
                       </div>
+                      {/* Unique Code Selector for Ticket */}
+                      {((sellerBookingProfile?.capacityEnabled || user?.capacityEnabled) && (sellerBookingProfile?.shopsAtLocation?.length > 0 || user?.shopsAtLocation?.length > 0)) && (
+                        <div className="col-span-12 md:col-span-3 space-y-1">
+                          <label className="text-[10px] font-bold text-purple-700 uppercase tracking-widest ml-1">
+                            Location Code (Shop)
+                          </label>
+                          <select
+                            value={ticket.uniqueCode || ""}
+                            onChange={(e) => {
+                              const selectedCode = e.target.value;
+                              const shops = sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || [];
+                              const matchedShop = shops.find(s => (s.uniqueCode || `SHOP_${s.shopNo}`) === selectedCode);
+                              const capVal = matchedShop ? (matchedShop.maximum || matchedShop.totalCapacity || matchedShop.minimum || 0) : 0;
+                              const newTickets = [...formData.tickets];
+                              newTickets[index] = {
+                                ...newTickets[index],
+                                uniqueCode: selectedCode,
+                                ...(capVal > 0 ? { capacity: String(capVal) } : {})
+                              };
+                              setFormData({ ...formData, tickets: newTickets });
+                            }}
+                            className="w-full px-2.5 py-2 bg-white ring-1 ring-purple-200 border-none rounded-xl text-xs font-bold text-purple-900 outline-none focus:ring-2 focus:ring-purple-400 cursor-pointer uppercase"
+                          >
+                            <option value="">Select Code</option>
+                            {(sellerBookingProfile?.shopsAtLocation || user?.shopsAtLocation || []).map((shop, sIdx) => {
+                              const codeVal = shop.uniqueCode || `SHOP_${shop.shopNo || sIdx + 1}`;
+                              return (
+                                <option key={sIdx} value={codeVal}>
+                                  {codeVal} {shop.shopNo ? `(Shop ${shop.shopNo} - Cap: ${shop.maximum || shop.totalCapacity || 0})` : ''}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      )}
+
                       <div className="col-span-6 md:col-span-2 space-y-1">
                         <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
                           Capacity
@@ -1972,9 +2031,9 @@ const EditProduct = () => {
                         const selectedHeader = categories.find((h) => (h._id || h.id) === formData.header);
                         const headerMatches = selectedHeader?.applicableModules?.includes(selectedModule);
                         return getFilteredList(selectedHeader?.children, selectedModule, headerMatches).map((c) => (
-                        <option key={c._id || c.id} value={c._id || c.id}>
-                          {c.name}
-                        </option>
+                          <option key={c._id || c.id} value={c._id || c.id}>
+                            {c.name}
+                          </option>
                         ));
                       })()}
                     </select>
@@ -1998,9 +2057,9 @@ const EditProduct = () => {
                         const selectedCategory = selectedHeader?.children?.find((c) => (c._id || c.id) === formData.category);
                         const inheritedMatch = selectedHeader?.applicableModules?.includes(selectedModule) || selectedCategory?.applicableModules?.includes(selectedModule);
                         return getFilteredList(selectedCategory?.children, selectedModule, inheritedMatch).map((sc) => (
-                        <option key={sc._id || sc.id} value={sc._id || sc.id}>
-                          {sc.name}
-                        </option>
+                          <option key={sc._id || sc.id} value={sc._id || sc.id}>
+                            {sc.name}
+                          </option>
                         ));
                       })()}
                     </select>
@@ -2049,9 +2108,9 @@ const EditProduct = () => {
                       </p>
                       <button className="text-[10px] font-black text-primary uppercase tracking-wider hover:underline">
                         Pick from Library
-                        </button>
-                      </div>
+                      </button>
                     </div>
+                  </div>
                 </div>
 
                 {/* Gallery Section */}

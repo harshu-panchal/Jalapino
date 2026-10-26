@@ -116,35 +116,11 @@ const GeneralBookingForm = () => {
         const seller = currentVenue?.sellerId;
         if (seller && seller.shopTimingsEnabled && (seller.shopOpeningTime || seller.shopClosingTime)) {
             const openMinutes = parseTimeToMinutes(seller.shopOpeningTime) ?? (10 * 60); // default 10:00 AM
-            const closeMinutes = parseTimeToMinutes(seller.shopClosingTime) ?? (20 * 60); // default 08:00 PM
+            const closeMinutes = parseTimeToMinutes(seller.shopClosingTime) ?? (18 * 60); // default 06:00 PM
 
             if (closeMinutes > openMinutes) {
-                const slots = [];
-                const stepMinutes = 60; // 1-hour interval slots like Swiggy / Zomato
-
-                // If selected date is today, only show upcoming slots
-                const todayStr = new Date().toISOString().split('T')[0];
-                const isToday = bookingDate === todayStr;
-                const now = new Date();
-                const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-                let current = openMinutes;
-                while (current + 30 <= closeMinutes) {
-                    const next = Math.min(current + stepMinutes, closeMinutes);
-                    
-                    // If today, filter out past slots (allow 15 mins buffer)
-                    if (!isToday || current >= currentMinutes - 15) {
-                        slots.push(`${formatTime12h(current)} - ${formatTime12h(next)}`);
-                    }
-                    current = next;
-                }
-
-                // If all slots have passed for today
-                if (isToday && slots.length === 0) {
-                    return ["Shop Closed for Today (Hours Passed)"];
-                }
-
-                if (slots.length > 0) return slots;
+                // Return direct full shop operating hours as single time slot
+                return [`${formatTime12h(openMinutes)} - ${formatTime12h(closeMinutes)}`];
             }
         }
 
@@ -182,6 +158,26 @@ const GeneralBookingForm = () => {
     const handleMemberChange = (index, field, value) => {
         const updated = [...members];
         updated[index][field] = value;
+
+        if (isChildPolicyEnabled) {
+            if (field === 'age') {
+                const num = Number(value);
+                if (value !== '' && !isNaN(num)) {
+                    if (num <= childMaxLimit) {
+                        updated[index].category = 'Child';
+                    } else {
+                        updated[index].category = 'Adult';
+                    }
+                }
+            } else if (field === 'category') {
+                const currentAge = Number(updated[index].age);
+                if (value === 'Child' && currentAge > childMaxLimit) {
+                    toast.warning(`Child age must be ≤ ${childMaxLimit} years. Resetting age or setting to Adult.`);
+                    updated[index].age = '';
+                }
+            }
+        }
+
         setMembers(updated);
     };
 
@@ -314,9 +310,17 @@ const GeneralBookingForm = () => {
     let baseAmount = 0;
 
     members.forEach(m => {
-        const isChild = m.category === 'Child' || (Number(m.age) > 0 && Number(m.age) <= childMaxLimit);
+        const ageNum = Number(m.age);
+        const hasValidAge = m.age !== '' && !isNaN(ageNum) && ageNum > 0;
+        
+        // Strictly only a child if within max age limit
+        const isChild = isChildPolicyEnabled && (
+            (m.category === 'Child' && (!hasValidAge || ageNum <= childMaxLimit)) ||
+            (hasValidAge && ageNum <= childMaxLimit)
+        ) && (hasValidAge ? ageNum <= childMaxLimit : true);
+
         if (isChild && isChildPolicyEnabled) {
-            if (Number(m.age) <= childFreeLimit) {
+            if (hasValidAge && ageNum <= childFreeLimit) {
                 freeChildrenCount += 1;
             } else {
                 paidChildrenCount += 1;
@@ -564,17 +568,42 @@ const GeneralBookingForm = () => {
                                         </div>
 
                                         {/* Child Policy Pricing Badge for this member */}
-                                        {isChildPolicyEnabled && (member.category === 'Child' || (Number(member.age) > 0 && Number(member.age) <= childMaxLimit)) && (
-                                            <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
-                                                Number(member.age) <= childFreeLimit
-                                                    ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
-                                                    : 'bg-purple-100 text-purple-700 border border-purple-200'
-                                            }`}>
-                                                {Number(member.age) <= childFreeLimit 
-                                                    ? `🎉 FREE Ticket (Age ≤ ${childFreeLimit})`
-                                                    : `🎟️ Child Ticket: ₹${childPriceSetting > 0 ? childPriceSetting : adultPricePerMember}`}
-                                            </span>
-                                        )}
+                                        {isChildPolicyEnabled && (() => {
+                                            const ageNum = Number(member.age);
+                                            const hasValidAge = member.age !== '' && !isNaN(ageNum) && ageNum > 0;
+                                            
+                                            if (member.category === 'Child' && hasValidAge && ageNum > childMaxLimit) {
+                                                return (
+                                                    <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                                        ⚠️ Age &gt; {childMaxLimit} yrs: Charged as Adult
+                                                    </span>
+                                                );
+                                            }
+
+                                            if (member.category === 'Child' || (hasValidAge && ageNum <= childMaxLimit)) {
+                                                if (!hasValidAge) {
+                                                    return (
+                                                        <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-purple-100 text-purple-700 border border-purple-200">
+                                                            🧒 Child Ticket (≤ {childMaxLimit} yrs)
+                                                        </span>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${
+                                                        ageNum <= childFreeLimit
+                                                            ? 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                                            : 'bg-purple-100 text-purple-700 border border-purple-200'
+                                                    }`}>
+                                                        {ageNum <= childFreeLimit 
+                                                            ? `🎉 FREE Ticket (Age ≤ ${childFreeLimit})`
+                                                            : `🎟️ Child Ticket: ₹${childPriceSetting > 0 ? childPriceSetting : adultPricePerMember}`}
+                                                    </span>
+                                                );
+                                            }
+
+                                            return null;
+                                        })()}
                                     </div>
                                     
                                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

@@ -63,13 +63,9 @@ const getProductPricing = (product) => {
 
     const totalAddOnExtra = fixedExtra + selectedClickBoxExtra;
 
-    originalPrice += totalAddOnExtra;
-    if (salePrice > 0) {
-        salePrice += totalAddOnExtra;
-    }
-
     const hasSalePrice = salePrice > 0 && salePrice < originalPrice;
-    return { originalPrice, unitPrice: hasSalePrice ? salePrice : originalPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra };
+    const baseUnitPrice = hasSalePrice ? salePrice : originalPrice;
+    return { originalPrice, unitPrice: baseUnitPrice + totalAddOnExtra, baseUnitPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra, totalAddOnExtra };
 };
 
 const EventSellerDetailPage = ({ embeddedState, onBack }) => {
@@ -214,6 +210,66 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         const minTime = new Date(Date.now() + totalHours * 60 * 60 * 1000);
         return minTime.toISOString().split('T')[0];
     }, [selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferUnit, selectedSeller?.advanceBookingBufferTime]);
+
+    // Calculate maximum allowed booking date based on seller's advanceBookingBufferAfter (Days)
+    const maxBookingDate = React.useMemo(() => {
+        if (!selectedSeller?.advanceBookingBufferEnabled || !selectedSeller?.advanceBookingBufferAfter || Number(selectedSeller.advanceBookingBufferAfter) <= 0) {
+            return undefined;
+        }
+        const maxDays = Number(selectedSeller.advanceBookingBufferAfter);
+        const maxTime = new Date(Date.now() + maxDays * 24 * 60 * 60 * 1000);
+        return maxTime.toISOString().split('T')[0];
+    }, [selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBufferAfter]);
+
+    // Available time slots based on the specific seller's configured slots or opening & closing hours
+    const sellerTimeSlots = React.useMemo(() => {
+        if (Array.isArray(selectedSeller?.customTimeSlots) && selectedSeller.customTimeSlots.length > 0) {
+            return selectedSeller.customTimeSlots;
+        }
+
+        const defaultSlots = [
+            "07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM",
+            "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM",
+            "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM",
+            "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM",
+            "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM",
+            "10:00 PM - 11:00 PM"
+        ];
+
+        const openTime = selectedSeller?.shopOpeningTime;
+        const closeTime = selectedSeller?.shopClosingTime;
+        if (!openTime || !closeTime) return defaultSlots;
+
+        const parseTimeToMinutes = (tStr) => {
+            if (!tStr) return null;
+            const parts = tStr.trim().split(' ');
+            if (parts.length < 2) return null;
+            const [time, modifier] = parts;
+            const [h, m] = time.split(':');
+            let hours = parseInt(h, 10);
+            const minutes = parseInt(m, 10) || 0;
+            if (hours === 12) {
+                hours = modifier.toUpperCase() === 'PM' ? 12 : 0;
+            } else if (modifier.toUpperCase() === 'PM') {
+                hours += 12;
+            }
+            return hours * 60 + minutes;
+        };
+
+        const formatTime12h = (minutes) => {
+            let h = Math.floor(minutes / 60);
+            const m = minutes % 60;
+            const period = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12;
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} ${period}`;
+        };
+
+        const openMin = parseTimeToMinutes(openTime);
+        const closeMin = parseTimeToMinutes(closeTime);
+        if (openMin === null || closeMin === null || openMin >= closeMin) return defaultSlots;
+
+        return [`${formatTime12h(openMin)} - ${formatTime12h(closeMin)}`];
+    }, [selectedSeller?.customTimeSlots, selectedSeller?.shopOpeningTime, selectedSeller?.shopClosingTime]);
 
     // Ensure the current booking type is valid for active permissions, else fallback to defaultBookingType
     const effectiveBookingType = (
@@ -801,6 +857,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const handleProceed = () => {
+        if (activeDate && minBookingDate && activeDate < minBookingDate) {
+            toast.error(`Event date must be on or after ${minBookingDate} due to seller's advance booking notice.`);
+            return;
+        }
+        if (activeDate && maxBookingDate && activeDate > maxBookingDate) {
+            toast.error(`Event date cannot be after ${maxBookingDate} for this seller.`);
+            return;
+        }
+
         // Collect preferences
         const collectedPreferences = {
             ...preferences,
@@ -925,7 +990,28 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                     {/* ─── DATE & TIME FILTERS (Seller & Service Category Driven) ─── */}
                     {showAnyDateFilter && (
-                        <div className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 shadow-sm">
+                        <div className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 shadow-sm space-y-3">
+                            {selectedSeller?.advanceBookingBufferEnabled && (selectedSeller?.advanceBookingBuffer > 0 || selectedSeller?.advanceBookingBufferAfter > 0) && (
+                                <div className="flex flex-wrap items-center justify-between gap-2 bg-amber-100/70 border border-amber-300/80 px-3.5 py-2 rounded-2xl">
+                                    <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                        ⏳ Advance Booking Notice: Requires minimum {selectedSeller.advanceBookingBuffer || 0} {selectedSeller.advanceBookingBufferUnit || 'days'} notice.
+                                        {selectedSeller.advanceBookingBufferAfter > 0 ? ` (Max ${selectedSeller.advanceBookingBufferAfter} days in advance)` : ''}
+                                    </span>
+                                    {activeDate && minBookingDate && activeDate < minBookingDate ? (
+                                        <span className="text-xs font-black text-red-600 bg-red-100 px-2.5 py-1 rounded-xl">
+                                            ⚠️ Not Available for {activeDate} (Earliest: {minBookingDate})
+                                        </span>
+                                    ) : activeDate && maxBookingDate && activeDate > maxBookingDate ? (
+                                        <span className="text-xs font-black text-red-600 bg-red-100 px-2.5 py-1 rounded-xl">
+                                            ⚠️ Too far in advance (Latest: {maxBookingDate})
+                                        </span>
+                                    ) : activeDate ? (
+                                        <span className="text-xs font-bold text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-xl">
+                                            ✅ Available for booking
+                                        </span>
+                                    ) : null}
+                                </div>
+                            )}
                             <div className="flex flex-wrap gap-3 items-end">
                                 {/* Event Type */}
                                 <div className="flex flex-col gap-1 min-w-[170px] flex-1 sm:flex-initial">
@@ -1053,7 +1139,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                                                 >
                                                     <option value="">-- Select Slot --</option>
-                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => {
+                                                    {sellerTimeSlots.map(slot => {
                                                         const isBooked = sellerBookedSlots.includes(slot);
                                                         return (
                                                             <option key={slot} value={slot} disabled={isBooked} className={isBooked ? "text-red-500 bg-slate-100 font-semibold" : ""}>
@@ -1087,6 +1173,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 value={activeDate}
                                                 onChange={e => handleDateChange(e.target.value)}
                                                 min={minBookingDate}
+                                                max={maxBookingDate}
                                                 className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                             />
                                         </div>
@@ -1099,7 +1186,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                                                 >
                                                     <option value="">-- Select Slot --</option>
-                                                    {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM", "04:00 PM - 05:00 PM", "05:00 PM - 06:00 PM", "06:00 PM - 07:00 PM", "07:00 PM - 08:00 PM", "08:00 PM - 09:00 PM", "09:00 PM - 10:00 PM", "10:00 PM - 11:00 PM"].map(slot => {
+                                                    {sellerTimeSlots.map(slot => {
                                                         const isBooked = sellerBookedSlots.includes(slot);
                                                         return (
                                                             <option key={slot} value={slot} disabled={isBooked} className={isBooked ? "text-red-500 bg-slate-100 font-semibold" : ""}>
@@ -1359,8 +1446,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     const matchingSelected = selectedProducts.filter(p => p._id === product._id);
                                     const isSelected = matchingSelected.length > 0;
                                     const totalQuantity = matchingSelected.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
-                                    const totalPrice = matchingSelected.reduce((sum, p) => sum + (getProductPricing(p).unitPrice * (Number(p.quantity) || 1)), 0);
-                                    const totalOriginalPrice = matchingSelected.reduce((sum, p) => sum + (getProductPricing(p).originalPrice * (Number(p.quantity) || 1)), 0);
+                                    const totalPrice = matchingSelected.reduce((sum, p) => {
+                                        const pr = getProductPricing(p);
+                                        const qty = Number(p.quantity) || 1;
+                                        return sum + (pr.baseUnitPrice * qty) + pr.totalAddOnExtra;
+                                    }, 0);
+                                    const totalOriginalPrice = matchingSelected.reduce((sum, p) => {
+                                        const pr = getProductPricing(p);
+                                        const qty = Number(p.quantity) || 1;
+                                        return sum + (pr.originalPrice * qty) + pr.totalAddOnExtra;
+                                    }, 0);
                                     const hasAnySalePrice = matchingSelected.some(p => getProductPricing(p).hasSalePrice);
                                     const defaultPricing = getProductPricing(product);
                                     const productImage = resolveProductImageUrl(product.mainImage || product.galleryImages?.[0]);
@@ -1435,7 +1530,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         return (
                                                             <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
                                                                 <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded">
-                                                                    Cap: {cap.minimum} - {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                                    Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
                                                                 </span>
                                                             </div>
                                                         );
@@ -1574,17 +1669,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
                                                             </button>
                                                         );
-                                                    })() : (product.isDelivery || product.isRental) ? (isSelected ? (
+                                                    })() : isSelected ? (
                                                         <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
                                                             <button
                                                                 type="button"
                                                                 aria-label={`Remove one ${product.name}`}
-                                                                onClick={() => {
-                                                                    if (product.variants?.length > 1) {
-                                                                        openProductGallery(product);
-                                                                    } else {
-                                                                        handleProductQuantityChange(matchingSelected[0] || product, -1);
-                                                                    }
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const targetProduct = matchingSelected[0] || product;
+                                                                    handleProductQuantityChange(targetProduct, -1);
                                                                 }}
                                                                 className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
                                                             >
@@ -1594,12 +1687,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             <button
                                                                 type="button"
                                                                 aria-label={`Add one ${product.name}`}
-                                                                onClick={() => {
-                                                                    if (product.variants?.length > 1) {
-                                                                        openProductGallery(product);
-                                                                    } else {
-                                                                        handleProductQuantityChange(matchingSelected[0] || product, 1);
-                                                                    }
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    const targetProduct = matchingSelected[0] || product;
+                                                                    handleProductQuantityChange(targetProduct, 1);
                                                                 }}
                                                                 className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
                                                             >
@@ -1619,22 +1710,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
                                                         >
                                                             Add Item
-                                                        </button>
-                                                    )) : (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (isSelected) {
-                                                                    handleProductSelection(product);
-                                                                } else if (product.variants?.length > 1 || product.hasAddOn || product.variants?.[0]?.hasAddOn) {
-                                                                    openProductGallery(product);
-                                                                } else {
-                                                                    handleProductSelection(product);
-                                                                }
-                                                            }}
-                                                            className={`text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 transition-all ${isSelected ? 'bg-purple-600 border-purple-600 text-white hover:bg-purple-700' : 'bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600'}`}
-                                                        >
-                                                            {isSelected ? 'Remove Item' : 'Add Item'}
                                                         </button>
                                                     )}
                                                 </div>
@@ -2161,8 +2236,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             }
 
                                             const totalAddOnExtra = fixedExtra + clickBoxExtra;
-                                            const modalPrice = rawBasePrice + totalAddOnExtra;
-                                            const modalOriginal = rawOriginal + totalAddOnExtra;
+                                            const modalUnitPrice = rawBasePrice + totalAddOnExtra;
+                                            const modalOriginalUnitPrice = rawOriginal + totalAddOnExtra;
 
                                             // Combined add-ons to save with selected product: auto-included fixed + checked click-box
                                             const combinedAppliedAddOns = [
@@ -2173,14 +2248,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             const selectedProductEntry = selectedProducts.find(p => p._id === imagePreview.product?._id && ((p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === activeVariantKey));
                                             const isItemAdded = Boolean(selectedProductEntry);
                                             const itemQuantity = selectedProductEntry?.quantity || 0;
+                                            const effectiveQty = itemQuantity || 1;
+                                            const modalTotalAmount = (rawBasePrice * effectiveQty) + totalAddOnExtra;
+                                            const modalTotalOriginal = (rawOriginal * effectiveQty) + totalAddOnExtra;
                                             return (
                                                 <>
                                                     {/* Top badges */}
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        {modalOriginal > modalPrice && (
-                                                             <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200/60 uppercase tracking-wider">
-                                                                 💰 Save ₹{modalOriginal - modalPrice}
-                                                             </div>
+                                                        {modalTotalOriginal > modalTotalAmount && (
+                                                            <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200/60 uppercase tracking-wider">
+                                                                💰 Save ₹{modalTotalOriginal - modalTotalAmount}
+                                                            </div>
                                                         )}
                                                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
                                                             {imagePreview.product?.category || selectedSeller?.category || 'Service / Item'}
@@ -2190,7 +2268,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             if (!cap || !selectedSeller?.capacityEnabled) return null;
                                                             return (
                                                                 <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
-                                                                    👥 Cap: {cap.minimum} - {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                                    👥 Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
                                                                 </span>
                                                             );
                                                         })()}
@@ -2213,26 +2291,42 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <div className="flex flex-col">
                                                             <div className="flex items-baseline gap-2">
                                                                 <span className="text-2xl lg:text-3xl font-black text-purple-700 tracking-tight leading-none">
-                                                                    ₹{(modalPrice * (itemQuantity || 1)).toLocaleString('en-IN')}
+                                                                    ₹{modalTotalAmount.toLocaleString('en-IN')}
                                                                 </span>
-                                                                {modalOriginal > modalPrice && (
+                                                                {modalTotalOriginal > modalTotalAmount && (
                                                                     <span className="text-sm text-slate-400 line-through font-semibold">
-                                                                        ₹{(modalOriginal * (itemQuantity || 1)).toLocaleString('en-IN')}
+                                                                        ₹{modalTotalOriginal.toLocaleString('en-IN')}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                {modalOriginal > modalPrice && (
+                                                                {modalTotalOriginal > modalTotalAmount && (
                                                                     <span className="inline-flex w-fit items-center text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
-                                                                        {Math.round(((modalOriginal - modalPrice) / modalOriginal) * 100)}% off
+                                                                        {Math.round(((modalTotalOriginal - modalTotalAmount) / modalTotalOriginal) * 100)}% off
                                                                     </span>
                                                                 )}
                                                                 {itemQuantity > 1 && (
                                                                     <span className="text-[10px] font-bold text-slate-400">
-                                                                        ({itemQuantity} × ₹{modalPrice.toLocaleString('en-IN')})
+                                                                        ({itemQuantity} × ₹{rawBasePrice.toLocaleString('en-IN')}{totalAddOnExtra > 0 ? ` + ₹${totalAddOnExtra.toLocaleString('en-IN')} Add-ons` : ''})
                                                                     </span>
                                                                 )}
                                                             </div>
+                                                            {(fixedExtra > 0 || clickBoxExtra > 0) && (
+                                                                <div className="flex flex-col gap-0.5 mt-1.5 text-[11px] font-medium text-slate-500">
+                                                                    {fixedExtra > 0 && (
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-slate-400">• Included Add-on:</span>
+                                                                            <span className="font-bold text-emerald-600">+₹{fixedExtra.toLocaleString('en-IN')}</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {clickBoxExtra > 0 && (
+                                                                        <div className="flex items-center gap-1.5">
+                                                                            <span className="text-slate-400">• Optional Add-on:</span>
+                                                                            <span className="font-bold text-purple-600">+₹{clickBoxExtra.toLocaleString('en-IN')}</span>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            )}
                                                         </div>
 
                                                         {imagePreview.product?.tickets?.length > 0 ? (() => {
@@ -2273,75 +2367,51 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 </button>
                                                             );
                                                         })() : isItemAdded ? (
-                                                            (imagePreview.product.isDelivery || imagePreview.product.isRental) ? (
-                                                                <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 p-1.5 shadow-sm">
-                                                                    <button
-                                                                        onClick={() => handleProductQuantityChange({
-                                                                            ...imagePreview.product,
-                                                                            price: modalPrice,
-                                                                            selectedVariant: modalSelectedVariant,
-                                                                            selectedAddOns: combinedAppliedAddOns
-                                                                        }, -1)}
-                                                                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
-                                                                    >
-                                                                        <RemoveIcon fontSize="small" />
-                                                                    </button>
-                                                                    <span className="min-w-6 text-center text-sm font-black text-slate-800">
-                                                                        {itemQuantity}
-                                                                    </span>
-                                                                    <button
-                                                                        type="button"
-                                                                        aria-label={`Add one ${imagePreview.name}`}
-                                                                        disabled={(() => {
+                                                            <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 p-1.5 shadow-sm">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Decrease quantity`}
+                                                                    onClick={() => handleProductQuantityChange({
+                                                                        ...imagePreview.product,
+                                                                        price: modalUnitPrice,
+                                                                        selectedVariant: modalSelectedVariant,
+                                                                        selectedAddOns: combinedAppliedAddOns
+                                                                    }, -1)}
+                                                                    className="flex h-8 w-8 items-center justify-center rounded-lg bg-white text-purple-700 hover:bg-purple-100 transition-colors shadow-sm"
+                                                                >
+                                                                    <RemoveIcon fontSize="small" />
+                                                                </button>
+                                                                <span className="min-w-6 text-center text-sm font-black text-slate-800">
+                                                                    {itemQuantity}
+                                                                </span>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Increase quantity`}
+                                                                    disabled={(() => {
+                                                                        const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                        if (capConfig && capConfig.bookingType === 'SINGLE') return true;
+                                                                        if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) return true;
+                                                                        return false;
+                                                                    })()}
+                                                                    onClick={() => handleProductQuantityChange({
+                                                                        ...imagePreview.product,
+                                                                        price: modalUnitPrice,
+                                                                        selectedVariant: modalSelectedVariant,
+                                                                        selectedAddOns: combinedAppliedAddOns
+                                                                    }, 1)}
+                                                                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm ${
+                                                                        (() => {
                                                                             const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                            if (capConfig && capConfig.bookingType === 'SINGLE') return true;
-                                                                            if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) return true;
-                                                                            return false;
-                                                                        })()}
-                                                                        onClick={() => handleProductQuantityChange({
-                                                                            ...imagePreview.product,
-                                                                            price: modalPrice,
-                                                                            selectedVariant: modalSelectedVariant,
-                                                                            selectedAddOns: combinedAppliedAddOns
-                                                                        }, 1)}
-                                                                        className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm ${
-                                                                            (() => {
-                                                                                const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                                if (capConfig && (capConfig.bookingType === 'SINGLE' || (capConfig.maximum > 0 && itemQuantity >= capConfig.maximum))) {
-                                                                                    return 'bg-slate-200 text-slate-400 cursor-not-allowed';
-                                                                                }
-                                                                                return 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700';
-                                                                            })()
-                                                                        }`}
-                                                                    >
-                                                                        <AddIcon fontSize="small" />
-                                                                    </button>
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex items-center gap-2">
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => {
-                                                                            setImagePreview(null);
-                                                                        }}
-                                                                        className="px-4 py-2.5 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95 bg-purple-600 text-white hover:bg-purple-700 shadow-purple-200"
-                                                                    >
-                                                                        Save & Done
-                                                                    </button>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleProductSelection({
-                                                                            ...imagePreview.product,
-                                                                            price: modalPrice,
-                                                                            selectedVariant: modalSelectedVariant,
-                                                                            selectedAddOns: combinedAppliedAddOns
-                                                                        })}
-                                                                        className="px-3 py-2.5 rounded-xl font-bold uppercase tracking-wider text-[10px] text-red-500 hover:bg-red-50 transition-all border border-red-200"
-                                                                    >
-                                                                        Remove
-                                                                    </button>
-                                                                </div>
-                                                            )
+                                                                            if (capConfig && (capConfig.bookingType === 'SINGLE' || (capConfig.maximum > 0 && itemQuantity >= capConfig.maximum))) {
+                                                                                return 'bg-slate-200 text-slate-400 cursor-not-allowed';
+                                                                            }
+                                                                            return 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700';
+                                                                        })()
+                                                                    }`}
+                                                                >
+                                                                    <AddIcon fontSize="small" />
+                                                                </button>
+                                                            </div>
                                                         ) : (
                                                             <button
                                                                 type="button"
@@ -2358,7 +2428,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                 ...updated[existingIdx],
                                                                                 selectedVariant: modalSelectedVariant,
                                                                                 selectedAddOns: combinedAppliedAddOns,
-                                                                                price: modalPrice
+                                                                                price: modalUnitPrice
                                                                             };
                                                                             return updated;
                                                                         }
@@ -2369,11 +2439,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                 quantity: initialQty,
                                                                                 selectedVariant: modalSelectedVariant,
                                                                                 selectedAddOns: combinedAppliedAddOns,
-                                                                                price: modalPrice
+                                                                                price: modalUnitPrice
                                                                             }
                                                                         ];
                                                                     });
-                                                                    setImagePreview(null);
                                                                 }}
                                                                 className="px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200"
                                                             >
@@ -2502,7 +2571,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                         const nextTotalExtra = fixedExtra + updatedChosen.reduce((sum, itm) => sum + (Number(itm.price) || 0), 0);
                                                                                         const nextUnitPrice = rawBasePrice + nextTotalExtra;
 
-                                                                                        // 3. Immediately sync into selectedProducts
+                                                                                        // 3. Sync into selectedProducts only if already added
                                                                                         setSelectedProducts(prev => {
                                                                                             const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === activeVariantKey);
                                                                                             if (existingIdx >= 0) {
@@ -2513,20 +2582,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                                     price: nextUnitPrice
                                                                                                 };
                                                                                                 return updated;
-                                                                                            } else {
-                                                                                                const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                                                const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
-                                                                                                return [
-                                                                                                    ...prev,
-                                                                                                    {
-                                                                                                        ...imagePreview.product,
-                                                                                                        quantity: initialQty,
-                                                                                                        selectedVariant: modalSelectedVariant,
-                                                                                                        selectedAddOns: nextCombinedAddOns,
-                                                                                                        price: nextUnitPrice
-                                                                                                    }
-                                                                                                ];
                                                                                             }
+                                                                                            return prev;
                                                                                         });
                                                                                     }}
                                                                                     className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${

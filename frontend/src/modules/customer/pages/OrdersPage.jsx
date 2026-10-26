@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation as useRouterLocation } from 'react-router-dom';
 import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle, CreditCard } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
@@ -10,11 +10,23 @@ import { useLocation } from '../context/LocationContext';
 
 const OrdersPage = () => {
     const navigate = useNavigate();
+    const routerLocation = useRouterLocation();
     const { settings } = useSettings();
     const { currentLocation } = useLocation();
-    const [activeTab, setActiveTab] = useState(() => {
-        return sessionStorage.getItem('jalapino_orders_tab') || 'retail';
-    });
+
+    // Check if a specific tab was requested via route state or URL params (e.g., /orders?tab=events)
+    const queryTab = new URLSearchParams(routerLocation.search).get('tab');
+    const initialTab = routerLocation.state?.tab || queryTab || sessionStorage.getItem('jalapino_orders_tab') || 'retail';
+
+    const [activeTab, setActiveTab] = useState(initialTab);
+
+    useEffect(() => {
+        if (routerLocation.state?.tab) {
+            setActiveTab(routerLocation.state.tab);
+        } else if (queryTab) {
+            setActiveTab(queryTab);
+        }
+    }, [routerLocation.state, queryTab]);
 
     useEffect(() => {
         sessionStorage.setItem('jalapino_orders_tab', activeTab);
