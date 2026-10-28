@@ -358,13 +358,15 @@ const PlanMyEventPage = () => {
         savedInfo,
         eventData: {
             eventType: selectedType,
-            date: filterDate,
-            time: filterTime,
+            date: filterDate || (filterMultipleDates.length > 0 ? filterMultipleDates[0]?.date : ''),
+            time: filterTime || (filterMultipleDates.length > 0 ? filterMultipleDates[0]?.time : ''),
             multipleEvents: filterMultipleDates,
+            remarks: filterRemarks || (filterMultipleDates.length > 0 ? filterMultipleDates[0]?.remarks : ''),
             guestCount: eventInfo.noOfGuests || 1,
             location: eventInfo.functionLocation || '',
             lat: eventInfo.lat || currentLocation?.latitude,
             lng: eventInfo.lng || currentLocation?.longitude,
+            eventInfo: eventInfo,
         },
         preferences: {}
     }), [selectedSellerDetail, activeCategory, eventTypes, selectedType, filterDate, filterEndDate, filterTime, filterMultipleDates, filterRemarks, eventInfo, savingInfo, savedInfo, currentLocation?.latitude, currentLocation?.longitude]);
@@ -453,12 +455,20 @@ const PlanMyEventPage = () => {
             const p = res?.data?.result || {};
             setEventInfo(prev => ({
                 ...prev,
-                bookingType: p.bookingType || 'individual',
+                bookingType: p.bookingType || prev.bookingType || 'individual',
+                primaryContactName: p.primaryContactName || p.name || prev.primaryContactName || '',
                 name: p.name || '',
                 gender: p.gender || '',
                 dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : '',
                 anniversaryDate: p.anniversaryDate ? p.anniversaryDate.split('T')[0] : '',
                 functionLocation: p.functionLocation || prev.functionLocation || '',
+                coupleNames: p.coupleNames || prev.coupleNames || '',
+                corporateCompanyName: p.corporateCompanyName || prev.corporateCompanyName || '',
+                corporateContactPerson: p.corporateContactPerson || prev.corporateContactPerson || '',
+                corporateMobile: p.corporateMobile || prev.corporateMobile || '',
+                corporateGstNumber: p.corporateGstNumber || prev.corporateGstNumber || '',
+                primaryPhone: p.primaryPhone || prev.primaryPhone || '',
+                noOfGuests: p.noOfGuests || prev.noOfGuests || '',
             }));
             fetchArea(p.functionLocation || p.city);
         }).catch(() => fetchArea());
@@ -629,7 +639,8 @@ const PlanMyEventPage = () => {
             fresh.advanceBookingBuffer !== selectedSellerDetail.advanceBookingBuffer ||
             fresh.advanceBookingBufferUnit !== selectedSellerDetail.advanceBookingBufferUnit ||
             fresh.advanceBookingBufferTime !== selectedSellerDetail.advanceBookingBufferTime ||
-            fresh.advanceBookingBufferAfter !== selectedSellerDetail.advanceBookingBufferAfter
+            fresh.advanceBookingBufferAfter !== selectedSellerDetail.advanceBookingBufferAfter ||
+            JSON.stringify(fresh.shopClosedDates) !== JSON.stringify(selectedSellerDetail.shopClosedDates)
         )) {
             setSelectedSellerDetail(fresh);
         }
@@ -704,11 +715,11 @@ const PlanMyEventPage = () => {
 
     // Category-wise date/time toggle flags — dynamically driven from admin settings
     const relevantCats = activeCategory ? [activeCategory] : categories;
-    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime) || (selectedSellerDetail && selectedSellerDetail.showStandardDateTime);
-    const showStandardDateSlotFilter = relevantCats.some(c => c.showStandardDateTimeSlot) || (selectedSellerDetail && selectedSellerDetail.showStandardDateTimeSlot);
-    const showAdvancedDateFilter = relevantCats.some(c => c.showAdvancedDateTime) || (selectedSellerDetail && selectedSellerDetail.showAdvancedDateTime);
-    const showAdvancedDateSlotFilter = relevantCats.some(c => c.showAdvancedDateTimeSlot) || (selectedSellerDetail && selectedSellerDetail.showAdvancedDateTimeSlot);
-    const showMultipleDateFilter = relevantCats.some(c => c.showMultipleDateTime) || (selectedSellerDetail && selectedSellerDetail.showMultipleDateTime);
+    const showStandardDateFilter = relevantCats.some(c => c.showStandardDateTime);
+    const showStandardDateSlotFilter = relevantCats.some(c => c.showStandardDateTimeSlot);
+    const showAdvancedDateFilter = relevantCats.some(c => c.showAdvancedDateTime);
+    const showAdvancedDateSlotFilter = relevantCats.some(c => c.showAdvancedDateTimeSlot);
+    const showMultipleDateFilter = relevantCats.some(c => c.showMultipleDateTime);
     const showAnyDateFilter = showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter;
 
     // Priority for rendering: Multiple > AdvancedSlot > Advanced > StandardSlot > Standard
@@ -930,7 +941,7 @@ const PlanMyEventPage = () => {
                             )}
 
                             {/* ─── FILTERS: Event Type + Date + Time ─── */}
-                            {(!selectedSellerDetail && activeCategory && activeCategory.showDateFilters !== false) && (
+                            {(activeCategory && activeCategory.showDateFilters !== false && showAnyDateFilter) && (
                                 <div className="bg-amber-50 border-b border-amber-200 px-5 py-3 shrink-0">
                                     <div className="flex flex-wrap gap-3 items-end max-w-4xl">
                                         {/* Event Type */}
@@ -1133,7 +1144,7 @@ const PlanMyEventPage = () => {
                             )}
 
                             {/* ─── EVENT INFO CARD ─── */}
-                            {(!selectedSellerDetail && activeCategory && activeCategory.showEventDetailsForm !== false) && (
+                            {(activeCategory && activeCategory.showEventDetailsForm === true) && (
                                 <div className="px-5 pt-4 pb-2">
                                     <div className="bg-white rounded-2xl border border-purple-100 shadow-sm p-4">
                                         <div className="flex items-center justify-between mb-3">

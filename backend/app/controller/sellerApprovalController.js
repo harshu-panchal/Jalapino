@@ -22,11 +22,18 @@ export const getEventRequests = async (req, res) => {
                 eventType: booking.eventType,
                 eventDate: booking.eventDate,
                 eventTime: booking.eventTime,
+                remarks: booking.remarks,
                 guestCount: booking.guestCount,
                 location: booking.location,
                 overallStatus: booking.overallStatus,
                 myServiceStatus: myService ? myService.status : 'UNKNOWN',
-                serviceDetails: myService
+                serviceDetails: myService,
+                eventInfo: booking.eventInfo,
+                selectedProducts: booking.selectedProducts || [],
+                totalAmount: booking.totalAmount,
+                advancePaymentAmount: booking.advancePaymentAmount,
+                advancePaymentPercentage: booking.advancePaymentPercentage,
+                multipleEvents: booking.multipleEvents || []
             };
         });
 

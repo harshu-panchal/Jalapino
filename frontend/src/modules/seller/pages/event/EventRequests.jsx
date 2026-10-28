@@ -77,20 +77,70 @@ const EventRequests = () => {
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800 capitalize">{req.eventType} Event</h3>
                                     <p className="text-slate-600 mt-1">
-                                        For <strong>{req.customer?.name || 'Customer'}</strong> • {req.guestCount} Guests
+                                        For <strong>{req.eventInfo?.primaryContactName || req.eventInfo?.name || (req.eventInfo?.bookingType === 'corporate' ? (req.eventInfo?.corporateCompanyName || req.eventInfo?.corporateContactPerson) : req.eventInfo?.coupleNames) || req.customer?.name || 'Customer'}</strong> • {req.guestCount} Guests
+                                        {req.customer?.phone ? ` • 📞 ${req.customer.phone}` : ''}
                                     </p>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4 mt-4 bg-slate-50 p-4 rounded-xl">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 bg-slate-50 p-4 rounded-xl">
                                     <div>
                                         <p className="text-xs text-slate-500 font-medium uppercase">Date & Time</p>
-                                        <p className="text-sm font-bold text-slate-800">{new Date(req.eventDate).toLocaleDateString()} at {req.eventTime}</p>
+                                        <p className="text-sm font-bold text-slate-800">
+                                            {req.eventDate ? new Date(req.eventDate).toLocaleDateString() : 'N/A'} {req.eventTime ? `at ${req.eventTime}` : ''}
+                                            {req.remarks ? ` (${req.remarks})` : ''}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 font-medium uppercase">Total / Advance</p>
+                                        <p className="text-sm font-bold text-slate-800">
+                                            ₹{(req.totalAmount || 0).toLocaleString('en-IN')}
+                                            {req.advancePaymentAmount > 0 ? (
+                                                <span className="text-xs text-purple-600 block">
+                                                    (Adv: ₹{req.advancePaymentAmount.toLocaleString('en-IN')})
+                                                </span>
+                                            ) : null}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-slate-500 font-medium uppercase">Location</p>
+                                        <p className="text-sm font-bold text-slate-800 truncate" title={req.location?.address || 'N/A'}>
+                                            {req.location?.address || 'N/A'}
+                                        </p>
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-500 font-medium uppercase">Overall Status</p>
                                         <p className="text-sm font-bold text-slate-800">{req.overallStatus}</p>
                                     </div>
                                 </div>
+
+                                {req.selectedProducts && req.selectedProducts.length > 0 && (
+                                    <div className="mt-3 p-3 bg-purple-50/60 rounded-xl border border-purple-100">
+                                        <p className="text-[11px] font-black uppercase text-purple-900 tracking-wider mb-1.5">
+                                            🛍️ Selected Items ({req.selectedProducts.length})
+                                        </p>
+                                        <div className="space-y-1">
+                                            {req.selectedProducts.map((p, pIdx) => (
+                                                <div key={pIdx} className="flex flex-wrap items-center justify-between text-xs text-slate-700">
+                                                    <span className="font-semibold">
+                                                        {p.productName || 'Product'} {p.selectedVariant?.name ? `(${p.selectedVariant.name})` : ''} × {p.quantity}
+                                                    </span>
+                                                    <span className="font-bold text-purple-700">
+                                                        ₹{((p.price || p.unitPrice || 0) * (p.quantity || 1) + (p.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0)).toLocaleString('en-IN')}
+                                                    </span>
+                                                    {p.selectedAddOns && p.selectedAddOns.length > 0 && (
+                                                        <div className="w-full flex flex-wrap gap-1 mt-0.5 pl-2">
+                                                            {p.selectedAddOns.map((ad, aIdx) => (
+                                                                <span key={aIdx} className="text-[10px] bg-white border border-purple-200 px-1.5 py-0.2 rounded text-purple-700">
+                                                                    + {ad.name} (₹{ad.price})
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {req.myServiceStatus === 'PENDING_APPROVAL' && (

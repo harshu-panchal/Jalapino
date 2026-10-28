@@ -44,6 +44,7 @@ const eventBookingSchema = new mongoose.Schema({
     budget: { type: Number },
     eventDate: { type: Date },
     eventTime: { type: String },
+    remarks: { type: String },
     multipleEvents: [{
         id: String,
         typeId: String,
@@ -52,6 +53,23 @@ const eventBookingSchema = new mongoose.Schema({
         time: String,
         remarks: String
     }],
+    eventInfo: { type: mongoose.Schema.Types.Mixed },
+    selectedProducts: [{
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+        productName: String,
+        quantity: Number,
+        price: Number,
+        unitPrice: Number,
+        selectedColors: [String],
+        selectedVariant: { type: mongoose.Schema.Types.Mixed },
+        selectedAddOns: [{
+            name: String,
+            price: Number,
+            isFixed: Boolean
+        }]
+    }],
+    advancePaymentAmount: { type: Number },
+    advancePaymentPercentage: { type: Number },
     location: {
         address: String,
         coordinates: {

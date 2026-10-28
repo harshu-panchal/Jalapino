@@ -111,12 +111,17 @@ const EventCheckoutPage = () => {
                 packageId: selectedPackage?._id,
                 paymentMethod: 'ONLINE', // Will be finalized at payment time
                 amount: baseAmount,
-                selectedProducts: selectedProducts.map(product => ({
-                    productId: product._id,
-                    quantity: product.quantity || 1,
-                    selectedColors: product.selectedColors || [],
-                    selectedVariant: product.selectedVariant || null,
-                }))
+                selectedProducts: selectedProducts.map(product => {
+                    const pricing = getProductPricing(product);
+                    return {
+                        productId: product._id,
+                        quantity: Number(product.quantity || 1),
+                        price: pricing.baseUnitPrice,
+                        selectedColors: product.selectedColors || [],
+                        selectedVariant: product.selectedVariant || null,
+                        selectedAddOns: product.selectedAddOns || []
+                    };
+                })
             });
             sessionStorage.removeItem(CHECKOUT_STATE_KEY);
             sessionStorage.removeItem(`jalapino_plan_event_products_${selectedSeller._id}`);
@@ -145,36 +150,78 @@ const EventCheckoutPage = () => {
                 <div className="max-w-xl mx-auto p-4 space-y-6">
 
                     {/* Customer Event Details Card */}
-                    {customerProfile && (
-                        <div className="bg-white p-5 rounded-2xl shadow-sm border border-purple-100 relative overflow-hidden">
-                            <div className="absolute top-0 right-0 p-4 opacity-5">
-                                <CelebrationIcon sx={{ fontSize: 100 }} />
+                    {(() => {
+                        const info = eventData?.eventInfo || customerProfile || {};
+                        const displayName = info.primaryContactName || info.name || customerProfile?.name || '';
+                        const displayGender = info.gender || customerProfile?.gender || '';
+                        const displayDob = info.dateOfBirth || customerProfile?.dateOfBirth || '';
+                        const displayLocation = info.functionLocation || customerProfile?.functionLocation || '';
+                        const displayAnniversary = info.anniversaryDate || customerProfile?.anniversaryDate || '';
+                        const displayCompany = info.corporateCompanyName || '';
+                        const displayCouple = info.coupleNames || '';
+
+                        const hasAnyDetail = displayName || displayGender || displayDob || displayLocation || displayAnniversary || displayCompany || displayCouple;
+                        if (!hasAnyDetail) return null;
+
+                        return (
+                            <div className="bg-white p-5 rounded-2xl shadow-sm border border-purple-100 relative overflow-hidden">
+                                <div className="absolute top-0 right-0 p-4 opacity-5">
+                                    <CelebrationIcon sx={{ fontSize: 100 }} />
+                                </div>
+                                <h2 className="font-bold text-lg text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
+                                    <span>🎉</span> Your Event Details
+                                </h2>
+                                <div className="grid grid-cols-2 gap-4">
+                                    {displayCompany ? (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">🏢 Company Name</span>
+                                            <span className="font-semibold text-slate-800">{displayCompany}</span>
+                                        </div>
+                                    ) : displayCouple ? (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">💑 Couple Names</span>
+                                            <span className="font-semibold text-slate-800">{displayCouple}</span>
+                                        </div>
+                                    ) : displayName ? (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">👤 Primary Contact</span>
+                                            <span className="font-semibold text-slate-800">{displayName}</span>
+                                        </div>
+                                    ) : null}
+
+                                    {displayGender && (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">⚧ Gender</span>
+                                            <span className="font-semibold text-slate-800 capitalize">{displayGender}</span>
+                                        </div>
+                                    )}
+
+                                    {displayDob ? (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">🎂 Date of Birth</span>
+                                            <span className="font-semibold text-slate-800">
+                                                {displayDob.includes('-') ? displayDob : new Date(displayDob).toLocaleDateString('en-IN')}
+                                            </span>
+                                        </div>
+                                    ) : displayAnniversary ? (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">💍 Anniversary Date</span>
+                                            <span className="font-semibold text-slate-800">
+                                                {displayAnniversary.includes('-') ? displayAnniversary : new Date(displayAnniversary).toLocaleDateString('en-IN')}
+                                            </span>
+                                        </div>
+                                    ) : null}
+
+                                    {displayLocation && (
+                                        <div>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">📍 Function Location</span>
+                                            <span className="font-semibold text-slate-800">{displayLocation}</span>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
-                            <h2 className="font-bold text-lg text-slate-800 mb-4 border-b pb-2 flex items-center gap-2">
-                                <span>🎉</span> Your Event Details
-                            </h2>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">👤 Name</span>
-                                    <span className="font-semibold text-slate-800">{customerProfile.name || 'Not provided'}</span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">⚧ Gender</span>
-                                    <span className="font-semibold text-slate-800 capitalize">{customerProfile.gender || 'Not provided'}</span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">🎂 Date of Birth</span>
-                                    <span className="font-semibold text-slate-800">
-                                        {customerProfile.dateOfBirth ? new Date(customerProfile.dateOfBirth).toLocaleDateString('en-IN') : 'Not provided'}
-                                    </span>
-                                </div>
-                                <div>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">📍 Function Location</span>
-                                    <span className="font-semibold text-slate-800">{customerProfile.functionLocation || 'Not provided'}</span>
-                                </div>
-                            </div>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                     {/* Summary Card */}
                     <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
@@ -182,11 +229,13 @@ const EventCheckoutPage = () => {
                         <div className="space-y-3">
                             <div className="flex justify-between">
                                 <span className="text-slate-500">Event Type</span>
-                                <span className="font-semibold text-slate-800 capitalize">{eventData?.eventType}</span>
+                                <span className="font-semibold text-slate-800 capitalize">{eventData?.eventType || 'Not selected'}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">Date & Time</span>
-                                <span className="font-semibold text-slate-800">{eventData?.date} at {eventData?.time}</span>
+                                <span className="font-semibold text-slate-800">
+                                    {eventData?.date ? `${eventData.date}${eventData.time ? ` at ${eventData.time}` : ''}${eventData.remarks ? ` (${eventData.remarks})` : ''}` : 'Not selected'}
+                                </span>
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">Guests</span>
@@ -217,7 +266,8 @@ const EventCheckoutPage = () => {
                             {selectedProducts.map((product, idx) => {
                                 const quantity = Number(product.quantity || 1);
                                 const pricing = getProductPricing(product);
-                                const lineTotal = pricing.unitPrice * quantity;
+                                const lineTotal = (pricing.baseUnitPrice * quantity) + pricing.totalAddOnExtra;
+                                const lineOriginalTotal = (pricing.originalPrice * quantity) + pricing.totalAddOnExtra;
                                 const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || idx;
                                 return (
                                     <div key={`${product._id}-${variantKey}`} className="flex flex-col text-sm">
@@ -227,7 +277,9 @@ const EventCheckoutPage = () => {
                                                 {product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
                                             </span>
                                             <span className="flex items-center gap-2 font-semibold text-slate-800">
-                                                {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString()}</span>}
+                                                {pricing.hasSalePrice && lineOriginalTotal > lineTotal && (
+                                                    <span className="text-xs text-slate-400 line-through">₹{lineOriginalTotal.toLocaleString()}</span>
+                                                )}
                                                 <span>₹{lineTotal.toLocaleString()}</span>
                                             </span>
                                         </div>

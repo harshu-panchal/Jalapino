@@ -301,17 +301,144 @@ const EventReservations = () => {
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Amount</p>
                                     <p className="font-bold text-slate-700 flex items-center gap-2">
                                         <span className="text-red-500 font-bold">₹</span>
-                                        {selectedRes.amount || "N/A"}
+                                        {Number(selectedRes.amount || 0).toLocaleString('en-IN')}
+                                        {selectedRes.advancePaymentAmount > 0 && (
+                                            <span className="text-xs text-purple-600 block">
+                                                (Adv: ₹{Number(selectedRes.advancePaymentAmount).toLocaleString('en-IN')})
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
+                                {selectedRes.eventType && (
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Event Type</p>
+                                        <p className="font-bold text-slate-700 capitalize">
+                                            {selectedRes.eventType}
+                                        </p>
+                                    </div>
+                                )}
+                                {selectedRes.remarks && (
+                                    <div className="col-span-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks / Occasion</p>
+                                        <p className="font-semibold text-slate-700">
+                                            {selectedRes.remarks}
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {selectedRes.customerPreferences && Object.keys(selectedRes.customerPreferences).length > 0 && (
+                        {/* Customer Event Details (Primary Contact, Gender, DOB, etc.) */}
+                        {selectedRes.eventInfo && typeof selectedRes.eventInfo === 'object' && Object.keys(selectedRes.eventInfo).length > 0 && (
+                            <div className="mb-6 bg-purple-50/50 rounded-2xl p-4 border border-purple-100">
+                                <h3 className="text-xs font-black text-purple-900 uppercase tracking-wider mb-3 pb-1 border-b border-purple-200">
+                                    👤 Event & Contact Details
+                                </h3>
+                                <div className="grid grid-cols-2 gap-3 text-xs">
+                                    {(selectedRes.eventInfo.primaryContactName || selectedRes.eventInfo.name) && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Primary Contact</span>
+                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.primaryContactName || selectedRes.eventInfo.name}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.bookingType && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Booking Type</span>
+                                            <span className="font-bold text-slate-800 capitalize">{selectedRes.eventInfo.bookingType}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.gender && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Gender</span>
+                                            <span className="font-bold text-slate-800 capitalize">{selectedRes.eventInfo.gender}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.dateOfBirth && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Date of Birth</span>
+                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.dateOfBirth}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.anniversaryDate && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Anniversary Date</span>
+                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.anniversaryDate}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.coupleNames && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Couple Names</span>
+                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.coupleNames}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.corporateCompanyName && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Company Name</span>
+                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.corporateCompanyName}</span>
+                                        </div>
+                                    )}
+                                    {selectedRes.eventInfo.corporateContactPerson && (
+                                        <div>
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Contact Person</span>
+                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.corporateContactPerson}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Selected Products & Add-ons */}
+                        {Array.isArray(selectedRes.selectedProducts) && selectedRes.selectedProducts.length > 0 && (
+                            <div className="mb-6 bg-slate-50 rounded-2xl p-4 border border-slate-200">
+                                <h3 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-3 pb-1 border-b border-slate-200">
+                                    🛍️ Selected Items ({selectedRes.selectedProducts.length})
+                                </h3>
+                                <div className="space-y-2">
+                                    {selectedRes.selectedProducts.map((p, pIdx) => (
+                                        <div key={pIdx} className="bg-white p-2.5 rounded-xl border border-slate-200 text-xs">
+                                            <div className="flex justify-between font-bold text-slate-800">
+                                                <span>{p.productName || 'Product'} {p.selectedVariant?.name ? `(${p.selectedVariant.name})` : ''} × {p.quantity || 1}</span>
+                                                <span className="text-purple-700">₹{((p.price || p.unitPrice || 0) * (p.quantity || 1) + (p.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0)).toLocaleString('en-IN')}</span>
+                                            </div>
+                                            {Array.isArray(p.selectedAddOns) && p.selectedAddOns.length > 0 && (
+                                                <div className="flex flex-wrap gap-1 mt-1.5 pl-1">
+                                                    {p.selectedAddOns.map((ad, aIdx) => (
+                                                        <span key={aIdx} className="text-[10px] bg-purple-50 text-purple-700 border border-purple-200 px-1.5 py-0.2 rounded font-semibold">
+                                                            + {ad.name} (₹{ad.price})
+                                                        </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {selectedRes.customerPreferences && typeof selectedRes.customerPreferences === 'object' && Object.entries(selectedRes.customerPreferences).filter(([k, v]) => {
+                            if (v === null || v === undefined) return false;
+                            // Hide legacy product internal fields that are already properly shown in SELECTED ITEMS
+                            const lowerKey = k.toLowerCase().replace(/[^a-z]/g, '');
+                            if (lowerKey === 'selectedproducts' || lowerKey === 'selectedproductquantities' || lowerKey === 'selectedproductcolors') return false;
+                            if (typeof v === 'string') return v.trim() !== '';
+                            if (Array.isArray(v)) return v.length > 0;
+                            if (typeof v === 'object') return Object.keys(v).length > 0;
+                            return true;
+                        }).length > 0 && (
                             <div className="mb-8">
                                 <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider mb-3 pb-2 border-b border-slate-100">Customer Preferences</h3>
                                 <div className="space-y-3">
-                                    {Object.entries(selectedRes.customerPreferences).map(([key, value]) => (
+                                    {Object.entries(selectedRes.customerPreferences)
+                                        .filter(([k, v]) => {
+                                            if (v === null || v === undefined) return false;
+                                            const lowerKey = k.toLowerCase().replace(/[^a-z]/g, '');
+                                            if (lowerKey === 'selectedproducts' || lowerKey === 'selectedproductquantities' || lowerKey === 'selectedproductcolors') return false;
+                                            if (typeof v === 'string') return v.trim() !== '';
+                                            if (Array.isArray(v)) return v.length > 0;
+                                            if (typeof v === 'object') return Object.keys(v).length > 0;
+                                            return true;
+                                        })
+                                        .map(([key, value]) => (
                                         <div key={key} className="flex flex-col bg-white p-3 rounded-xl border border-slate-200">
                                             <span className="text-xs font-bold text-slate-400 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                                             {typeof value === 'string' && (value.startsWith('http') || value.match(/\.(jpeg|jpg|gif|png|webp)$/i)) ? (
@@ -323,7 +450,7 @@ const EventReservations = () => {
                                                     <div className="w-6 h-6 rounded-md shadow-sm border border-slate-200" style={{ backgroundColor: value }}></div>
                                                     <span className="text-sm font-bold text-slate-800 uppercase">{value}</span>
                                                 </div>
-                                            ) : typeof value === 'object' ? (
+                                            ) : (value !== null && typeof value === 'object' && !Array.isArray(value)) ? (
                                                 // Handle corrupted old data fallback
                                                 <div className="space-y-2 mt-1">
                                                     {Object.entries(value).map(([subKey, subVal]) => (
@@ -339,14 +466,14 @@ const EventReservations = () => {
                                                                     <span className="text-sm font-bold text-slate-800 uppercase">{subVal}</span>
                                                                 </div>
                                                             ) : (
-                                                                <span className="text-sm font-medium text-slate-800">{String(subVal)}</span>
+                                                                <span className="text-sm font-medium text-slate-800">{String(subVal ?? '')}</span>
                                                             )}
                                                         </div>
                                                     ))}
                                                 </div>
                                             ) : (
                                                 <span className="text-sm font-medium text-slate-800">
-                                                    {String(value)}
+                                                    {String(value ?? '')}
                                                 </span>
                                             )}
                                         </div>

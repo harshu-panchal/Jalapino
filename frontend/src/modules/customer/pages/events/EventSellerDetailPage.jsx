@@ -221,6 +221,18 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         return maxTime.toISOString().split('T')[0];
     }, [selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBufferAfter]);
 
+    // Check if a date is marked as shop closed / holiday (only if enabled on this seller)
+    const isDateClosed = React.useCallback((dateStr) => {
+        if (!dateStr || !selectedSeller) return false;
+        if (!selectedSeller.shopHolidaysEnabled) return false;
+        const closedDates = Array.isArray(selectedSeller.shopClosedDates) ? selectedSeller.shopClosedDates : [];
+        return closedDates.includes(dateStr);
+    }, [selectedSeller]);
+
+    const isCurrentDateClosed = React.useMemo(() => {
+        return Boolean(activeDate && isDateClosed(activeDate));
+    }, [activeDate, isDateClosed]);
+
     // Available time slots based on the specific seller's configured slots or opening & closing hours
     const sellerTimeSlots = React.useMemo(() => {
         if (Array.isArray(selectedSeller?.customTimeSlots) && selectedSeller.customTimeSlots.length > 0) {
@@ -507,7 +519,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                         const mapping = {};
                         results.forEach(r => { mapping[r.id] = r.count; });
                         setTicketSoldMap(mapping);
-                    }).catch(() => {});
+                    }).catch(() => { });
                 }
                 try {
                     const savedSelection = JSON.parse(sessionStorage.getItem(selectedProductsStorageKey) || '[]');
@@ -516,7 +528,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     for (const item of savedSelection) {
                         const baseProduct = productsMap.get(String(item.productId));
                         if (baseProduct) {
-                            const activeVariant = item.selectedVariant 
+                            const activeVariant = item.selectedVariant
                                 ? baseProduct.variants?.find(v => (v.sku || v.name) === (item.selectedVariant.sku || item.selectedVariant.name)) || item.selectedVariant
                                 : baseProduct.variants?.[0];
                             const availableAddOnNames = new Set([
@@ -765,10 +777,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
 
             if (change > 0) {
-                if (capConfig && capConfig.bookingType === 'SINGLE') {
-                    toast.error("Single booking allowed for this product/shop.");
-                    return prev;
-                }
                 if (capConfig && capConfig.maximum > 0 && (currentQty + change) > capConfig.maximum) {
                     toast.error(`Maximum allowed capacity is ${capConfig.maximum}`);
                     return prev;
@@ -857,6 +865,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const handleProceed = () => {
+        if (isCurrentDateClosed) {
+            toast.error(`Shop is closed on ${activeDate}. Please select another date.`);
+            return;
+        }
         if (activeDate && minBookingDate && activeDate < minBookingDate) {
             toast.error(`Event date must be on or after ${minBookingDate} due to seller's advance booking notice.`);
             return;
@@ -884,11 +896,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
         };
 
+        const resolvedEventType = allEventTypes?.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || eventData?.eventType || '';
+        const resolvedDate = activeDate || eventData?.date || (activeMultipleDates?.[0]?.date) || '';
+        const resolvedTime = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
+        const resolvedRemarks = activeRemarks || eventData?.remarks || (activeMultipleDates?.[0]?.remarks) || '';
+
         const updatedEventData = {
             ...eventData,
-            eventType: activeEventType || eventData?.eventType || '',
-            date: activeDate || eventData?.date || '',
-            time: activeTime || eventData?.time || '',
+            eventType: resolvedEventType,
+            date: resolvedDate,
+            time: resolvedTime,
+            remarks: resolvedRemarks,
             multipleEvents: activeMultipleDates.length > 0 ? activeMultipleDates : eventData?.multipleEvents || [],
             guestCount: Number(activeEventInfo.noOfGuests || eventData?.guestCount || 1),
             location: activeEventInfo.functionLocation || eventData?.location || '',
@@ -926,10 +944,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     const selectedProductsSubtotal = selectedProducts
         .filter(product => !product.tickets || product.tickets.length === 0)
-        .reduce(
-            (total, product) => total + getProductPricing(product).unitPrice * (Number(product.quantity) || 1),
-            0
-        );
+        .reduce((total, product) => {
+            const pr = getProductPricing(product);
+            const qty = Number(product.quantity) || 1;
+            return total + (pr.baseUnitPrice * qty) + pr.totalAddOnExtra;
+        }, 0);
 
     const content = (
         <div className="max-w-5xl mx-auto px-4 pt-4 pb-24">
@@ -997,7 +1016,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         ⏳ Advance Booking Notice: Requires minimum {selectedSeller.advanceBookingBuffer || 0} {selectedSeller.advanceBookingBufferUnit || 'days'} notice.
                                         {selectedSeller.advanceBookingBufferAfter > 0 ? ` (Max ${selectedSeller.advanceBookingBufferAfter} days in advance)` : ''}
                                     </span>
-                                    {activeDate && minBookingDate && activeDate < minBookingDate ? (
+                                    {isCurrentDateClosed ? (
+                                        <span className="text-xs font-black text-red-600 bg-red-100 px-2.5 py-1 rounded-xl">
+                                            🚫 Shop Closed / Holiday on {activeDate}
+                                        </span>
+                                    ) : activeDate && minBookingDate && activeDate < minBookingDate ? (
                                         <span className="text-xs font-black text-red-600 bg-red-100 px-2.5 py-1 rounded-xl">
                                             ⚠️ Not Available for {activeDate} (Earliest: {minBookingDate})
                                         </span>
@@ -1065,6 +1088,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             type="button"
                                             onClick={() => {
                                                 if (!multiInputDate) return;
+                                                if (isDateClosed(multiInputDate)) {
+                                                    toast.error(`Shop is closed on ${multiInputDate}. Please select another date.`);
+                                                    return;
+                                                }
                                                 const newEntry = {
                                                     id: Date.now(),
                                                     typeId: activeEventType,
@@ -1548,11 +1575,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
                                                                             <span className="font-bold text-slate-800">{ticket.name}</span>
                                                                             {ticket.capacity !== undefined && ticket.capacity !== null && (
-                                                                                <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${
-                                                                                    isSoldOut 
-                                                                                        ? 'bg-red-100 text-red-600 border border-red-200' 
-                                                                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                                }`}>
+                                                                                <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${isSoldOut
+                                                                                    ? 'bg-red-100 text-red-600 border border-red-200'
+                                                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                                    }`}>
                                                                                     {isSoldOut ? 'Sold Out' : `Capacity: ${remainingCap} Left`}
                                                                                 </span>
                                                                             )}
@@ -1627,7 +1653,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     ₹{defaultPricing.originalPrice.toLocaleString('en-IN')}
                                                                 </span>
                                                             )}
-                                                            <span>₹{defaultPricing.unitPrice.toLocaleString('en-IN')}</span>
+                                                            <span>₹{defaultPricing.baseUnitPrice.toLocaleString('en-IN')}</span>
                                                         </>
                                                     )}
                                                 </span>
@@ -1651,20 +1677,19 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         sellerId: selectedSeller,
                                                                         tickets: product.tickets || [],
                                                                     };
-                                                                    navigate('/plan-my-event/booking', { 
-                                                                        state: { 
+                                                                    navigate('/plan-my-event/booking', {
+                                                                        state: {
                                                                             venue: venueObj,
                                                                             selectedShop: selectedShop,
                                                                             prefilledDate: activeDate || '',
                                                                             prefilledTimeSlot: activeTime || ''
-                                                                        } 
+                                                                        }
                                                                     });
                                                                 }}
-                                                                className={`text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${
-                                                                    isSoldOut
-                                                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                                                                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95'
-                                                                }`}
+                                                                className={`text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${isSoldOut
+                                                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95'
+                                                                    }`}
                                                             >
                                                                 {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
                                                             </button>
@@ -1983,16 +2008,55 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     )}
 
                     {/* --- Plan Summary Below Chat --- */}
-                    <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-6">
+                    <div id="plan-summary-section" className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 mt-6">
                         <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-5">
                             <h3 className="text-xl font-bold text-slate-800">Plan Summary</h3>
                             <div className="mt-3 space-y-2 text-sm">
                                 <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Event Type</span><span className="font-semibold">{activeEventType || eventData?.eventType || 'Not selected'}</span>
+                                    <span>Event Type</span><span className="font-semibold capitalize">{allEventTypes?.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || eventData?.eventType || 'Not selected'}</span>
                                 </div>
                                 <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Date & Time</span><span className="font-semibold">{activeDate || eventData?.date || 'Not selected'}{activeTime || eventData?.time ? ` · ${activeTime || eventData?.time}` : ''}</span>
+                                    <span>Date & Time</span><span className="font-semibold">{(() => {
+                                        const dateVal = activeDate || eventData?.date || (activeMultipleDates?.[0]?.date) || '';
+                                        const timeVal = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
+                                        const remarksVal = activeRemarks || eventData?.remarks || (activeMultipleDates?.[0]?.remarks) || '';
+                                        if (!dateVal && !timeVal) return 'Not selected';
+                                        return `${dateVal}${timeVal ? ` · ${timeVal}` : ''}${remarksVal ? ` (${remarksVal})` : ''}`;
+                                    })()}</span>
                                 </div>
+                                {activeEventInfo && (
+                                    <>
+                                        {(activeEventInfo.primaryContactName || activeEventInfo.name || activeEventInfo.coupleNames || activeEventInfo.corporateCompanyName) && (
+                                            <div className="flex justify-between gap-4 text-slate-600">
+                                                <span>Contact</span>
+                                                <span className="font-semibold">
+                                                    {activeEventInfo.bookingType === 'corporate'
+                                                        ? (activeEventInfo.corporateCompanyName || activeEventInfo.corporateContactPerson)
+                                                        : activeEventInfo.bookingType === 'couple'
+                                                            ? activeEventInfo.coupleNames
+                                                            : (activeEventInfo.primaryContactName || activeEventInfo.name)}
+                                                    {activeEventInfo.primaryPhone ? ` (${activeEventInfo.primaryPhone})` : ''}
+                                                </span>
+                                            </div>
+                                        )}
+                                        {activeEventInfo.gender && activeEventInfo.bookingType === 'individual' && (
+                                            <div className="flex justify-between gap-4 text-slate-600">
+                                                <span>Gender</span><span className="font-semibold capitalize">{activeEventInfo.gender}</span>
+                                            </div>
+                                        )}
+                                        {(activeEventInfo.dateOfBirth || activeEventInfo.anniversaryDate) && (
+                                            <div className="flex justify-between gap-4 text-slate-600">
+                                                <span>{activeEventInfo.bookingType === 'couple' ? 'Anniversary Date' : 'Date of Birth'}</span>
+                                                <span className="font-semibold">{activeEventInfo.bookingType === 'couple' ? activeEventInfo.anniversaryDate : activeEventInfo.dateOfBirth}</span>
+                                            </div>
+                                        )}
+                                        {activeEventInfo.functionLocation && (
+                                            <div className="flex justify-between gap-4 text-slate-600">
+                                                <span>Function Location</span><span className="font-semibold">{activeEventInfo.functionLocation}</span>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
                                 <div className="flex justify-between gap-4 text-slate-600">
                                     <span>Guests</span><span className="font-semibold">{activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
                                 </div>
@@ -2005,6 +2069,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map((product, pIdx) => {
                                     const quantity = Number(product.quantity) || 1;
                                     const pricing = getProductPricing(product);
+                                    const lineTotal = (pricing.baseUnitPrice * quantity) + pricing.totalAddOnExtra;
+                                    const lineOriginalTotal = (pricing.originalPrice * quantity) + pricing.totalAddOnExtra;
                                     const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || pIdx;
                                     return (
                                         <div key={`${product._id}-${variantKey}`} className="flex flex-col gap-0.5 text-slate-600">
@@ -2013,8 +2079,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     {product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
                                                 </span>
                                                 <span className="flex items-center gap-2 font-semibold">
-                                                    {pricing.hasSalePrice && <span className="text-xs text-slate-400 line-through">₹{(pricing.originalPrice * quantity).toLocaleString('en-IN')}</span>}
-                                                    <span>₹{(pricing.unitPrice * quantity).toLocaleString('en-IN')}</span>
+                                                    {pricing.hasSalePrice && lineOriginalTotal > lineTotal && (
+                                                        <span className="text-xs text-slate-400 line-through">₹{lineOriginalTotal.toLocaleString('en-IN')}</span>
+                                                    )}
+                                                    <span>₹{lineTotal.toLocaleString('en-IN')}</span>
                                                 </span>
                                             </div>
                                             {product.selectedAddOns?.length > 0 && (
@@ -2030,7 +2098,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     );
                                 })}
                                 <div className="flex justify-between border-t border-purple-100 pt-3 font-bold text-slate-800">
-                                    <span>Selected Products</span><span>{selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).reduce((total, product) => total + (Number(product.quantity) || 0), 0)} items · ₹{selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).reduce((total, product) => total + getProductPricing(product).unitPrice * (Number(product.quantity) || 1), 0).toLocaleString('en-IN')}</span>
+                                    <span>Selected Products</span><span>{selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).reduce((total, product) => total + (Number(product.quantity) || 0), 0)} items · ₹{selectedProductsSubtotal.toLocaleString('en-IN')}</span>
                                 </div>
                                 {selectedSeller?.advanceBookingEnabled && Number(selectedSeller?.advancePaymentPercentage) > 0 && selectedProductsSubtotal > 0 && (
                                     <div className="flex justify-between items-center bg-purple-100/60 p-2.5 rounded-xl border border-purple-200 mt-2">
@@ -2199,7 +2267,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                                             // ADD ON calculation
                                             const hasAddOn = Boolean(modalSelectedVariant?.hasAddOn || imagePreview.product?.hasAddOn);
-                                            
+
                                             // 1. Fixed add-ons (TOGAL 1: Price fixed)
                                             let fixedList = [];
                                             if (Array.isArray(modalSelectedVariant?.fixedAddOns)) {
@@ -2305,28 +2373,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         {Math.round(((modalTotalOriginal - modalTotalAmount) / modalTotalOriginal) * 100)}% off
                                                                     </span>
                                                                 )}
-                                                                {itemQuantity > 1 && (
-                                                                    <span className="text-[10px] font-bold text-slate-400">
-                                                                        ({itemQuantity} × ₹{rawBasePrice.toLocaleString('en-IN')}{totalAddOnExtra > 0 ? ` + ₹${totalAddOnExtra.toLocaleString('en-IN')} Add-ons` : ''})
-                                                                    </span>
-                                                                )}
+                                                                <span className="text-[10px] font-bold text-slate-500">
+                                                                    ({effectiveQty} × ₹{rawBasePrice.toLocaleString('en-IN')}{totalAddOnExtra > 0 ? ` + ₹${totalAddOnExtra.toLocaleString('en-IN')} Add-ons` : ''})
+                                                                </span>
                                                             </div>
-                                                            {(fixedExtra > 0 || clickBoxExtra > 0) && (
-                                                                <div className="flex flex-col gap-0.5 mt-1.5 text-[11px] font-medium text-slate-500">
-                                                                    {fixedExtra > 0 && (
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <span className="text-slate-400">• Included Add-on:</span>
-                                                                            <span className="font-bold text-emerald-600">+₹{fixedExtra.toLocaleString('en-IN')}</span>
-                                                                        </div>
-                                                                    )}
-                                                                    {clickBoxExtra > 0 && (
-                                                                        <div className="flex items-center gap-1.5">
-                                                                            <span className="text-slate-400">• Optional Add-on:</span>
-                                                                            <span className="font-bold text-purple-600">+₹{clickBoxExtra.toLocaleString('en-IN')}</span>
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            )}
                                                         </div>
 
                                                         {imagePreview.product?.tickets?.length > 0 ? (() => {
@@ -2349,19 +2399,18 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                             tickets: imagePreview.product.tickets || [],
                                                                         };
                                                                         setImagePreview(null);
-                                                                        navigate('/plan-my-event/booking', { 
-                                                                            state: { 
+                                                                        navigate('/plan-my-event/booking', {
+                                                                            state: {
                                                                                 venue: venueObj,
                                                                                 prefilledDate: activeDate || '',
                                                                                 prefilledTimeSlot: activeTime || ''
-                                                                            } 
+                                                                            }
                                                                         });
                                                                     }}
-                                                                    className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${
-                                                                        isSoldOut
-                                                                            ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                                                                            : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
-                                                                    }`}
+                                                                    className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isSoldOut
+                                                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                                                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
+                                                                        }`}
                                                                 >
                                                                     {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
                                                                 </button>
@@ -2389,7 +2438,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     aria-label={`Increase quantity`}
                                                                     disabled={(() => {
                                                                         const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                        if (capConfig && capConfig.bookingType === 'SINGLE') return true;
                                                                         if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) return true;
                                                                         return false;
                                                                     })()}
@@ -2399,15 +2447,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         selectedVariant: modalSelectedVariant,
                                                                         selectedAddOns: combinedAppliedAddOns
                                                                     }, 1)}
-                                                                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm ${
-                                                                        (() => {
-                                                                            const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                            if (capConfig && (capConfig.bookingType === 'SINGLE' || (capConfig.maximum > 0 && itemQuantity >= capConfig.maximum))) {
-                                                                                return 'bg-slate-200 text-slate-400 cursor-not-allowed';
-                                                                            }
-                                                                            return 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700';
-                                                                        })()
-                                                                    }`}
+                                                                    className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm ${(() => {
+                                                                        const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                        if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) {
+                                                                            return 'bg-slate-200 text-slate-400 cursor-not-allowed';
+                                                                        }
+                                                                        return 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700';
+                                                                    })()
+                                                                        }`}
                                                                 >
                                                                     <AddIcon fontSize="small" />
                                                                 </button>
@@ -2419,7 +2466,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
                                                                     const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
                                                                     const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
-                                                                    
+
                                                                     setSelectedProducts(prev => {
                                                                         const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
                                                                         if (existingIdx >= 0) {
@@ -2451,6 +2498,70 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             </button>
                                                         )}
                                                     </div>
+
+                                                    {/* Total Add-ons & Product Total Box with View Details button (Placed right above Select Variant) */}
+                                                    {hasAddOn && (fixedExtra > 0 || clickBoxExtra > 0) && (
+                                                        <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-purple-50 p-3.5 shadow-sm flex items-center justify-between gap-3">
+                                                            <div className="flex flex-col gap-0.5">
+                                                                <span className="text-[10px] font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                                                                    <span>✨</span> Total Price Breakdown
+                                                                </span>
+                                                                <div className="flex items-center gap-2 text-xs">
+                                                                    <span className="text-base font-black text-purple-700">
+                                                                        ₹{modalTotalAmount.toLocaleString('en-IN')}
+                                                                    </span>
+                                                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
+                                                                        <span className="text-slate-700 font-bold">(Product: ₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')})</span>
+                                                                        {fixedExtra > 0 && <span className="text-emerald-600 font-bold">(Included: ₹{fixedExtra.toLocaleString('en-IN')})</span>}
+                                                                        {clickBoxExtra > 0 && <span className="text-purple-600 font-bold">(Optional: ₹{clickBoxExtra.toLocaleString('en-IN')})</span>}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    // Sync current variant and add-ons selection into selectedProducts so Plan Summary shows latest values
+                                                                    const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                                                    setSelectedProducts(prev => {
+                                                                        const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
+                                                                        if (existingIdx >= 0) {
+                                                                            const updated = [...prev];
+                                                                            updated[existingIdx] = {
+                                                                                ...updated[existingIdx],
+                                                                                selectedVariant: modalSelectedVariant,
+                                                                                selectedAddOns: combinedAppliedAddOns,
+                                                                                price: modalUnitPrice
+                                                                            };
+                                                                            return updated;
+                                                                        } else {
+                                                                            const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                            const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                                                                            return [
+                                                                                ...prev,
+                                                                                {
+                                                                                    ...imagePreview.product,
+                                                                                    quantity: initialQty,
+                                                                                    selectedVariant: modalSelectedVariant,
+                                                                                    selectedAddOns: combinedAppliedAddOns,
+                                                                                    price: modalUnitPrice
+                                                                                }
+                                                                            ];
+                                                                        }
+                                                                    });
+                                                                    setImagePreview(null);
+                                                                    setTimeout(() => {
+                                                                        const el = document.getElementById('plan-summary-section');
+                                                                        if (el) {
+                                                                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                                        }
+                                                                    }, 100);
+                                                                }}
+                                                                className="px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm hover:opacity-95 active:scale-95 transition-all whitespace-nowrap"
+                                                            >
+                                                                View Details →
+                                                            </button>
+                                                        </div>
+                                                    )}
 
                                                     {/* Variants Selection (if product has variants) */}
                                                     {imagePreview.product?.variants && imagePreview.product.variants.length > 0 && (
@@ -2586,17 +2697,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                             return prev;
                                                                                         });
                                                                                     }}
-                                                                                    className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${
-                                                                                        isChecked
-                                                                                            ? 'bg-purple-100/70 border-purple-400 shadow-sm'
-                                                                                            : 'bg-white border-slate-200 hover:border-purple-300'
-                                                                                    }`}
+                                                                                    className={`flex items-center justify-between p-2.5 rounded-lg border transition-all cursor-pointer ${isChecked
+                                                                                        ? 'bg-purple-100/70 border-purple-400 shadow-sm'
+                                                                                        : 'bg-white border-slate-200 hover:border-purple-300'
+                                                                                        }`}
                                                                                 >
                                                                                     <div className="flex items-center gap-2">
                                                                                         <input
                                                                                             type="checkbox"
                                                                                             checked={isChecked}
-                                                                                            onChange={() => {}}
+                                                                                            onChange={() => { }}
                                                                                             className="h-4 w-4 text-purple-600 rounded border-slate-300 focus:ring-purple-400 pointer-events-none"
                                                                                         />
                                                                                         <span className="text-xs font-bold text-slate-800 uppercase tracking-tight">
@@ -2647,11 +2757,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         <div className="flex flex-wrap items-center justify-between gap-1 text-xs">
                                                                             <span className="font-bold text-slate-800">{ticket.name}</span>
                                                                             {ticket.capacity !== undefined && ticket.capacity !== null && (
-                                                                                <span className={`px-2.5 py-0.5 rounded-md font-bold text-[11px] ${
-                                                                                    isSoldOut 
-                                                                                        ? 'bg-red-100 text-red-600 border border-red-200' 
-                                                                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                                }`}>
+                                                                                <span className={`px-2.5 py-0.5 rounded-md font-bold text-[11px] ${isSoldOut
+                                                                                    ? 'bg-red-100 text-red-600 border border-red-200'
+                                                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                                    }`}>
                                                                                     {isSoldOut ? 'Sold Out' : `Capacity: ${remainingCap} Left`}
                                                                                 </span>
                                                                             )}

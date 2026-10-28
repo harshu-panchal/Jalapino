@@ -89,21 +89,33 @@ export const getEventReservations = async (req, res) => {
                 });
             }
 
+            const eventInfo = booking.eventInfo || {};
+            const contactName = eventInfo.primaryContactName || eventInfo.name || (eventInfo.bookingType === 'corporate' ? (eventInfo.corporateCompanyName || eventInfo.corporateContactPerson) : eventInfo.coupleNames) || booking.customer?.name || "Customer";
+            const contactPhone = eventInfo.primaryPhone || eventInfo.corporateMobile || booking.customer?.phone || "";
+
             return {
                 _id: booking._id,
+                bookingId: booking.bookingId,
+                eventType: booking.eventType,
                 customerInfo: {
-                    name: booking.customer?.name || "Customer",
-                    phone: booking.customer?.phone || "",
+                    name: contactName,
+                    phone: contactPhone,
                     email: booking.customer?.email || ""
                 },
                 status: mappedStatus,
                 eventDate: booking.eventDate,
                 eventTime: booking.eventTime,
+                remarks: booking.remarks,
                 guestCount: booking.guestCount,
                 location: booking.location,
+                eventInfo: booking.eventInfo || {},
+                selectedProducts: booking.selectedProducts || [],
+                advancePaymentAmount: booking.advancePaymentAmount,
+                advancePaymentPercentage: booking.advancePaymentPercentage,
+                multipleEvents: booking.multipleEvents || [],
                 customerPreferences: customerPreferences,
                 createdAt: booking.createdAt,
-                amount: sellerService ? (sellerService.amount || booking.totalAmount) : booking.totalAmount
+                amount: booking.totalAmount || (sellerService ? sellerService.amount : 0)
             };
         });
 

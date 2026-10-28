@@ -28,11 +28,22 @@ export const createEventBooking = async (req, res) => {
         let productSubtotal = 0;
         let selectedProductLines = [];
         if (Array.isArray(selectedProducts) && selectedProducts.length > 0) {
-            selectedProductLines = selectedProducts.map(line => ({
-                productId: line.productId || line._id,
-                quantity: Number(line.quantity || 1),
-                selectedColors: Array.isArray(line.selectedColors) ? line.selectedColors : [],
-            }));
+            selectedProductLines = selectedProducts.map(line => {
+                const addOns = Array.isArray(line.selectedAddOns) ? line.selectedAddOns : [];
+                const addOnTotal = addOns.reduce((s, a) => s + (Number(a.price) || 0), 0);
+                const unitPrice = Number(line.price || 0);
+                const quantity = Number(line.quantity || 1);
+                return {
+                    productId: line.productId || line._id,
+                    quantity: quantity,
+                    price: unitPrice,
+                    unitPrice: unitPrice,
+                    selectedColors: Array.isArray(line.selectedColors) ? line.selectedColors : [],
+                    selectedVariant: line.selectedVariant || null,
+                    selectedAddOns: addOns,
+                    lineTotal: (unitPrice * quantity) + addOnTotal
+                };
+            });
 
             if (selectedProductLines.some(line => !line.productId || !Number.isInteger(line.quantity) || line.quantity < 1)) {
                 return handleResponse(res, 400, "Selected product quantities are invalid");
@@ -41,16 +52,24 @@ export const createEventBooking = async (req, res) => {
             const productDocs = await Product.find({
                 _id: { $in: selectedProductLines.map(line => line.productId) },
                 sellerId,
-            }).select('_id name price colors').lean();
+            }).select('_id name price salePrice colors variants hasAddOn fixedAddOns clickBoxAddOns').lean();
 
             const productsById = new Map(productDocs.map(product => [String(product._id), product]));
             if (selectedProductLines.some(line => !productsById.has(String(line.productId)))) {
                 return handleResponse(res, 400, "One or more selected products are unavailable for this seller");
             }
-            selectedProductLines = selectedProductLines.map(line => ({
-                ...line,
-                productName: productsById.get(String(line.productId)).name,
-            }));
+            selectedProductLines = selectedProductLines.map(line => {
+                const doc = productsById.get(String(line.productId));
+                const finalPrice = line.price > 0 ? line.price : (doc.salePrice || doc.price || 0);
+                const addOnTotal = (line.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+                return {
+                    ...line,
+                    productName: doc.name,
+                    price: finalPrice,
+                    unitPrice: finalPrice,
+                    lineTotal: (finalPrice * line.quantity) + addOnTotal
+                };
+            });
 
             const hasInvalidProductColors = selectedProductLines.some(line => {
                 const allowedColors = productsById.get(String(line.productId)).colors || [];
@@ -61,7 +80,7 @@ export const createEventBooking = async (req, res) => {
             }
 
             productSubtotal = selectedProductLines.reduce((sum, line) => {
-                return sum + (Number(productsById.get(String(line.productId)).price || 0) * line.quantity);
+                return sum + line.lineTotal;
             }, 0);
         }
 
@@ -194,22 +213,31 @@ export const createEventBooking = async (req, res) => {
         });
 
         // Create the booking entry
+        const calculatedTotalAmount = baseAmount + productSubtotal;
+        const advancePercentage = Number(seller?.advancePaymentPercentage || 0);
+        const calculatedAdvance = advancePercentage > 0 ? Math.round((calculatedTotalAmount * advancePercentage) / 100) : 0;
+
         const newBooking = new EventBooking({
             bookingId: bookingId,
             customer: customerId,
             eventType: eventData.eventType || 'Custom',
             eventDate: new Date(primaryDate || Date.now()),
             eventTime: eventData.time || '10:00 AM',
+            remarks: eventData.remarks || (eventData.multipleEvents && eventData.multipleEvents[0]?.remarks) || '',
             multipleEvents: eventData.multipleEvents || [],
+            eventInfo: eventData.eventInfo || {},
+            selectedProducts: selectedProductLines,
+            advancePaymentAmount: calculatedAdvance,
+            advancePaymentPercentage: advancePercentage,
             location: {
-                address: eventData.location || 'Pending Address'
+                address: eventData.location || (eventData.eventInfo && eventData.eventInfo.functionLocation) || 'Pending Address'
             },
             guestCount: parseInt(eventData.guestCount, 10) || 1,
             budget: parseInt(eventData.budget, 10) || 0,
             services: services,
             paymentStatus: 'PENDING',
             paymentMode: paymentMethod || 'ONLINE', // Will be finalized later
-            totalAmount: baseAmount + productSubtotal,
+            totalAmount: calculatedTotalAmount,
             overallStatus: 'PENDING' // Waiting for seller approval
         });
 
