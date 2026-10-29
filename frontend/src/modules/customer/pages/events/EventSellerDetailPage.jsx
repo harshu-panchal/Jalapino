@@ -479,6 +479,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     const [customNotes, setCustomNotes] = useState('');
     const [customBudget, setCustomBudget] = useState('');
+    const [productPage, setProductPage] = useState(1);
+    const PRODUCTS_PER_PAGE = 10;
 
     // Chat States
     const [messages, setMessages] = useState([]);
@@ -497,7 +499,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             setIsLoadingProducts(true);
             try {
                 // Fetch catalog products filtered by this seller
-                const productParams = new URLSearchParams({ sellerId: selectedSeller._id, module: 'plan_my_event' });
+                const productParams = new URLSearchParams({ sellerId: selectedSeller._id, limit: '100', module: 'plan_my_event' });
                 if (eventData?.lat && eventData?.lng) {
                     productParams.set('lat', eventData.lat);
                     productParams.set('lng', eventData.lng);
@@ -1468,8 +1470,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 <p className="text-slate-500 text-xs mt-2">No individual catalog items found.</p>
                             </div>
                         ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                {products.map(product => {
+                            <>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {products.slice((productPage - 1) * PRODUCTS_PER_PAGE, productPage * PRODUCTS_PER_PAGE).map(product => {
                                     const matchingSelected = selectedProducts.filter(p => p._id === product._id);
                                     const isSelected = matchingSelected.length > 0;
                                     const totalQuantity = matchingSelected.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
@@ -1505,7 +1508,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     type="button"
                                                     onClick={() => openProductGallery(product)}
                                                     aria-label={`View product gallery for ${product.name}`}
-                                                    className="w-16 h-16 rounded-xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/60 cursor-zoom-in"
+                                                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/80 cursor-zoom-in shadow-sm hover:opacity-95 transition-all"
                                                 >
                                                     <img
                                                         src={productImage}
@@ -1742,7 +1745,48 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         </div>
                                     );
                                 })}
-                            </div>
+                                </div>
+
+                                {/* Dynamic Pagination for Products: 10 items per page */}
+                                {products.length > PRODUCTS_PER_PAGE && (
+                                    <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-100">
+                                        <p className="text-xs font-semibold text-slate-500">
+                                            Showing <span className="font-bold text-slate-800">{(productPage - 1) * PRODUCTS_PER_PAGE + 1}</span> to <span className="font-bold text-slate-800">{Math.min(productPage * PRODUCTS_PER_PAGE, products.length)}</span> of <span className="font-bold text-slate-800">{products.length}</span> products
+                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                            <button
+                                                type="button"
+                                                disabled={productPage === 1}
+                                                onClick={() => setProductPage(prev => Math.max(1, prev - 1))}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                                            >
+                                                ‹ Prev
+                                            </button>
+                                            {Array.from({ length: Math.ceil(products.length / PRODUCTS_PER_PAGE) }, (_, i) => i + 1).map(pNum => (
+                                                <button
+                                                    key={pNum}
+                                                    type="button"
+                                                    onClick={() => setProductPage(pNum)}
+                                                    className={`w-8 h-8 rounded-lg text-xs font-black transition-all shadow-sm flex items-center justify-center ${productPage === pNum
+                                                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-purple-200'
+                                                        : 'border border-slate-200 bg-white text-slate-700 hover:bg-purple-50 hover:text-purple-600'
+                                                        }`}
+                                                >
+                                                    {pNum}
+                                                </button>
+                                            ))}
+                                            <button
+                                                type="button"
+                                                disabled={productPage === Math.ceil(products.length / PRODUCTS_PER_PAGE)}
+                                                onClick={() => setProductPage(prev => Math.min(Math.ceil(products.length / PRODUCTS_PER_PAGE), prev + 1))}
+                                                className="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all shadow-sm"
+                                            >
+                                                Next ›
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </>
                         )}
                     </div>
 
@@ -2509,69 +2553,67 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         )}
                                                     </div>
 
-                                                    {/* Total Add-ons & Product Total Box with View Details button (Placed right above Select Variant) */}
-                                                    {hasAddOn && (fixedExtra > 0 || clickBoxExtra > 0) && (
-                                                        <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-purple-50 p-3.5 shadow-sm flex items-center justify-between gap-3">
-                                                            <div className="flex flex-col gap-0.5">
-                                                                <span className="text-[10px] font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
-                                                                    <span>✨</span> Total Price Breakdown
+                                                    {/* Total Price / Add-ons Breakdown Box with View Details button (Placed right above Select Variant) */}
+                                                    <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-purple-50 p-3.5 shadow-sm flex items-center justify-between gap-3">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                                                                <span>✨</span> Total Price Breakdown
+                                                            </span>
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <span className="text-base font-black text-purple-700">
+                                                                    ₹{modalTotalAmount.toLocaleString('en-IN')}
                                                                 </span>
-                                                                <div className="flex items-center gap-2 text-xs">
-                                                                    <span className="text-base font-black text-purple-700">
-                                                                        ₹{modalTotalAmount.toLocaleString('en-IN')}
-                                                                    </span>
-                                                                    <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
-                                                                        <span className="text-slate-700 font-bold">(Product: ₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')})</span>
-                                                                        {fixedExtra > 0 && <span className="text-emerald-600 font-bold">(Included: ₹{fixedExtra.toLocaleString('en-IN')})</span>}
-                                                                        {clickBoxExtra > 0 && <span className="text-purple-600 font-bold">(Optional: ₹{clickBoxExtra.toLocaleString('en-IN')})</span>}
-                                                                    </div>
+                                                                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
+                                                                    <span className="text-slate-700 font-bold">(Product: ₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')})</span>
+                                                                    {fixedExtra > 0 && <span className="text-emerald-600 font-bold">(Included: ₹{fixedExtra.toLocaleString('en-IN')})</span>}
+                                                                    {clickBoxExtra > 0 && <span className="text-purple-600 font-bold">(Optional: ₹{clickBoxExtra.toLocaleString('en-IN')})</span>}
                                                                 </div>
                                                             </div>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => {
-                                                                    // Sync current variant and add-ons selection into selectedProducts so Plan Summary shows latest values
-                                                                    const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
-                                                                    setSelectedProducts(prev => {
-                                                                        const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
-                                                                        if (existingIdx >= 0) {
-                                                                            const updated = [...prev];
-                                                                            updated[existingIdx] = {
-                                                                                ...updated[existingIdx],
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                // Sync current variant and add-ons selection into selectedProducts so Plan Summary shows latest values
+                                                                const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                                                setSelectedProducts(prev => {
+                                                                    const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
+                                                                    if (existingIdx >= 0) {
+                                                                        const updated = [...prev];
+                                                                        updated[existingIdx] = {
+                                                                            ...updated[existingIdx],
+                                                                            selectedVariant: modalSelectedVariant,
+                                                                            selectedAddOns: combinedAppliedAddOns,
+                                                                            price: modalUnitPrice
+                                                                        };
+                                                                        return updated;
+                                                                    } else {
+                                                                        const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                        const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                                                                        return [
+                                                                            ...prev,
+                                                                            {
+                                                                                ...imagePreview.product,
+                                                                                quantity: initialQty,
                                                                                 selectedVariant: modalSelectedVariant,
                                                                                 selectedAddOns: combinedAppliedAddOns,
                                                                                 price: modalUnitPrice
-                                                                            };
-                                                                            return updated;
-                                                                        } else {
-                                                                            const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                            const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
-                                                                            return [
-                                                                                ...prev,
-                                                                                {
-                                                                                    ...imagePreview.product,
-                                                                                    quantity: initialQty,
-                                                                                    selectedVariant: modalSelectedVariant,
-                                                                                    selectedAddOns: combinedAppliedAddOns,
-                                                                                    price: modalUnitPrice
-                                                                                }
-                                                                            ];
-                                                                        }
-                                                                    });
-                                                                    setImagePreview(null);
-                                                                    setTimeout(() => {
-                                                                        const el = document.getElementById('plan-summary-section');
-                                                                        if (el) {
-                                                                            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                                                        }
-                                                                    }, 100);
-                                                                }}
-                                                                className="px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm hover:opacity-95 active:scale-95 transition-all whitespace-nowrap"
-                                                            >
-                                                                View Details →
-                                                            </button>
-                                                        </div>
-                                                    )}
+                                                                            }
+                                                                        ];
+                                                                    }
+                                                                });
+                                                                setImagePreview(null);
+                                                                setTimeout(() => {
+                                                                    const el = document.getElementById('plan-summary-section');
+                                                                    if (el) {
+                                                                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                                    }
+                                                                }, 100);
+                                                            }}
+                                                            className="px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm hover:opacity-95 active:scale-95 transition-all whitespace-nowrap"
+                                                        >
+                                                            View Details →
+                                                        </button>
+                                                    </div>
 
                                                     {/* Variants Selection (if product has variants) */}
                                                     {imagePreview.product?.variants && imagePreview.product.variants.length > 0 && (
