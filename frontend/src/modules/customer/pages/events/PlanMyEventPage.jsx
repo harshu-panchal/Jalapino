@@ -84,7 +84,7 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
                 }`}
         >
             {seller.banners && seller.banners.length > 0 && (
-                <div className="w-full h-32 relative overflow-hidden bg-slate-900 shrink-0">
+                <div className="w-full h-44 sm:h-52 md:h-56 relative overflow-hidden bg-slate-900 shrink-0">
                     <AnimatePresence mode="wait">
                         <motion.img
                             key={currentBanner}
