@@ -26,7 +26,7 @@ const EventPackages = () => {
     const [myPackages, setMyPackages] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
-    
+
     const [form, setForm] = useState({
         templateId: '',
         categoryId: '',
@@ -187,8 +187,8 @@ const EventPackages = () => {
                                     {templates
                                         .filter(tpl => !!form.id || !myPackages.find(p => (p.template?._id || p.template) === tpl._id))
                                         .map(tpl => (
-                                        <MenuItem key={tpl._id} value={tpl._id}>{tpl.packageName} ({tpl.category?.name})</MenuItem>
-                                    ))}
+                                            <MenuItem key={tpl._id} value={tpl._id}>{tpl.packageName} ({tpl.category?.name})</MenuItem>
+                                        ))}
                                 </Select>
                             </FormControl>
 

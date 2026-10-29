@@ -2317,15 +2317,19 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             const isItemAdded = Boolean(selectedProductEntry);
                                             const itemQuantity = selectedProductEntry?.quantity || 0;
                                             const effectiveQty = itemQuantity || 1;
+                                            // When item is NOT added to selection, show the exact product price (same as outside card).
+                                            // When added to selection, show the multiplied total with add-ons.
+                                            const displayPrice = isItemAdded ? ((rawBasePrice * effectiveQty) + totalAddOnExtra) : rawBasePrice;
+                                            const displayOriginal = isItemAdded ? ((rawOriginal * effectiveQty) + totalAddOnExtra) : rawOriginal;
                                             const modalTotalAmount = (rawBasePrice * effectiveQty) + totalAddOnExtra;
                                             const modalTotalOriginal = (rawOriginal * effectiveQty) + totalAddOnExtra;
                                             return (
                                                 <>
                                                     {/* Top badges */}
                                                     <div className="flex items-center gap-2 flex-wrap">
-                                                        {modalTotalOriginal > modalTotalAmount && (
+                                                        {displayOriginal > displayPrice && (
                                                             <div className="text-[10px] font-bold text-purple-700 bg-purple-50 px-3 py-1 rounded-lg border border-purple-200/60 uppercase tracking-wider">
-                                                                💰 Save ₹{modalTotalOriginal - modalTotalAmount}
+                                                                💰 Save ₹{displayOriginal - displayPrice}
                                                             </div>
                                                         )}
                                                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
@@ -2359,23 +2363,29 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <div className="flex flex-col">
                                                             <div className="flex items-baseline gap-2">
                                                                 <span className="text-2xl lg:text-3xl font-black text-purple-700 tracking-tight leading-none">
-                                                                    ₹{modalTotalAmount.toLocaleString('en-IN')}
+                                                                    ₹{displayPrice.toLocaleString('en-IN')}
                                                                 </span>
-                                                                {modalTotalOriginal > modalTotalAmount && (
+                                                                {displayOriginal > displayPrice && (
                                                                     <span className="text-sm text-slate-400 line-through font-semibold">
-                                                                        ₹{modalTotalOriginal.toLocaleString('en-IN')}
+                                                                        ₹{displayOriginal.toLocaleString('en-IN')}
                                                                     </span>
                                                                 )}
                                                             </div>
                                                             <div className="flex items-center gap-2 mt-1">
-                                                                {modalTotalOriginal > modalTotalAmount && (
+                                                                {displayOriginal > displayPrice && (
                                                                     <span className="inline-flex w-fit items-center text-[10px] font-black text-red-600 bg-red-50 border border-red-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
-                                                                        {Math.round(((modalTotalOriginal - modalTotalAmount) / modalTotalOriginal) * 100)}% off
+                                                                        {Math.round(((displayOriginal - displayPrice) / displayOriginal) * 100)}% off
                                                                     </span>
                                                                 )}
-                                                                <span className="text-[10px] font-bold text-slate-500">
-                                                                    ({effectiveQty} × ₹{rawBasePrice.toLocaleString('en-IN')}{totalAddOnExtra > 0 ? ` + ₹${totalAddOnExtra.toLocaleString('en-IN')} Add-ons` : ''})
-                                                                </span>
+                                                                {isItemAdded ? (
+                                                                    <span className="text-[10px] font-bold text-slate-500">
+                                                                        ({effectiveQty} × ₹{rawBasePrice.toLocaleString('en-IN')}{totalAddOnExtra > 0 ? ` + ₹${totalAddOnExtra.toLocaleString('en-IN')} Add-ons` : ''})
+                                                                    </span>
+                                                                ) : hasAddOn && totalAddOnExtra > 0 ? (
+                                                                    <span className="text-[10px] font-semibold text-purple-600">
+                                                                        (Base Price • +₹{totalAddOnExtra.toLocaleString('en-IN')} Add-ons on selection)
+                                                                    </span>
+                                                                ) : null}
                                                             </div>
                                                         </div>
 

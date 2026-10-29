@@ -123,6 +123,11 @@ export const createEventBooking = async (req, res) => {
                 return handleResponse(res, 400, `The requested guest count exceeds the provider's maximum capacity of ${seller.maxGuestCapacity}.`);
             }
 
+            // Check if seller shop is closed / holiday on this date
+            if (seller.shopHolidaysEnabled && Array.isArray(seller.shopClosedDates) && seller.shopClosedDates.includes(eventDateStr)) {
+                return handleResponse(res, 400, `The provider's shop is closed on ${eventDateStr}. Please choose an alternative date.`);
+            }
+
             // Count existing accepted bookings for this seller on this date
             const startOfDay = new Date(eventDateStr);
             const endOfDay = new Date(startOfDay);
