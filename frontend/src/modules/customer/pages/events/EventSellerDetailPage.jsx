@@ -142,11 +142,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const showAdvancedDateFilter = Boolean(selectedSeller?.showAdvancedDateTime !== undefined ? selectedSeller.showAdvancedDateTime : activeCat?.showAdvancedDateTime);
     const showAdvancedDateSlotFilter = Boolean(selectedSeller?.showAdvancedDateTimeSlot !== undefined ? selectedSeller.showAdvancedDateTimeSlot : activeCat?.showAdvancedDateTimeSlot);
     const showMultipleDateFilter = Boolean(selectedSeller?.showMultipleDateTime !== undefined ? selectedSeller.showMultipleDateTime : activeCat?.showMultipleDateTime);
-    const showAnyDateFilter = Boolean(
-        selectedSeller?.showDateFilters !== undefined
-            ? selectedSeller.showDateFilters
-            : (activeCat?.showDateFilters !== false && (showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter))
-    );
+    const sellerDateFlags = [
+        'showStandardDateTime',
+        'showStandardDateTimeSlot',
+        'showAdvancedDateTime',
+        'showAdvancedDateTimeSlot',
+        'showMultipleDateTime',
+    ];
+    const hasSellerDateSettings = sellerDateFlags.some(flag => selectedSeller?.[flag] !== undefined);
+    const showAnyDateFilter = hasSellerDateSettings
+        ? (showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter)
+        : (activeCat?.showDateFilters !== false && (showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter));
 
     const dateMode = showMultipleDateFilter ? 'multiple'
         : showAdvancedDateSlotFilter ? 'advancedSlot'
@@ -386,6 +392,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [ticketSoldMap, setTicketSoldMap] = useState({});
     const [selectedShop, setSelectedShop] = useState(null);
     const [sellerBookedSlots, setSellerBookedSlots] = useState([]);
+    const [uniqueCodeDateBooked, setUniqueCodeDateBooked] = useState(false);
     const [selectedAddOns, setSelectedAddOns] = useState({});
 
     const openProductGallery = (product) => {
@@ -476,6 +483,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [materialPreference, setMaterialPreference] = useState('');
     const [isCustomizationRequested, setIsCustomizationRequested] = useState(false);
     const [referencePhoto, setReferencePhoto] = useState(null);
+    const [isUploadingReferencePhoto, setIsUploadingReferencePhoto] = useState(false);
     const [formDate, setFormDate] = useState(eventData?.date || '');
     const [formTime, setFormTime] = useState(eventData?.time || '');
     const [isDateBooked, setIsDateBooked] = useState(false);
@@ -623,30 +631,47 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     useEffect(() => {
         if (!selectedSeller?._id || !activeDate) {
             setSellerBookedSlots([]);
+            setUniqueCodeDateBooked(false);
             return;
         }
-        axiosInstance.get(`/events/slots/${selectedSeller._id}?date=${activeDate}`)
+        const selectedCode = selectedProducts.find(product => product.selectedVariant?.uniqueCode || product.uniqueCode)?.selectedVariant?.uniqueCode
+            || selectedProducts.find(product => product.selectedVariant?.uniqueCode || product.uniqueCode)?.uniqueCode
+            || selectedShop?.uniqueCode
+            || '';
+        const codeQuery = selectedCode ? `&uniqueCode=${encodeURIComponent(selectedCode)}` : '';
+        axiosInstance.get(`/events/slots/${selectedSeller._id}?date=${activeDate}${codeQuery}`)
             .then(res => {
                 const slots = res.data?.result?.bookedSlots || [];
                 setSellerBookedSlots(Array.isArray(slots) ? slots : []);
+                const codeProduct = selectedProducts.find(product => product.selectedVariant?.uniqueCode || product.uniqueCode);
+                const codeConfig = codeProduct ? getProductCapacityConfig(codeProduct, codeProduct.selectedVariant) : null;
+                const selectedShopType = String(selectedShop?.bookingType || '').toUpperCase();
+                setUniqueCodeDateBooked(Boolean(codeQuery && (codeConfig?.bookingType === 'SINGLE' || selectedShopType === 'SINGLE') && slots.length));
             })
-            .catch(() => setSellerBookedSlots([]));
-    }, [selectedSeller?._id, activeDate]);
+            .catch(() => {
+                setSellerBookedSlots([]);
+                setUniqueCodeDateBooked(false);
+            });
+    }, [selectedSeller?._id, activeDate, selectedProducts, selectedShop?.uniqueCode]);
 
     useEffect(() => {
         if (isLoadingProducts) return;
         try {
-            sessionStorage.setItem(selectedProductsStorageKey, JSON.stringify(
-                selectedProducts.map(({ _id, quantity, selectedColors = [], selectedVariant, price, salePrice, selectedAddOns = [] }) => ({
-                    productId: _id,
-                    quantity,
-                    selectedColors,
-                    selectedVariant,
-                    price,
-                    salePrice,
-                    selectedAddOns
-                }))
-            ));
+            if (selectedProducts.length === 0) {
+                sessionStorage.removeItem(selectedProductsStorageKey);
+            } else {
+                sessionStorage.setItem(selectedProductsStorageKey, JSON.stringify(
+                    selectedProducts.map(({ _id, quantity, selectedColors = [], selectedVariant, price, salePrice, selectedAddOns = [] }) => ({
+                        productId: _id,
+                        quantity,
+                        selectedColors,
+                        selectedVariant,
+                        price,
+                        salePrice,
+                        selectedAddOns
+                    }))
+                ));
+            }
         } catch (error) {
             console.warn('Could not preserve selected event products:', error);
         }
@@ -894,14 +919,47 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         }));
     };
 
-    const handlePhotoUpload = (e) => {
+    const handlePhotoUpload = async (e) => {
         const file = e.target.files[0];
-        if (file) {
-            setReferencePhoto(file);
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please choose an image file.');
+            e.target.value = '';
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image must be 5 MB or smaller.');
+            e.target.value = '';
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'misc');
+        setIsUploadingReferencePhoto(true);
+        try {
+            const response = await customerApi.uploadMedia(formData);
+            const url = response?.data?.result?.url || response?.data?.result?.secureUrl;
+            if (!url) throw new Error('Upload did not return an image URL');
+            setReferencePhoto({ url, name: file.name });
+            toast.success('Reference image uploaded');
+        } catch (error) {
+            toast.error(error?.response?.data?.message || error.message || 'Reference image upload failed');
+            e.target.value = '';
+        } finally {
+            setIsUploadingReferencePhoto(false);
         }
     };
 
     const handleProceed = () => {
+        if (uniqueCodeDateBooked) {
+            toast.error('This product code is already booked for the selected date. Please choose another date.');
+            return;
+        }
+        if (isUploadingReferencePhoto) {
+            toast.error('Please wait for the reference image upload to finish.');
+            return;
+        }
         // 1. Mandatory check: At least one product or service must be selected
         const selectedProductItems = (selectedProducts || []).filter(p => !p.tickets || p.tickets.length === 0);
         const totalItemsCount = selectedProductItems.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
@@ -1097,7 +1155,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 themePreference,
                 colorPreferences,
                 materialPreference,
-                referencePhoto,
+                referencePhoto: referencePhoto?.url || '',
                 customNotes,
                 customBudget,
                 selectedProducts: selectedProducts.map(p => p._id),
@@ -2209,7 +2267,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             <label htmlFor="ref-photo-file" className="cursor-pointer text-center">
                                                 <span className="text-xs font-black text-purple-600 uppercase tracking-wider block">Browse File</span>
                                                 <span className="text-[10px] text-slate-400 block mt-0.5">
-                                                    {referencePhoto ? referencePhoto.name : 'Upload layout PNG, JPG (Max 5MB)'}
+                                                    {isUploadingReferencePhoto ? 'Uploading reference image…' : (referencePhoto ? referencePhoto.name : 'Upload layout PNG, JPG (Max 5MB)')}
                                                 </span>
                                             </label>
                                         </div>
@@ -2233,7 +2291,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                         </div>
                     )}
                     {/* Live Chat with Seller (Socket.io) */}
-                    {selectedSeller?.ticketSystemEnabled && (
+                    {selectedSeller?.customizationEngineEnabled && selectedSeller?.quoteCustomerNotes && (
                         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
                             <div className="bg-slate-50 px-5 py-3 border-b border-slate-150 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
@@ -2386,6 +2444,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <span className="text-xs text-slate-400 line-through">₹{lineOriginalTotal.toLocaleString('en-IN')}</span>
                                                     )}
                                                     <span>₹{lineTotal.toLocaleString('en-IN')}</span>
+                                                    <button
+                                                        type="button"
+                                                        title="Remove item"
+                                                        onClick={() => {
+                                                            setSelectedProducts(prev => prev.filter(p => !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey)));
+                                                        }}
+                                                        className="ml-1 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full w-5 h-5 flex items-center justify-center transition-all text-xs font-black"
+                                                    >
+                                                        ✕
+                                                    </button>
                                                 </span>
                                             </div>
                                             {product.selectedAddOns?.length > 0 && (
@@ -2799,6 +2867,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
                                                                     const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
                                                                     const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                                                    const resolvedVariant = capConfig ? {
+                                                                        ...modalSelectedVariant,
+                                                                        uniqueCode: capConfig.uniqueCode,
+                                                                        shopNo: capConfig.shopNo,
+                                                                        bookingType: capConfig.bookingType,
+                                                                        capacityType: capConfig.capacityType,
+                                                                        minimum: capConfig.minimum,
+                                                                        maximum: capConfig.maximum
+                                                                    } : modalSelectedVariant;
 
                                                                     setSelectedProducts(prev => {
                                                                         const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
@@ -2806,7 +2883,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                             const updated = [...prev];
                                                                             updated[existingIdx] = {
                                                                                 ...updated[existingIdx],
-                                                                                selectedVariant: modalSelectedVariant,
+                                                                                selectedVariant: resolvedVariant,
                                                                                 selectedAddOns: combinedAppliedAddOns,
                                                                                 price: modalUnitPrice
                                                                             };
@@ -2817,7 +2894,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                             {
                                                                                 ...imagePreview.product,
                                                                                 quantity: initialQty,
-                                                                                selectedVariant: modalSelectedVariant,
+                                                                                selectedVariant: resolvedVariant,
                                                                                 selectedAddOns: combinedAppliedAddOns,
                                                                                 price: modalUnitPrice
                                                                             }
@@ -2841,6 +2918,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             <div className="flex gap-2.5 flex-wrap">
                                                                 {imagePreview.product.variants.map((v, idx) => {
                                                                     const isVariantActive = (modalSelectedVariant?.sku || modalSelectedVariant?.name) === (v.sku || v.name);
+                                                                    const variantCapacity = getProductCapacityConfig(imagePreview.product, v);
                                                                     return (
                                                                         <button
                                                                             key={idx}
@@ -2870,11 +2948,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                                                                 }`}
                                                                         >
-                                                                            {v.name}
+                                                                            {v.name}{variantCapacity?.uniqueCode ? ` · ${variantCapacity.uniqueCode}` : ''}
                                                                         </button>
                                                                     );
                                                                 })}
                                                             </div>
+                                                            {!getProductCapacityConfig(imagePreview.product, modalSelectedVariant)?.uniqueCode && selectedSeller?.capacityEnabled && (
+                                                                <p className="mt-2 text-[10px] font-semibold text-amber-700">
+                                                                    Availability for this option has not been configured yet. Please contact the seller before booking.
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     )}
 
@@ -3041,20 +3124,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                             price: modalUnitPrice
                                                                         };
                                                                         return updated;
-                                                                    } else {
-                                                                        const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                        const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
-                                                                        return [
-                                                                            ...prev,
-                                                                            {
-                                                                                ...imagePreview.product,
-                                                                                quantity: initialQty,
-                                                                                selectedVariant: modalSelectedVariant,
-                                                                                selectedAddOns: combinedAppliedAddOns,
-                                                                                price: modalUnitPrice
-                                                                            }
-                                                                        ];
                                                                     }
+                                                                    // Do NOT auto-add the product if user didn't click "Add to Selection"
+                                                                    return prev;
                                                                 });
                                                                 setImagePreview(null);
                                                                 setTimeout(() => {
@@ -3066,7 +3138,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             }}
                                                             className="px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm hover:opacity-95 active:scale-95 transition-all whitespace-nowrap"
                                                         >
-                                                            View Details →
+                                                            {isItemAdded ? 'View Details →' : 'View Summary →'}
                                                         </button>
                                                     </div>
 

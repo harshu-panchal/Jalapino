@@ -265,7 +265,6 @@ const ProductManagement = () => {
     hasIngredients: false,
     hasShelfLife: false,
     hasFssaiLicense: false,
-    hasFssaiLicense: false,
     hasExtraDetails: false,
     isDelivery: false,
     isService: false,

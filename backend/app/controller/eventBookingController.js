@@ -13,7 +13,7 @@ import { emitSellerNotification, emitCustomerNotification } from '../modules/not
 // Create a new event booking
 export const createEventBooking = async (req, res) => {
     try {
-        const { eventData, preferences, selectedCategories, paymentMethod, paymentDetails, amount, sellerId, selectedProducts = [] } = req.body;
+        const { eventData, preferences, selectedCategories, paymentMethod, paymentDetails, amount, sellerId, selectedProducts = [], selectedShop = null } = req.body;
         const customerId = req.user.id || req.user._id;
 
         if (!sellerId) {
@@ -40,6 +40,8 @@ export const createEventBooking = async (req, res) => {
                     unitPrice: unitPrice,
                     selectedColors: Array.isArray(line.selectedColors) ? line.selectedColors : [],
                     selectedVariant: line.selectedVariant || null,
+                    uniqueCode: String(line.uniqueCode || line.selectedVariant?.uniqueCode || '').trim(),
+                    shopNo: String(line.shopNo || line.selectedVariant?.shopNo || '').trim(),
                     selectedAddOns: addOns,
                     lineTotal: (unitPrice * quantity) + addOnTotal
                 };
@@ -139,6 +141,50 @@ export const createEventBooking = async (req, res) => {
                 overallStatus: { $nin: ['CANCELLED', 'REJECTED'] }
             });
 
+            // Enforce the seller's existing shop/product unique-code capacity per date.
+            // Pending requests reserve capacity too; cancelled and rejected bookings do not.
+            const requestedShopCode = String(selectedShop?.uniqueCode || '').trim().toUpperCase();
+            const requestedShopNo = String(selectedShop?.shopNo || '').trim();
+            if (seller.capacityEnabled && requestedShopCode) {
+                const shop = (seller.shopsAtLocation || []).find(s =>
+                    String(s.uniqueCode || '').trim().toUpperCase() === requestedShopCode ||
+                    (requestedShopNo && String(s.shopNo || '') === requestedShopNo)
+                );
+                if (!shop) return handleResponse(res, 400, 'Selected shop is not configured for this seller');
+                const shopBookings = bookingsOnDate.filter(b =>
+                    String(b.selectedShop?.uniqueCode || '').trim().toUpperCase() === requestedShopCode ||
+                    (requestedShopNo && String(b.selectedShop?.shopNo || '') === requestedShopNo)
+                );
+                const shopType = String(shop.bookingType || selectedShop.bookingType || 'MULTIPLE').toUpperCase();
+                if (shopType === 'SINGLE' && shopBookings.length > 0) {
+                    return handleResponse(res, 400, 'This shop is already booked for the selected date. Please choose another date.');
+                }
+                const shopMaximum = Number(shop.maximum || shop.totalCapacity || 0);
+                const shopGuestsBooked = shopBookings.reduce((sum, b) => sum + (Number(b.guestCount) || 1), 0);
+                if (shopType !== 'SINGLE' && shopMaximum > 0 && shopGuestsBooked + (parseInt(eventData.guestCount, 10) || 1) > shopMaximum) {
+                    return handleResponse(res, 400, `Selected shop capacity is full for this date. Remaining capacity: ${Math.max(0, shopMaximum - shopGuestsBooked)}.`);
+                }
+            }
+
+            for (const line of (seller.capacityEnabled ? selectedProductLines : [])) {
+                const code = String(line.uniqueCode || '').trim().toUpperCase();
+                if (!code) continue;
+                const product = await Product.findOne({ _id: line.productId, sellerId }).select('variants').lean();
+                const variant = (product?.variants || []).find(v => String(v.uniqueCode || '').trim().toUpperCase() === code);
+                if (!variant) return handleResponse(res, 400, `Product code ${code} is not configured for this product`);
+                const codeBookings = bookingsOnDate.flatMap(b => (b.selectedProducts || [])
+                    .filter(existing => String(existing.uniqueCode || existing.selectedVariant?.uniqueCode || '').trim().toUpperCase() === code));
+                const type = String(variant.bookingType || 'MULTIPLE').toUpperCase();
+                if (type === 'SINGLE' && codeBookings.length > 0) {
+                    return handleResponse(res, 400, `Product code ${code} is already booked for the selected date.`);
+                }
+                const max = Number(variant.maximum || variant.totalCapacity || 0);
+                const used = codeBookings.reduce((sum, existing) => sum + (Number(existing.quantity) || 0), 0);
+                if (type !== 'SINGLE' && max > 0 && used + line.quantity > max) {
+                    return handleResponse(res, 400, `Product code ${code} has only ${Math.max(0, max - used)} capacity left for the selected date.`);
+                }
+            }
+
             const existingBookingsCount = bookingsOnDate.length;
             const numberOfShops = seller.numberOfShops || 1;
             
@@ -210,6 +256,11 @@ export const createEventBooking = async (req, res) => {
             return {
                 seller: sellerId,
                 category: categoryId || null,
+                quotePermissions: {
+                    sellerQuotation: Boolean(seller?.customizationEngineEnabled && seller?.quoteSellerQuotation),
+                    revision: Boolean(seller?.customizationEngineEnabled && seller?.quoteQuoteRevision),
+                    customerApproval: Boolean(seller?.customizationEngineEnabled && seller?.quoteCustomerApproval),
+                },
                 preferences: Object.keys(bookingPreferences).map(key => ({
                     fieldName: key,
                     value: bookingPreferences[key]
@@ -232,6 +283,15 @@ export const createEventBooking = async (req, res) => {
             multipleEvents: eventData.multipleEvents || [],
             eventInfo: eventData.eventInfo || {},
             selectedProducts: selectedProductLines,
+            selectedShop: selectedShop ? {
+                uniqueCode: String(selectedShop.uniqueCode || '').trim(),
+                shopNo: String(selectedShop.shopNo || '').trim(),
+                bookingType: String(selectedShop.bookingType || '').trim(),
+                capacityType: String(selectedShop.capacityType || '').trim(),
+                minimum: Number(selectedShop.minimum || 0),
+                maximum: Number(selectedShop.maximum || 0),
+                totalCapacity: Number(selectedShop.totalCapacity || 0)
+            } : undefined,
             advancePaymentAmount: calculatedAdvance,
             advancePaymentPercentage: advancePercentage,
             location: {
@@ -327,6 +387,37 @@ export const updateEventBooking = async (req, res) => {
     } catch (error) {
         console.error("Update error:", error);
         return handleResponse(res, 500, 'Failed to update booking');
+    }
+};
+
+export const respondToEventQuotation = async (req, res) => {
+    try {
+        const customerId = req.user.id || req.user._id;
+        const { sellerId, action, note = '' } = req.body;
+        if (!sellerId || !['APPROVE', 'REQUEST_REVISION'].includes(action)) return handleResponse(res, 400, 'Seller and valid action are required');
+        const booking = await EventBooking.findById(req.params.id);
+        if (!booking) return handleResponse(res, 404, 'Booking not found');
+        if (String(booking.customer) !== String(customerId)) return handleResponse(res, 403, 'Unauthorized');
+        const service = booking.services.find(s => String(s.seller) === String(sellerId));
+        if (!service) return handleResponse(res, 404, 'Seller is not assigned to this booking');
+        if (action === 'REQUEST_REVISION' && service.status === 'ACCEPTED') return handleResponse(res, 400, 'A revision cannot be requested after the seller accepts the request');
+        const canRequestRevision = action === 'REQUEST_REVISION' && service.quotation?.status === 'APPROVED';
+        if (service.quotation?.status !== 'PENDING_CUSTOMER' && !canRequestRevision) return handleResponse(res, 400, 'There is no quotation awaiting your response');
+        if (action === 'APPROVE') {
+            if (!service.quotePermissions?.customerApproval) return handleResponse(res, 403, 'Customer approval is not enabled for this seller');
+            service.quotation.status = 'APPROVED';
+            service.quotation.approvedAt = new Date();
+        } else {
+            if (!service.quotePermissions?.revision) return handleResponse(res, 403, 'Quotation revisions are not enabled for this seller');
+            service.quotation.status = 'REVISION_REQUESTED';
+            service.quotation.revisionNote = String(note).trim();
+            service.quotation.revisionRequestedAt = new Date();
+        }
+        await booking.save();
+        return handleResponse(res, 200, action === 'APPROVE' ? 'Quotation approved' : 'Revision requested', booking);
+    } catch (error) {
+        console.error('Quotation response error:', error);
+        return handleResponse(res, 500, 'Failed to respond to quotation');
     }
 };
 
@@ -516,7 +607,7 @@ export const reassignSeller = async (req, res) => {
 export const getSellerBookedSlots = async (req, res) => {
     try {
         const { sellerId } = req.params;
-        const { date } = req.query;
+        const { date, uniqueCode } = req.query;
 
         if (!sellerId || !date) {
             return handleResponse(res, 400, "Seller ID and date are required");
@@ -533,10 +624,18 @@ export const getSellerBookedSlots = async (req, res) => {
             "services.seller": sellerId,
             eventDate: { $gte: startOfDay, $lte: endOfDay },
             overallStatus: { $nin: ['CANCELLED', 'REJECTED'] }
-        }).select('eventTime multipleEvents');
+        }).select('eventTime multipleEvents selectedProducts selectedShop');
 
         const bookedSlots = new Set();
         bookings.forEach(b => {
+            if (uniqueCode) {
+                const normalizedCode = String(uniqueCode).trim().toUpperCase();
+                const hasCodeBooking = String(b.selectedShop?.uniqueCode || '').trim().toUpperCase() === normalizedCode
+                    || (b.selectedProducts || []).some(product =>
+                        String(product.uniqueCode || product.selectedVariant?.uniqueCode || '').trim().toUpperCase() === normalizedCode
+                    );
+                if (!hasCodeBooking) return;
+            }
             if (b.eventTime) bookedSlots.add(b.eventTime);
             if (Array.isArray(b.multipleEvents)) {
                 b.multipleEvents.forEach(me => {

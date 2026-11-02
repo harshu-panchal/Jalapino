@@ -1,4 +1,5 @@
 import EventBooking from '../models/event/EventBooking.js';
+import Product from '../models/product.js';
 import handleResponse from '../utils/helper.js';
 import { emitCustomerNotification } from '../modules/notifications/notification.service.js';
 
@@ -10,7 +11,35 @@ export const getEventRequests = async (req, res) => {
         // Find all bookings where this seller is part of the services array
         const bookings = await EventBooking.find({
             'services.seller': sellerId
-        }).populate('customer', 'name email phone').sort({ createdAt: -1 });
+        })
+            .populate('customer', 'name email phone')
+            .populate('selectedProducts.productId', 'name')
+            .sort({ createdAt: -1 });
+
+        const productIds = new Set();
+        const addProductId = value => {
+            const rawId = value && typeof value === 'object'
+                ? (value._id || value.productId || value.id || value.toHexString?.())
+                : value;
+            const id = String(rawId || '');
+            if (/^[a-f\d]{24}$/i.test(id)) productIds.add(id);
+        };
+        bookings.forEach(booking => {
+            (booking.selectedProducts || []).forEach(line => addProductId(line.productId));
+            const service = booking.services.find(item => item.seller && item.seller.toString() === sellerId.toString());
+            (service?.preferences || []).forEach(preference => {
+                if (preference.fieldName === 'selectedProducts' && Array.isArray(preference.value)) {
+                    preference.value.forEach(addProductId);
+                }
+                if (preference.fieldName === 'selectedProductQuantities' && Array.isArray(preference.value)) {
+                    preference.value.forEach(line => addProductId(line?.productId || line?._id));
+                }
+            });
+        });
+        const productDocs = productIds.size
+            ? await Product.find({ _id: { $in: [...productIds] } }).select('_id name').lean()
+            : [];
+        const productNamesById = Object.fromEntries(productDocs.map(product => [String(product._id), product.name]));
 
         // Map and filter down to just what the seller needs to see
         const requests = bookings.map(booking => {
@@ -30,6 +59,7 @@ export const getEventRequests = async (req, res) => {
                 serviceDetails: myService,
                 eventInfo: booking.eventInfo,
                 selectedProducts: booking.selectedProducts || [],
+                productNamesById,
                 totalAmount: booking.totalAmount,
                 advancePaymentAmount: booking.advancePaymentAmount,
                 advancePaymentPercentage: booking.advancePaymentPercentage,
@@ -74,6 +104,11 @@ export const updateRequestStatus = async (req, res) => {
 
         if (!updatedAny) {
             return handleResponse(res, 403, 'You are not assigned to this booking');
+        }
+
+        const myService = booking.services.find(s => s.seller && s.seller.toString() === sellerId.toString());
+        if (status === 'ACCEPTED' && myService?.quotePermissions?.sellerQuotation && myService.quotation?.status !== 'APPROVED') {
+            return handleResponse(res, 400, 'Send a quotation and wait for customer approval before accepting this request');
         }
 
         // --- ORCHESTRATION ENGINE ---
@@ -138,5 +173,32 @@ export const updateRequestStatus = async (req, res) => {
     } catch (error) {
         console.error("Update Request Status error:", error);
         return handleResponse(res, 500, 'Failed to update request status');
+    }
+};
+
+export const sendEventQuotation = async (req, res) => {
+    try {
+        const sellerId = req.user.sellerId || req.user.id || req.user._id;
+        const { amount, note = '' } = req.body;
+        const price = Number(amount);
+        if (!Number.isFinite(price) || price < 0) return handleResponse(res, 400, 'Enter a valid quotation amount');
+        const booking = await EventBooking.findById(req.params.id);
+        if (!booking) return handleResponse(res, 404, 'Booking not found');
+        const service = booking.services.find(s => String(s.seller) === String(sellerId));
+        if (!service) return handleResponse(res, 403, 'You are not assigned to this booking');
+        if (!service.quotePermissions?.sellerQuotation) return handleResponse(res, 403, 'Quotation is not enabled for your seller account');
+        if (service.status === 'ACCEPTED') return handleResponse(res, 400, 'Quotation cannot be changed after accepting the request');
+        const isRevision = service.quotation?.status === 'REVISION_REQUESTED';
+        if (isRevision && !service.quotePermissions.revision) return handleResponse(res, 403, 'Quotation revisions are not enabled');
+        service.quotation = { ...service.quotation?.toObject?.(), amount: price, note: String(note).trim(), status: service.quotePermissions.customerApproval ? 'PENDING_CUSTOMER' : 'APPROVED', sentAt: new Date() };
+        service.amount = price;
+        booking.totalAmount = price;
+        if (booking.advancePaymentPercentage > 0) booking.advancePaymentAmount = Math.round(price * booking.advancePaymentPercentage / 100);
+        await booking.save();
+        emitCustomerNotification('EVENT_QUOTATION_RECEIVED', { userId: booking.customer, bookingId: booking._id, message: 'Your seller sent an event quotation.' });
+        return handleResponse(res, 200, 'Quotation sent', booking);
+    } catch (error) {
+        console.error('Send event quotation error:', error);
+        return handleResponse(res, 500, 'Failed to send quotation');
     }
 };

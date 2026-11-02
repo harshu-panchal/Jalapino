@@ -25,6 +25,7 @@ export const customerApi = {
 
   // Custom Image Requests
   uploadCustomerImage: (data) => axiosInstance.post("/customer-images/upload", data),
+  uploadMedia: (data) => axiosInstance.post("/media/upload", data),
 
   // Cart
   getCart: () => getWithDedupe("/cart", {}, { ttl: 2000 }), // Very short cache for cart
@@ -122,6 +123,7 @@ export const customerApi = {
   updateEventBooking: (id, data) => axiosInstance.put(`/events/${id}`, data),
   cancelEventBooking: (id) => axiosInstance.delete(`/events/${id}`),
   getEventBookingDetails: (id) => axiosInstance.get(`/events/${id}`),
+  respondToEventQuotation: (id, data) => axiosInstance.post(`/events/${id}/quotation-response`, data),
   getAlternativeSellers: (bookingId, categoryId) => axiosInstance.get(`/events/${bookingId}/alternative-sellers/${categoryId}`),
   reassignSeller: (bookingId, data) => axiosInstance.put(`/events/${bookingId}/reassign-seller`, data),
   submitEventBookingReview: (id, data) => axiosInstance.post(`/events/${id}/review`, data),

@@ -721,7 +721,14 @@ const PlanMyEventPage = () => {
             fresh.advanceBookingBufferUnit !== selectedSellerDetail.advanceBookingBufferUnit ||
             fresh.advanceBookingBufferTime !== selectedSellerDetail.advanceBookingBufferTime ||
             fresh.advanceBookingBufferAfter !== selectedSellerDetail.advanceBookingBufferAfter ||
-            JSON.stringify(fresh.shopClosedDates) !== JSON.stringify(selectedSellerDetail.shopClosedDates)
+            JSON.stringify(fresh.shopClosedDates) !== JSON.stringify(selectedSellerDetail.shopClosedDates) ||
+            [
+                'showStandardDateTime',
+                'showStandardDateTimeSlot',
+                'showAdvancedDateTime',
+                'showAdvancedDateTimeSlot',
+                'showMultipleDateTime',
+            ].some(flag => fresh[flag] !== selectedSellerDetail[flag])
         )) {
             setSelectedSellerDetail(fresh);
         }

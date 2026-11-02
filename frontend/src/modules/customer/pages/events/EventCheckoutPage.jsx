@@ -116,6 +116,15 @@ const EventCheckoutPage = () => {
                 preferences,
                 selectedCategories,
                 sellerId: selectedSeller._id,
+                selectedShop: selectedShop ? {
+                    uniqueCode: selectedShop.uniqueCode || '',
+                    shopNo: selectedShop.shopNo || '',
+                    bookingType: selectedShop.bookingType || 'MULTIPLE',
+                    capacityType: selectedShop.capacityType || '',
+                    minimum: Number(selectedShop.minimum || 0),
+                    maximum: Number(selectedShop.maximum || selectedShop.totalCapacity || 0),
+                    totalCapacity: Number(selectedShop.totalCapacity || 0)
+                } : null,
                 packageId: selectedPackage?._id,
                 paymentMethod: 'ONLINE', // Will be finalized at payment time
                 amount: baseAmount,
@@ -127,6 +136,8 @@ const EventCheckoutPage = () => {
                         price: pricing.baseUnitPrice,
                         selectedColors: product.selectedColors || [],
                         selectedVariant: product.selectedVariant || null,
+                        uniqueCode: product.selectedVariant?.uniqueCode || product.uniqueCode || '',
+                        shopNo: product.selectedVariant?.shopNo || product.shopNo || '',
                         selectedAddOns: product.selectedAddOns || []
                     };
                 })

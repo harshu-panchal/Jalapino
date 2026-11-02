@@ -7,6 +7,7 @@ import {
   bounceBackSellerApplicationById,
 } from "../../services/admin/sellerApplicationService.js";
 import Seller from "../../models/seller.js";
+import Notification from "../../models/notification.js";
 import { saveRawFile } from "../../services/localStorageService.js";
 
 export const getPendingSellers = async (req, res) => {
@@ -157,9 +158,27 @@ export const approveSellerDocument = async (req, res) => {
     }
 
     if (!seller.documentStatuses) seller.documentStatuses = new Map();
+    const previousStatus = seller.documentStatuses.get(documentKey);
     seller.documentStatuses.set(documentKey, status || "approved");
 
     await seller.save();
+
+    if (previousStatus === "reuploaded" && ["verified", "approved"].includes(status || "approved")) {
+      await Notification.create({
+        recipient: seller._id,
+        recipientModel: "Seller",
+        role: "seller",
+        type: "system",
+        title: "Document Verified",
+        message: "Your reuploaded document has been verified successfully.",
+        channel: "in_app",
+        status: "sent",
+        isRead: false,
+        data: { documentKey, status: status || "approved" },
+      }).catch((notificationError) => {
+        console.error("Failed to notify seller about verified document:", notificationError);
+      });
+    }
 
     return handleResponse(res, 200, "Document status updated", { documentKey, status: seller.documentStatuses.get(documentKey) });
   } catch (error) {

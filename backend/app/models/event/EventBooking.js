@@ -27,7 +27,21 @@ const eventServiceAssignmentSchema = new mongoose.Schema({
     review: { type: String, trim: true },
     preferences: [preferenceValueSchema],
     specialInstructions: { type: String },
-    sellerNotes: { type: String }
+    sellerNotes: { type: String },
+    quotePermissions: {
+        sellerQuotation: { type: Boolean, default: false },
+        revision: { type: Boolean, default: false },
+        customerApproval: { type: Boolean, default: false }
+    },
+    quotation: {
+        amount: { type: Number },
+        note: { type: String, trim: true },
+        status: { type: String, enum: ['NOT_SENT', 'PENDING_CUSTOMER', 'REVISION_REQUESTED', 'APPROVED'], default: 'NOT_SENT' },
+        revisionNote: { type: String, trim: true },
+        sentAt: { type: Date },
+        approvedAt: { type: Date },
+        revisionRequestedAt: { type: Date }
+    }
 });
 
 const eventBookingSchema = new mongoose.Schema({
@@ -64,12 +78,23 @@ const eventBookingSchema = new mongoose.Schema({
         unitPrice: Number,
         selectedColors: [String],
         selectedVariant: { type: mongoose.Schema.Types.Mixed },
+        uniqueCode: { type: String, trim: true, default: '' },
+        shopNo: { type: String, trim: true, default: '' },
         selectedAddOns: [{
             name: String,
             price: Number,
             isFixed: Boolean
         }]
     }],
+    selectedShop: {
+        uniqueCode: { type: String, trim: true, default: '' },
+        shopNo: { type: String, trim: true, default: '' },
+        bookingType: { type: String, trim: true, default: '' },
+        capacityType: { type: String, trim: true, default: '' },
+        minimum: { type: Number, default: 0 },
+        maximum: { type: Number, default: 0 },
+        totalCapacity: { type: Number, default: 0 }
+    },
     advancePaymentAmount: { type: Number },
     advancePaymentPercentage: { type: Number },
     location: {

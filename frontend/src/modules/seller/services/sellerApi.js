@@ -73,6 +73,7 @@ export const sellerApi = {
     // Event Requests
     getEventRequests: () => axiosInstance.get('/seller/event-requests'),
     updateEventRequestStatus: (id, data) => axiosInstance.put(`/seller/event-requests/${id}/status`, data),
+    sendEventQuotation: (id, data) => axiosInstance.put(`/seller/event-requests/${id}/quotation`, data),
 
     // Live Streaming
     startLiveStream: (data) => axiosInstance.post('/live/start', data),

@@ -53,6 +53,27 @@ const OrdersPage = () => {
     const [loading, setLoading] = useState(true);
     const [editingEvent, setEditingEvent] = useState(null);
     const [editFormData, setEditFormData] = useState({ guestCount: '', budget: '', date: '', time: '', location: '' });
+    const [quotationBusy, setQuotationBusy] = useState('');
+
+    const handleQuotationResponse = async (booking, service, action) => {
+        let note = '';
+        if (action === 'REQUEST_REVISION') {
+            note = window.prompt('Seller ko revision ke liye kya update chahiye?') || '';
+            if (!note.trim()) return;
+        }
+        const busyKey = `${booking._id}:${service.seller?._id || service.seller}`;
+        setQuotationBusy(busyKey);
+        try {
+            const { data } = await customerApi.respondToEventQuotation(booking._id, { sellerId: service.seller?._id || service.seller, action, note });
+            const updated = data?.result || data?.data || data;
+            setEventBookings(prev => prev.map(item => String(item._id) === String(booking._id) ? updated : item));
+            toast.success(action === 'APPROVE' ? 'Quotation approved' : 'Revision requested');
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Quotation response failed');
+        } finally {
+            setQuotationBusy('');
+        }
+    };
 
     const filteredRetailOrders = orders.filter(order => {
         if (order.moduleType === 'wholesale') return false; // Default to retail if missing
@@ -710,6 +731,18 @@ const OrdersPage = () => {
                                                     </button>
                                                 )}
                                             </div>
+                                            {service.quotation?.status && service.quotation.status !== 'NOT_SENT' && (
+                                                <div className="w-full mt-2 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
+                                                    <p className="text-xs font-bold text-indigo-900">Seller quotation: ₹{Number(service.quotation.amount || 0).toLocaleString('en-IN')} · {service.quotation.status.replaceAll('_', ' ')}</p>
+                                                    {service.quotation.note && <p className="text-xs text-slate-600 mt-1">{service.quotation.note}</p>}
+                                                    {(service.quotation.status === 'PENDING_CUSTOMER' || (service.quotation.status === 'APPROVED' && service.quotePermissions?.revision && service.status !== 'ACCEPTED')) && (
+                                                        <div className="flex flex-wrap gap-2 mt-3">
+                                                            {service.quotation.status === 'PENDING_CUSTOMER' && service.quotePermissions?.customerApproval && <button disabled={quotationBusy === `${booking._id}:${service.seller?._id || service.seller}`} onClick={() => handleQuotationResponse(booking, service, 'APPROVE')} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold disabled:opacity-50">Approve quotation</button>}
+                                                            {service.quotePermissions?.revision && <button disabled={quotationBusy === `${booking._id}:${service.seller?._id || service.seller}`} onClick={() => handleQuotationResponse(booking, service, 'REQUEST_REVISION')} className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 text-xs font-bold disabled:opacity-50">Request revision</button>}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     ))}
                                 </div>

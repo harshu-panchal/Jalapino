@@ -1,5 +1,5 @@
 import express from 'express';
-import { createEventBooking, getMyEventBookings, getEventBookingDetails, updateEventBooking, deleteEventBooking, processPaymentForBooking, completeEventBooking, getAlternativeSellers, reassignSeller, getSellerBookedSlots, submitEventBookingReview, getEventBookingReview } from '../controller/eventBookingController.js';
+import { createEventBooking, getMyEventBookings, getEventBookingDetails, updateEventBooking, deleteEventBooking, processPaymentForBooking, completeEventBooking, getAlternativeSellers, reassignSeller, getSellerBookedSlots, submitEventBookingReview, getEventBookingReview, respondToEventQuotation } from '../controller/eventBookingController.js';
 import { verifyToken } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -11,6 +11,7 @@ router.get('/my-bookings', verifyToken, getMyEventBookings);
 router.get('/:id', verifyToken, getEventBookingDetails);
 router.put('/:id', verifyToken, updateEventBooking);
 router.delete('/:id', verifyToken, deleteEventBooking);
+router.post('/:id/quotation-response', verifyToken, respondToEventQuotation);
 
 // Review routes (Customer review seller)
 router.post('/:id/review', verifyToken, submitEventBookingReview);
