@@ -88,43 +88,43 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     // When viewing a specific seller, prioritize the seller's specific store permissions configured by Admin.
     // Fall back to category permissions only if seller fields are not defined.
     const isEventDetailsEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.eventDetailsEnabled !== undefined
             ? selectedSeller.eventDetailsEnabled
             : (activeCat?.showEventDetailsForm || activeCat?.eventDetailsEnabled)
     );
 
     const isPrimaryContactEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.primaryContactEnabled !== undefined
             ? selectedSeller.primaryContactEnabled
             : activeCat?.primaryContactEnabled
     );
 
     const isCoupleContactEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.coupleContactEnabled !== undefined
             ? selectedSeller.coupleContactEnabled
             : activeCat?.coupleContactEnabled
     );
 
     const isCorporateContactEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.corporateContactEnabled !== undefined
             ? selectedSeller.corporateContactEnabled
             : activeCat?.corporateContactEnabled
     );
 
     const isNoOfGuestsEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.noOfGuestsEnabled !== undefined
             ? selectedSeller.noOfGuestsEnabled
             : (activeCat?.showNoOfGuestsBox || activeCat?.noOfGuestsEnabled)
     );
 
     const isFunctionLocationEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.functionLocationEnabled !== undefined
             ? selectedSeller.functionLocationEnabled
             : activeCat?.functionLocationEnabled
     );
 
     const isSellerLocationEnabled = Boolean(
-        selectedSeller
+        selectedSeller?.sellerLocationEnabled !== undefined
             ? selectedSeller.sellerLocationEnabled
             : activeCat?.sellerLocationEnabled
     );
@@ -137,12 +137,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             : 'individual';
 
     // Date & Time Filter toggles
-    const showStandardDateFilter = Boolean(selectedSeller ? selectedSeller.showStandardDateTime : activeCat?.showStandardDateTime);
-    const showStandardDateSlotFilter = Boolean(selectedSeller ? selectedSeller.showStandardDateTimeSlot : activeCat?.showStandardDateTimeSlot);
-    const showAdvancedDateFilter = Boolean(selectedSeller ? selectedSeller.showAdvancedDateTime : activeCat?.showAdvancedDateTime);
-    const showAdvancedDateSlotFilter = Boolean(selectedSeller ? selectedSeller.showAdvancedDateTimeSlot : activeCat?.showAdvancedDateTimeSlot);
-    const showMultipleDateFilter = Boolean(selectedSeller ? selectedSeller.showMultipleDateTime : activeCat?.showMultipleDateTime);
-    const showAnyDateFilter = showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter;
+    const showStandardDateFilter = Boolean(selectedSeller?.showStandardDateTime !== undefined ? selectedSeller.showStandardDateTime : activeCat?.showStandardDateTime);
+    const showStandardDateSlotFilter = Boolean(selectedSeller?.showStandardDateTimeSlot !== undefined ? selectedSeller.showStandardDateTimeSlot : activeCat?.showStandardDateTimeSlot);
+    const showAdvancedDateFilter = Boolean(selectedSeller?.showAdvancedDateTime !== undefined ? selectedSeller.showAdvancedDateTime : activeCat?.showAdvancedDateTime);
+    const showAdvancedDateSlotFilter = Boolean(selectedSeller?.showAdvancedDateTimeSlot !== undefined ? selectedSeller.showAdvancedDateTimeSlot : activeCat?.showAdvancedDateTimeSlot);
+    const showMultipleDateFilter = Boolean(selectedSeller?.showMultipleDateTime !== undefined ? selectedSeller.showMultipleDateTime : activeCat?.showMultipleDateTime);
+    const showAnyDateFilter = Boolean(
+        selectedSeller?.showDateFilters !== undefined
+            ? selectedSeller.showDateFilters
+            : (activeCat?.showDateFilters !== false && (showStandardDateFilter || showStandardDateSlotFilter || showAdvancedDateFilter || showAdvancedDateSlotFilter || showMultipleDateFilter))
+    );
 
     const dateMode = showMultipleDateFilter ? 'multiple'
         : showAdvancedDateSlotFilter ? 'advancedSlot'
@@ -880,6 +884,75 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             return;
         }
 
+        // Mandatory check for Event Type, Date & Time if enabled
+        if (showAnyDateFilter) {
+            if (!activeEventType) {
+                toast.error("Please select an Event Type.");
+                return;
+            }
+            if (!activeDate && (!activeMultipleDates || activeMultipleDates.length === 0)) {
+                toast.error("Please select an Event Date.");
+                return;
+            }
+            if (!activeTime && (!activeMultipleDates || activeMultipleDates.length === 0)) {
+                toast.error("Please select an Event Time.");
+                return;
+            }
+        }
+
+        // Mandatory checks for "Your Event Details" fields that are enabled by Category or Seller
+        if (effectiveBookingType === 'individual' && isPrimaryContactEnabled) {
+            if (!activeEventInfo.primaryContactName?.trim() && !activeEventInfo.name?.trim()) {
+                toast.error("Please enter Primary Contact name.");
+                return;
+            }
+            if (!activeEventInfo.gender) {
+                toast.error("Please select Gender.");
+                return;
+            }
+            if (!activeEventInfo.dateOfBirth) {
+                toast.error("Please select Date of Birth.");
+                return;
+            }
+        } else if (effectiveBookingType === 'couple' && isCoupleContactEnabled) {
+            if (!activeEventInfo.groomName?.trim() && !activeEventInfo.partner1Name?.trim() && !activeEventInfo.coupleNames?.trim()) {
+                toast.error("Please enter Couple / Partner name.");
+                return;
+            }
+            if (!activeEventInfo.anniversaryDate) {
+                toast.error("Please select Anniversary Date.");
+                return;
+            }
+        } else if (effectiveBookingType === 'corporate' && isCorporateContactEnabled) {
+            if (!activeEventInfo.companyName?.trim() && !activeEventInfo.corporateCompanyName?.trim()) {
+                toast.error("Please enter Company Name.");
+                return;
+            }
+            if (!activeEventInfo.corporateContactPerson?.trim()) {
+                toast.error("Please enter Contact Person name.");
+                return;
+            }
+            if (!activeEventInfo.corporateMobile?.trim()) {
+                toast.error("Please enter Mobile Number.");
+                return;
+            }
+        }
+
+        if (isFunctionLocationEnabled && !activeEventInfo.functionLocation?.trim()) {
+            toast.error("Please enter Function Location.");
+            return;
+        }
+
+        if (isSellerLocationEnabled && !activeEventInfo.sellerLocation?.trim()) {
+            toast.error("Please enter Seller Location.");
+            return;
+        }
+
+        if (isNoOfGuestsEnabled && !activeEventInfo.noOfGuests) {
+            toast.error("Please enter Number of Guests.");
+            return;
+        }
+
         // Collect preferences
         const collectedPreferences = {
             ...preferences,
@@ -1473,278 +1546,278 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             <>
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     {products.slice((productPage - 1) * PRODUCTS_PER_PAGE, productPage * PRODUCTS_PER_PAGE).map(product => {
-                                    const matchingSelected = selectedProducts.filter(p => p._id === product._id);
-                                    const isSelected = matchingSelected.length > 0;
-                                    const totalQuantity = matchingSelected.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
-                                    const totalPrice = matchingSelected.reduce((sum, p) => {
-                                        const pr = getProductPricing(p);
-                                        const qty = Number(p.quantity) || 1;
-                                        return sum + (pr.baseUnitPrice * qty) + pr.totalAddOnExtra;
-                                    }, 0);
-                                    const totalOriginalPrice = matchingSelected.reduce((sum, p) => {
-                                        const pr = getProductPricing(p);
-                                        const qty = Number(p.quantity) || 1;
-                                        return sum + (pr.originalPrice * qty) + pr.totalAddOnExtra;
-                                    }, 0);
-                                    const hasAnySalePrice = matchingSelected.some(p => getProductPricing(p).hasSalePrice);
-                                    const defaultPricing = getProductPricing(product);
-                                    const productImage = resolveProductImageUrl(product.mainImage || product.galleryImages?.[0]);
-                                    return (
-                                        <div
-                                            key={product._id}
-                                            onClick={(event) => {
-                                                if (!event.target.closest('button, input, label, select, textarea, a')) {
-                                                    openProductGallery(product);
-                                                }
-                                            }}
-                                            className={`border-2 rounded-2xl p-4 transition-all flex flex-col justify-between cursor-pointer
+                                        const matchingSelected = selectedProducts.filter(p => p._id === product._id);
+                                        const isSelected = matchingSelected.length > 0;
+                                        const totalQuantity = matchingSelected.reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+                                        const totalPrice = matchingSelected.reduce((sum, p) => {
+                                            const pr = getProductPricing(p);
+                                            const qty = Number(p.quantity) || 1;
+                                            return sum + (pr.baseUnitPrice * qty) + pr.totalAddOnExtra;
+                                        }, 0);
+                                        const totalOriginalPrice = matchingSelected.reduce((sum, p) => {
+                                            const pr = getProductPricing(p);
+                                            const qty = Number(p.quantity) || 1;
+                                            return sum + (pr.originalPrice * qty) + pr.totalAddOnExtra;
+                                        }, 0);
+                                        const hasAnySalePrice = matchingSelected.some(p => getProductPricing(p).hasSalePrice);
+                                        const defaultPricing = getProductPricing(product);
+                                        const productImage = resolveProductImageUrl(product.mainImage || product.galleryImages?.[0]);
+                                        return (
+                                            <div
+                                                key={product._id}
+                                                onClick={(event) => {
+                                                    if (!event.target.closest('button, input, label, select, textarea, a')) {
+                                                        openProductGallery(product);
+                                                    }
+                                                }}
+                                                className={`border-2 rounded-2xl p-4 transition-all flex flex-col justify-between cursor-pointer
                                                         ${isSelected
-                                                    ? 'border-purple-500 bg-purple-50/40 shadow-sm'
-                                                    : 'border-slate-100 hover:border-purple-200'
-                                                }`}
-                                        >
-                                            <div className="flex gap-3">
-                                                <button
-                                                    type="button"
-                                                    onClick={() => openProductGallery(product)}
-                                                    aria-label={`View product gallery for ${product.name}`}
-                                                    className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/80 cursor-zoom-in shadow-sm hover:opacity-95 transition-all"
-                                                >
-                                                    <img
-                                                        src={productImage}
-                                                        alt={product.name}
-                                                        className="w-full h-full object-cover"
-                                                        onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
-                                                    />
-                                                </button>
-                                                <div className="min-w-0 flex-1">
-                                                    <h4 className="font-bold text-sm text-slate-800 truncate">
-                                                        {product.name}
-                                                    </h4>
-                                                    {matchingSelected.length > 0 && matchingSelected.some(p => p.selectedVariant?.name) && (
-                                                        <div className="flex flex-wrap gap-1 mt-1">
-                                                            {matchingSelected.map((item, idx) => item.selectedVariant?.name ? (
-                                                                <span key={item.selectedVariant?.sku || item.selectedVariant?.name || idx} className="text-[10px] font-semibold text-purple-700 bg-purple-100/70 px-1.5 py-0.5 rounded border border-purple-200">
-                                                                    {item.selectedVariant.name} × {item.quantity}
-                                                                </span>
-                                                            ) : null)}
-                                                        </div>
-                                                    )}
-                                                    {matchingSelected.length > 0 && matchingSelected.some(p => p.selectedAddOns?.length > 0) ? (
-                                                        <div className="flex flex-wrap gap-1 mt-1">
-                                                            {matchingSelected.flatMap(p => p.selectedAddOns || []).map((addon, aIdx) => (
-                                                                <span key={aIdx} className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
-                                                                    + {addon.name} (₹{addon.price})
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                    ) : (() => {
-                                                        const autoFixed = getFixedAddOnsForProduct(product);
-                                                        if (autoFixed.length > 0) {
-                                                            return (
-                                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                                    {autoFixed.map((addon, aIdx) => (
-                                                                        <span key={aIdx} className="text-[9px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
-                                                                            ✨ Incl: {addon.name} (+₹{addon.price})
-                                                                        </span>
-                                                                    ))}
-                                                                </div>
-                                                            );
-                                                        }
-                                                        return null;
-                                                    })()}
-                                                    <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{product.description}</p>
-                                                    {(() => {
-                                                        const cap = getProductCapacityConfig(product, product.variants?.[0]);
-                                                        if (!cap || !selectedSeller?.capacityEnabled) return null;
-                                                        return (
-                                                            <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded">
-                                                                    Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
-                                                                </span>
+                                                        ? 'border-purple-500 bg-purple-50/40 shadow-sm'
+                                                        : 'border-slate-100 hover:border-purple-200'
+                                                    }`}
+                                            >
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => openProductGallery(product)}
+                                                        aria-label={`View product gallery for ${product.name}`}
+                                                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/80 cursor-zoom-in shadow-sm hover:opacity-95 transition-all"
+                                                    >
+                                                        <img
+                                                            src={productImage}
+                                                            alt={product.name}
+                                                            className="w-full h-full object-cover"
+                                                            onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
+                                                        />
+                                                    </button>
+                                                    <div className="min-w-0 flex-1">
+                                                        <h4 className="font-bold text-sm text-slate-800 truncate">
+                                                            {product.name}
+                                                        </h4>
+                                                        {matchingSelected.length > 0 && matchingSelected.some(p => p.selectedVariant?.name) && (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {matchingSelected.map((item, idx) => item.selectedVariant?.name ? (
+                                                                    <span key={item.selectedVariant?.sku || item.selectedVariant?.name || idx} className="text-[10px] font-semibold text-purple-700 bg-purple-100/70 px-1.5 py-0.5 rounded border border-purple-200">
+                                                                        {item.selectedVariant.name} × {item.quantity}
+                                                                    </span>
+                                                                ) : null)}
                                                             </div>
-                                                        );
-                                                    })()}
-                                                    {product.tickets?.length > 0 && (
-                                                        <div className="mt-2 space-y-1.5">
-                                                            {product.tickets.map((ticket, ticketIndex) => {
-                                                                const soldCount = ticketSoldMap[product._id] || 0;
-                                                                const totalCap = Number(ticket.capacity ?? 0);
-                                                                const remainingCap = Math.max(0, totalCap - soldCount);
-                                                                const isSoldOut = totalCap > 0 && remainingCap <= 0;
-
+                                                        )}
+                                                        {matchingSelected.length > 0 && matchingSelected.some(p => p.selectedAddOns?.length > 0) ? (
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {matchingSelected.flatMap(p => p.selectedAddOns || []).map((addon, aIdx) => (
+                                                                    <span key={aIdx} className="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                                                        + {addon.name} (₹{addon.price})
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        ) : (() => {
+                                                            const autoFixed = getFixedAddOnsForProduct(product);
+                                                            if (autoFixed.length > 0) {
                                                                 return (
-                                                                    <div key={ticket._id || ticketIndex} className="rounded-lg bg-purple-50/70 border border-purple-100 px-2.5 py-2">
-                                                                        <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
-                                                                            <span className="font-bold text-slate-800">{ticket.name}</span>
-                                                                            {ticket.capacity !== undefined && ticket.capacity !== null && (
-                                                                                <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${isSoldOut
-                                                                                    ? 'bg-red-100 text-red-600 border border-red-200'
-                                                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                                                                    }`}>
-                                                                                    {isSoldOut ? 'Sold Out' : `Capacity: ${remainingCap} Left`}
-                                                                                </span>
-                                                                            )}
-                                                                        </div>
-                                                                        {ticket.instructions && (
-                                                                            <p className="text-[10px] text-slate-600 mt-1 font-medium bg-white/70 p-1.5 rounded border border-purple-100/60">
-                                                                                📋 {ticket.instructions}
-                                                                            </p>
-                                                                        )}
-                                                                        {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
-                                                                            <p className="text-[10px] text-slate-500 mt-1">
-                                                                                {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
-                                                                            </p>
-                                                                        )}
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {autoFixed.map((addon, aIdx) => (
+                                                                            <span key={aIdx} className="text-[9px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded border border-purple-200">
+                                                                                ✨ Incl: {addon.name} (+₹{addon.price})
+                                                                            </span>
+                                                                        ))}
                                                                     </div>
                                                                 );
-                                                            })}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {isSelected && Array.isArray(product.colors) && product.colors.length > 0 && (
-                                                <div className="mt-3 rounded-xl border border-purple-100 bg-white p-3">
-                                                    <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Choose colors for {product.name}</p>
-                                                    <div className="flex flex-wrap gap-2">
-                                                        {[...new Set([...product.colors, ...(matchingSelected[0]?.selectedColors || [])])].map((color, colorIndex) => {
-                                                            const isColorSelected = (matchingSelected[0]?.selectedColors || []).includes(color);
+                                                            }
+                                                            return null;
+                                                        })()}
+                                                        <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{product.description}</p>
+                                                        {(() => {
+                                                            const cap = getProductCapacityConfig(product, product.variants?.[0]);
+                                                            if (!cap || !selectedSeller?.capacityEnabled) return null;
                                                             return (
-                                                                <button
-                                                                    key={`${color}-${colorIndex}`}
-                                                                    type="button"
-                                                                    aria-pressed={isColorSelected}
-                                                                    onClick={() => handleProductColorToggle(product._id, color)}
-                                                                    className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${isColorSelected ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300'}`}
-                                                                >
-                                                                    <span className="h-3.5 w-3.5 rounded-full border border-slate-200" style={{ backgroundColor: color }} />
-                                                                    {color}
-                                                                </button>
+                                                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
+                                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded">
+                                                                        Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                                    </span>
+                                                                </div>
                                                             );
-                                                        })}
-                                                        <label className="flex items-center gap-2 rounded-lg border border-dashed border-purple-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 cursor-pointer hover:border-purple-500">
-                                                            <input
-                                                                type="color"
-                                                                aria-label={`Choose a custom color for ${product.name}`}
-                                                                value={[...(matchingSelected[0]?.selectedColors || [])].reverse().find(color => /^#[0-9a-f]{6}$/i.test(color)) || '#8b5cf6'}
-                                                                onChange={(e) => handleProductColorAdd(product._id, e.target.value)}
-                                                                className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
-                                                            />
-                                                            Pick color
-                                                        </label>
+                                                        })()}
+                                                        {product.tickets?.length > 0 && (
+                                                            <div className="mt-2 space-y-1.5">
+                                                                {product.tickets.map((ticket, ticketIndex) => {
+                                                                    const soldCount = ticketSoldMap[product._id] || 0;
+                                                                    const totalCap = Number(ticket.capacity ?? 0);
+                                                                    const remainingCap = Math.max(0, totalCap - soldCount);
+                                                                    const isSoldOut = totalCap > 0 && remainingCap <= 0;
+
+                                                                    return (
+                                                                        <div key={ticket._id || ticketIndex} className="rounded-lg bg-purple-50/70 border border-purple-100 px-2.5 py-2">
+                                                                            <div className="flex flex-wrap items-center justify-between gap-1 text-[11px]">
+                                                                                <span className="font-bold text-slate-800">{ticket.name}</span>
+                                                                                {ticket.capacity !== undefined && ticket.capacity !== null && (
+                                                                                    <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${isSoldOut
+                                                                                        ? 'bg-red-100 text-red-600 border border-red-200'
+                                                                                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                                                        }`}>
+                                                                                        {isSoldOut ? 'Sold Out' : `Capacity: ${remainingCap} Left`}
+                                                                                    </span>
+                                                                                )}
+                                                                            </div>
+                                                                            {ticket.instructions && (
+                                                                                <p className="text-[10px] text-slate-600 mt-1 font-medium bg-white/70 p-1.5 rounded border border-purple-100/60">
+                                                                                    📋 {ticket.instructions}
+                                                                                </p>
+                                                                            )}
+                                                                            {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
+                                                                                <p className="text-[10px] text-slate-500 mt-1">
+                                                                                    {ticket.timeSlots.map((slot) => [slot.date, slot.startTime && slot.endTime ? `${slot.startTime}–${slot.endTime}` : slot.startTime || slot.endTime].filter(Boolean).join(' ')).filter(Boolean).join(' · ')}
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
-                                            )}
-                                            <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
-                                                <span className="flex flex-wrap items-center gap-x-2 font-extrabold text-sm text-purple-600">
-                                                    {isSelected ? (
-                                                        <>
-                                                            {hasAnySalePrice && totalOriginalPrice > totalPrice && (
-                                                                <span className="text-xs font-semibold text-slate-400 line-through">
-                                                                    ₹{totalOriginalPrice.toLocaleString('en-IN')}
-                                                                </span>
-                                                            )}
-                                                            <span>₹{totalPrice.toLocaleString('en-IN')}</span>
-                                                            {totalQuantity > 1 && (
-                                                                <span className="text-[10px] font-semibold text-slate-400">({totalQuantity} items)</span>
-                                                            )}
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            {defaultPricing.hasSalePrice && (
-                                                                <span className="text-xs font-semibold text-slate-400 line-through">
-                                                                    ₹{defaultPricing.originalPrice.toLocaleString('en-IN')}
-                                                                </span>
-                                                            )}
-                                                            <span>₹{defaultPricing.baseUnitPrice.toLocaleString('en-IN')}</span>
-                                                        </>
-                                                    )}
-                                                </span>
-                                                <div className="flex items-center gap-2">
-                                                    {product.tickets?.length > 0 ? (() => {
-                                                        const soldCount = ticketSoldMap[product._id] || 0;
-                                                        const totalCap = Number(product.tickets[0]?.capacity ?? 0);
-                                                        const remainingCap = Math.max(0, totalCap - soldCount);
-                                                        const isSoldOut = totalCap > 0 && remainingCap <= 0;
-
-                                                        return (
-                                                            <button
-                                                                type="button"
-                                                                disabled={isSoldOut}
-                                                                onClick={() => {
-                                                                    if (isSoldOut) return;
-                                                                    const venueObj = {
-                                                                        _id: product._id,
-                                                                        name: product.name || selectedSeller?.shopName || selectedSeller?.name,
-                                                                        price: Number(product.tickets?.[0]?.salePrice || product.tickets?.[0]?.price || product.price || 1000),
-                                                                        sellerId: selectedSeller,
-                                                                        tickets: product.tickets || [],
-                                                                    };
-                                                                    navigate('/plan-my-event/booking', {
-                                                                        state: {
-                                                                            venue: venueObj,
-                                                                            selectedShop: selectedShop,
-                                                                            prefilledDate: activeDate || '',
-                                                                            prefilledTimeSlot: activeTime || ''
-                                                                        }
-                                                                    });
-                                                                }}
-                                                                className={`text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${isSoldOut
-                                                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
-                                                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95'
-                                                                    }`}
-                                                            >
-                                                                {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
-                                                            </button>
-                                                        );
-                                                    })() : isSelected ? (
-                                                        <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
-                                                            <button
-                                                                type="button"
-                                                                aria-label={`Remove one ${product.name}`}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const targetProduct = matchingSelected[0] || product;
-                                                                    handleProductQuantityChange(targetProduct, -1);
-                                                                }}
-                                                                className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
-                                                            >
-                                                                <RemoveIcon fontSize="small" />
-                                                            </button>
-                                                            <span className="min-w-5 text-center text-xs font-black text-slate-800">{totalQuantity}</span>
-                                                            <button
-                                                                type="button"
-                                                                aria-label={`Add one ${product.name}`}
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    const targetProduct = matchingSelected[0] || product;
-                                                                    handleProductQuantityChange(targetProduct, 1);
-                                                                }}
-                                                                className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
-                                                            >
-                                                                <AddIcon fontSize="small" />
-                                                            </button>
+                                                {isSelected && Array.isArray(product.colors) && product.colors.length > 0 && (
+                                                    <div className="mt-3 rounded-xl border border-purple-100 bg-white p-3">
+                                                        <p className="mb-2 text-[10px] font-black uppercase tracking-wider text-slate-500">Choose colors for {product.name}</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {[...new Set([...product.colors, ...(matchingSelected[0]?.selectedColors || [])])].map((color, colorIndex) => {
+                                                                const isColorSelected = (matchingSelected[0]?.selectedColors || []).includes(color);
+                                                                return (
+                                                                    <button
+                                                                        key={`${color}-${colorIndex}`}
+                                                                        type="button"
+                                                                        aria-pressed={isColorSelected}
+                                                                        onClick={() => handleProductColorToggle(product._id, color)}
+                                                                        className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${isColorSelected ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300'}`}
+                                                                    >
+                                                                        <span className="h-3.5 w-3.5 rounded-full border border-slate-200" style={{ backgroundColor: color }} />
+                                                                        {color}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                            <label className="flex items-center gap-2 rounded-lg border border-dashed border-purple-300 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 cursor-pointer hover:border-purple-500">
+                                                                <input
+                                                                    type="color"
+                                                                    aria-label={`Choose a custom color for ${product.name}`}
+                                                                    value={[...(matchingSelected[0]?.selectedColors || [])].reverse().find(color => /^#[0-9a-f]{6}$/i.test(color)) || '#8b5cf6'}
+                                                                    onChange={(e) => handleProductColorAdd(product._id, e.target.value)}
+                                                                    className="h-5 w-5 cursor-pointer rounded border-0 bg-transparent p-0"
+                                                                />
+                                                                Pick color
+                                                            </label>
                                                         </div>
-                                                    ) : (
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                if (product.variants?.length > 1 || product.hasAddOn || product.variants?.[0]?.hasAddOn) {
-                                                                    openProductGallery(product);
-                                                                } else {
-                                                                    handleProductQuantityChange(product, 1);
-                                                                }
-                                                            }}
-                                                            className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
-                                                        >
-                                                            Add Item
-                                                        </button>
-                                                    )}
+                                                    </div>
+                                                )}
+                                                <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
+                                                    <span className="flex flex-wrap items-center gap-x-2 font-extrabold text-sm text-purple-600">
+                                                        {isSelected ? (
+                                                            <>
+                                                                {hasAnySalePrice && totalOriginalPrice > totalPrice && (
+                                                                    <span className="text-xs font-semibold text-slate-400 line-through">
+                                                                        ₹{totalOriginalPrice.toLocaleString('en-IN')}
+                                                                    </span>
+                                                                )}
+                                                                <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+                                                                {totalQuantity > 1 && (
+                                                                    <span className="text-[10px] font-semibold text-slate-400">({totalQuantity} items)</span>
+                                                                )}
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                {defaultPricing.hasSalePrice && (
+                                                                    <span className="text-xs font-semibold text-slate-400 line-through">
+                                                                        ₹{defaultPricing.originalPrice.toLocaleString('en-IN')}
+                                                                    </span>
+                                                                )}
+                                                                <span>₹{defaultPricing.baseUnitPrice.toLocaleString('en-IN')}</span>
+                                                            </>
+                                                        )}
+                                                    </span>
+                                                    <div className="flex items-center gap-2">
+                                                        {product.tickets?.length > 0 ? (() => {
+                                                            const soldCount = ticketSoldMap[product._id] || 0;
+                                                            const totalCap = Number(product.tickets[0]?.capacity ?? 0);
+                                                            const remainingCap = Math.max(0, totalCap - soldCount);
+                                                            const isSoldOut = totalCap > 0 && remainingCap <= 0;
+
+                                                            return (
+                                                                <button
+                                                                    type="button"
+                                                                    disabled={isSoldOut}
+                                                                    onClick={() => {
+                                                                        if (isSoldOut) return;
+                                                                        const venueObj = {
+                                                                            _id: product._id,
+                                                                            name: product.name || selectedSeller?.shopName || selectedSeller?.name,
+                                                                            price: Number(product.tickets?.[0]?.salePrice || product.tickets?.[0]?.price || product.price || 1000),
+                                                                            sellerId: selectedSeller,
+                                                                            tickets: product.tickets || [],
+                                                                        };
+                                                                        navigate('/plan-my-event/booking', {
+                                                                            state: {
+                                                                                venue: venueObj,
+                                                                                selectedShop: selectedShop,
+                                                                                prefilledDate: activeDate || '',
+                                                                                prefilledTimeSlot: activeTime || ''
+                                                                            }
+                                                                        });
+                                                                    }}
+                                                                    className={`text-[11px] font-black uppercase tracking-wider px-4 py-2 rounded-xl transition-all flex items-center gap-1.5 ${isSoldOut
+                                                                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                                                                        : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md hover:opacity-95 active:scale-95'
+                                                                        }`}
+                                                                >
+                                                                    {isSoldOut ? 'Sold Out' : '🎟️ Book Tickets'}
+                                                                </button>
+                                                            );
+                                                        })() : isSelected ? (
+                                                            <div className="flex items-center gap-2 rounded-lg border border-purple-200 bg-purple-50 px-1.5 py-1">
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Remove one ${product.name}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const targetProduct = matchingSelected[0] || product;
+                                                                        handleProductQuantityChange(targetProduct, -1);
+                                                                    }}
+                                                                    className="flex h-7 w-7 items-center justify-center rounded-md bg-white text-purple-700 hover:bg-purple-100"
+                                                                >
+                                                                    <RemoveIcon fontSize="small" />
+                                                                </button>
+                                                                <span className="min-w-5 text-center text-xs font-black text-slate-800">{totalQuantity}</span>
+                                                                <button
+                                                                    type="button"
+                                                                    aria-label={`Add one ${product.name}`}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        const targetProduct = matchingSelected[0] || product;
+                                                                        handleProductQuantityChange(targetProduct, 1);
+                                                                    }}
+                                                                    className="flex h-7 w-7 items-center justify-center rounded-md bg-purple-600 text-white hover:bg-purple-700"
+                                                                >
+                                                                    <AddIcon fontSize="small" />
+                                                                </button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                type="button"
+                                                                onClick={() => {
+                                                                    if (product.variants?.length > 1 || product.hasAddOn || product.variants?.[0]?.hasAddOn) {
+                                                                        openProductGallery(product);
+                                                                    } else {
+                                                                        handleProductQuantityChange(product, 1);
+                                                                    }
+                                                                }}
+                                                                className="text-[10px] font-black uppercase tracking-wider px-3 py-1.5 rounded-lg border-2 bg-white border-slate-200 text-slate-600 hover:border-purple-500 hover:text-purple-600 transition-all"
+                                                            >
+                                                                Add Item
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    );
-                                })}
+                                        );
+                                    })}
                                 </div>
 
                                 {/* Dynamic Pagination for Products: 10 items per page */}
@@ -2102,7 +2175,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     </>
                                 )}
                                 <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Guests</span><span className="font-semibold">{activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {selectedSeller?.minGuestCapacity || 1}-{selectedSeller?.maxGuestCapacity || 500})</span>
+                                    {(() => {
+                                        const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
+                                        let minCap = selectedSeller?.minGuestCapacity;
+                                        let maxCap = selectedSeller?.maxGuestCapacity;
+                                        if (shops.length > 0) {
+                                            const validMins = shops.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
+                                            const validMaxs = shops.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
+                                            if (validMins.length > 0) minCap = Math.min(...validMins);
+                                            if (validMaxs.length > 0) maxCap = Math.max(...validMaxs);
+                                        }
+                                        return (
+                                            <>
+                                                <span>Guests</span>
+                                                <span className="font-semibold">
+                                                    {activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {minCap || 1}-{maxCap || 500})
+                                                </span>
+                                            </>
+                                        );
+                                    })()}
                                 </div>
                                 {selectedShop && (
                                     <div className="flex justify-between gap-4 text-purple-700 bg-purple-100/60 p-2 rounded-xl font-bold">
@@ -2116,12 +2207,20 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     const lineTotal = (pricing.baseUnitPrice * quantity) + pricing.totalAddOnExtra;
                                     const lineOriginalTotal = (pricing.originalPrice * quantity) + pricing.totalAddOnExtra;
                                     const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || pIdx;
+                                    const cap = getProductCapacityConfig(product, product.selectedVariant);
                                     return (
                                         <div key={`${product._id}-${variantKey}`} className="flex flex-col gap-0.5 text-slate-600">
                                             <div className="flex justify-between gap-4">
-                                                <span>
-                                                    {product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
-                                                </span>
+                                                <div className="flex flex-col">
+                                                    <span>
+                                                        {product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
+                                                    </span>
+                                                    {cap && selectedSeller?.capacityEnabled && (
+                                                        <span className="text-[10px] font-bold text-purple-700">
+                                                            👥 Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                        </span>
+                                                    )}
+                                                </div>
                                                 <span className="flex items-center gap-2 font-semibold">
                                                     {pricing.hasSalePrice && lineOriginalTotal > lineTotal && (
                                                         <span className="text-xs text-slate-400 line-through">₹{lineOriginalTotal.toLocaleString('en-IN')}</span>
@@ -2361,12 +2460,32 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             const isItemAdded = Boolean(selectedProductEntry);
                                             const itemQuantity = selectedProductEntry?.quantity || 0;
                                             const effectiveQty = itemQuantity || 1;
-                                            // When item is NOT added to selection, show the exact product price (same as outside card).
-                                            // When added to selection, show the multiplied total with add-ons.
-                                            const displayPrice = isItemAdded ? ((rawBasePrice * effectiveQty) + totalAddOnExtra) : rawBasePrice;
-                                            const displayOriginal = isItemAdded ? ((rawOriginal * effectiveQty) + totalAddOnExtra) : rawOriginal;
+                                            // Upar header price card: sirf base product price dikhao (add-ons NAHI)
+                                            // Not added: rawBasePrice; Added: rawBasePrice * qty (NO add-ons)
+                                            const displayPrice = isItemAdded ? (rawBasePrice * effectiveQty) : rawBasePrice;
+                                            const displayOriginal = isItemAdded ? (rawOriginal * effectiveQty) : rawOriginal;
+                                            // modalTotalAmount: full total with add-ons — sirf Total Breakdown box ke liye
                                             const modalTotalAmount = (rawBasePrice * effectiveQty) + totalAddOnExtra;
                                             const modalTotalOriginal = (rawOriginal * effectiveQty) + totalAddOnExtra;
+
+                                            // Combined total: is product ke SABHI variants jo add ho chuke hain (HALF + FULL dono)
+                                            // Current active variant ko exclude karo (uski value modalTotalAmount se lenge)
+                                            const otherVariantEntries = selectedProducts.filter(p =>
+                                                p._id === imagePreview.product?._id &&
+                                                (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') !== activeVariantKey
+                                            );
+                                            const otherVariantsTotal = otherVariantEntries.reduce((sum, p) => {
+                                                const qty = p.quantity || 1;
+                                                // Stored p.price = baseUnitPrice + addonPerUnit (addon is NOT per-unit, fix it)
+                                                const addonTotal = (p.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+                                                const storedUnitPrice = Number(p.price) || 0;
+                                                const baseUnitOnly = storedUnitPrice - addonTotal; // strip addon from unit price
+                                                const correctEntryTotal = (baseUnitOnly * qty) + addonTotal; // addon counted once only
+                                                return sum + correctEntryTotal;
+                                            }, 0);
+                                            // Grand combined total = current variant total + baaki sabhi added variants
+                                            const combinedProductTotal = otherVariantsTotal + modalTotalAmount;
+                                            const hasOtherVariants = otherVariantEntries.length > 0;
                                             return (
                                                 <>
                                                     {/* Top badges */}
@@ -2423,7 +2542,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 )}
                                                                 {isItemAdded ? (
                                                                     <span className="text-[10px] font-bold text-slate-500">
-                                                                        ({effectiveQty} × ₹{rawBasePrice.toLocaleString('en-IN')}{totalAddOnExtra > 0 ? ` + ₹${totalAddOnExtra.toLocaleString('en-IN')} Add-ons` : ''})
+                                                                        ({effectiveQty} × ₹{rawBasePrice.toLocaleString('en-IN')})
                                                                     </span>
                                                                 ) : hasAddOn && totalAddOnExtra > 0 ? (
                                                                     <span className="text-[10px] font-semibold text-purple-600">
@@ -2551,68 +2670,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 Add to Selection
                                                             </button>
                                                         )}
-                                                    </div>
-
-                                                    {/* Total Price / Add-ons Breakdown Box with View Details button (Placed right above Select Variant) */}
-                                                    <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-purple-50 p-3.5 shadow-sm flex items-center justify-between gap-3">
-                                                        <div className="flex flex-col gap-0.5">
-                                                            <span className="text-[10px] font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
-                                                                <span>✨</span> Total Price Breakdown
-                                                            </span>
-                                                            <div className="flex items-center gap-2 text-xs">
-                                                                <span className="text-base font-black text-purple-700">
-                                                                    ₹{modalTotalAmount.toLocaleString('en-IN')}
-                                                                </span>
-                                                                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
-                                                                    <span className="text-slate-700 font-bold">(Product: ₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')})</span>
-                                                                    {fixedExtra > 0 && <span className="text-emerald-600 font-bold">(Included: ₹{fixedExtra.toLocaleString('en-IN')})</span>}
-                                                                    {clickBoxExtra > 0 && <span className="text-purple-600 font-bold">(Optional: ₹{clickBoxExtra.toLocaleString('en-IN')})</span>}
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                        <button
-                                                            type="button"
-                                                            onClick={() => {
-                                                                // Sync current variant and add-ons selection into selectedProducts so Plan Summary shows latest values
-                                                                const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
-                                                                setSelectedProducts(prev => {
-                                                                    const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
-                                                                    if (existingIdx >= 0) {
-                                                                        const updated = [...prev];
-                                                                        updated[existingIdx] = {
-                                                                            ...updated[existingIdx],
-                                                                            selectedVariant: modalSelectedVariant,
-                                                                            selectedAddOns: combinedAppliedAddOns,
-                                                                            price: modalUnitPrice
-                                                                        };
-                                                                        return updated;
-                                                                    } else {
-                                                                        const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                        const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
-                                                                        return [
-                                                                            ...prev,
-                                                                            {
-                                                                                ...imagePreview.product,
-                                                                                quantity: initialQty,
-                                                                                selectedVariant: modalSelectedVariant,
-                                                                                selectedAddOns: combinedAppliedAddOns,
-                                                                                price: modalUnitPrice
-                                                                            }
-                                                                        ];
-                                                                    }
-                                                                });
-                                                                setImagePreview(null);
-                                                                setTimeout(() => {
-                                                                    const el = document.getElementById('plan-summary-section');
-                                                                    if (el) {
-                                                                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                                                                    }
-                                                                }, 100);
-                                                            }}
-                                                            className="px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm hover:opacity-95 active:scale-95 transition-all whitespace-nowrap"
-                                                        >
-                                                            View Details →
-                                                        </button>
                                                     </div>
 
                                                     {/* Variants Selection (if product has variants) */}
@@ -2776,6 +2833,82 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             )}
                                                         </div>
                                                     )}
+
+                                                    {/* Total Price / Add-ons Breakdown Box with View Details button (Above Brand/Ingredients) */}
+                                                    <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-purple-50 p-3.5 shadow-sm flex items-center justify-between gap-3">
+                                                        <div className="flex flex-col gap-0.5">
+                                                            <span className="text-[10px] font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                                                                <span>✨</span> Total Price Breakdown
+                                                            </span>
+                                                            <div className="flex items-center gap-2 text-xs">
+                                                                <span className="text-base font-black text-purple-700">
+                                                                    ₹{combinedProductTotal.toLocaleString('en-IN')}
+                                                                </span>
+                                                                <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
+                                                                    {/* Current variant breakdown */}
+                                                                    <span className="text-slate-700 font-bold">
+                                                                        ({modalSelectedVariant?.name && modalSelectedVariant.name !== 'default' ? `${modalSelectedVariant.name}: ` : ''}₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')}
+                                                                        {fixedExtra > 0 ? ` +₹${fixedExtra.toLocaleString('en-IN')}` : ''}
+                                                                        {clickBoxExtra > 0 ? ` +₹${clickBoxExtra.toLocaleString('en-IN')}` : ''})
+                                                                    </span>
+                                                                    {/* Other added variants breakdown */}
+                                                                    {hasOtherVariants && otherVariantEntries.map((p, idx) => {
+                                                                        const varLabel = p.selectedVariant?.name || p.selectedVariant?.sku || 'Other';
+                                                                        const addonAmt = (p.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+                                                                        const baseOnly = (Number(p.price) || 0) - addonAmt;
+                                                                        const varTotal = (baseOnly * (p.quantity || 1)) + addonAmt;
+                                                                        return (
+                                                                            <span key={idx} className="text-indigo-600 font-bold">
+                                                                                (+{varLabel}×{p.quantity}: ₹{varTotal.toLocaleString('en-IN')})
+                                                                            </span>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => {
+                                                                const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                                                setSelectedProducts(prev => {
+                                                                    const existingIdx = prev.findIndex(p => p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey);
+                                                                    if (existingIdx >= 0) {
+                                                                        const updated = [...prev];
+                                                                        updated[existingIdx] = {
+                                                                            ...updated[existingIdx],
+                                                                            selectedVariant: modalSelectedVariant,
+                                                                            selectedAddOns: combinedAppliedAddOns,
+                                                                            price: modalUnitPrice
+                                                                        };
+                                                                        return updated;
+                                                                    } else {
+                                                                        const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                        const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                                                                        return [
+                                                                            ...prev,
+                                                                            {
+                                                                                ...imagePreview.product,
+                                                                                quantity: initialQty,
+                                                                                selectedVariant: modalSelectedVariant,
+                                                                                selectedAddOns: combinedAppliedAddOns,
+                                                                                price: modalUnitPrice
+                                                                            }
+                                                                        ];
+                                                                    }
+                                                                });
+                                                                setImagePreview(null);
+                                                                setTimeout(() => {
+                                                                    const el = document.getElementById('plan-summary-section');
+                                                                    if (el) {
+                                                                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                                                    }
+                                                                }, 100);
+                                                            }}
+                                                            className="px-3.5 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-sm hover:opacity-95 active:scale-95 transition-all whitespace-nowrap"
+                                                        >
+                                                            View Details →
+                                                        </button>
+                                                    </div>
 
                                                     {/* Dynamic Brand Name & Ingredients for Selected Variant */}
                                                     {modalSelectedVariant && (modalSelectedVariant.brand || modalSelectedVariant.ingredients) && (

@@ -1610,8 +1610,7 @@ const EditProduct = () => {
                                     maximum: matchedShop?.maximum ?? 0,
                                     capacityType: matchedShop?.capacityType || "SHOP CAPECITY",
                                     totalCapacity: matchedShop?.totalCapacity ?? 0,
-                                    bookingType: matchedShop?.bookingType || "MULTIPLE",
-                                    ...(capVal > 0 ? { stock: String(capVal), hasStock: true } : {})
+                                    bookingType: matchedShop?.bookingType || "MULTIPLE"
                                   };
                                   return { ...prev, variants: updated };
                                 });

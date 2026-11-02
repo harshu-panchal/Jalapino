@@ -75,11 +75,6 @@ export const searchEventSellers = async (req, res) => {
 
     if (lat && lng) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(lat, lng);
-      const panIndiaSellerIds = await Product.distinct("sellerId", {
-        deliveryCoverage: "pan_india",
-        status: "active",
-        $or: [{ isDelivery: true }, { isService: true }, { isRental: true }],
-      });
       const zoneProductsSellerIds = await Product.distinct("sellerId", {
         deliveryCoverage: "zone_wise",
         status: "active",
@@ -93,7 +88,6 @@ export const searchEventSellers = async (req, res) => {
         .filter((id) => zonedSellerIds.includes(id));
       const eligibleSellerIds = [...new Set([
         ...nearbySellerIds,
-        ...panIndiaSellerIds,
         ...eligibleZoneSellerIds,
       ].map(String))];
       console.log("==== DEBUG: nearbySellerIds returned by getNearbySellerIdsForCustomer ====");

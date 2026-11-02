@@ -15,6 +15,7 @@ import axiosInstance from '@core/api/axios';
 import { useAuth } from '@core/context/AuthContext';
 import { customerApi } from '../../services/customerApi';
 import { useLocation as useAppLocation } from '../../context/LocationContext';
+import { toast } from 'sonner';
 /* ── category color map (same as EventCategoriesPage) ── */
 const getCategoryStyle = (name = '') => {
     const lower = name.toLowerCase();
@@ -37,6 +38,10 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
     const [loadingProd, setLoadingProd] = useState(true);
     const [currentBanner, setCurrentBanner] = useState(0);
     const [showBookingTip, setShowBookingTip] = useState(false);
+    const [prodPage, setProdPage] = useState(1);
+    const [totalProducts, setTotalProducts] = useState(0);
+    const [totalPages, setTotalPages] = useState(1);
+    const PRODS_PER_PAGE = 10;
 
     useEffect(() => {
         if (!seller.banners || seller.banners.length <= 1) return;
@@ -51,7 +56,12 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
         const fetchProducts = async () => {
             setLoadingProd(true);
             try {
-                const productParams = new URLSearchParams({ sellerId: seller._id, limit: '4', module: 'plan_my_event' });
+                const productParams = new URLSearchParams({
+                    sellerId: seller._id,
+                    page: String(prodPage),
+                    limit: String(PRODS_PER_PAGE),
+                    module: 'plan_my_event'
+                });
                 if (eventParams?.lat && eventParams?.lng) {
                     productParams.set('lat', eventParams.lat);
                     productParams.set('lng', eventParams.lng);
@@ -60,16 +70,27 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
                 const res = await axiosInstance.get(`/products?${productParams.toString()}`);
                 const responseData = res.data?.results || res.data?.result || res.data?.data || [];
                 const itemsArray = Array.isArray(responseData) ? responseData : (responseData.items || []);
-                if (!cancelled) setProducts(itemsArray.slice(0, 4));
+                const totalCount = res.data?.total || responseData?.total || (Array.isArray(responseData) ? responseData.length : (responseData.items ? responseData.total : 0)) || itemsArray.length;
+                const calcTotalPages = res.data?.totalPages || responseData?.totalPages || Math.ceil(totalCount / PRODS_PER_PAGE) || 1;
+
+                if (!cancelled) {
+                    setProducts(itemsArray);
+                    setTotalProducts(totalCount);
+                    setTotalPages(calcTotalPages);
+                }
             } catch {
-                if (!cancelled) setProducts([]);
+                if (!cancelled) {
+                    setProducts([]);
+                    setTotalProducts(0);
+                    setTotalPages(1);
+                }
             } finally {
                 if (!cancelled) setLoadingProd(false);
             }
         };
         fetchProducts();
         return () => { cancelled = true; };
-    }, [seller._id, eventParams?.lat, eventParams?.lng]);
+    }, [seller._id, eventParams?.lat, eventParams?.lng, prodPage]);
 
     const catStyle = getCategoryStyle(activeCategory?.name || '');
 
@@ -148,50 +169,107 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
             </div>
 
             {/* Products Row */}
-            <div className="px-4 py-3 flex-1">
+            <div className="px-4 py-3 flex-1 flex flex-col justify-between">
                 {loadingProd ? (
-                    <div className="flex items-center gap-2 py-2">
-                        <CircularProgress size={14} sx={{ color: '#8b5cf6' }} />
+                    <div className="flex items-center gap-2 py-4 justify-center">
+                        <CircularProgress size={16} sx={{ color: '#8b5cf6' }} />
                         <span className="text-[11px] text-slate-400">Loading products...</span>
                     </div>
                 ) : products.length === 0 ? (
-                    <p className="text-[11px] text-slate-400 py-1">No products listed yet.</p>
+                    <p className="text-[11px] text-slate-400 py-3 text-center">No products listed yet.</p>
                 ) : (
-                    <div className="grid grid-cols-2 gap-2">
-                        {products.map((product) => (
-                            <div
-                                key={product._id}
-                                className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-50 border border-slate-100"
-                            >
-                                <div className="w-9 h-9 rounded-lg overflow-hidden bg-slate-200 shrink-0">
-                                    {product.mainImage ? (
-                                        <img
-                                            src={resolveImageUrl(product.mainImage)}
-                                            alt={product.name}
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => { e.target.style.display = 'none'; }}
-                                        />
-                                    ) : (
-                                        <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">📦</div>
-                                    )}
+                    <>
+                        <div className="grid grid-cols-2 gap-2">
+                            {products.map((product) => (
+                                <div
+                                    key={product._id}
+                                    className="flex items-center gap-2 p-1.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-purple-200 transition-colors"
+                                >
+                                    <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 shrink-0">
+                                        {product.mainImage ? (
+                                            <img
+                                                src={resolveImageUrl(product.mainImage)}
+                                                alt={product.name}
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            <div className="w-full h-full flex items-center justify-center text-slate-400 text-xs">📦</div>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[11px] font-semibold text-slate-700 truncate leading-tight">{product.name}</p>
+                                        {product.price !== undefined && (
+                                            <p className="text-[11px] text-purple-600 font-bold">₹{product.price}</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="min-w-0 flex-1">
-                                    <p className="text-[10px] font-semibold text-slate-700 truncate leading-tight">{product.name}</p>
-                                    {product.price !== undefined && (
-                                        <p className="text-[10px] text-purple-600 font-bold">₹{product.price}</p>
-                                    )}
+                            ))}
+                        </div>
+
+                        {/* Pagination Bar for Products (1 to 10 on page 1, 11 to 20 on page 2) */}
+                        {totalPages > 1 && (
+                            <div
+                                onClick={(e) => e.stopPropagation()}
+                                className="flex items-center justify-between pt-2.5 mt-2 border-t border-slate-100/80 text-[11px]"
+                            >
+                                <span className="text-slate-400 font-medium">
+                                    {((prodPage - 1) * PRODS_PER_PAGE) + 1}–{Math.min(prodPage * PRODS_PER_PAGE, totalProducts || (products.length + ((prodPage - 1) * PRODS_PER_PAGE)))} of {totalProducts || 'many'}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        type="button"
+                                        disabled={prodPage <= 1 || loadingProd}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setProdPage(p => Math.max(1, p - 1));
+                                        }}
+                                        className="px-2 py-0.5 rounded-md border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span className="px-1.5 py-0.5 font-bold text-purple-700 bg-purple-50 rounded border border-purple-200">
+                                        {prodPage}/{totalPages}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        disabled={prodPage >= totalPages || loadingProd}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setProdPage(p => Math.min(totalPages, p + 1));
+                                        }}
+                                        className="px-2 py-0.5 rounded-md border border-slate-200 text-slate-600 font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                        Next
+                                    </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        )}
+                    </>
                 )}
             </div>
 
             {/* Footer CTA */}
             <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[11px] text-slate-500 font-medium">
-                    Cap: {seller.minGuestCapacity || 1} - {seller.maxGuestCapacity || '—'} guests
-                </span>
+                {(() => {
+                    // Check shopsAtLocation for true minimum & maximum if available
+                    const shops = Array.isArray(seller.shopsAtLocation) ? seller.shopsAtLocation : [];
+                    let minCap = seller.minGuestCapacity;
+                    let maxCap = seller.maxGuestCapacity;
+
+                    if (shops.length > 0) {
+                        const validMins = shops.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
+                        const validMaxs = shops.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
+                        if (validMins.length > 0) minCap = Math.min(...validMins);
+                        if (validMaxs.length > 0) maxCap = Math.max(...validMaxs);
+                    }
+
+                    return (
+                        <span className="text-[11px] text-slate-500 font-medium">
+                            Cap: {minCap || 1} - {maxCap || '—'} guests
+                        </span>
+                    );
+                })()}
                 <span className="text-[11px] font-bold text-purple-600 flex items-center gap-1">
                     View Details <ArrowForwardIosIcon sx={{ fontSize: 10 }} />
                 </span>
@@ -576,14 +654,16 @@ const PlanMyEventPage = () => {
     useEffect(() => {
         // Prioritize function location if entered, then city-level search, then global location name
         const searchLoc = eventInfo.functionLocation || currentLocation?.city || currentLocation?.name;
-        // Use eventInfo coordinates (from Google Autocomplete) if available,
-        // otherwise fallback to currentLocation coordinates (latitude/longitude from LocationContext)
-        const lat = eventInfo.lat || currentLocation?.latitude;
-        const lng = eventInfo.lng || currentLocation?.longitude;
+        // If user manually changed or entered a functionLocation without picking a new Google place,
+        // do NOT send the old header location's GPS coordinates (which would force Patna results for Indore text).
+        // Only send lat/lng if functionLocation matches header location or was set from Google Autocomplete for that address.
+        const isHeaderLocation = !eventInfo.functionLocation || eventInfo.functionLocation === currentLocation?.name || eventInfo.functionLocation === currentLocation?.city;
+        const lat = eventInfo.lat || (isHeaderLocation ? currentLocation?.latitude : undefined);
+        const lng = eventInfo.lng || (isHeaderLocation ? currentLocation?.longitude : undefined);
         fetchSellers(activeCategory, filterDate, filterTime, searchLoc, lat, lng);
         // Reset booking data when filters change
         setSellerBookings({});
-    }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, currentLocation, fetchSellers]);
+    }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, eventInfo.lat, eventInfo.lng, currentLocation, fetchSellers]);
 
     useEffect(() => {
         if (!activeCategory && !selectedSellerDetail) {
@@ -736,6 +816,77 @@ const PlanMyEventPage = () => {
     const displayedCats = activeCategory ? [activeCategory] : filteredCats;
 
     const handleSellerSelect = (seller) => {
+        // Validate that top Event Filters (Date, Time, Event Type) are filled if enabled for this category
+        if (showAnyDateFilter) {
+            if (!selectedType) {
+                toast.error("Please select an Event Type.");
+                return;
+            }
+            if (!filterDate && (!filterMultipleDates || filterMultipleDates.length === 0)) {
+                toast.error("Please select an Event Date.");
+                return;
+            }
+            if (!filterTime && (!filterMultipleDates || filterMultipleDates.length === 0)) {
+                toast.error("Please select an Event Time.");
+                return;
+            }
+        }
+
+        // Validate that enabled "Your Event Details" are filled before viewing details
+        if (activeCategory && activeCategory.showEventDetailsForm !== false) {
+            if (eventInfo.bookingType === 'individual' && (activeCategory.primaryContactEnabled || seller.primaryContactEnabled)) {
+                if (!eventInfo.primaryContactName?.trim() && !eventInfo.name?.trim()) {
+                    toast.error("Please enter Primary Contact name.");
+                    return;
+                }
+                if (!eventInfo.gender) {
+                    toast.error("Please select Gender.");
+                    return;
+                }
+                if (!eventInfo.dateOfBirth) {
+                    toast.error("Please select Date of Birth.");
+                    return;
+                }
+            } else if (eventInfo.bookingType === 'couple' && (activeCategory.coupleContactEnabled || seller.coupleContactEnabled)) {
+                if (!eventInfo.coupleNames?.trim()) {
+                    toast.error("Please enter Couple / Partner name.");
+                    return;
+                }
+                if (!eventInfo.anniversaryDate) {
+                    toast.error("Please select Anniversary Date.");
+                    return;
+                }
+            } else if (eventInfo.bookingType === 'corporate' && (activeCategory.corporateContactEnabled || seller.corporateContactEnabled)) {
+                if (!eventInfo.corporateCompanyName?.trim()) {
+                    toast.error("Please enter Company Name.");
+                    return;
+                }
+                if (!eventInfo.corporateContactPerson?.trim()) {
+                    toast.error("Please enter Contact Person name.");
+                    return;
+                }
+                if (!eventInfo.corporateMobile?.trim()) {
+                    toast.error("Please enter Mobile Number.");
+                    return;
+                }
+            }
+
+            if ((activeCategory.functionLocationEnabled || seller.functionLocationEnabled) && !eventInfo.functionLocation?.trim()) {
+                toast.error("Please enter Function Location.");
+                return;
+            }
+
+            if ((activeCategory.sellerLocationEnabled || seller.sellerLocationEnabled) && !eventInfo.sellerLocation?.trim()) {
+                toast.error("Please enter Seller Location.");
+                return;
+            }
+
+            if ((activeCategory.showNoOfGuestsBox || activeCategory.noOfGuestsEnabled || seller.noOfGuestsEnabled) && !eventInfo.noOfGuests) {
+                toast.error("Please enter Number of Guests.");
+                return;
+            }
+        }
+
         setSelectedSellerDetail(seller);
     };
 

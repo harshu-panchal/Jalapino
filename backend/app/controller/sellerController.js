@@ -354,12 +354,14 @@ export const updateSellerProfile = async (req, res) => {
           let prodCapTotal = 0;
           let hasProdCap = false;
           let shopCapMax = 0;
+          let shopCapMin = 0;
           let hasShopCap = false;
 
           seller.shopsAtLocation.forEach(s => {
             const isProd = String(s.capacityType || '').trim().toUpperCase() === 'PRODUCT CAPECITY';
             const capVal = Number(s.totalCapacity ?? s.maximum ?? 0);
             const maxVal = Number(s.maximum ?? 0);
+            const minVal = Number(s.minimum ?? 0);
             const rowVal = capVal || maxVal || 0;
 
             if (isProd) {
@@ -368,6 +370,9 @@ export const updateSellerProfile = async (req, res) => {
             } else {
               hasShopCap = true;
               if (rowVal > shopCapMax) shopCapMax = rowVal;
+              if (minVal > 0 && (shopCapMin === 0 || minVal < shopCapMin)) {
+                shopCapMin = minVal;
+              }
             }
           });
 
@@ -376,6 +381,9 @@ export const updateSellerProfile = async (req, res) => {
           }
           if (hasShopCap) {
             seller.maxGuestCapacity = shopCapMax;
+            if (shopCapMin > 0) {
+              seller.minGuestCapacity = shopCapMin;
+            }
           }
         }
       } catch (e) {

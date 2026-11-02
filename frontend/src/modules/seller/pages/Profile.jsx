@@ -83,12 +83,14 @@ const SellerProfile = () => {
     let prodCapTotal = 0;
     let hasProdCap = false;
     let shopCapMax = 0;
+    let shopCapMin = 0;
     let hasShopCap = false;
 
     // For each row, row capacity is its maximum
     const updatedShops = shops.map(s => {
       const isProd = String(s.capacityType || '').trim().toUpperCase() === 'PRODUCT CAPECITY';
       const maxVal = Number(s.maximum ?? 0);
+      const minVal = Number(s.minimum ?? 0);
       const rowTotal = maxVal > 0 ? maxVal : (Number(s.totalCapacity) || 0);
 
       if (isProd) {
@@ -98,6 +100,9 @@ const SellerProfile = () => {
         hasShopCap = true;
         if (rowTotal > shopCapMax) {
           shopCapMax = rowTotal; // Store capacity: only the maximum of all store rows (e.g. max of 500 & 50 is 500)
+        }
+        if (minVal > 0 && (shopCapMin === 0 || minVal < shopCapMin)) {
+          shopCapMin = minVal;
         }
       }
 
@@ -113,6 +118,9 @@ const SellerProfile = () => {
     }
     if (hasShopCap) {
       updates.maxGuestCapacity = shopCapMax;
+      if (shopCapMin > 0) {
+        updates.minGuestCapacity = shopCapMin;
+      }
     }
     return updates;
   };
