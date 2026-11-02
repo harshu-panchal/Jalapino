@@ -397,6 +397,9 @@ export const completeEventBooking = async (req, res) => {
         }
 
         booking.overallStatus = 'COMPLETED';
+        if (!booking.completedAt) {
+            booking.completedAt = new Date();
+        }
         await booking.save();
 
         // Fetch GASP Pricing Engine setting for default commission
@@ -555,6 +558,107 @@ export const getSellerBookedSlots = async (req, res) => {
         return handleResponse(res, 200, "Booked slots fetched successfully", {
             bookedSlots: Array.from(bookedSlots)
         });
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+// Submit Rating & Review for Event Booking (Customer reviewing Seller)
+export const submitEventBookingReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { rating, review } = req.body;
+        const customerId = req.user.id || req.user._id;
+
+        const numRating = Number(rating);
+        if (!numRating || numRating < 1 || numRating > 5) {
+            return handleResponse(res, 400, "Rating must be between 1 and 5 stars");
+        }
+
+        const booking = await EventBooking.findById(id);
+        if (!booking) {
+            return handleResponse(res, 404, "Booking not found");
+        }
+
+        // Verify ownership
+        if (booking.customer?.toString() !== customerId?.toString()) {
+            return handleResponse(res, 403, "Unauthorized to review this booking");
+        }
+
+        if (booking.overallStatus !== 'COMPLETED') {
+            return handleResponse(res, 400, "Reviews can only be submitted for COMPLETED events");
+        }
+
+        booking.sellerRating = numRating;
+        booking.sellerReview = String(review || '').trim();
+        booking.sellerReviewedAt = new Date();
+
+        // Also update service ratings
+        if (Array.isArray(booking.services) && booking.services.length > 0) {
+            booking.services.forEach(service => {
+                service.rating = numRating;
+                if (review) service.review = String(review).trim();
+            });
+        }
+
+        await booking.save();
+
+        // Dynamically update seller rating in DB
+        try {
+            const Seller = await import('../models/seller.js').then(m => m.default);
+            for (const s of booking.services) {
+                if (s.seller) {
+                    const sellerDoc = await Seller.findById(s.seller);
+                    if (sellerDoc) {
+                        const currentTotalRatings = Number(sellerDoc.totalRatings || sellerDoc.reviewsCount || 0);
+                        const currentAvg = Number(sellerDoc.rating || 0);
+                        const newTotal = currentTotalRatings + 1;
+                        const newAvg = Number(((currentAvg * currentTotalRatings + numRating) / newTotal).toFixed(1));
+
+                        sellerDoc.rating = newAvg;
+                        sellerDoc.totalRatings = newTotal;
+                        sellerDoc.reviewsCount = newTotal;
+                        await sellerDoc.save();
+
+                        // Emit real-time notification to the seller
+                        const { emitSellerNotification } = await import('../modules/notifications/notification.service.js');
+                        const { NOTIFICATION_EVENTS } = await import('../modules/notifications/notification.constants.js');
+                        emitSellerNotification(NOTIFICATION_EVENTS.EVENT_REVIEW_REMINDER, {
+                            userId: s.seller,
+                            bookingId: booking._id,
+                            title: "New Customer Review Received!",
+                            message: `Customer rated your service with ${numRating}⭐: "${String(review || 'Great service!').slice(0, 80)}"`,
+                            data: {
+                              rating: numRating,
+                              bookingId: booking._id
+                            }
+                        });
+                    }
+                }
+            }
+        } catch (sellerErr) {
+            console.error("Error updating seller rating:", sellerErr);
+        }
+
+        return handleResponse(res, 200, "Review submitted successfully", {
+            sellerRating: booking.sellerRating,
+            sellerReview: booking.sellerReview,
+            sellerReviewedAt: booking.sellerReviewedAt
+        });
+    } catch (error) {
+        return handleResponse(res, 500, error.message);
+    }
+};
+
+// Get Event Booking Review
+export const getEventBookingReview = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const booking = await EventBooking.findById(id).select('bookingId sellerRating sellerReview sellerReviewedAt services overallStatus');
+        if (!booking) {
+            return handleResponse(res, 404, "Booking not found");
+        }
+        return handleResponse(res, 200, "Review details fetched successfully", booking);
     } catch (error) {
         return handleResponse(res, 500, error.message);
     }

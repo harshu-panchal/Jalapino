@@ -1,4 +1,5 @@
 import LiveKitchen from "../models/liveKitchen.js";
+import Seller from "../models/seller.js";
 import { handleResponse } from "../utils/helper.js";
 import fs from "fs";
 
@@ -9,6 +10,11 @@ export const updateStreamUrl = async (req, res) => {
     try {
         const { streamUrl, orderId } = req.body;
         const sellerId = req.user.id; // assuming seller authentication middleware is applied
+
+        const seller = await Seller.findById(sellerId).select('liveKitchenEnabled liveServicesEnabled').lean();
+        if (!seller || (!seller.liveKitchenEnabled && !seller.liveServicesEnabled)) {
+            return handleResponse(res, 403, "Live kitchen feature is not enabled for your account by Admin");
+        }
 
         let liveKitchen = await LiveKitchen.findOne({ sellerId, orderId: orderId || null });
         
@@ -91,6 +97,12 @@ export const addPhotoUpdate = async (req, res) => {
 export const getLiveKitchenStatus = async (req, res) => {
     try {
         const { sellerId, orderId } = req.params;
+
+        const seller = await Seller.findById(sellerId).select('liveKitchenEnabled liveServicesEnabled').lean();
+        if (!seller || (!seller.liveKitchenEnabled && !seller.liveServicesEnabled)) {
+            return handleResponse(res, 404, "Live kitchen is not enabled for this seller");
+        }
+
         const query = { sellerId, isActive: true, isCustomerVisible: true };
         
         if (orderId) {
@@ -116,7 +128,12 @@ export const getLiveKitchenStatus = async (req, res) => {
 // @access  Public
 export const getPublicLiveStreams = async (req, res) => {
     try {
-        const query = { isActive: true, isCustomerVisible: true, streamUrl: { $ne: "" } };
+        const enabledSellers = await Seller.find({
+            $or: [{ liveKitchenEnabled: true }, { liveServicesEnabled: true }]
+        }).select('_id').lean();
+        const enabledIds = enabledSellers.map(s => s._id);
+
+        const query = { sellerId: { $in: enabledIds }, isActive: true, isCustomerVisible: true, streamUrl: { $ne: "" } };
         
         let liveKitchens = await LiveKitchen.find(query)
             .sort({ updatedAt: -1 })

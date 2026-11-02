@@ -124,6 +124,8 @@ export const customerApi = {
   getEventBookingDetails: (id) => axiosInstance.get(`/events/${id}`),
   getAlternativeSellers: (bookingId, categoryId) => axiosInstance.get(`/events/${bookingId}/alternative-sellers/${categoryId}`),
   reassignSeller: (bookingId, data) => axiosInstance.put(`/events/${bookingId}/reassign-seller`, data),
+  submitEventBookingReview: (id, data) => axiosInstance.post(`/events/${id}/review`, data),
+  getEventBookingReview: (id) => axiosInstance.get(`/events/${id}/review`),
   
   // Venue Visits
   createVenueVisitRequests: (data) => axiosInstance.post("/venues/visit-requests", data),

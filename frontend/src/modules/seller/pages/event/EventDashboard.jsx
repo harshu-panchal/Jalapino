@@ -128,7 +128,10 @@ const EventDashboard = () => {
                                         </p>
                                     </div>
                                     <button
-                                        onClick={() => navigate('/seller/reservations')}
+                                        onClick={() => {
+                                            sessionStorage.setItem('openReservationId', req._id);
+                                            navigate(`/seller/reservations?id=${req._id}`);
+                                        }}
                                         className="px-5 py-2 bg-slate-100 text-slate-700 font-bold rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-slate-200"
                                     >
                                         Manage

@@ -1063,29 +1063,23 @@ const SellerProfile = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
-                <div className="space-y-3">
-                  <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
-                    Physical Payment Enabled
-                  </label>
-                  <div className="flex items-center">
-                    <label className="relative inline-flex items-center cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="sr-only peer"
-                        checked={formData.physicalPaymentEnabled}
-                        disabled={!isEditing}
-                        onChange={(e) => setFormData({ ...formData, physicalPaymentEnabled: e.target.checked })}
-                      />
-                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-slate-900"></div>
-                    </label>
-                    <span className="text-xs font-bold text-slate-500 ml-3">
-                      {formData.physicalPaymentEnabled ? "ON" : "OFF"}
-                    </span>
+              {/* Physical Payment Settings: Only shown in profile IF Admin has enabled it for this seller */}
+              {Boolean(profile?.physicalPaymentEnabled) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 pt-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                        Physical Payment
+                      </label>
+                      <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                        Enabled by Admin
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      Admin has enabled physical / QR payment for your shop. Customers can pay physically at your venue or scan your QR code.
+                    </p>
                   </div>
-                </div>
 
-                {formData.physicalPaymentEnabled && (
                   <div className="space-y-3">
                     <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
                       Payment QR Code / Barcode Link
@@ -1105,8 +1099,42 @@ const SellerProfile = () => {
                       </div>
                     )}
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
+              {/* Optional Add-on Services: Only shown in profile IF Admin has enabled them for this seller */}
+              {(Boolean(profile?.addonDecorationEnabled) || Boolean(profile?.addonBridalEnabled) || Boolean(profile?.addonCateringEnabled)) && (
+                <div className="border-t border-slate-100 pt-6 mt-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                      Optional Add-on Services
+                    </label>
+                    <span className="text-[10px] font-bold text-brand-700 bg-brand-50 px-2.5 py-0.5 rounded-full border border-brand-200">
+                      Enabled by Admin
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {Boolean(profile?.addonDecorationEnabled) && (
+                      <div className="bg-purple-50/60 border border-purple-200 rounded-xl p-3.5">
+                        <span className="text-[10px] font-bold text-purple-600 uppercase block">Decoration Add-on</span>
+                        <span className="text-sm font-black text-purple-900">+₹{profile.addonDecorationPrice || 0}</span>
+                      </div>
+                    )}
+                    {Boolean(profile?.addonBridalEnabled) && (
+                      <div className="bg-pink-50/60 border border-pink-200 rounded-xl p-3.5">
+                        <span className="text-[10px] font-bold text-pink-600 uppercase block">Bridal Add-on</span>
+                        <span className="text-sm font-black text-pink-900">+₹{profile.addonBridalPrice || 0}</span>
+                      </div>
+                    )}
+                    {Boolean(profile?.addonCateringEnabled) && (
+                      <div className="bg-amber-50/60 border border-amber-200 rounded-xl p-3.5">
+                        <span className="text-[10px] font-bold text-amber-600 uppercase block">Catering Add-on</span>
+                        <span className="text-sm font-black text-amber-900">+₹{profile.addonCateringPrice || 0}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </form>
           </Card>
 

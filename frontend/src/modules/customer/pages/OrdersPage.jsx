@@ -1,18 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation as useRouterLocation } from 'react-router-dom';
-import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle, CreditCard } from 'lucide-react';
+import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle, CreditCard, Star } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
 import { useSettings } from '@/core/context/SettingsContext';
 import { toast } from 'sonner';
 import { useLocation } from '../context/LocationContext';
+import { useCustomerMode } from '../context/CustomerModeContext';
 
 const OrdersPage = () => {
     const navigate = useNavigate();
     const routerLocation = useRouterLocation();
     const { settings } = useSettings();
-    const { currentLocation } = useLocation();
+    const { currentLocation, availableModules } = useLocation();
+    const { toggleMode } = useCustomerMode();
 
     // Check if a specific tab was requested via route state or URL params (e.g., /orders?tab=events)
     const queryTab = new URLSearchParams(routerLocation.search).get('tab');
@@ -28,9 +30,24 @@ const OrdersPage = () => {
         }
     }, [routerLocation.state, queryTab]);
 
+    // Determine enabled tabs based on current location DB settings & platform settings
+    const isRetailVisible = availableModules ? Boolean(availableModules.retailEnabled && settings?.platformControl?.retailEnabled !== false) : true;
+    const isWholesaleVisible = availableModules ? Boolean(availableModules.wholesaleEnabled && settings?.platformControl?.wholesaleEnabled !== false) : false;
+    const isEventsVisible = availableModules ? Boolean(availableModules.planMyEventEnabled && settings?.platformControl?.planMyEventEnabled !== false) : true;
+
+    // Auto-select valid active tab if current active tab is not visible in current location
     useEffect(() => {
-        sessionStorage.setItem('jalapino_orders_tab', activeTab);
-    }, [activeTab]);
+        if (activeTab === 'retail' && !isRetailVisible) {
+            if (isWholesaleVisible) setActiveTab('wholesale');
+            else if (isEventsVisible) setActiveTab('events');
+        } else if (activeTab === 'wholesale' && !isWholesaleVisible) {
+            if (isRetailVisible) setActiveTab('retail');
+            else if (isEventsVisible) setActiveTab('events');
+        } else if (activeTab === 'events' && !isEventsVisible) {
+            if (isRetailVisible) setActiveTab('retail');
+            else if (isWholesaleVisible) setActiveTab('wholesale');
+        }
+    }, [activeTab, isRetailVisible, isWholesaleVisible, isEventsVisible]);
     const [orders, setOrders] = useState([]);
     const [eventBookings, setEventBookings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -67,6 +84,75 @@ const OrdersPage = () => {
     // Support Ticket State
     const [ticketModalOpen, setTicketModalOpen] = useState(false);
     const [ticketFormData, setTicketFormData] = useState({ subject: '', category: 'booking', description: '', priority: 'medium' });
+
+    // Event Seller Review States
+    const [reviewModalOpen, setReviewModalOpen] = useState(false);
+    const [selectedReviewBooking, setSelectedReviewBooking] = useState(null);
+    const [reviewRating, setReviewRating] = useState(5);
+    const [reviewHoverRating, setReviewHoverRating] = useState(0);
+    const [reviewText, setReviewText] = useState('');
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+    // Auto-open review modal if reviewBookingId in query params
+    const reviewBookingId = new URLSearchParams(routerLocation.search).get('reviewBookingId');
+    useEffect(() => {
+        if (reviewBookingId && eventBookings.length > 0) {
+            const targetBooking = eventBookings.find(b => String(b._id) === String(reviewBookingId));
+            if (targetBooking) {
+                setActiveTab('events');
+                setSelectedReviewBooking(targetBooking);
+                setReviewRating(targetBooking.sellerRating || 5);
+                setReviewText(targetBooking.sellerReview || '');
+                setReviewModalOpen(true);
+            }
+        }
+    }, [reviewBookingId, eventBookings]);
+
+    const handleOpenReviewModal = (booking) => {
+        setSelectedReviewBooking(booking);
+        setReviewRating(booking.sellerRating || 5);
+        setReviewText(booking.sellerReview || '');
+        setReviewModalOpen(true);
+    };
+
+    const handleSubmitReview = async (e) => {
+        e?.preventDefault();
+        if (!selectedReviewBooking) return;
+        if (!reviewRating || reviewRating < 1 || reviewRating > 5) {
+            return toast.error("Please select a rating between 1 and 5 stars");
+        }
+        setIsSubmittingReview(true);
+        toast.loading("Submitting review...", { id: 'review' });
+        try {
+            const res = await customerApi.submitEventBookingReview(selectedReviewBooking._id, {
+                rating: reviewRating,
+                review: reviewText
+            });
+            if (res.data?.success) {
+                toast.success("Thank you! Your review has been saved in database.", { id: 'review' });
+                setEventBookings(prev => prev.map(b => {
+                    if (b._id === selectedReviewBooking._id) {
+                        return {
+                            ...b,
+                            sellerRating: reviewRating,
+                            sellerReview: reviewText,
+                            sellerReviewedAt: new Date()
+                        };
+                    }
+                    return b;
+                }));
+                setReviewModalOpen(false);
+                setSelectedReviewBooking(null);
+            } else {
+                toast.error(res.data?.message || "Failed to submit review", { id: 'review' });
+            }
+        } catch (err) {
+            console.error("Submit review error:", err);
+            toast.error(err.response?.data?.message || "Failed to submit review", { id: 'review' });
+        } finally {
+            setIsSubmittingReview(false);
+        }
+    };
 
     useEffect(() => {
         const fetchOrders = async () => {
@@ -308,7 +394,17 @@ const OrdersPage = () => {
                 className="sticky top-0 z-30 px-4 py-3 flex items-center gap-2 mb-4 shadow-[0_8px_32px_rgba(0,0,0,0.12)]"
             >
                 <button
-                    onClick={() => navigate(-1)}
+                    onClick={() => {
+                        if (activeTab === 'events') {
+                            navigate('/plan-my-event');
+                        } else if (activeTab === 'wholesale') {
+                            if (toggleMode) toggleMode('whole');
+                            navigate('/');
+                        } else {
+                            if (toggleMode) toggleMode('retail');
+                            navigate('/');
+                        }
+                    }}
                     className="w-10 h-10 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors -ml-1"
                 >
                     <ChevronLeft size={22} className="text-white" />
@@ -317,24 +413,30 @@ const OrdersPage = () => {
             </div>
 
             <div className="flex bg-white px-4 pt-2 border-b border-slate-100 mb-4 shadow-sm sticky top-[64px] z-20">
-                <button 
-                    onClick={() => setActiveTab('retail')}
-                    className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-colors ${activeTab === 'retail' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
-                >
-                    Retail
-                </button>
-                <button 
-                    onClick={() => setActiveTab('wholesale')}
-                    className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-colors ${activeTab === 'wholesale' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
-                >
-                    Wholesale
-                </button>
-                <button 
-                    onClick={() => setActiveTab('events')}
-                    className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-colors ${activeTab === 'events' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
-                >
-                    Events
-                </button>
+                {isRetailVisible && (
+                    <button 
+                        onClick={() => setActiveTab('retail')}
+                        className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-colors ${activeTab === 'retail' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
+                    >
+                        Retail
+                    </button>
+                )}
+                {isWholesaleVisible && (
+                    <button 
+                        onClick={() => setActiveTab('wholesale')}
+                        className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-colors ${activeTab === 'wholesale' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
+                    >
+                        Wholesale
+                    </button>
+                )}
+                {isEventsVisible && (
+                    <button 
+                        onClick={() => setActiveTab('events')}
+                        className={`flex-1 py-3 text-[13px] font-bold border-b-2 transition-colors ${activeTab === 'events' ? 'border-brand-600 text-brand-600' : 'border-transparent text-slate-500'}`}
+                    >
+                        Events
+                    </button>
+                )}
             </div>
 
             <div className="space-y-4 px-4 pb-2">
@@ -559,16 +661,21 @@ const OrdersPage = () => {
                             key={booking._id}
                             className="block bg-white rounded-2xl px-4 py-3.5 shadow-[0_8px_24px_rgba(15,23,42,0.06)] border border-slate-100/80 mb-4"
                         >
-                            <div className="flex justify-between items-start mb-3">
-                                <div>
-                                    <h3 className="font-bold text-slate-900 capitalize text-sm">
-                                        {booking.eventType} Event
-                                    </h3>
+                            <div className="flex justify-between items-start mb-3 gap-2">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                                        <h3 className="font-bold text-slate-900 capitalize text-sm">
+                                            {booking.eventType} Event
+                                        </h3>
+                                        <span className="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded-md">
+                                            Order ID: #{booking.bookingId || booking._id}
+                                        </span>
+                                    </div>
                                     <p className="text-xs text-slate-500 mt-0.5">
                                         {new Date(booking.eventDate).toLocaleDateString()} at {booking.eventTime}
                                     </p>
                                 </div>
-                                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase ${booking.overallStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}>
+                                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase shrink-0 ${booking.overallStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}>
                                     {booking.overallStatus || booking.status}
                                 </span>
                             </div>
@@ -666,6 +773,32 @@ const OrdersPage = () => {
                                             <CreditCard size={14} /> 
                                             Pay Remaining ₹{(booking.totalAmount - Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100)).toLocaleString()} Online
                                         </button>
+                                    )}
+
+                                    {booking.overallStatus === 'COMPLETED' && (
+                                        <div className="w-full mb-1">
+                                            {booking.sellerRating ? (
+                                                <div className="bg-amber-50/80 border border-amber-200/70 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                                                    <div className="flex items-center gap-1.5 text-amber-800 font-bold">
+                                                        <Star size={15} className="fill-amber-400 text-amber-500" />
+                                                        <span>Your Review: {booking.sellerRating}/5 Stars</span>
+                                                    </div>
+                                                    {booking.sellerReview && (
+                                                        <span className="text-slate-600 truncate max-w-[200px] text-[11px] italic" title={booking.sellerReview}>
+                                                            "{booking.sellerReview}"
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <button
+                                                    onClick={() => handleOpenReviewModal(booking)}
+                                                    className="w-full flex items-center justify-center gap-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-amber-200"
+                                                >
+                                                    <Star size={14} className="fill-white" />
+                                                    Rate & Review Seller
+                                                </button>
+                                            )}
+                                        </div>
                                     )}
                                     <button 
                                         onClick={() => handleEditClick(booking)}

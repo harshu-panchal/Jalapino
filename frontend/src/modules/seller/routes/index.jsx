@@ -192,6 +192,10 @@ const SellerRoutes = () => {
     activeNavItems = activeNavItems.filter(item => !['Physical Visits'].includes(item.label));
   }
 
+  if (user?.liveKitchenEnabled !== true && user?.liveServicesEnabled !== true) {
+    activeNavItems = activeNavItems.filter(item => !['Go Live'].includes(item.label));
+  }
+
   return (
     <DashboardLayout navItems={activeNavItems} title={isEventSeller && !isRetailEnabled ? "Event Management" : isRetailEnabled && !isEventSeller ? "Seller Panel" : "Seller & Event Dashboard"}>
       <Routes>
@@ -251,7 +255,9 @@ const SellerRoutes = () => {
         <Route path="/booking-management" element={<BookingManagement />} />
         <Route path="/visit-requests" element={<SellerVisitManagement />} />
         <Route path="/scanner" element={<QRScannerView />} />
-        <Route path="/live" element={<LiveStream />} />
+        {(user?.liveKitchenEnabled === true || user?.liveServicesEnabled === true) && (
+          <Route path="/live" element={<LiveStream />} />
+        )}
         <Route path="/video-subscriptions" element={<VideoSubscriptions />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />

@@ -37,6 +37,7 @@ export const getEventDashboardStats = async (req, res) => {
             if (sellerService) {
                 if (sellerService.status === 'ACCEPTED') mappedStatus = 'confirmed';
                 if (sellerService.status === 'REJECTED') mappedStatus = 'rejected';
+                if (sellerService.status === 'COMPLETED') mappedStatus = 'completed';
             }
 
             return {
@@ -79,6 +80,7 @@ export const getEventReservations = async (req, res) => {
             if (sellerService) {
                 if (sellerService.status === 'ACCEPTED') mappedStatus = 'confirmed';
                 if (sellerService.status === 'REJECTED') mappedStatus = 'rejected';
+                if (sellerService.status === 'COMPLETED') mappedStatus = 'completed';
             }
 
             // Convert preferences array to object for the frontend modal
@@ -92,6 +94,12 @@ export const getEventReservations = async (req, res) => {
             const eventInfo = booking.eventInfo || {};
             const contactName = eventInfo.primaryContactName || eventInfo.name || (eventInfo.bookingType === 'corporate' ? (eventInfo.corporateCompanyName || eventInfo.corporateContactPerson) : eventInfo.coupleNames) || booking.customer?.name || "Customer";
             const contactPhone = eventInfo.primaryPhone || eventInfo.corporateMobile || booking.customer?.phone || "";
+
+            const totalAmount = booking.totalAmount || (sellerService ? sellerService.amount : 0);
+            const advancePercentage = (booking.advancePaymentPercentage && booking.advancePaymentPercentage > 0) ? booking.advancePaymentPercentage : 30;
+            const advanceAmount = (booking.advancePaymentAmount !== undefined && booking.advancePaymentAmount !== null && Number(booking.advancePaymentAmount) > 0)
+                ? booking.advancePaymentAmount
+                : Math.round((Number(totalAmount || 0) * advancePercentage) / 100);
 
             return {
                 _id: booking._id,
@@ -110,12 +118,19 @@ export const getEventReservations = async (req, res) => {
                 location: booking.location,
                 eventInfo: booking.eventInfo || {},
                 selectedProducts: booking.selectedProducts || [],
-                advancePaymentAmount: booking.advancePaymentAmount,
-                advancePaymentPercentage: booking.advancePaymentPercentage,
+                advancePaymentAmount: advanceAmount,
+                advancePaymentPercentage: advancePercentage,
+                paymentStatus: booking.paymentStatus || 'PENDING',
+                paymentMode: booking.paymentMode || 'COD',
+                overallStatus: booking.overallStatus || 'PENDING',
                 multipleEvents: booking.multipleEvents || [],
                 customerPreferences: customerPreferences,
+                sellerRating: booking.sellerRating || sellerService?.rating || 0,
+                sellerReview: booking.sellerReview || sellerService?.review || '',
+                sellerReviewedAt: booking.sellerReviewedAt || null,
                 createdAt: booking.createdAt,
-                amount: booking.totalAmount || (sellerService ? sellerService.amount : 0)
+                amount: totalAmount,
+                totalAmount: totalAmount
             };
         });
 
@@ -187,6 +202,9 @@ export const updateReservationStatus = async (req, res) => {
                 } catch (e) { console.log('Notification error', e) }
             } else if (newStatus === 'COMPLETED') {
                 booking.overallStatus = allCompleted ? 'COMPLETED' : 'IN_PROGRESS';
+                if (allCompleted && !booking.completedAt) {
+                    booking.completedAt = new Date();
+                }
 
                 if (allCompleted && booking.paymentStatus === 'ADVANCE_PAID') {
                     try {
@@ -293,5 +311,33 @@ export const updateReservationStatus = async (req, res) => {
     } catch (error) {
         console.error('Error updating reservation status:', error);
         return handleResponse(res, 500, 'Failed to update reservation status');
+    }
+};
+
+// Confirm COD payment by seller
+export const confirmCODPayment = async (req, res) => {
+    try {
+        const sellerId = req.user.sellerId || req.user.id;
+        const { id } = req.params;
+
+        const booking = await EventBooking.findOne({ _id: id, "services.seller": sellerId });
+        if (!booking) {
+            return handleResponse(res, 404, 'Reservation not found');
+        }
+
+        booking.paymentStatus = 'PAID';
+        if (booking.overallStatus === 'PENDING' || booking.overallStatus === 'PAYMENT_PENDING') {
+            booking.overallStatus = 'CONFIRMED';
+        }
+        await booking.save();
+
+        return handleResponse(res, 200, 'COD payment confirmed successfully', {
+            _id: booking._id,
+            paymentStatus: booking.paymentStatus,
+            overallStatus: booking.overallStatus
+        });
+    } catch (error) {
+        console.error('Error confirming COD payment:', error);
+        return handleResponse(res, 500, 'Failed to confirm COD payment');
     }
 };

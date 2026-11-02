@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { customerApi } from '../../services/customerApi';
 import { useSettings } from '@core/context/SettingsContext';
+import { useAuth } from '@core/context/AuthContext';
 
 const CHECKOUT_STATE_KEY = 'jalapino_plan_event_checkout';
 
@@ -65,6 +66,7 @@ const EventCheckoutPage = () => {
     const state = routeState || readSavedCheckoutState();
     const navigate = useNavigate();
     const { settings } = useSettings();
+    const { user, isAuthenticated } = useAuth();
     const eventData = state?.eventData;
     const preferences = state?.preferences;
     const selectedCategories = state?.selectedCategories;
@@ -100,6 +102,12 @@ const EventCheckoutPage = () => {
     const totalAmount = baseAmount + selectedProductsSubtotal;
 
     const handleSendRequest = async () => {
+        if (!isAuthenticated && !user) {
+            toast.error("Please login or signup first to send request.");
+            navigate('/login', { state: { from: '/plan-my-event/checkout' } });
+            return;
+        }
+
         setIsSending(true);
         toast.loading("Sending Request to Providers...", { id: 'booking' });
         try {
@@ -128,7 +136,12 @@ const EventCheckoutPage = () => {
             toast.success("Request Sent! Awaiting Seller Approval.", { id: 'booking' });
             navigate('/orders?tab=events', { state: { tab: 'events' } }); // Go to orders page with Events tab active
         } catch (error) {
-            const apiMessage = error?.response?.data?.message || "Failed to send request.";
+            const status = error?.response?.status;
+            let apiMessage = error?.response?.data?.message || "Failed to send request.";
+            if (status === 401 || apiMessage.toLowerCase().includes('unauthorized') || apiMessage.toLowerCase().includes('token')) {
+                apiMessage = "Please login or signup first.";
+                navigate('/login', { state: { from: '/plan-my-event/checkout' } });
+            }
             toast.error(apiMessage, { id: 'booking' });
             setIsSending(false);
         }
@@ -214,7 +227,9 @@ const EventCheckoutPage = () => {
 
                                     {displayLocation && (
                                         <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">📍 Function Location</span>
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
+                                                {info.serviceLocationType === 'seller' ? '🏢 Seller Location' : '📍 Function Location'}
+                                            </span>
                                             <span className="font-semibold text-slate-800">{displayLocation}</span>
                                         </div>
                                     )}

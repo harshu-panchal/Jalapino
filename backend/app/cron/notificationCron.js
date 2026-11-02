@@ -75,10 +75,31 @@ const runDailyNotificationChecks = async () => {
     }
 };
 
-// Run everyday at 10:00 AM
+// Run everyday at 10:00 AM, and check 8-10h event reviews every 15 minutes
 export const initNotificationCron = () => {
     cron.schedule("0 10 * * *", () => {
         runDailyNotificationChecks();
     });
-    console.log("[CRON] Notification Cron Initialized.");
+
+    // Run 8-10h event review notification check every 15 minutes
+    cron.schedule("*/15 * * * *", async () => {
+        try {
+            const { processEventReviewNotifications } = await import("../jobs/eventReviewNotificationJob.js");
+            await processEventReviewNotifications();
+        } catch (e) {
+            console.error("[CRON] Error running event review notification check:", e);
+        }
+    });
+
+    // Initial check on boot after 10 seconds
+    setTimeout(async () => {
+        try {
+            const { processEventReviewNotifications } = await import("../jobs/eventReviewNotificationJob.js");
+            await processEventReviewNotifications();
+        } catch (e) {
+            // silent on initial boot
+        }
+    }, 10000);
+
+    console.log("[CRON] Notification Cron Initialized (including 8-10h Event Review Checks).");
 };

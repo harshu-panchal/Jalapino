@@ -457,7 +457,8 @@ function eventData(eventType, payload = {}, role) {
     eventType === NOTIFICATION_EVENTS.NEW_EVENT_BOOKING_REQUEST ||
     eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_APPROVED ||
     eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REJECTED ||
-    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE ||
+    eventType === NOTIFICATION_EVENTS.EVENT_REVIEW_REMINDER
   ) {
     const bookingId = String(payload.bookingId || "").trim() || undefined;
     const baseUrl = getFrontendBaseUrl();

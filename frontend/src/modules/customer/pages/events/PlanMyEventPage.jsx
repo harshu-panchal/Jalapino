@@ -359,6 +359,7 @@ const PlanMyEventPage = () => {
     /* — event info form (name / gender / dob / functionLocation) — */
     const [eventInfo, setEventInfo] = useState({
         bookingType: 'individual',
+        serviceLocationType: 'function', // 'function' or 'seller'
         name: '',
         gender: '',
         dateOfBirth: '',
@@ -441,7 +442,7 @@ const PlanMyEventPage = () => {
             multipleEvents: filterMultipleDates,
             remarks: filterRemarks || (filterMultipleDates.length > 0 ? filterMultipleDates[0]?.remarks : ''),
             guestCount: eventInfo.noOfGuests || 1,
-            location: eventInfo.functionLocation || '',
+            location: (eventInfo.serviceLocationType === 'seller' ? eventInfo.sellerLocation : eventInfo.functionLocation) || eventInfo.functionLocation || eventInfo.sellerLocation || '',
             lat: eventInfo.lat || currentLocation?.latitude,
             lng: eventInfo.lng || currentLocation?.longitude,
             eventInfo: eventInfo,
@@ -816,77 +817,9 @@ const PlanMyEventPage = () => {
     const displayedCats = activeCategory ? [activeCategory] : filteredCats;
 
     const handleSellerSelect = (seller) => {
-        // Validate that top Event Filters (Date, Time, Event Type) are filled if enabled for this category
-        if (showAnyDateFilter) {
-            if (!selectedType) {
-                toast.error("Please select an Event Type.");
-                return;
-            }
-            if (!filterDate && (!filterMultipleDates || filterMultipleDates.length === 0)) {
-                toast.error("Please select an Event Date.");
-                return;
-            }
-            if (!filterTime && (!filterMultipleDates || filterMultipleDates.length === 0)) {
-                toast.error("Please select an Event Time.");
-                return;
-            }
-        }
-
-        // Validate that enabled "Your Event Details" are filled before viewing details
-        if (activeCategory && activeCategory.showEventDetailsForm !== false) {
-            if (eventInfo.bookingType === 'individual' && (activeCategory.primaryContactEnabled || seller.primaryContactEnabled)) {
-                if (!eventInfo.primaryContactName?.trim() && !eventInfo.name?.trim()) {
-                    toast.error("Please enter Primary Contact name.");
-                    return;
-                }
-                if (!eventInfo.gender) {
-                    toast.error("Please select Gender.");
-                    return;
-                }
-                if (!eventInfo.dateOfBirth) {
-                    toast.error("Please select Date of Birth.");
-                    return;
-                }
-            } else if (eventInfo.bookingType === 'couple' && (activeCategory.coupleContactEnabled || seller.coupleContactEnabled)) {
-                if (!eventInfo.coupleNames?.trim()) {
-                    toast.error("Please enter Couple / Partner name.");
-                    return;
-                }
-                if (!eventInfo.anniversaryDate) {
-                    toast.error("Please select Anniversary Date.");
-                    return;
-                }
-            } else if (eventInfo.bookingType === 'corporate' && (activeCategory.corporateContactEnabled || seller.corporateContactEnabled)) {
-                if (!eventInfo.corporateCompanyName?.trim()) {
-                    toast.error("Please enter Company Name.");
-                    return;
-                }
-                if (!eventInfo.corporateContactPerson?.trim()) {
-                    toast.error("Please enter Contact Person name.");
-                    return;
-                }
-                if (!eventInfo.corporateMobile?.trim()) {
-                    toast.error("Please enter Mobile Number.");
-                    return;
-                }
-            }
-
-            if ((activeCategory.functionLocationEnabled || seller.functionLocationEnabled) && !eventInfo.functionLocation?.trim()) {
-                toast.error("Please enter Function Location.");
-                return;
-            }
-
-            if ((activeCategory.sellerLocationEnabled || seller.sellerLocationEnabled) && !eventInfo.sellerLocation?.trim()) {
-                toast.error("Please enter Seller Location.");
-                return;
-            }
-
-            if ((activeCategory.showNoOfGuestsBox || activeCategory.noOfGuestsEnabled || seller.noOfGuestsEnabled) && !eventInfo.noOfGuests) {
-                toast.error("Please enter Number of Guests.");
-                return;
-            }
-        }
-
+        // Allow user to open and browse the seller details & products.
+        // Complete validation of Date, Time, Event Type, Contact Info, Location, Guests,
+        // and Product Selection is enforced when clicking "View Details" on the Plan Summary.
         setSelectedSellerDetail(seller);
     };
 
@@ -1450,32 +1383,88 @@ const PlanMyEventPage = () => {
                                                 </div>
                                             )}
 
-                                            {(relevantCats.some(c => c.functionLocationEnabled) || filteredSellers.some(s => s.functionLocationEnabled)) && (
-                                                <div className="flex flex-col gap-1">
-                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
-                                                    <input
-                                                        ref={locationInputRef}
-                                                        type="text"
-                                                        value={eventInfo.functionLocation}
-                                                        onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
-                                                        placeholder="City / Venue area"
-                                                        className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
-                                                    />
-                                                </div>
-                                            )}
+                                            {(() => {
+                                                const hasFunc = Boolean(relevantCats.some(c => c.functionLocationEnabled) || filteredSellers.some(s => s.functionLocationEnabled));
+                                                const hasSeller = Boolean(relevantCats.some(c => c.sellerLocationEnabled) || filteredSellers.some(s => s.sellerLocationEnabled));
 
-                                            {(relevantCats.some(c => c.sellerLocationEnabled) || filteredSellers.some(s => s.sellerLocationEnabled)) && (
-                                                <div className="flex flex-col gap-1">
-                                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Seller Location</label>
-                                                    <input
-                                                        type="text"
-                                                        value={eventInfo.sellerLocation}
-                                                        onChange={e => handleEventInfoChange('sellerLocation', e.target.value)}
-                                                        placeholder="Seller's city/area"
-                                                        className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
-                                                    />
-                                                </div>
-                                            )}
+                                                if (hasFunc && hasSeller) {
+                                                    const activeLocType = eventInfo.serviceLocationType || 'function';
+                                                    return (
+                                                        <div className="flex flex-col gap-1 sm:col-span-2">
+                                                            <div className="flex items-center justify-between">
+                                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                                                                    Service Location Preference
+                                                                </label>
+                                                                <div className="flex items-center gap-1 bg-purple-50 p-0.5 rounded-lg border border-purple-100">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleEventInfoChange('serviceLocationType', 'function')}
+                                                                        className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${activeLocType === 'function' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                                    >
+                                                                        📍 Function Location
+                                                                    </button>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleEventInfoChange('serviceLocationType', 'seller')}
+                                                                        className={`px-2 py-0.5 rounded text-[10px] font-black transition-all ${activeLocType === 'seller' ? 'bg-purple-600 text-white shadow-sm' : 'text-purple-600 hover:bg-purple-100'}`}
+                                                                    >
+                                                                        🏢 Seller Location
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                            {activeLocType === 'function' ? (
+                                                                <input
+                                                                    ref={locationInputRef}
+                                                                    type="text"
+                                                                    value={eventInfo.functionLocation}
+                                                                    onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
+                                                                    placeholder="City / Venue area for event"
+                                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                                />
+                                                            ) : (
+                                                                <input
+                                                                    type="text"
+                                                                    value={eventInfo.sellerLocation}
+                                                                    onChange={e => handleEventInfoChange('sellerLocation', e.target.value)}
+                                                                    placeholder="Seller's city/area or shop address"
+                                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                                />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }
+
+                                                return (
+                                                    <>
+                                                        {hasFunc && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Function Location</label>
+                                                                <input
+                                                                    ref={locationInputRef}
+                                                                    type="text"
+                                                                    value={eventInfo.functionLocation}
+                                                                    onChange={e => handleEventInfoChange('functionLocation', e.target.value)}
+                                                                    placeholder="City / Venue area"
+                                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                                />
+                                                            </div>
+                                                        )}
+
+                                                        {hasSeller && (
+                                                            <div className="flex flex-col gap-1">
+                                                                <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">📍 Seller Location</label>
+                                                                <input
+                                                                    type="text"
+                                                                    value={eventInfo.sellerLocation}
+                                                                    onChange={e => handleEventInfoChange('sellerLocation', e.target.value)}
+                                                                    placeholder="Seller's city/area"
+                                                                    className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400 placeholder:text-slate-300"
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                );
+                                            })()}
                                         </div>
                                     </div>
                                 </div>

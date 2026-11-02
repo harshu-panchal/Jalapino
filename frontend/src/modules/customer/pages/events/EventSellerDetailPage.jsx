@@ -721,10 +721,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const getProductCapacityConfig = (product, variant) => {
         if (!selectedSeller?.capacityEnabled) return null;
         const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
-        const variantCode = variant?.uniqueCode || product?.uniqueCode;
-        const matchedShop = shops.find(s => s.uniqueCode && variantCode && s.uniqueCode === variantCode)
-            || shops.find(s => String(s.shopNo) === String(variant?.shopNo || product?.shopNo))
-            || shops[0];
+        const variantCode = (variant?.uniqueCode || product?.uniqueCode || '').trim();
+        const variantShopNo = variant?.shopNo || product?.shopNo;
+
+        // If this product / variant does NOT have a uniqueCode or shopNo assigned by the seller,
+        // it does NOT have shop capacity configured. Return null!
+        if (!variantCode && !variantShopNo) {
+            return null;
+        }
+
+        const matchedShop = shops.find(s => s.uniqueCode && variantCode && s.uniqueCode.toUpperCase() === variantCode.toUpperCase())
+            || shops.find(s => variantShopNo && String(s.shopNo) === String(variantShopNo));
 
         const minimum = Number(variant?.minimum ?? product?.minimum ?? matchedShop?.minimum ?? 0);
         const maximum = Number(variant?.maximum ?? product?.maximum ?? matchedShop?.maximum ?? 0);
@@ -733,15 +740,39 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         const bookingType = String(variant?.bookingType || product?.bookingType || matchedShop?.bookingType || 'MULTIPLE').toUpperCase();
         const capacityType = String(variant?.capacityType || product?.capacityType || matchedShop?.capacityType || 'SHOP CAPECITY').toUpperCase();
 
+        if (!matchedShop && minimum === 0 && maxLimit === 0) {
+            return null;
+        }
+
         return {
             enabled: true,
             minimum: minimum > 0 ? minimum : 1,
             maximum: maxLimit,
             bookingType,
             capacityType,
-            uniqueCode: variantCode || matchedShop?.uniqueCode || ''
+            uniqueCode: variantCode || matchedShop?.uniqueCode || '',
+            shopNo: variantShopNo || matchedShop?.shopNo || '',
+            matchedShop: matchedShop || null
         };
     };
+
+    // Automatically derive selectedShop from selectedProducts that have a shop attached
+    const activeSelectedShop = React.useMemo(() => {
+        if (!selectedSeller?.capacityEnabled) return null;
+        const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
+        if (shops.length === 0) return null;
+
+        for (const p of selectedProducts) {
+            const cap = getProductCapacityConfig(p, p.selectedVariant || p.variants?.[0]);
+            if (cap && (cap.uniqueCode || cap.shopNo)) {
+                const found = shops.find(s => s.uniqueCode && cap.uniqueCode && s.uniqueCode.toUpperCase() === cap.uniqueCode.toUpperCase())
+                    || shops.find(s => cap.shopNo && String(s.shopNo) === String(cap.shopNo));
+                if (found) return found;
+                if (cap.matchedShop) return cap.matchedShop;
+            }
+        }
+        return selectedShop || null;
+    }, [selectedProducts, selectedSeller?.capacityEnabled, selectedSeller?.shopsAtLocation, selectedShop]);
 
     const getFixedAddOnsForProduct = (product, variant) => {
         const activeVariant = variant || product?.selectedVariant || product?.variants?.[0];
@@ -871,6 +902,48 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const handleProceed = () => {
+        // 1. Mandatory check: At least one product or service must be selected
+        const selectedProductItems = (selectedProducts || []).filter(p => !p.tickets || p.tickets.length === 0);
+        const totalItemsCount = selectedProductItems.reduce((acc, p) => acc + (Number(p.quantity) || 0), 0);
+        const hasSelectedProducts = totalItemsCount > 0 || (selectedProducts && selectedProducts.length > 0) || selectedProductsSubtotal > 0;
+
+        if (!hasSelectedProducts) {
+            toast.error("Please select at least one product or service.");
+            const productsEl = document.getElementById('products-section') || document.getElementById('plan-summary-section');
+            if (productsEl) {
+                productsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            return;
+        }
+
+        // 2. Mandatory check: Event Type must be selected
+        const resolvedEventType = allEventTypes?.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || eventData?.eventType;
+        if (!resolvedEventType || resolvedEventType === 'Not selected' || !String(resolvedEventType).trim()) {
+            toast.error("Please select an Event Type.");
+            const el = document.getElementById('event-filter-section') || document.querySelector('select');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // 3. Mandatory check: Event Date must be selected
+        const resolvedDate = activeDate || eventData?.date || (activeMultipleDates?.[0]?.date) || '';
+        if (!resolvedDate && (!activeMultipleDates || activeMultipleDates.length === 0)) {
+            toast.error("Please select an Event Date.");
+            const el = document.getElementById('event-filter-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // 4. Mandatory check: Event Time must be selected
+        const resolvedTime = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
+        if (!resolvedTime && (!activeMultipleDates || activeMultipleDates.length === 0)) {
+            toast.error("Please select an Event Time.");
+            const el = document.getElementById('event-filter-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        // 5. Seller closed & advance booking notice rules
         if (isCurrentDateClosed) {
             toast.error(`Shop is closed on ${activeDate}. Please select another date.`);
             return;
@@ -884,72 +957,136 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             return;
         }
 
-        // Mandatory check for Event Type, Date & Time if enabled
-        if (showAnyDateFilter) {
-            if (!activeEventType) {
-                toast.error("Please select an Event Type.");
-                return;
-            }
-            if (!activeDate && (!activeMultipleDates || activeMultipleDates.length === 0)) {
-                toast.error("Please select an Event Date.");
-                return;
-            }
-            if (!activeTime && (!activeMultipleDates || activeMultipleDates.length === 0)) {
-                toast.error("Please select an Event Time.");
-                return;
-            }
-        }
-
-        // Mandatory checks for "Your Event Details" fields that are enabled by Category or Seller
-        if (effectiveBookingType === 'individual' && isPrimaryContactEnabled) {
-            if (!activeEventInfo.primaryContactName?.trim() && !activeEventInfo.name?.trim()) {
+        // 6. Mandatory checks for Event Details (Contact Person, Gender, DOB / Anniversary / Corporate)
+        if (effectiveBookingType === 'individual') {
+            const contactName = activeEventInfo?.primaryContactName?.trim() || activeEventInfo?.name?.trim() || eventData?.eventInfo?.primaryContactName?.trim() || eventData?.eventInfo?.name?.trim();
+            if (!contactName) {
                 toast.error("Please enter Primary Contact name.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            if (!activeEventInfo.gender) {
+            const gender = activeEventInfo?.gender || eventData?.eventInfo?.gender;
+            if (!gender) {
                 toast.error("Please select Gender.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            if (!activeEventInfo.dateOfBirth) {
+            const dob = activeEventInfo?.dateOfBirth || eventData?.eventInfo?.dateOfBirth;
+            if (!dob) {
                 toast.error("Please select Date of Birth.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-        } else if (effectiveBookingType === 'couple' && isCoupleContactEnabled) {
-            if (!activeEventInfo.groomName?.trim() && !activeEventInfo.partner1Name?.trim() && !activeEventInfo.coupleNames?.trim()) {
+        } else if (effectiveBookingType === 'couple') {
+            const coupleNames = activeEventInfo?.groomName?.trim() || activeEventInfo?.partner1Name?.trim() || activeEventInfo?.coupleNames?.trim() || eventData?.eventInfo?.coupleNames?.trim();
+            if (!coupleNames) {
                 toast.error("Please enter Couple / Partner name.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            if (!activeEventInfo.anniversaryDate) {
+            const annivDate = activeEventInfo?.anniversaryDate || eventData?.eventInfo?.anniversaryDate;
+            if (!annivDate) {
                 toast.error("Please select Anniversary Date.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-        } else if (effectiveBookingType === 'corporate' && isCorporateContactEnabled) {
-            if (!activeEventInfo.companyName?.trim() && !activeEventInfo.corporateCompanyName?.trim()) {
+        } else if (effectiveBookingType === 'corporate') {
+            const companyName = activeEventInfo?.companyName?.trim() || activeEventInfo?.corporateCompanyName?.trim() || eventData?.eventInfo?.corporateCompanyName?.trim();
+            if (!companyName) {
                 toast.error("Please enter Company Name.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            if (!activeEventInfo.corporateContactPerson?.trim()) {
+            const person = activeEventInfo?.corporateContactPerson?.trim() || eventData?.eventInfo?.corporateContactPerson?.trim();
+            if (!person) {
                 toast.error("Please enter Contact Person name.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
-            if (!activeEventInfo.corporateMobile?.trim()) {
+            const mobile = activeEventInfo?.corporateMobile?.trim() || eventData?.eventInfo?.corporateMobile?.trim();
+            if (!mobile) {
                 toast.error("Please enter Mobile Number.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
             }
         }
 
-        if (isFunctionLocationEnabled && !activeEventInfo.functionLocation?.trim()) {
+        // 7. Location check (Function Location or Seller Location)
+        const chosenType = activeEventInfo?.serviceLocationType || 'function';
+        const funcLoc = activeEventInfo?.functionLocation?.trim() || eventData?.location?.trim();
+        const sellerLoc = activeEventInfo?.sellerLocation?.trim();
+
+        if (isFunctionLocationEnabled && isSellerLocationEnabled) {
+            if (chosenType === 'function' && !funcLoc) {
+                toast.error("Please enter Function Location.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+            if (chosenType === 'seller' && !sellerLoc) {
+                toast.error("Please enter Seller Location.");
+                const el = document.getElementById('event-details-section');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return;
+            }
+        } else if (isFunctionLocationEnabled && !funcLoc) {
             toast.error("Please enter Function Location.");
+            const el = document.getElementById('event-details-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
-        }
-
-        if (isSellerLocationEnabled && !activeEventInfo.sellerLocation?.trim()) {
+        } else if (isSellerLocationEnabled && !sellerLoc) {
             toast.error("Please enter Seller Location.");
+            const el = document.getElementById('event-details-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        } else if (!funcLoc && !sellerLoc) {
+            toast.error("Please enter Function Location.");
+            const el = document.getElementById('event-details-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 
-        if (isNoOfGuestsEnabled && !activeEventInfo.noOfGuests) {
+        // 8. Number of Guests & Capacity check
+        const guestVal = Number(activeEventInfo?.noOfGuests || eventData?.guestCount || 0);
+        if (!guestVal || isNaN(guestVal) || guestVal <= 0) {
             toast.error("Please enter Number of Guests.");
+            const el = document.getElementById('event-details-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+
+        const currentShop = activeSelectedShop || selectedShop;
+        let minCap = currentShop ? Number(currentShop.minimum) : null;
+        let maxCap = currentShop ? Number(currentShop.maximum || currentShop.totalCapacity) : null;
+
+        if (!minCap && !maxCap && selectedSeller?.capacityEnabled) {
+            const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
+            if (shops.length > 0) {
+                const validMins = shops.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
+                const validMaxs = shops.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
+                if (validMins.length > 0) minCap = Math.min(...validMins);
+                if (validMaxs.length > 0) maxCap = Math.max(...validMaxs);
+            }
+        }
+
+        if (minCap && guestVal < Number(minCap)) {
+            toast.error(`Number of guests must be at least ${minCap} (Limit: ${minCap}-${maxCap || 'Max'}).`);
+            const el = document.getElementById('event-details-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+        if (maxCap && guestVal > Number(maxCap)) {
+            toast.error(`Number of guests cannot exceed ${maxCap} (Limit: ${minCap || 1}-${maxCap}).`);
+            const el = document.getElementById('event-details-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
             return;
         }
 
@@ -971,9 +1108,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
         };
 
-        const resolvedEventType = allEventTypes?.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || eventData?.eventType || '';
-        const resolvedDate = activeDate || eventData?.date || (activeMultipleDates?.[0]?.date) || '';
-        const resolvedTime = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
         const resolvedRemarks = activeRemarks || eventData?.remarks || (activeMultipleDates?.[0]?.remarks) || '';
 
         const updatedEventData = {
@@ -984,7 +1118,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             remarks: resolvedRemarks,
             multipleEvents: activeMultipleDates.length > 0 ? activeMultipleDates : eventData?.multipleEvents || [],
             guestCount: Number(activeEventInfo.noOfGuests || eventData?.guestCount || 1),
-            location: activeEventInfo.functionLocation || eventData?.location || '',
+            location: (activeEventInfo.serviceLocationType === 'seller' ? activeEventInfo.sellerLocation : activeEventInfo.functionLocation) || activeEventInfo.functionLocation || activeEventInfo.sellerLocation || eventData?.location || '',
             eventInfo: activeEventInfo,
         };
 
@@ -994,7 +1128,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             preferences: collectedPreferences,
             selectedCategories,
             selectedSeller,
-            selectedShop,
+            selectedShop: activeSelectedShop || selectedShop,
             selectedProducts: selectedProducts.filter(p => !p.tickets || p.tickets.length === 0),
         };
         try {
@@ -1067,6 +1201,32 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                         </div>
                     )}
 
+                    {/* Admin Enabled Features (Physical Payment & Add-on Badges) */}
+                    {(selectedSeller?.physicalPaymentEnabled || selectedSeller?.addonDecorationEnabled || selectedSeller?.addonBridalEnabled || selectedSeller?.addonCateringEnabled) && (
+                        <div className="flex items-center gap-2 flex-wrap mt-2.5">
+                            {selectedSeller?.physicalPaymentEnabled && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500/25 text-emerald-100 border border-emerald-400/30 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                                    💳 Physical / QR Payment Available
+                                </span>
+                            )}
+                            {selectedSeller?.addonDecorationEnabled && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-purple-500/25 text-purple-100 border border-purple-400/30 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                                    ✨ Decoration Add-on (+₹{selectedSeller.addonDecorationPrice || 0})
+                                </span>
+                            )}
+                            {selectedSeller?.addonBridalEnabled && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-pink-500/25 text-pink-100 border border-pink-400/30 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                                    👰 Bridal Add-on (+₹{selectedSeller.addonBridalPrice || 0})
+                                </span>
+                            )}
+                            {selectedSeller?.addonCateringEnabled && (
+                                <span className="inline-flex items-center gap-1 text-[10px] font-bold bg-amber-500/25 text-amber-100 border border-amber-400/30 px-2.5 py-1 rounded-full backdrop-blur-sm">
+                                    🍽️ Catering Add-on (+₹{selectedSeller.addonCateringPrice || 0})
+                                </span>
+                            )}
+                        </div>
+                    )}
+
                     <div className="mt-5 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 max-w-2xl">
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-300">About Us / Description</h3>
                         <p className="text-sm mt-1 leading-relaxed text-white/95 font-medium">
@@ -1084,7 +1244,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                     {/* ─── DATE & TIME FILTERS (Seller & Service Category Driven) ─── */}
                     {showAnyDateFilter && (
-                        <div className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 shadow-sm space-y-3">
+                        <div id="event-filter-section" className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 shadow-sm space-y-3">
                             {selectedSeller?.advanceBookingBufferEnabled && (selectedSeller?.advanceBookingBuffer > 0 || selectedSeller?.advanceBookingBufferAfter > 0) && (
                                 <div className="flex flex-wrap items-center justify-between gap-2 bg-amber-100/70 border border-amber-300/80 px-3.5 py-2 rounded-2xl">
                                     <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
@@ -1337,7 +1497,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
                     {/* ─── EVENT DETAILS FORM (Seller & Service Category Driven) ─── */}
                     {isEventDetailsEnabled && (
-                        <div className="bg-white rounded-3xl border border-purple-100 shadow-sm p-6">
+                        <div id="event-details-section" className="bg-white rounded-3xl border border-purple-100 shadow-sm p-6">
                             <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
                                 <div className="flex flex-wrap items-center gap-3">
                                     <h3 className="text-xs font-black text-purple-700 uppercase tracking-wider flex items-center gap-1.5">
@@ -1525,7 +1685,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     )}
 
                     {/* Products Grid */}
-                    <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
+                    <div id="products-section" className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm space-y-6">
 
 
                         <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider mb-4">
@@ -1756,7 +1916,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         navigate('/plan-my-event/booking', {
                                                                             state: {
                                                                                 venue: venueObj,
-                                                                                selectedShop: selectedShop,
+                                                                                selectedShop: activeSelectedShop || selectedShop,
                                                                                 prefilledDate: activeDate || '',
                                                                                 prefilledTimeSlot: activeTime || ''
                                                                             }
@@ -2176,12 +2336,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 )}
                                 <div className="flex justify-between gap-4 text-slate-600">
                                     {(() => {
-                                        const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
-                                        let minCap = selectedSeller?.minGuestCapacity;
-                                        let maxCap = selectedSeller?.maxGuestCapacity;
-                                        if (shops.length > 0) {
-                                            const validMins = shops.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
-                                            const validMaxs = shops.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
+                                        const currentShop = activeSelectedShop || selectedShop;
+                                        let minCap = currentShop ? Number(currentShop.minimum) : null;
+                                        let maxCap = currentShop ? Number(currentShop.maximum || currentShop.totalCapacity) : null;
+                                        if (!minCap && !maxCap && Array.isArray(selectedSeller?.shopsAtLocation) && selectedSeller.shopsAtLocation.length > 0) {
+                                            const validMins = selectedSeller.shopsAtLocation.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
+                                            const validMaxs = selectedSeller.shopsAtLocation.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
                                             if (validMins.length > 0) minCap = Math.min(...validMins);
                                             if (validMaxs.length > 0) maxCap = Math.max(...validMaxs);
                                         }
@@ -2189,16 +2349,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             <>
                                                 <span>Guests</span>
                                                 <span className="font-semibold">
-                                                    {activeEventInfo?.noOfGuests || eventData?.guestCount || 1} (Limit: {minCap || 1}-{maxCap || 500})
+                                                    {activeEventInfo?.noOfGuests || eventData?.guestCount || 1} {minCap || maxCap ? `(Limit: ${minCap || 1}-${maxCap || 'Max'})` : ''}
                                                 </span>
                                             </>
                                         );
                                     })()}
                                 </div>
-                                {selectedShop && (
+                                {(activeSelectedShop || selectedShop) && (
                                     <div className="flex justify-between gap-4 text-purple-700 bg-purple-100/60 p-2 rounded-xl font-bold">
                                         <span>📍 Selected Shop / Area</span>
-                                        <span>{selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`} ({selectedShop.bookingType || 'MULTIPLE'})</span>
+                                        <span>{(activeSelectedShop || selectedShop).uniqueCode || `Shop ${(activeSelectedShop || selectedShop).shopNo}`} ({(activeSelectedShop || selectedShop).bookingType || 'MULTIPLE'})</span>
                                     </div>
                                 )}
                                 {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map((product, pIdx) => {

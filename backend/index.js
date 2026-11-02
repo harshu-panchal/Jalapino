@@ -49,6 +49,11 @@ import {
   getDocumentExpiryNotificationJobHandler,
   getDocumentExpiryNotificationJobInterval,
 } from "./app/jobs/documentExpiryNotificationJob.js";
+import {
+  getEventReviewNotificationJobHandler,
+  getEventReviewNotificationJobInterval,
+} from "./app/jobs/eventReviewNotificationJob.js";
+import { initNotificationCron } from "./app/cron/notificationCron.js";
 import logger from "./app/services/logger.js";
 import { stopScheduledJobs } from "./app/services/distributedScheduler.js";
 
@@ -374,7 +379,7 @@ async function startScheduler() {
   await startScheduledJobs();
   registerSchedulerStopper(stopScheduledJobs);
 
-  const scheduledJobs = ['orderAutoCancelJob', 'returnWindowReleaseJob', 'documentExpiryNotificationJob'];
+  const scheduledJobs = ['orderAutoCancelJob', 'returnWindowReleaseJob', 'documentExpiryNotificationJob', 'eventReviewNotificationJob'];
   if (isPayoutBatchJobEnabled()) scheduledJobs.push('payoutBatchJob');
   if (isWalletLedgerVerifierEnabled()) scheduledJobs.push('walletLedgerVerifierJob');
   if (isFirebaseTrackingCleanupJobEnabled()) scheduledJobs.push('firebaseTrackingCleanupJob');

@@ -57,6 +57,8 @@ const Analytics = () => {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [chartRange, setChartRange] = useState("Daily");
+  const [selectedModuleFilter, setSelectedModuleFilter] = useState("All");
+  const [reportSearchQuery, setReportSearchQuery] = useState("");
   const hasFetchedOnce = useRef(false);
 
   useEffect(() => {
@@ -137,7 +139,24 @@ const Analytics = () => {
   ];
 
   const salesTrendArr = statsData?.salesTrend ?? [];
-  const hasNoData = !Number(statsData?.overview?.totalOrders) && (!salesTrendArr.length || salesTrendArr.every((d) => !d.sales));
+  const totalOrdersCount = Number(String(statsData?.overview?.totalOrders || "0").replace(/[^0-9]/g, ''));
+  const hasNoData = !totalOrdersCount && (!salesTrendArr.length || salesTrendArr.every((d) => !d.sales));
+
+      // Filtered detailed reports
+  const filteredReports = useMemo(() => {
+    const list = statsData?.detailedReports || [];
+    return list.filter((r) => {
+      const matchModule = selectedModuleFilter === "All" || r.module === selectedModuleFilter;
+      const q = reportSearchQuery.trim().toLowerCase();
+      const matchSearch =
+        !q ||
+        r.id?.toLowerCase().includes(q) ||
+        r.category?.toLowerCase().includes(q) ||
+        r.customerName?.toLowerCase().includes(q) ||
+        r.customerPhone?.toLowerCase().includes(q);
+      return matchModule && matchSearch;
+    });
+  }, [statsData?.detailedReports, selectedModuleFilter, reportSearchQuery]);
 
   const handleDownloadReport = () => {
     if (isExporting) return;
@@ -148,56 +167,52 @@ const Analytics = () => {
         return /[",\n\r]/.test(s) ? `"${s}"` : s;
       };
       const lines = [];
-      lines.push("Analytics Report");
-      lines.push(`Generated,${new Date().toISOString()}`);
+      lines.push("=== JALAPINO SELLER PERFORMANCE & BOOKINGS REPORT ===");
+      lines.push(`Generated At,${new Date().toLocaleString("en-IN")}`);
       lines.push("");
 
       const ov = statsData?.overview ?? {};
-      lines.push("Overview");
+      lines.push("=== EXECUTIVE OVERVIEW ===");
       lines.push("Metric,Value");
-      ["Total Sales", "Total Orders", "Avg Order Value", "Conversion Rate"].forEach((label, i) => {
-        const key = ["totalSales", "totalOrders", "avgOrderValue", "conversionRate"][i];
-        lines.push(`${escapeCsv(label)},${escapeCsv(ov[key] ?? "—")}`);
-      });
+      lines.push(`Total Sales,${escapeCsv(ov.totalSales || "₹0")}`);
+      lines.push(`Total Orders & Bookings,${escapeCsv(ov.totalOrders || "0")}`);
+      lines.push(`Average Order Value,${escapeCsv(ov.avgOrderValue || "₹0")}`);
+      lines.push(`Conversion Rate,${escapeCsv(ov.conversionRate || "0%")}`);
       lines.push("");
 
-      const trend = statsData?.salesTrend ?? [];
-      if (trend.length) {
-        lines.push("Sales Trend");
-        lines.push("Period,Sales,Traffic");
-        trend.forEach((d) => {
-          lines.push(`${escapeCsv(d.name)},${escapeCsv(d.sales)},${escapeCsv(d.traffic)}`);
+      // Module & Category Breakdown
+      const modules = statsData?.moduleBreakdown ?? [];
+      lines.push("=== MODULE & CATEGORY BREAKDOWN ===");
+      lines.push("Module,Category Name,Total Bookings/Orders,Tickets Count,Total Revenue (₹)");
+      if (modules.length) {
+        modules.forEach((mod) => {
+          if (mod.categories && mod.categories.length) {
+            mod.categories.forEach((cat) => {
+              lines.push(
+                `${escapeCsv(mod.module)},${escapeCsv(cat.name)},${escapeCsv(cat.count)},${escapeCsv(cat.ticketsCount || "—")},${escapeCsv(cat.revenue)}`
+              );
+            });
+          } else {
+            lines.push(
+              `${escapeCsv(mod.module)},General,0,—,0`
+            );
+          }
         });
-        lines.push("");
       }
+      lines.push("");
 
-      const top = statsData?.topProducts ?? [];
-      if (top.length) {
-        lines.push("Top Products");
-        lines.push("Product,Sales,Revenue,Trend %");
-        top.forEach((p) => {
-          lines.push(`${escapeCsv(p.name)},${escapeCsv(p.sales)},${escapeCsv(p.revenue)},${escapeCsv(p.trend)}`);
+      // Detailed Bookings & Tickets Ledger
+      const reports = statsData?.detailedReports ?? [];
+      lines.push("=== ALL BOOKINGS, TICKETS & ORDERS LEDGER ===");
+      lines.push("ID / Ticket ID,Module,Category,Customer Name,Phone,Date,Time Slot,Status,Amount (₹),Details");
+      if (reports.length) {
+        reports.forEach((r) => {
+          lines.push(
+            `${escapeCsv(r.id)},${escapeCsv(r.module)},${escapeCsv(r.category)},${escapeCsv(r.customerName)},${escapeCsv(r.customerPhone)},${escapeCsv(r.date)},${escapeCsv(r.time)},${escapeCsv(r.status)},${escapeCsv(r.amount)},${escapeCsv(r.details)}`
+          );
         });
-        lines.push("");
-      }
-
-      const cat = statsData?.categoryMix ?? [];
-      if (cat.length) {
-        lines.push("Category Mix");
-        lines.push("Category,Volume");
-        cat.forEach((c) => {
-          lines.push(`${escapeCsv(c.subject)},${escapeCsv(c.A)}`);
-        });
-        lines.push("");
-      }
-
-      const traffic = statsData?.trafficSources ?? [];
-      if (traffic.length) {
-        lines.push("Traffic Sources");
-        lines.push("Source,Value");
-        traffic.forEach((t) => {
-          lines.push(`${escapeCsv(t.name)},${escapeCsv(t.value)}`);
-        });
+      } else {
+        lines.push("No bookings or orders recorded yet.");
       }
 
       const csvContent = lines.join("\n");
@@ -205,10 +220,10 @@ const Analytics = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `analytics-report-${new Date().toISOString().slice(0, 10)}.csv`;
+      a.download = `seller-sales-report-${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Report downloaded successfully!");
+      toast.success("Comprehensive report downloaded successfully!");
     } catch (e) {
       console.error(e);
       toast.error("Failed to download report");
@@ -242,7 +257,7 @@ const Analytics = () => {
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 w-full sm:w-auto overflow-x-auto scrollbar-hide min-w-0">
-              {["Overview", "Sales", "Customers"].map((tab) => (
+              {["Overview", "Sales", "Bookings & Tickets", "Customers"].map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -673,6 +688,134 @@ const Analytics = () => {
         </BlurFade>
         )}
       </div>
+      {/* Detailed Bookings & Tickets Ledger Report */}
+      {(activeTab === "Overview" || activeTab === "Sales" || activeTab === "Bookings & Tickets") && (
+        <BlurFade delay={0.5}>
+          <Card className="border-none shadow-xl shadow-slate-200/50 rounded-2xl p-0 overflow-hidden bg-white">
+            <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  Detailed Bookings & Tickets Report
+                  <Badge variant="outline" className="text-[10px] font-bold">
+                    {filteredReports.length} Records
+                  </Badge>
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  Live dynamic ledger of all events, venue ticket bookings, and orders.
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
+                  {["All", "Plan My Event", "Tickets & Venues", "Retail"].map((mod) => (
+                    <button
+                      key={mod}
+                      onClick={() => setSelectedModuleFilter(mod)}
+                      className={cn(
+                        "px-2.5 py-1 rounded-lg font-bold transition-all whitespace-nowrap",
+                        selectedModuleFilter === mod
+                          ? "bg-white text-slate-900 shadow-sm"
+                          : "text-slate-600 hover:text-slate-900"
+                      )}
+                    >
+                      {mod === "Plan My Event" ? "Events" : mod === "Tickets & Venues" ? "Tickets" : mod}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={reportSearchQuery}
+                  onChange={(e) => setReportSearchQuery(e.target.value)}
+                  placeholder="Search ID, customer, category..."
+                  className="text-xs px-3 py-1.5 border border-slate-200 rounded-xl w-44 sm:w-56 focus:outline-none focus:ring-1 focus:ring-primary"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-slate-50/80 text-[10px] font-black text-slate-400 uppercase tracking-wider border-b border-slate-100">
+                    <th className="py-3 px-4">Booking / Ticket ID</th>
+                    <th className="py-3 px-4">Module</th>
+                    <th className="py-3 px-4">Category</th>
+                    <th className="py-3 px-4">Customer</th>
+                    <th className="py-3 px-4">Date & Time</th>
+                    <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4 text-right">Amount (₹)</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                  {filteredReports.length > 0 ? (
+                    filteredReports.map((r, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="py-3 px-4 font-mono font-bold text-slate-900">
+                          {r.id}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={cn(
+                              "inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                              r.module === "Plan My Event"
+                                ? "bg-purple-50 text-purple-700 border-purple-200"
+                                : r.module === "Tickets & Venues"
+                                ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            )}
+                          >
+                            {r.module === "Plan My Event"
+                              ? "🎉 Event"
+                              : r.module === "Tickets & Venues"
+                              ? "🎟️ Ticket"
+                              : "🛍️ Retail"}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-800">
+                          {r.category}
+                          {r.details && (
+                            <span className="block text-[10px] text-slate-400 font-normal">
+                              {r.details}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
+                          <span className="font-bold text-slate-900 block">{r.customerName}</span>
+                          <span className="text-[10px] text-slate-400 block">{r.customerPhone}</span>
+                        </td>
+                        <td className="py-3 px-4 text-slate-600">
+                          <span className="font-semibold block">{r.date}</span>
+                          <span className="text-[10px] text-slate-400 block">{r.time}</span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className={cn(
+                              "text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider inline-block",
+                              ["Completed", "Confirmed", "Paid", "Checked-In", "Delivered"].includes(r.status)
+                                ? "bg-emerald-100/70 text-emerald-800"
+                                : "bg-slate-100 text-slate-600"
+                            )}
+                          >
+                            {r.status}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4 text-right font-black text-slate-900">
+                          ₹{Number(r.amount || 0).toLocaleString("en-IN")}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-400 font-medium">
+                        No bookings or tickets found for this filter.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </BlurFade>
+      )}
+
       {/* Product Detail Modal */}
       <Modal
         isOpen={isProductModalOpen}

@@ -23,6 +23,8 @@ const eventServiceAssignmentSchema = new mongoose.Schema({
         enum: ['PENDING_APPROVAL', 'ACCEPTED', 'REJECTED', 'CLARIFICATION_REQUESTED', 'COMPLETED'],
         default: 'PENDING_APPROVAL'
     },
+    rating: { type: Number, min: 1, max: 5 },
+    review: { type: String, trim: true },
     preferences: [preferenceValueSchema],
     specialInstructions: { type: String },
     sellerNotes: { type: String }
@@ -92,7 +94,16 @@ const eventBookingSchema = new mongoose.Schema({
         type: String,
         enum: ['PENDING', 'PAYMENT_PENDING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
         default: 'PENDING'
-    }
+    },
+    completedAt: { type: Date },
+    reviewNotificationSent: { type: Boolean, default: false },
+    reviewNotificationSentAt: { type: Date },
+    sellerRating: { type: Number, min: 1, max: 5 },
+    sellerReview: { type: String, trim: true },
+    sellerReviewedAt: { type: Date },
+    customerRatingBySeller: { type: Number, min: 1, max: 5 },
+    customerReviewBySeller: { type: String, trim: true },
+    customerReviewedAt: { type: Date }
 }, {
     timestamps: true
 });

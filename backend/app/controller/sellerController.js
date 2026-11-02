@@ -391,14 +391,11 @@ export const updateSellerProfile = async (req, res) => {
       }
     }
 
-    if (req.body.addonDecorationEnabled !== undefined) seller.addonDecorationEnabled = req.body.addonDecorationEnabled === 'true' || req.body.addonDecorationEnabled === true;
-    if (req.body.addonDecorationPrice !== undefined) seller.addonDecorationPrice = Number(req.body.addonDecorationPrice);
-    if (req.body.addonBridalEnabled !== undefined) seller.addonBridalEnabled = req.body.addonBridalEnabled === 'true' || req.body.addonBridalEnabled === true;
-    if (req.body.addonBridalPrice !== undefined) seller.addonBridalPrice = Number(req.body.addonBridalPrice);
-    if (req.body.addonCateringEnabled !== undefined) seller.addonCateringEnabled = req.body.addonCateringEnabled === 'true' || req.body.addonCateringEnabled === true;
-    if (req.body.addonCateringPrice !== undefined) seller.addonCateringPrice = Number(req.body.addonCateringPrice);
-    if (req.body.physicalPaymentEnabled !== undefined) seller.physicalPaymentEnabled = req.body.physicalPaymentEnabled === 'true' || req.body.physicalPaymentEnabled === true;
-    if (req.body.paymentQrCode !== undefined) seller.paymentQrCode = req.body.paymentQrCode;
+    // physicalPaymentEnabled and Add-ons are strictly managed by Admin. 
+    // Seller can only update paymentQrCode if physicalPaymentEnabled is true.
+    if (req.body.paymentQrCode !== undefined && seller.physicalPaymentEnabled) {
+      seller.paymentQrCode = req.body.paymentQrCode;
+    }
 
     // Shop Operation Settings
     if (isShopActive !== undefined) seller.isShopActive = isShopActive === 'true' || isShopActive === true;

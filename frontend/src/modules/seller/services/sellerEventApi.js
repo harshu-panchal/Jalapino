@@ -32,5 +32,16 @@ export const sellerEventApi = {
             console.error('Error updating reservation status:', error);
             throw error;
         }
+    },
+
+    // Confirm COD payment
+    confirmCODPayment: async (id) => {
+        try {
+            const response = await axiosInstance.put(`/seller/events/reservations/${id}/confirm-cod`);
+            return response.data;
+        } catch (error) {
+            console.error('Error confirming COD payment:', error);
+            throw error;
+        }
     }
 };
