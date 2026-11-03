@@ -13,6 +13,14 @@ const OrdersPage = () => {
     const navigate = useNavigate();
     const routerLocation = useRouterLocation();
     const { settings } = useSettings();
+
+    // Event bookings carry the seller's configured advance percentage.
+    // Fall back to the global setting only for legacy bookings without it.
+    const getEventAdvancePercentage = (booking) => {
+        const bookingPercentage = Number(booking?.advancePaymentPercentage);
+        if (Number.isFinite(bookingPercentage) && bookingPercentage >= 0) return bookingPercentage;
+        return Number(settings?.bookingControl?.advanceBookingLimitPercent ?? 20);
+    };
     const { currentLocation, availableModules } = useLocation();
     const { toggleMode } = useCustomerMode();
 
@@ -256,7 +264,7 @@ const OrdersPage = () => {
             toast.loading("Initiating Gateway...", { id: 'payment' });
             
             // GASP: Calculate Advance Amount
-            const advanceLimit = settings?.bookingControl?.advanceBookingLimitPercent ?? 20;
+            const advanceLimit = getEventAdvancePercentage(booking);
             const advanceAmount = Math.round((booking.totalAmount * advanceLimit) / 100);
 
             // 1. Create Gateway Order
@@ -311,7 +319,7 @@ const OrdersPage = () => {
         try {
             toast.loading("Initiating Gateway...", { id: 'payment' });
             
-            const advanceLimit = settings?.bookingControl?.advanceBookingLimitPercent ?? 20;
+            const advanceLimit = getEventAdvancePercentage(booking);
             const advanceAmount = Math.round((booking.totalAmount * advanceLimit) / 100);
             const remainingAmount = booking.totalAmount - advanceAmount;
 
@@ -703,7 +711,42 @@ const OrdersPage = () => {
                             <div className="text-xs text-slate-600 mb-3 space-y-1">
                                 <p><span className="font-medium">Location:</span> {booking.location?.address || booking.location || 'Pending Location'}</p>
                                 <p><span className="font-medium">Guests:</span> {booking.guestCount} People</p>
+                                {booking.eventInfo?.primaryContactName || booking.eventInfo?.coupleNames || booking.eventInfo?.corporateCompanyName ? (
+                                    <p><span className="font-medium">Contact:</span> {booking.eventInfo.primaryContactName || booking.eventInfo.coupleNames || booking.eventInfo.corporateCompanyName}</p>
+                                ) : null}
+                                {booking.eventInfo?.gender && <p><span className="font-medium">Gender:</span> {booking.eventInfo.gender}</p>}
+                                {booking.eventInfo?.dateOfBirth && <p><span className="font-medium">Date of Birth:</span> {booking.eventInfo.dateOfBirth}</p>}
+                                {booking.eventInfo?.anniversaryDate && <p><span className="font-medium">Anniversary Date:</span> {booking.eventInfo.anniversaryDate}</p>}
                             </div>
+
+                            {booking.selectedShop && (
+                                <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 p-3 text-xs">
+                                    <span className="font-black text-purple-900">📍 Selected Shop / Area</span>
+                                    <span className="font-extrabold text-purple-700">
+                                        {booking.selectedShop.uniqueCode || `Shop ${booking.selectedShop.shopNo || ''}`} {booking.selectedShop.bookingType ? `(${booking.selectedShop.bookingType})` : ''}
+                                    </span>
+                                </div>
+                            )}
+
+                            {Array.isArray(booking.selectedProducts) && booking.selectedProducts.length > 0 && (
+                                <div className="mb-4 rounded-xl border border-purple-100 bg-purple-50/60 p-3">
+                                    <p className="mb-1.5 text-xs font-bold uppercase tracking-wider text-purple-900">Selected Products</p>
+                                    <div className="space-y-1.5">
+                                        {booking.selectedProducts.map((product, productIndex) => (
+                                            <div key={productIndex} className="text-xs text-slate-700">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="font-semibold">
+                                                        {product.productId?.name || product.productName || 'Product'}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {product.quantity}
+                                                    </span>
+                                                    <span className="font-bold text-purple-700">₹{Number(product.lineTotal || ((product.price || product.unitPrice || 0) * (product.quantity || 1))).toLocaleString('en-IN')}</span>
+                                                </div>
+                                                <div className="pl-2 text-[10px] font-semibold text-slate-500">({product.quantity || 1} × ₹{Number(product.price || product.unitPrice || 0).toLocaleString('en-IN')})</div>
+                                                {product.selectedAddOns?.length > 0 && <div className="pl-2 text-[10px] text-purple-700">Add-ons: {product.selectedAddOns.map(addOn => `${addOn.name} (₹${addOn.price})`).join(', ')}</div>}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             <div className="mb-4">
                                 <p className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-wider">Requested Services</p>
@@ -762,13 +805,13 @@ const OrdersPage = () => {
                                         <div className="flex justify-between items-center">
                                             <span className="text-[11px] font-medium text-slate-400">Advance Paid</span>
                                             <span className="text-xs font-bold text-emerald-600">
-                                                - ₹{Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100).toLocaleString()}
+                                            - ₹{Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100).toLocaleString()}
                                             </span>
                                         </div>
                                         <div className="flex justify-between items-center border-t border-slate-50 pt-1 mt-1">
                                             <span className="text-[11px] font-bold text-slate-600">Remaining Balance</span>
                                             <span className="text-xs font-bold text-slate-800">
-                                                ₹{(booking.totalAmount - Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100)).toLocaleString()}
+                                            ₹{(booking.totalAmount - Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100)).toLocaleString()}
                                             </span>
                                         </div>
                                     </>
@@ -790,7 +833,7 @@ const OrdersPage = () => {
                                             className="flex-1 flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-lg shadow-purple-200"
                                         >
                                             <CreditCard className="h-4 w-4" />
-                                            Pay ₹{Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100).toLocaleString()} Online
+                                            Pay ₹{Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100).toLocaleString()} Online
                                         </button>
                                     )}
                                 </div>
@@ -804,7 +847,7 @@ const OrdersPage = () => {
                                             className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white py-2.5 rounded-xl text-xs font-bold transition-all shadow-md shadow-emerald-200 mb-1"
                                         >
                                             <CreditCard size={14} /> 
-                                            Pay Remaining ₹{(booking.totalAmount - Math.round((booking.totalAmount * (settings?.bookingControl?.advanceBookingLimitPercent ?? 20)) / 100)).toLocaleString()} Online
+                                            Pay Remaining ₹{(booking.totalAmount - Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100)).toLocaleString()} Online
                                         </button>
                                     )}
 

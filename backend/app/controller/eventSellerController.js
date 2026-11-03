@@ -8,6 +8,7 @@ import {
   getNearbySellerIdsForCustomer,
   getZoneSellerIdsForCustomer,
 } from "../services/customerVisibilityService.js";
+import { getBookingStart, getMinimumBookingAt } from "../utils/advanceBooking.js";
 
 export const searchEventSellers = async (req, res) => {
   try {
@@ -174,15 +175,12 @@ export const searchEventSellers = async (req, res) => {
         // Check Advance Booking Buffer (Minimum Before Notice & Maximum After Days)
         if (seller.advanceBookingBufferEnabled) {
           const currentTime = Date.now();
-          const targetTime = new Date(date).getTime();
-          const hoursDiff = (targetTime - currentTime) / (1000 * 60 * 60);
+          const targetDateTime = getBookingStart(date, time);
+          const targetTime = targetDateTime?.getTime() || new Date(date).getTime();
           const daysDiff = (targetTime - currentTime) / (1000 * 60 * 60 * 24);
 
           if (seller.advanceBookingBuffer && seller.advanceBookingBuffer > 0) {
-            const requiredHours = seller.advanceBookingBufferUnit === 'hours'
-              ? seller.advanceBookingBuffer
-              : seller.advanceBookingBuffer * 24;
-            if (hoursDiff < requiredHours) {
+            if (targetTime < getMinimumBookingAt(seller, currentTime).getTime()) {
               continue; // Exclude: event is too soon, buffer not satisfied
             }
           }

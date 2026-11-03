@@ -23,6 +23,29 @@ const resolveProductImageUrl = (path) => (
     typeof path === 'string' && path.startsWith('data:') ? path : resolveImageUrl(path)
 );
 
+const formatLocalDate = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+const parseSlotStartMinutes = (value) => {
+    const raw = String(value || '').split('-')[0].trim();
+    const match = raw.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (!match) return null;
+    let hours = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const period = match[3]?.toUpperCase();
+    if (minutes > 59) return null;
+    if (period) {
+        if (hours < 1 || hours > 12) return null;
+        if (hours === 12) hours = period === 'AM' ? 0 : 12;
+        else if (period === 'PM') hours += 12;
+    }
+    return hours * 60 + minutes;
+};
+
 const getProductPricing = (product) => {
     // If unitPrice or price was directly calculated and stored with add-on
     let basePrice = product?.selectedVariant?.price ?? product?.price;
@@ -194,6 +217,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [localSavingInfo, setLocalSavingInfo] = useState(false);
     const [localSavedInfo, setLocalSavedInfo] = useState(false);
     const saveTimerRef = useRef(null);
+    const [bookingClock, setBookingClock] = useState(() => Date.now());
+
+    useEffect(() => {
+        const timer = setInterval(() => setBookingClock(Date.now()), 30 * 1000);
+        return () => clearInterval(timer);
+    }, []);
 
     // Active state values: prefer currentState if passed from PlanMyEventPage, else local
     const allEventTypes = (currentState.eventTypes && currentState.eventTypes.length > 0) ? currentState.eventTypes : localEventTypes;
@@ -207,18 +236,34 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const isSavingInfo = currentState.savingInfo !== undefined ? currentState.savingInfo : localSavingInfo;
     const isSavedInfo = currentState.savedInfo !== undefined ? currentState.savedInfo : localSavedInfo;
 
-    // Calculate minimum allowed booking date based on seller's advanceBookingBuffer
-    const minBookingDate = React.useMemo(() => {
-        if (!selectedSeller?.advanceBookingBufferEnabled) {
-            return new Date().toISOString().split('T')[0];
-        }
+    // Calculate the live minimum booking timestamp from this seller's settings.
+    const advanceBookingCutoff = React.useMemo(() => {
+        if (!selectedSeller?.advanceBookingBufferEnabled) return new Date(bookingClock);
         const buffer = Number(selectedSeller.advanceBookingBuffer) || 0;
-        const unit = selectedSeller.advanceBookingBufferUnit || 'days';
-        const extraHours = (unit === 'days' && selectedSeller.advanceBookingBufferTime) ? (Number(selectedSeller.advanceBookingBufferTime) || 0) : 0;
-        const totalHours = (unit === 'hours' ? buffer : buffer * 24) + extraHours;
+        if (buffer <= 0) return new Date(bookingClock);
+        const extraHours = selectedSeller.advanceBookingBufferUnit === 'days'
+            ? (Number.parseFloat(String(selectedSeller.advanceBookingBufferTime ?? 0)) || 0)
+            : 0;
+        const totalHours = selectedSeller.advanceBookingBufferUnit === 'hours'
+            ? buffer
+            : (buffer * 24) + Math.max(0, extraHours);
+        return new Date(bookingClock + Math.max(0, totalHours) * 60 * 60 * 1000);
+    }, [bookingClock, selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferUnit, selectedSeller?.advanceBookingBufferTime]);
 
-        const minTime = new Date(Date.now() + totalHours * 60 * 60 * 1000);
-        return minTime.toISOString().split('T')[0];
+    // Calculate minimum allowed booking date without UTC conversion. Date inputs
+    // are local-calendar values, so using toISOString() can shift the date.
+    const minBookingDate = React.useMemo(() => {
+        return formatLocalDate(advanceBookingCutoff);
+    }, [advanceBookingCutoff]);
+
+    const advanceNoticeLabel = React.useMemo(() => {
+        const buffer = Number(selectedSeller?.advanceBookingBuffer) || 0;
+        if (!selectedSeller?.advanceBookingBufferEnabled || buffer <= 0) return '';
+        if (selectedSeller.advanceBookingBufferUnit === 'hours') {
+            return `${buffer} hour${buffer === 1 ? '' : 's'}`;
+        }
+        const extraHours = Number.parseFloat(String(selectedSeller.advanceBookingBufferTime ?? 0)) || 0;
+        return `${buffer} day${buffer === 1 ? '' : 's'}${extraHours > 0 ? ` + ${extraHours} hour${extraHours === 1 ? '' : 's'}` : ''}`;
     }, [selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferUnit, selectedSeller?.advanceBookingBufferTime]);
 
     // Calculate maximum allowed booking date based on seller's advanceBookingBufferAfter (Days)
@@ -227,9 +272,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             return undefined;
         }
         const maxDays = Number(selectedSeller.advanceBookingBufferAfter);
-        const maxTime = new Date(Date.now() + maxDays * 24 * 60 * 60 * 1000);
-        return maxTime.toISOString().split('T')[0];
-    }, [selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBufferAfter]);
+        const maxTime = new Date(bookingClock + maxDays * 24 * 60 * 60 * 1000);
+        return formatLocalDate(maxTime);
+    }, [bookingClock, selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBufferAfter]);
 
     // Check if a date is marked as shop closed / holiday (only if enabled on this seller)
     const isDateClosed = React.useCallback((dateStr) => {
@@ -292,6 +337,23 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
         return [`${formatTime12h(openMin)} - ${formatTime12h(closeMin)}`];
     }, [selectedSeller?.customTimeSlots, selectedSeller?.shopOpeningTime, selectedSeller?.shopClosingTime]);
+
+    // When the selected date is today, hide only slots whose start time is
+    // inside the live advance-booking window. Future dates keep all slots.
+    const bookableSellerTimeSlots = React.useMemo(() => {
+        if (!activeDate || !selectedSeller?.advanceBookingBufferEnabled || !(Number(selectedSeller.advanceBookingBuffer) > 0)) {
+            return sellerTimeSlots;
+        }
+        if (activeDate !== formatLocalDate(new Date())) return sellerTimeSlots;
+
+        return sellerTimeSlots.filter(slot => {
+            const startMinutes = parseSlotStartMinutes(slot);
+            if (startMinutes === null) return true;
+            const slotStart = new Date();
+            slotStart.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+            return slotStart.getTime() >= advanceBookingCutoff.getTime();
+        });
+    }, [activeDate, advanceBookingCutoff, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferEnabled, sellerTimeSlots]);
 
     // Ensure the current booking type is valid for active permissions, else fallback to defaultBookingType
     const effectiveBookingType = (
@@ -391,8 +453,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [modalSelectedVariant, setModalSelectedVariant] = useState(null);
     const [ticketSoldMap, setTicketSoldMap] = useState({});
     const [selectedShop, setSelectedShop] = useState(null);
-    const [sellerBookedSlots, setSellerBookedSlots] = useState([]);
-    const [uniqueCodeDateBooked, setUniqueCodeDateBooked] = useState(false);
+    const [productVariantUsageBySlot, setProductVariantUsageBySlot] = useState({});
     const [selectedAddOns, setSelectedAddOns] = useState({});
 
     const openProductGallery = (product) => {
@@ -627,32 +688,29 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         };
     }, [eventData, selectedSeller, navigate, user, selectedProductsStorageKey]);
 
-    // Fetch booked time slots for this seller on activeDate
+    // Fetch booking usage for the selected date. Time slots remain selectable;
+    // availability is resolved when a product variant is selected.
     useEffect(() => {
         if (!selectedSeller?._id || !activeDate) {
-            setSellerBookedSlots([]);
-            setUniqueCodeDateBooked(false);
+            setProductVariantUsageBySlot({});
             return;
         }
-        const selectedCode = selectedProducts.find(product => product.selectedVariant?.uniqueCode || product.uniqueCode)?.selectedVariant?.uniqueCode
-            || selectedProducts.find(product => product.selectedVariant?.uniqueCode || product.uniqueCode)?.uniqueCode
-            || selectedShop?.uniqueCode
-            || '';
-        const codeQuery = selectedCode ? `&uniqueCode=${encodeURIComponent(selectedCode)}` : '';
-        axiosInstance.get(`/events/slots/${selectedSeller._id}?date=${activeDate}${codeQuery}`)
-            .then(res => {
-                const slots = res.data?.result?.bookedSlots || [];
-                setSellerBookedSlots(Array.isArray(slots) ? slots : []);
-                const codeProduct = selectedProducts.find(product => product.selectedVariant?.uniqueCode || product.uniqueCode);
-                const codeConfig = codeProduct ? getProductCapacityConfig(codeProduct, codeProduct.selectedVariant) : null;
-                const selectedShopType = String(selectedShop?.bookingType || '').toUpperCase();
-                setUniqueCodeDateBooked(Boolean(codeQuery && (codeConfig?.bookingType === 'SINGLE' || selectedShopType === 'SINGLE') && slots.length));
-            })
-            .catch(() => {
-                setSellerBookedSlots([]);
-                setUniqueCodeDateBooked(false);
-            });
-    }, [selectedSeller?._id, activeDate, selectedProducts, selectedShop?.uniqueCode]);
+        let cancelled = false;
+        const fetchVariantUsage = async () => {
+            try {
+                const res = await axiosInstance.get(`/events/slots/${selectedSeller._id}?date=${encodeURIComponent(activeDate)}`);
+                if (!cancelled) setProductVariantUsageBySlot(res.data?.result?.productVariantUsageBySlot || {});
+            } catch {
+                if (!cancelled) setProductVariantUsageBySlot({});
+            }
+        };
+        fetchVariantUsage();
+        const refreshTimer = setInterval(fetchVariantUsage, 30 * 1000);
+        return () => {
+            cancelled = true;
+            clearInterval(refreshTimer);
+        };
+    }, [selectedSeller?._id, activeDate]);
 
     useEffect(() => {
         if (isLoadingProducts) return;
@@ -745,27 +803,23 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     const getProductCapacityConfig = (product, variant) => {
         if (!selectedSeller?.capacityEnabled) return null;
-        const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
         const variantCode = (variant?.uniqueCode || product?.uniqueCode || '').trim();
         const variantShopNo = variant?.shopNo || product?.shopNo;
 
-        // If this product / variant does NOT have a uniqueCode or shopNo assigned by the seller,
-        // it does NOT have shop capacity configured. Return null!
-        if (!variantCode && !variantShopNo) {
+        // Capacity belongs to the product variant. Seller shop settings are only
+        // used when the product is created; they are never used as a runtime fallback.
+        if (!variantCode) {
             return null;
         }
 
-        const matchedShop = shops.find(s => s.uniqueCode && variantCode && s.uniqueCode.toUpperCase() === variantCode.toUpperCase())
-            || shops.find(s => variantShopNo && String(s.shopNo) === String(variantShopNo));
-
-        const minimum = Number(variant?.minimum ?? product?.minimum ?? matchedShop?.minimum ?? 0);
-        const maximum = Number(variant?.maximum ?? product?.maximum ?? matchedShop?.maximum ?? 0);
-        const totalCap = Number(variant?.totalCapacity ?? product?.totalCapacity ?? matchedShop?.totalCapacity ?? 0);
+        const minimum = Number(variant?.minimum ?? product?.minimum ?? 0);
+        const maximum = Number(variant?.maximum ?? product?.maximum ?? 0);
+        const totalCap = Number(variant?.totalCapacity ?? product?.totalCapacity ?? 0);
         const maxLimit = maximum > 0 ? maximum : (totalCap > 0 ? totalCap : 0);
-        const bookingType = String(variant?.bookingType || product?.bookingType || matchedShop?.bookingType || 'MULTIPLE').toUpperCase();
-        const capacityType = String(variant?.capacityType || product?.capacityType || matchedShop?.capacityType || 'SHOP CAPECITY').toUpperCase();
+        const bookingType = String(variant?.bookingType || product?.bookingType || 'MULTIPLE').toUpperCase();
+        const capacityType = String(variant?.capacityType || product?.capacityType || 'PRODUCT CAPACITY').toUpperCase();
 
-        if (!matchedShop && minimum === 0 && maxLimit === 0) {
+        if (minimum === 0 && maxLimit === 0) {
             return null;
         }
 
@@ -775,10 +829,29 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             maximum: maxLimit,
             bookingType,
             capacityType,
-            uniqueCode: variantCode || matchedShop?.uniqueCode || '',
-            shopNo: variantShopNo || matchedShop?.shopNo || '',
-            matchedShop: matchedShop || null
+            uniqueCode: variantCode,
+            shopNo: variantShopNo || ''
         };
+    };
+
+    const getBookedVariantUsage = (product, variant) => {
+        const code = String(variant?.uniqueCode || product?.uniqueCode || '').trim().toUpperCase();
+        const productId = String(product?._id || product?.productId || '').trim();
+        const slot = String(activeTime || '').trim();
+        if (!productId || !code || !slot) return 0;
+        return Number(productVariantUsageBySlot?.[productId]?.[code]?.[slot] || 0);
+    };
+
+    const isVariantBooked = (product, variant) => {
+        const capacity = getProductCapacityConfig(product, variant);
+        const used = getBookedVariantUsage(product, variant);
+        if (used <= 0) return false;
+        if (String(capacity?.bookingType || '').toUpperCase() === 'SINGLE') return true;
+
+        // Multiple shops can accept bookings until their configured maximum;
+        // the next booking must still be able to satisfy the configured minimum.
+        const remaining = Number(capacity?.maximum || 0) - used;
+        return Number(capacity?.maximum || 0) > 0 && remaining < Number(capacity?.minimum || 1);
     };
 
     // Automatically derive selectedShop from selectedProducts that have a shop attached
@@ -790,10 +863,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         for (const p of selectedProducts) {
             const cap = getProductCapacityConfig(p, p.selectedVariant || p.variants?.[0]);
             if (cap && (cap.uniqueCode || cap.shopNo)) {
+                const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
                 const found = shops.find(s => s.uniqueCode && cap.uniqueCode && s.uniqueCode.toUpperCase() === cap.uniqueCode.toUpperCase())
                     || shops.find(s => cap.shopNo && String(s.shopNo) === String(cap.shopNo));
                 if (found) return found;
-                if (cap.matchedShop) return cap.matchedShop;
             }
         }
         return selectedShop || null;
@@ -827,6 +900,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
             if (currentQty === 0 && change > 0) {
                 const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
+                const used = getBookedVariantUsage(product, product.selectedVariant);
+                if (capConfig?.maximum > 0 && used + initialQty > capConfig.maximum) {
+                    toast.error(`Only ${Math.max(0, capConfig.maximum - used)} capacity left for this variant`);
+                    return prev;
+                }
                 const autoFixedAddOns = getFixedAddOnsForProduct(product, product.selectedVariant);
                 const existingAddOns = Array.isArray(product.selectedAddOns) ? product.selectedAddOns : [];
                 // Merge if not already present
@@ -839,7 +917,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
 
             if (change > 0) {
-                if (capConfig && capConfig.maximum > 0 && (currentQty + change) > capConfig.maximum) {
+                const used = getBookedVariantUsage(product, product.selectedVariant);
+                if (capConfig && capConfig.maximum > 0 && (used + currentQty + change) > capConfig.maximum) {
                     toast.error(`Maximum allowed capacity is ${capConfig.maximum}`);
                     return prev;
                 }
@@ -952,8 +1031,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const handleProceed = () => {
-        if (uniqueCodeDateBooked) {
-            toast.error('This product code is already booked for the selected date. Please choose another date.');
+        const bookedVariant = selectedProducts.find(product => isVariantBooked(product, product.selectedVariant));
+        if (bookedVariant) {
+            toast.error('The selected variant is already booked for this date and time slot. Please choose another variant.');
             return;
         }
         if (isUploadingReferencePhoto) {
@@ -1009,6 +1089,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         if (activeDate && minBookingDate && activeDate < minBookingDate) {
             toast.error(`Event date must be on or after ${minBookingDate} due to seller's advance booking notice.`);
             return;
+        }
+        if (activeDate && resolvedTime && selectedSeller?.advanceBookingBufferEnabled && Number(selectedSeller.advanceBookingBuffer) > 0) {
+            const startMinutes = parseSlotStartMinutes(resolvedTime);
+            if (startMinutes !== null) {
+                const selectedStart = new Date(`${activeDate}T00:00:00`);
+                selectedStart.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
+                if (selectedStart.getTime() < advanceBookingCutoff.getTime()) {
+                    toast.error('This time slot is inside the seller\'s advance booking notice. Please choose a later slot.');
+                    return;
+                }
+            }
         }
         if (activeDate && maxBookingDate && activeDate > maxBookingDate) {
             toast.error(`Event date cannot be after ${maxBookingDate} for this seller.`);
@@ -1306,7 +1397,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             {selectedSeller?.advanceBookingBufferEnabled && (selectedSeller?.advanceBookingBuffer > 0 || selectedSeller?.advanceBookingBufferAfter > 0) && (
                                 <div className="flex flex-wrap items-center justify-between gap-2 bg-amber-100/70 border border-amber-300/80 px-3.5 py-2 rounded-2xl">
                                     <span className="text-xs font-bold text-amber-900 flex items-center gap-1.5">
-                                        ⏳ Advance Booking Notice: Requires minimum {selectedSeller.advanceBookingBuffer || 0} {selectedSeller.advanceBookingBufferUnit || 'days'} notice.
+                                        ⏳ Advance Booking Notice: Requires minimum {advanceNoticeLabel} notice.
                                         {selectedSeller.advanceBookingBufferAfter > 0 ? ` (Max ${selectedSeller.advanceBookingBufferAfter} days in advance)` : ''}
                                     </span>
                                     {isCurrentDateClosed ? (
@@ -1326,6 +1417,18 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             ✅ Available for booking
                                         </span>
                                     ) : null}
+                                </div>
+                            )}
+                            {/* Seller profile closed-date message must also appear when
+                                advance booking settings are disabled. */}
+                            {isCurrentDateClosed && !(selectedSeller?.advanceBookingBufferEnabled && (selectedSeller?.advanceBookingBuffer > 0 || selectedSeller?.advanceBookingBufferAfter > 0)) && (
+                                <div className="flex flex-wrap items-center justify-between gap-2 bg-red-100 border border-red-200 px-3.5 py-2 rounded-2xl">
+                                    <span className="text-xs font-black text-red-700">
+                                        🚫 Shop Closed / Holiday on {activeDate}
+                                    </span>
+                                    <span className="text-xs font-semibold text-red-600">
+                                        Please select another date.
+                                    </span>
                                 </div>
                             )}
                             <div className="flex flex-wrap gap-3 items-end">
@@ -1459,14 +1562,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                                                 >
                                                     <option value="">-- Select Slot --</option>
-                                                    {sellerTimeSlots.map(slot => {
-                                                        const isBooked = sellerBookedSlots.includes(slot);
-                                                        return (
-                                                            <option key={slot} value={slot} disabled={isBooked} className={isBooked ? "text-red-500 bg-slate-100 font-semibold" : ""}>
-                                                                {slot} {isBooked ? "(Already Booked)" : ""}
-                                                            </option>
-                                                        );
-                                                    })}
+                                                    {bookableSellerTimeSlots.map(slot => (
+                                                        <option key={slot} value={slot}>{slot}</option>
+                                                    ))}
                                                 </select>
                                             </div>
                                         )}
@@ -1506,14 +1604,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer"
                                                 >
                                                     <option value="">-- Select Slot --</option>
-                                                    {sellerTimeSlots.map(slot => {
-                                                        const isBooked = sellerBookedSlots.includes(slot);
-                                                        return (
-                                                            <option key={slot} value={slot} disabled={isBooked} className={isBooked ? "text-red-500 bg-slate-100 font-semibold" : ""}>
-                                                                {slot} {isBooked ? "(Already Booked)" : ""}
-                                                            </option>
-                                                        );
-                                                    })}
+                                                    {bookableSellerTimeSlots.map(slot => (
+                                                        <option key={slot} value={slot}>{slot}</option>
+                                                    ))}
                                                 </select>
                                             </div>
                                         )}
@@ -1689,7 +1782,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         <input
                                             type="date"
                                             value={effectiveBookingType === 'couple' ? (activeEventInfo.anniversaryDate || '') : (activeEventInfo.dateOfBirth || '')}
-                                            max={new Date().toISOString().split('T')[0]}
                                             onChange={e => handleEventInfoFieldChange(effectiveBookingType === 'couple' ? 'anniversaryDate' : 'dateOfBirth', e.target.value)}
                                             className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400"
                                         />
@@ -2407,7 +2499,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             <>
                                                 <span>Guests</span>
                                                 <span className="font-semibold">
-                                                    {activeEventInfo?.noOfGuests || eventData?.guestCount || 1} {minCap || maxCap ? `(Limit: ${minCap || 1}-${maxCap || 'Max'})` : ''}
+                                                    {activeEventInfo?.noOfGuests ? `${activeEventInfo.noOfGuests}${minCap || maxCap ? ` (Limit: ${minCap || 1}-${maxCap || 'Max'})` : ''}` : ''}
                                                 </span>
                                             </>
                                         );
@@ -2432,6 +2524,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <div className="flex flex-col">
                                                     <span>
                                                         {product.name}{product.selectedVariant?.name ? ` (${product.selectedVariant.name})` : ''} × {quantity}
+                                                    </span>
+                                                    <span className="text-[10px] font-semibold text-slate-500">
+                                                        ({quantity} × ₹{pricing.baseUnitPrice.toLocaleString('en-IN')})
                                                     </span>
                                                     {cap && selectedSeller?.capacityEnabled && (
                                                         <span className="text-[10px] font-bold text-purple-700">
@@ -2711,8 +2806,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 const correctEntryTotal = (baseUnitOnly * qty) + addonTotal; // addon counted once only
                                                 return sum + correctEntryTotal;
                                             }, 0);
-                                            // Grand combined total = current variant total + baaki sabhi added variants
-                                            const combinedProductTotal = otherVariantsTotal + modalTotalAmount;
+                                            // Product ko Add to Selection karne se pehle current variant ka
+                                            // price breakdown mein include nahi hona chahiye. Add hone ke
+                                            // baad hi base price aur selected add-ons total mein aayenge.
+                                            const currentVariantTotal = isItemAdded ? modalTotalAmount : 0;
+                                            // Grand combined total = added current variant + baaki added variants
+                                            const combinedProductTotal = otherVariantsTotal + currentVariantTotal;
                                             const hasOtherVariants = otherVariantEntries.length > 0;
                                             return (
                                                 <>
@@ -2839,7 +2938,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     aria-label={`Increase quantity`}
                                                                     disabled={(() => {
                                                                         const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                        if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) return true;
+                                                                        const bookedUsage = getBookedVariantUsage(imagePreview.product, modalSelectedVariant);
+                                                                        if (capConfig && capConfig.maximum > 0 && bookedUsage + itemQuantity >= capConfig.maximum) return true;
                                                                         return false;
                                                                     })()}
                                                                     onClick={() => handleProductQuantityChange({
@@ -2850,7 +2950,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     }, 1)}
                                                                     className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all shadow-sm ${(() => {
                                                                         const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                                        if (capConfig && capConfig.maximum > 0 && itemQuantity >= capConfig.maximum) {
+                                                                        const bookedUsage = getBookedVariantUsage(imagePreview.product, modalSelectedVariant);
+                                                                        if (capConfig && capConfig.maximum > 0 && bookedUsage + itemQuantity >= capConfig.maximum) {
                                                                             return 'bg-slate-200 text-slate-400 cursor-not-allowed';
                                                                         }
                                                                         return 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700';
@@ -2863,7 +2964,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         ) : (
                                                             <button
                                                                 type="button"
+                                                                 disabled={isVariantBooked(imagePreview.product, modalSelectedVariant)}
                                                                 onClick={() => {
+                                                                     if (isVariantBooked(imagePreview.product, modalSelectedVariant)) {
+                                                                         toast.error('This variant is already booked for the selected date and time slot.');
+                                                                         return;
+                                                                     }
                                                                     const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
                                                                     const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
                                                                     const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
@@ -2901,10 +3007,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         ];
                                                                     });
                                                                 }}
-                                                                className="px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200"
+                                                                 className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isVariantBooked(imagePreview.product, modalSelectedVariant)
+                                                                     ? 'bg-red-100 text-red-500 cursor-not-allowed shadow-none'
+                                                                     : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
+                                                                     }`}
                                                             >
                                                                 <ShoppingBag size={14} strokeWidth={2.5} />
-                                                                Add to Selection
+                                                                 {isVariantBooked(imagePreview.product, modalSelectedVariant) ? 'Already Booked' : 'Add to Selection'}
                                                             </button>
                                                         )}
                                                     </div>
@@ -2919,11 +3028,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 {imagePreview.product.variants.map((v, idx) => {
                                                                     const isVariantActive = (modalSelectedVariant?.sku || modalSelectedVariant?.name) === (v.sku || v.name);
                                                                     const variantCapacity = getProductCapacityConfig(imagePreview.product, v);
+                                                                    const isVariantAlreadyBooked = isVariantBooked(imagePreview.product, v);
                                                                     return (
                                                                         <button
                                                                             key={idx}
                                                                             type="button"
+                                                                            disabled={isVariantAlreadyBooked}
                                                                             onClick={() => {
+                                                                                if (isVariantAlreadyBooked) return;
                                                                                 setModalSelectedVariant(v);
                                                                                 const vKey = `${imagePreview.product?._id}_${v.sku || v.name || 'default'}`;
                                                                                 const existingForVariant = selectedProducts.find(
@@ -2943,12 +3055,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                     }));
                                                                                 }
                                                                             }}
-                                                                            className={`px-4 py-2 font-bold rounded-lg text-xs transition-all border-2 ${isVariantActive
+                                                                            className={`px-4 py-2 font-bold rounded-lg text-xs transition-all border-2 ${isVariantAlreadyBooked
+                                                                                ? 'bg-red-50 border-red-200 text-red-500 cursor-not-allowed'
+                                                                                : isVariantActive
                                                                                 ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
                                                                                 : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                                                                 }`}
                                                                         >
-                                                                            {v.name}{variantCapacity?.uniqueCode ? ` · ${variantCapacity.uniqueCode}` : ''}
+                                                                            {v.name}{variantCapacity?.uniqueCode ? ` · ${variantCapacity.uniqueCode}` : ''}{isVariantAlreadyBooked ? ' · Already Booked' : ''}
                                                                         </button>
                                                                     );
                                                                 })}
@@ -3088,12 +3202,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     ₹{combinedProductTotal.toLocaleString('en-IN')}
                                                                 </span>
                                                                 <div className="flex flex-wrap items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
-                                                                    {/* Current variant breakdown */}
-                                                                    <span className="text-slate-700 font-bold">
-                                                                        ({modalSelectedVariant?.name && modalSelectedVariant.name !== 'default' ? `${modalSelectedVariant.name}: ` : ''}₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')}
-                                                                        {fixedExtra > 0 ? ` +₹${fixedExtra.toLocaleString('en-IN')}` : ''}
-                                                                        {clickBoxExtra > 0 ? ` +₹${clickBoxExtra.toLocaleString('en-IN')}` : ''})
-                                                                    </span>
+                                                                    {/* Current variant breakdown: only after Add to Selection */}
+                                                                    {isItemAdded && (
+                                                                        <span className="text-slate-700 font-bold">
+                                                                            ({modalSelectedVariant?.name && modalSelectedVariant.name !== 'default' ? `${modalSelectedVariant.name}: ` : ''}₹{(rawBasePrice * effectiveQty).toLocaleString('en-IN')}
+                                                                            {fixedExtra > 0 ? ` +₹${fixedExtra.toLocaleString('en-IN')}` : ''}
+                                                                            {clickBoxExtra > 0 ? ` +₹${clickBoxExtra.toLocaleString('en-IN')}` : ''})
+                                                                        </span>
+                                                                    )}
                                                                     {/* Other added variants breakdown */}
                                                                     {hasOtherVariants && otherVariantEntries.map((p, idx) => {
                                                                         const varLabel = p.selectedVariant?.name || p.selectedVariant?.sku || 'Other';

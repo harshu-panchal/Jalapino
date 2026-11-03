@@ -265,7 +265,9 @@ const EventCheckoutPage = () => {
                             </div>
                             <div className="flex justify-between">
                                 <span className="text-slate-500">Guests</span>
-                                <span className="font-semibold text-slate-800">{eventData?.guestCount} People</span>
+                                <span className="font-semibold text-slate-800">
+                                    {eventData?.eventInfo?.noOfGuests ? `${eventData.eventInfo.noOfGuests} People${selectedShop && (selectedShop.minimum || selectedShop.maximum || selectedShop.totalCapacity) ? ` (Limit: ${selectedShop.minimum || 1}-${selectedShop.maximum || selectedShop.totalCapacity || 'Max'})` : ''}` : ''}
+                                </span>
                             </div>
                             {selectedShop && (
                                 <div className="flex justify-between items-center bg-purple-50 p-2.5 rounded-xl border border-purple-200">
@@ -309,6 +311,14 @@ const EventCheckoutPage = () => {
                                                 <span>₹{lineTotal.toLocaleString()}</span>
                                             </span>
                                         </div>
+                                        <span className="text-[10px] font-semibold text-slate-500 pl-2">
+                                            ({quantity} × ₹{pricing.baseUnitPrice.toLocaleString('en-IN')})
+                                        </span>
+                                        {(product.selectedVariant?.minimum || product.selectedVariant?.maximum || product.selectedVariant?.totalCapacity) && (
+                                            <span className="text-[10px] font-bold text-purple-700 pl-2">
+                                                👥 Cap: Min = {product.selectedVariant.minimum || 1}, Max = {product.selectedVariant.maximum || product.selectedVariant.totalCapacity || 'No limit'} ({String(product.selectedVariant.bookingType || 'MULTIPLE').toUpperCase()})
+                                            </span>
+                                        )}
                                         {product.selectedAddOns?.length > 0 && (
                                             <div className="flex flex-wrap gap-1 text-[11px] text-purple-700 pl-2 mt-0.5">
                                                 {product.selectedAddOns.map((ad, aIndex) => (

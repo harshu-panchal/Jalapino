@@ -32,6 +32,27 @@ const getCategoryStyle = (name = '') => {
     return { bg: '#64748B', text: '#FFFFFF' };
 };
 
+const getEventStartTimestamp = (date, time) => {
+    if (!date) return null;
+    const result = new Date(`${String(date).slice(0, 10)}T00:00:00`);
+    if (Number.isNaN(result.getTime())) return null;
+    const rawTime = String(time || '').split('-')[0].trim();
+    const match = rawTime.match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+    if (!match) {
+        result.setHours(23, 59, 59, 999);
+        return result.getTime();
+    }
+    let hours = Number(match[1]);
+    const minutes = Number(match[2] || 0);
+    const period = match[3]?.toUpperCase();
+    if (period) {
+        if (hours === 12) hours = period === 'AM' ? 0 : 12;
+        else if (period === 'PM') hours += 12;
+    }
+    result.setHours(hours, minutes, 0, 0);
+    return result.getTime();
+};
+
 /* ── SellerCard with products ── */
 const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = [], isBlocked = false }) => {
     const [products, setProducts] = useState([]);
@@ -402,6 +423,7 @@ const PlanMyEventPage = () => {
 
     /* — seller bookings on selected date (seller-wise) — */
     const [sellerBookings, setSellerBookings] = useState({}); // { sellerId: [...bookings] }
+    const [bookingClock, setBookingClock] = useState(() => Date.now());
 
     /* — unified search (seller / product) — */
     const [globalSearch, setGlobalSearch] = useState('');
@@ -666,6 +688,25 @@ const PlanMyEventPage = () => {
         setSellerBookings({});
     }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, eventInfo.lat, eventInfo.lng, currentLocation, fetchSellers]);
 
+    // Keep seller visibility aligned with the live advance-booking cutoff while
+    // the customer keeps this screen open.
+    useEffect(() => {
+        const clockTimer = setInterval(() => setBookingClock(Date.now()), 30 * 1000);
+        return () => clearInterval(clockTimer);
+    }, []);
+
+    useEffect(() => {
+        if (!activeCategory || !filterDate) return undefined;
+        const refreshTimer = setInterval(() => {
+            const searchLoc = eventInfo.functionLocation || currentLocation?.city || currentLocation?.name;
+            const isHeaderLocation = !eventInfo.functionLocation || eventInfo.functionLocation === currentLocation?.name || eventInfo.functionLocation === currentLocation?.city;
+            const lat = eventInfo.lat || (isHeaderLocation ? currentLocation?.latitude : undefined);
+            const lng = eventInfo.lng || (isHeaderLocation ? currentLocation?.longitude : undefined);
+            fetchSellers(activeCategory, filterDate, filterTime, searchLoc, lat, lng);
+        }, 60 * 1000);
+        return () => clearInterval(refreshTimer);
+    }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, eventInfo.lat, eventInfo.lng, currentLocation, fetchSellers]);
+
     useEffect(() => {
         if (!activeCategory && !selectedSellerDetail) {
             sessionStorage.removeItem(PLAN_MY_EVENT_VIEW_KEY);
@@ -755,10 +796,8 @@ const PlanMyEventPage = () => {
 
     // Filter by Advance Booking Buffer if a date is selected
     if (filterDate) {
-        const selectedTime = new Date(filterDate).getTime();
-        const currentTime = new Date().getTime();
-        const hoursDiff = (selectedTime - currentTime) / (1000 * 60 * 60);
-
+        const selectedTime = getEventStartTimestamp(filterDate, filterTime);
+        const currentTime = bookingClock;
 
         smartFilteredSellers = smartFilteredSellers.filter(s => {
             if (!s.advanceBookingBufferEnabled) return true;
@@ -766,10 +805,9 @@ const PlanMyEventPage = () => {
 
             const requiredHours = s.advanceBookingBufferUnit === 'hours'
                 ? s.advanceBookingBuffer
-                : s.advanceBookingBuffer * 24;
+                : (s.advanceBookingBuffer * 24) + (Number.parseFloat(String(s.advanceBookingBufferTime ?? 0)) || 0);
 
-
-            const beforePassed = (!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) || (hoursDiff >= requiredHours);
+            const beforePassed = (!s.advanceBookingBuffer || s.advanceBookingBuffer <= 0) || (selectedTime >= currentTime + (requiredHours * 60 * 60 * 1000));
             const afterPassed = (!s.advanceBookingBufferAfter || s.advanceBookingBufferAfter <= 0) || (((selectedTime - currentTime) / (1000 * 60 * 60 * 24)) <= s.advanceBookingBufferAfter);
             return beforePassed && afterPassed;
         });

@@ -1265,7 +1265,7 @@ const SellerProfile = () => {
                     <span className="text-[10px] font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">Minimum time before booking</span>
                   </label>
                   <div className="flex gap-4 w-full md:max-w-xs mt-2 items-center">
-                    <input type="number" min="0"
+                    <input type="number" min="0" step="0.01"
                       name="advanceBookingBuffer"
                       value={formData.advanceBookingBuffer ?? ""}
                       onChange={(e) => setFormData(prev => ({ ...prev, advanceBookingBuffer: e.target.value === "" ? "" : Number(e.target.value) }))}
@@ -1286,6 +1286,7 @@ const SellerProfile = () => {
                         type="number"
                         min="0"
                         max="23"
+                        step="0.01"
                         placeholder="Hrs"
                         title="Additional hours buffer"
                         value={formData.advanceBookingBufferTime ?? "12"}

@@ -74,6 +74,33 @@ const EventRequests = () => {
         return product?.productId?.name || product?.productName || product?.name || 'Product details unavailable';
     };
 
+    const getBookingProductUnitPrice = (req, line) => {
+        const directPrice = Number(line?.price ?? line?.unitPrice);
+        if (Number.isFinite(directPrice) && directPrice > 0) return directPrice;
+        const requestedId = line?.productId && typeof line.productId === 'object'
+            ? (line.productId._id || line.productId.id)
+            : line?.productId;
+        const product = (Array.isArray(req.selectedProducts) ? req.selectedProducts : []).find(item => {
+            const itemId = item.productId && typeof item.productId === 'object'
+                ? (item.productId._id || item.productId.id)
+                : item.productId;
+            const itemName = item.productName || item.name || item.productId?.name;
+            const lineName = line.productName || line.name || line.productId?.name || getBookingProductName(req, line.productId);
+            return String(itemId || item._id) === String(requestedId || '')
+                || (itemName && lineName && String(itemName) === String(lineName));
+        });
+        return Number(product?.price ?? product?.unitPrice ?? 0);
+    };
+
+    const getDisplayStatus = (req) => {
+        if (!req) return 'REQUESTED';
+        if (req.myServiceStatus === 'REJECTED') return 'REJECTED';
+        if (req.overallStatus === 'CANCELLED') return 'CANCELLED';
+        const paymentStatus = String(req.paymentStatus || '').toUpperCase();
+        if (paymentStatus === 'PAID' || paymentStatus === 'ADVANCE_PAID') return 'COMPLETED';
+        return 'REQUESTED';
+    };
+
     if (isLoading) {
         return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
     }
@@ -96,6 +123,9 @@ const EventRequests = () => {
             ) : (
                 <div className="grid gap-6">
                     {requests.map((req) => (
+                        (() => {
+                            const displayStatus = getDisplayStatus(req);
+                            return (
                         <motion.div
                             key={req._id}
                             initial={{ opacity: 0, y: 10 }}
@@ -104,11 +134,11 @@ const EventRequests = () => {
                         >
                             <div className="space-y-3 flex-1">
                                 <div className="flex items-center gap-3">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.myServiceStatus === 'PENDING_APPROVAL' ? 'bg-orange-100 text-orange-700' :
-                                            req.myServiceStatus === 'ACCEPTED' ? 'bg-green-100 text-green-700' :
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${displayStatus === 'REQUESTED' ? 'bg-orange-100 text-orange-700' :
+                                            displayStatus === 'COMPLETED' ? 'bg-blue-100 text-blue-700' :
                                                 'bg-red-100 text-red-700'
                                         }`}>
-                                        {req.myServiceStatus.replace('_', ' ')}
+                                        {displayStatus}
                                     </span>
                                     <span className="text-sm font-medium text-slate-500">Booking ID: {req.bookingId}</span>
                                 </div>
@@ -148,9 +178,27 @@ const EventRequests = () => {
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-500 font-medium uppercase">Overall Status</p>
-                                        <p className="text-sm font-bold text-slate-800">{req.overallStatus}</p>
+                                        <p className="text-sm font-bold text-slate-800">{displayStatus}</p>
                                     </div>
                                 </div>
+
+                                {req.selectedShop && (
+                                    <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 p-3">
+                                        <span className="text-xs font-black text-purple-900">📍 Selected Shop / Area</span>
+                                        <span className="text-xs font-extrabold text-purple-700">
+                                            {req.selectedShop.uniqueCode || `Shop ${req.selectedShop.shopNo || ''}`} {req.selectedShop.bookingType ? `(${req.selectedShop.bookingType})` : ''}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {req.eventInfo && (
+                                    <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-xl border border-slate-200 bg-white p-4">
+                                        {req.eventInfo.gender && <div><p className="text-[10px] font-bold uppercase text-slate-500">Gender</p><p className="text-sm font-semibold text-slate-800 capitalize">{req.eventInfo.gender}</p></div>}
+                                        {req.eventInfo.dateOfBirth && <div><p className="text-[10px] font-bold uppercase text-slate-500">Date of Birth</p><p className="text-sm font-semibold text-slate-800">{req.eventInfo.dateOfBirth}</p></div>}
+                                        {req.eventInfo.anniversaryDate && <div><p className="text-[10px] font-bold uppercase text-slate-500">Anniversary Date</p><p className="text-sm font-semibold text-slate-800">{req.eventInfo.anniversaryDate}</p></div>}
+                                        {req.eventInfo.functionLocation && <div><p className="text-[10px] font-bold uppercase text-slate-500">Function Location</p><p className="text-sm font-semibold text-slate-800">{req.eventInfo.functionLocation}</p></div>}
+                                    </div>
+                                )}
 
                                 {Array.isArray(req.serviceDetails?.preferences) && req.serviceDetails.preferences.length > 0 && (
                                     <div className="mt-3 p-4 rounded-xl border border-fuchsia-100 bg-fuchsia-50/50">
@@ -173,11 +221,16 @@ const EventRequests = () => {
                                                     <div key={`${preference.fieldName || 'request'}-${index}`} className="rounded-lg bg-white border border-fuchsia-100 p-3">
                                                         <p className="text-[10px] font-bold uppercase text-slate-500">{label}</p>
                                                         {isSelectedProducts && <ul className="text-sm text-slate-800 mt-1 space-y-1">{preference.value.map((id, productIndex) => <li key={`${id}-${productIndex}`}>{getBookingProductName(req, typeof id === 'object' ? (id.productId || id._id) : id)}</li>)}</ul>}
-                                                        {isSelectedQuantities && <ul className="text-sm text-slate-800 mt-1 space-y-2">{preference.value.map((line, lineIndex) => <li key={`${line.productId || line._id || lineIndex}`}>
-                                                            <span className="font-semibold">{getBookingProductName(req, line.productId || line._id)} × {line.quantity || 1}</span>
-                                                            {(line.selectedVariant?.name || line.selectedVariant?.shopNo) && <span className="text-xs text-slate-500"> · {line.selectedVariant.name || `Shop ${line.selectedVariant.shopNo}`}</span>}
-                                                            {Array.isArray(line.selectedAddOns) && line.selectedAddOns.length > 0 && <span className="block text-xs text-slate-600">Add-ons: {line.selectedAddOns.map(addOn => `${addOn.name}${addOn.price ? ` (₹${addOn.price})` : ''}`).join(', ')}</span>}
-                                                        </li>)}</ul>}
+                                                        {isSelectedQuantities && <ul className="text-sm text-slate-800 mt-1 space-y-2">{preference.value.map((line, lineIndex) => {
+                                                            const quantity = line.quantity || 1;
+                                                            const unitPrice = getBookingProductUnitPrice(req, line);
+                                                            return <li key={`${line.productId || line._id || lineIndex}`}>
+                                                                <span className="font-semibold">{getBookingProductName(req, line.productId || line._id)} × {quantity}</span>
+                                                                {unitPrice > 0 && <span className="block text-xs text-slate-500">({quantity} × ₹{unitPrice.toLocaleString('en-IN')})</span>}
+                                                                {(line.selectedVariant?.name || line.selectedVariant?.shopNo) && <span className="text-xs text-slate-500"> · {line.selectedVariant.name || `Shop ${line.selectedVariant.shopNo}`}</span>}
+                                                                {Array.isArray(line.selectedAddOns) && line.selectedAddOns.length > 0 && <span className="block text-xs text-slate-600">Add-ons: {line.selectedAddOns.map(addOn => `${addOn.name}${addOn.price ? ` (₹${addOn.price})` : ''}`).join(', ')}</span>}
+                                                            </li>;
+                                                        })}</ul>}
                                                         {isSelectedColors && <ul className="text-sm text-slate-800 mt-1 space-y-1">{preference.value.map((line, lineIndex) => <li key={`${line.productId || lineIndex}`}>{line.productName || getBookingProductName(req, line.productId)}: {(line.colors || []).join(', ')}</li>)}</ul>}
                                                         {!isSelectedProducts && !isSelectedQuantities && !isSelectedColors && value && (
                                                             referenceImageUrl ? <a href={referenceImageUrl} target="_blank" rel="noreferrer" className="inline-block mt-2">
@@ -209,6 +262,10 @@ const EventRequests = () => {
                                                     <span className="font-bold text-purple-700">
                                                         ₹{((p.price || p.unitPrice || 0) * (p.quantity || 1) + (p.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0)).toLocaleString('en-IN')}
                                                     </span>
+                                                    <span className="w-full pl-2 text-[10px] font-semibold text-slate-500">({p.quantity || 1} × ₹{Number(p.price || p.unitPrice || 0).toLocaleString('en-IN')})</span>
+                                                    {(p.selectedVariant?.minimum || p.selectedVariant?.maximum || p.selectedVariant?.totalCapacity) && (
+                                                        <span className="w-full pl-2 text-[10px] font-bold text-purple-700">👥 Cap: Min = {p.selectedVariant.minimum || 1}, Max = {p.selectedVariant.maximum || p.selectedVariant.totalCapacity || 'No limit'} ({String(p.selectedVariant.bookingType || 'MULTIPLE').toUpperCase()})</span>
+                                                    )}
                                                     {p.selectedAddOns && p.selectedAddOns.length > 0 && (
                                                         <div className="w-full flex flex-wrap gap-1 mt-0.5 pl-2">
                                                             {p.selectedAddOns.map((ad, aIdx) => (
@@ -261,6 +318,8 @@ const EventRequests = () => {
                                 </div>
                             )}
                         </motion.div>
+                            );
+                        })()
                     ))}
                 </div>
             )}

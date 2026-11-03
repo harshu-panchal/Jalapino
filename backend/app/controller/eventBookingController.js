@@ -9,6 +9,7 @@ import Product from '../models/product.js';
 import EventCategory from '../models/event/EventCategory.js';
 import handleResponse from '../utils/helper.js';
 import { emitSellerNotification, emitCustomerNotification } from '../modules/notifications/notification.service.js';
+import { getBookingStart, isBookingWithinAdvanceNotice } from '../utils/advanceBooking.js';
 
 // Create a new event booking
 export const createEventBooking = async (req, res) => {
@@ -96,11 +97,18 @@ export const createEventBooking = async (req, res) => {
         }
         const eventDateObj = new Date(primaryDate || Date.now());
         const eventDateStr = eventDateObj.toISOString().split('T')[0];
+        const requestedTime = String(eventData.time || eventData.eventTime || eventData.multipleEvents?.[0]?.time || '').trim();
         const daysDifference = Math.ceil((eventDateObj.getTime() - Date.now()) / (1000 * 3600 * 24));
         const maxAdvanceDays = globalSettings?.bookingControl?.bookingWindowDays ?? 365;
         
         if (daysDifference > maxAdvanceDays) {
             return handleResponse(res, 400, `Booking rejected by GASP: You cannot book an event more than ${maxAdvanceDays} days in advance.`);
+        }
+
+        const sellerForAdvanceCheck = await Seller.findById(sellerId).select('advanceBookingBufferEnabled advanceBookingBuffer advanceBookingBufferUnit advanceBookingBufferTime').lean();
+        if (sellerForAdvanceCheck && !isBookingWithinAdvanceNotice(sellerForAdvanceCheck, eventDateStr, requestedTime)) {
+            const bookingStart = getBookingStart(eventDateStr, requestedTime);
+            return handleResponse(res, 400, `Booking requires advance notice until ${bookingStart?.toLocaleString() || 'the selected time'}.`);
         }
 
         // --- SELLER CALENDAR VALIDATION & OFFLINE PROTECTION ---
@@ -141,23 +149,35 @@ export const createEventBooking = async (req, res) => {
                 overallStatus: { $nin: ['CANCELLED', 'REJECTED'] }
             });
 
-            // Enforce the seller's existing shop/product unique-code capacity per date.
+            const bookingsForSelectedTime = requestedTime
+                ? bookingsOnDate.filter(booking => (
+                    String(booking.eventTime || '').trim() === requestedTime
+                    || (Array.isArray(booking.multipleEvents) && booking.multipleEvents.some(event => (
+                        String(event.date || eventDateStr).trim() === eventDateStr
+                        && String(event.time || '').trim() === requestedTime
+                    )))
+                ))
+                : bookingsOnDate;
+
+            // Product capacity is checked against the selected product/variant below.
+            // Do not let the seller shop or seller-wide capacity lock a product booking.
             // Pending requests reserve capacity too; cancelled and rejected bookings do not.
             const requestedShopCode = String(selectedShop?.uniqueCode || '').trim().toUpperCase();
             const requestedShopNo = String(selectedShop?.shopNo || '').trim();
-            if (seller.capacityEnabled && requestedShopCode) {
+            const hasProductCapacityLines = seller.capacityEnabled && selectedProductLines.some(line => line.uniqueCode);
+            if (!hasProductCapacityLines && seller.capacityEnabled && requestedShopCode) {
                 const shop = (seller.shopsAtLocation || []).find(s =>
                     String(s.uniqueCode || '').trim().toUpperCase() === requestedShopCode ||
                     (requestedShopNo && String(s.shopNo || '') === requestedShopNo)
                 );
                 if (!shop) return handleResponse(res, 400, 'Selected shop is not configured for this seller');
-                const shopBookings = bookingsOnDate.filter(b =>
+                const shopBookings = bookingsForSelectedTime.filter(b =>
                     String(b.selectedShop?.uniqueCode || '').trim().toUpperCase() === requestedShopCode ||
                     (requestedShopNo && String(b.selectedShop?.shopNo || '') === requestedShopNo)
                 );
                 const shopType = String(shop.bookingType || selectedShop.bookingType || 'MULTIPLE').toUpperCase();
                 if (shopType === 'SINGLE' && shopBookings.length > 0) {
-                    return handleResponse(res, 400, 'This shop is already booked for the selected date. Please choose another date.');
+                    return handleResponse(res, 400, 'This shop is already booked for the selected date and time slot. Please choose another time slot.');
                 }
                 const shopMaximum = Number(shop.maximum || shop.totalCapacity || 0);
                 const shopGuestsBooked = shopBookings.reduce((sum, b) => sum + (Number(b.guestCount) || 1), 0);
@@ -172,27 +192,32 @@ export const createEventBooking = async (req, res) => {
                 const product = await Product.findOne({ _id: line.productId, sellerId }).select('variants').lean();
                 const variant = (product?.variants || []).find(v => String(v.uniqueCode || '').trim().toUpperCase() === code);
                 if (!variant) return handleResponse(res, 400, `Product code ${code} is not configured for this product`);
-                const codeBookings = bookingsOnDate.flatMap(b => (b.selectedProducts || [])
-                    .filter(existing => String(existing.uniqueCode || existing.selectedVariant?.uniqueCode || '').trim().toUpperCase() === code));
+                const codeBookings = bookingsForSelectedTime.flatMap(b => (b.selectedProducts || [])
+                    .filter(existing => String(existing.productId || '') === String(line.productId)
+                        && String(existing.uniqueCode || existing.selectedVariant?.uniqueCode || '').trim().toUpperCase() === code));
                 const type = String(variant.bookingType || 'MULTIPLE').toUpperCase();
+                const minimum = Number(variant.minimum || 0);
+                if (minimum > 0 && line.quantity < minimum) {
+                    return handleResponse(res, 400, `Product code ${code} requires a minimum quantity of ${minimum}.`);
+                }
                 if (type === 'SINGLE' && codeBookings.length > 0) {
-                    return handleResponse(res, 400, `Product code ${code} is already booked for the selected date.`);
+                    return handleResponse(res, 400, `Product code ${code} is already booked for the selected date and time slot.`);
                 }
                 const max = Number(variant.maximum || variant.totalCapacity || 0);
                 const used = codeBookings.reduce((sum, existing) => sum + (Number(existing.quantity) || 0), 0);
                 if (type !== 'SINGLE' && max > 0 && used + line.quantity > max) {
-                    return handleResponse(res, 400, `Product code ${code} has only ${Math.max(0, max - used)} capacity left for the selected date.`);
+                    return handleResponse(res, 400, `Product code ${code} has only ${Math.max(0, max - used)} capacity left for the selected date and time slot.`);
                 }
             }
 
             const existingBookingsCount = bookingsOnDate.length;
             const numberOfShops = seller.numberOfShops || 1;
             
-            if (seller.bookingType === 'one_time') {
+            if (!hasProductCapacityLines && seller.bookingType === 'one_time') {
                 if (existingBookingsCount >= numberOfShops) {
                     return handleResponse(res, 400, "The selected provider has reached their maximum booking capacity for this date (One-time bookings full).");
                 }
-            } else {
+            } else if (!hasProductCapacityLines) {
                 // Multiple time -> check total capacity
                 let consumedCapacity = 0;
                 bookingsOnDate.forEach(b => {
@@ -334,6 +359,7 @@ export const getMyEventBookings = async (req, res) => {
         const bookings = await EventBooking.find({ customer: customerId })
             .populate('services.category', 'name icon')
             .populate('services.seller', 'name businessName mobile')
+            .populate('selectedProducts.productId', 'name')
             .sort({ createdAt: -1 });
         return handleResponse(res, 200, 'Event bookings fetched successfully', bookings);
     } catch (error) {
@@ -627,21 +653,48 @@ export const getSellerBookedSlots = async (req, res) => {
         }).select('eventTime multipleEvents selectedProducts selectedShop');
 
         const bookedSlots = new Set();
+        // Keep per-variant usage as well.  The customer UI uses this data to
+        // disable only the selected product variant, not the whole time slot.
+        const variantUsageBySlot = {};
+        const productVariantUsageBySlot = {};
+        const addVariantUsage = (productId, code, slot, quantity) => {
+            const normalizedCode = String(code || '').trim().toUpperCase();
+            const normalizedSlot = String(slot || '').trim();
+            const normalizedProductId = String(productId || '').trim();
+            if (!normalizedProductId || !normalizedCode || !normalizedSlot) return;
+            if (!variantUsageBySlot[normalizedCode]) variantUsageBySlot[normalizedCode] = {};
+            variantUsageBySlot[normalizedCode][normalizedSlot] =
+                (variantUsageBySlot[normalizedCode][normalizedSlot] || 0) + (Number(quantity) || 1);
+            if (!productVariantUsageBySlot[normalizedProductId]) productVariantUsageBySlot[normalizedProductId] = {};
+            if (!productVariantUsageBySlot[normalizedProductId][normalizedCode]) {
+                productVariantUsageBySlot[normalizedProductId][normalizedCode] = {};
+            }
+            productVariantUsageBySlot[normalizedProductId][normalizedCode][normalizedSlot] =
+                (productVariantUsageBySlot[normalizedProductId][normalizedCode][normalizedSlot] || 0) + (Number(quantity) || 1);
+        };
+
         bookings.forEach(b => {
-            if (uniqueCode) {
-                const normalizedCode = String(uniqueCode).trim().toUpperCase();
-                const hasCodeBooking = String(b.selectedShop?.uniqueCode || '').trim().toUpperCase() === normalizedCode
-                    || (b.selectedProducts || []).some(product =>
-                        String(product.uniqueCode || product.selectedVariant?.uniqueCode || '').trim().toUpperCase() === normalizedCode
-                    );
-                if (!hasCodeBooking) return;
-            }
-            if (b.eventTime) bookedSlots.add(b.eventTime);
-            if (Array.isArray(b.multipleEvents)) {
-                b.multipleEvents.forEach(me => {
-                    if (me.time) bookedSlots.add(me.time);
-                });
-            }
+            const bookingSlots = [
+                b.eventTime,
+                ...(Array.isArray(b.multipleEvents)
+                    ? b.multipleEvents
+                        .filter(me => String(me.date || date).trim() === String(date).trim())
+                        .map(me => me.time)
+                    : [])
+            ].filter(Boolean);
+
+            const bookingVariants = (b.selectedProducts || [])
+                .map(product => ({
+                    productId: product.productId,
+                    code: product.uniqueCode || product.selectedVariant?.uniqueCode,
+                    quantity: product.quantity
+                }))
+                .filter(product => product.code);
+
+            bookingSlots.forEach(slot => {
+                bookedSlots.add(slot);
+                bookingVariants.forEach(product => addVariantUsage(product.productId, product.code, slot, product.quantity));
+            });
         });
 
         // Also check SellerVenueAvailability if any venue belongs to seller
@@ -654,8 +707,14 @@ export const getSellerBookedSlots = async (req, res) => {
             venueAvailability.bookedSlots.forEach(s => bookedSlots.add(s));
         }
 
+        const normalizedRequestedCode = String(uniqueCode || '').trim().toUpperCase();
+        const requestedCodeUsage = variantUsageBySlot[normalizedRequestedCode] || {};
+
         return handleResponse(res, 200, "Booked slots fetched successfully", {
-            bookedSlots: Array.from(bookedSlots)
+            // Kept for backward compatibility with existing consumers.
+            bookedSlots: uniqueCode ? Object.keys(requestedCodeUsage) : Array.from(bookedSlots),
+            variantUsageBySlot,
+            productVariantUsageBySlot
         });
     } catch (error) {
         return handleResponse(res, 500, error.message);

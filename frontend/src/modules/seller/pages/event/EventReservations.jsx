@@ -172,16 +172,16 @@ const EventReservations = () => {
 
     const getDisplayStatus = (res) => {
         if (!res) return { label: 'REQUESTED', color: 'bg-amber-100 text-amber-700 border-amber-200' };
-        if (res.status === 'completed' || res.overallStatus === 'COMPLETED') {
-            return { label: 'COMPLETED', color: 'bg-blue-100 text-blue-700 border-blue-200' };
-        }
-        if (res.status === 'rejected' || res.status === 'cancelled' || res.overallStatus === 'CANCELLED') {
+        if (res.status === 'rejected') {
             return { label: 'REJECTED', color: 'bg-red-100 text-red-700 border-red-200' };
         }
+        if (res.status === 'cancelled' || res.overallStatus === 'CANCELLED') {
+            return { label: 'CANCELLED', color: 'bg-red-100 text-red-700 border-red-200' };
+        }
         const payStatus = String(res.paymentStatus || '').toUpperCase();
-        const isPaid = payStatus === 'PAID' || payStatus === 'ADVANCE_PAID' || res.status === 'confirmed' || res.status === 'active';
-        if (isPaid) {
-            return { label: 'CONFIRMED', color: 'bg-green-100 text-green-700 border-green-200' };
+        const isPaymentConfirmed = payStatus === 'PAID' || payStatus === 'ADVANCE_PAID';
+        if (isPaymentConfirmed) {
+            return { label: 'COMPLETED', color: 'bg-blue-100 text-blue-700 border-blue-200' };
         }
         return { label: 'REQUESTED', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     };
@@ -218,7 +218,7 @@ const EventReservations = () => {
             return r.status === 'confirmed' || disp === 'confirmed';
         }
         if (filter === 'rejected') {
-            return r.status === 'rejected' || r.status === 'cancelled' || disp === 'rejected';
+            return r.status === 'rejected' || r.status === 'cancelled' || disp === 'rejected' || disp === 'cancelled';
         }
         if (filter === 'completed') {
             return r.status === 'completed' || disp === 'completed';
@@ -612,6 +612,9 @@ const EventReservations = () => {
                                             <div className="flex justify-between font-bold text-slate-800">
                                                 <span>{p.productName || 'Product'} {p.selectedVariant?.name ? `(${p.selectedVariant.name})` : ''} × {p.quantity || 1}</span>
                                                 <span className="text-purple-700">₹{((p.price || p.unitPrice || 0) * (p.quantity || 1) + (p.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0)).toLocaleString('en-IN')}</span>
+                                            </div>
+                                            <div className="text-[10px] font-semibold text-slate-500 pl-1 mt-0.5">
+                                                ({p.quantity || 1} × ₹{Number(p.price || p.unitPrice || 0).toLocaleString('en-IN')})
                                             </div>
                                             {Array.isArray(p.selectedAddOns) && p.selectedAddOns.length > 0 && (
                                                 <div className="flex flex-wrap gap-1 mt-1.5 pl-1">
