@@ -454,6 +454,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [ticketSoldMap, setTicketSoldMap] = useState({});
     const [selectedShop, setSelectedShop] = useState(null);
     const [productVariantUsageBySlot, setProductVariantUsageBySlot] = useState({});
+    const [productVariantUsageByDate, setProductVariantUsageByDate] = useState({});
+    const [shopUsageBySlot, setShopUsageBySlot] = useState({});
     const [selectedAddOns, setSelectedAddOns] = useState({});
 
     const openProductGallery = (product) => {
@@ -693,15 +695,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     useEffect(() => {
         if (!selectedSeller?._id || !activeDate) {
             setProductVariantUsageBySlot({});
+            setProductVariantUsageByDate({});
+            setShopUsageBySlot({});
             return;
         }
         let cancelled = false;
         const fetchVariantUsage = async () => {
             try {
                 const res = await axiosInstance.get(`/events/slots/${selectedSeller._id}?date=${encodeURIComponent(activeDate)}`);
-                if (!cancelled) setProductVariantUsageBySlot(res.data?.result?.productVariantUsageBySlot || {});
+                if (!cancelled) {
+                    setProductVariantUsageBySlot(res.data?.result?.productVariantUsageBySlot || {});
+                    setProductVariantUsageByDate(res.data?.result?.productVariantUsageByDate || {});
+                    setShopUsageBySlot(res.data?.result?.shopUsageBySlot || {});
+                }
             } catch {
-                if (!cancelled) setProductVariantUsageBySlot({});
+                if (!cancelled) {
+                    setProductVariantUsageBySlot({});
+                    setProductVariantUsageByDate({});
+                    setShopUsageBySlot({});
+                }
             }
         };
         fetchVariantUsage();
@@ -819,7 +831,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         const bookingType = String(variant?.bookingType || product?.bookingType || 'MULTIPLE').toUpperCase();
         const capacityType = String(variant?.capacityType || product?.capacityType || 'PRODUCT CAPACITY').toUpperCase();
 
-        if (minimum === 0 && maxLimit === 0) {
+        // Shop-capacity variants are governed only by the selected shop/date
+        // availability. Do not treat their shop limits as product capacity.
+        if (capacityType.includes('SHOP')) return null;
+
+        // SINGLE product capacity must stay active even when Min/Max are left empty,
+        // so the variant shows "already booked" after one booking on the date.
+        if (minimum === 0 && maxLimit === 0 && bookingType !== 'SINGLE') {
             return null;
         }
 
@@ -835,14 +853,40 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const getBookedVariantUsage = (product, variant) => {
-        const code = String(variant?.uniqueCode || product?.uniqueCode || '').trim().toUpperCase();
         const productId = String(product?._id || product?.productId || '').trim();
-        const slot = String(activeTime || '').trim();
-        if (!productId || !code || !slot) return 0;
-        return Number(productVariantUsageBySlot?.[productId]?.[code]?.[slot] || 0);
+        if (!productId) return 0;
+        return Number(productVariantUsageByDate?.[productId] || 0);
+    };
+
+    const isShopCapacityVariant = (product, variant) => {
+        const capacityType = String(variant?.capacityType || product?.capacityType || '').trim().toUpperCase();
+        return capacityType.includes('SHOP');
+    };
+
+    const getShopForProductVariant = (product, variant) => {
+        const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
+        const code = String(variant?.uniqueCode || product?.uniqueCode || '').trim().toUpperCase();
+        const shopNo = String(variant?.shopNo || product?.shopNo || '').trim();
+        return shops.find(shop =>
+            (code && String(shop.uniqueCode || '').trim().toUpperCase() === code) ||
+            (shopNo && String(shop.shopNo || '').trim() === shopNo)
+        ) || null;
+    };
+
+    const isShopSlotBooked = (product, variant) => {
+        if (!selectedSeller?.capacityEnabled || !isShopCapacityVariant(product, variant) || !activeDate || !activeTime) return false;
+        const shop = getShopForProductVariant(product, variant) || selectedShop;
+        if (!shop) return false;
+        const shopKey = String(shop.uniqueCode || '').trim().toUpperCase() || `SHOP_NO:${String(shop.shopNo || '').trim()}`;
+        const type = String(shop.bookingType || 'MULTIPLE').toUpperCase();
+        const shopUsage = shopUsageBySlot?.[shopKey] || {};
+        const used = Number(shopUsage?.[String(activeTime).trim()] || 0);
+        const usedOnDate = Object.values(shopUsage).some(count => Number(count) > 0);
+        return type === 'SINGLE' ? usedOnDate : used > 0;
     };
 
     const isVariantBooked = (product, variant) => {
+        if (isShopSlotBooked(product, variant)) return true;
         const capacity = getProductCapacityConfig(product, variant);
         const used = getBookedVariantUsage(product, variant);
         if (used <= 0) return false;
@@ -854,6 +898,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         return Number(capacity?.maximum || 0) > 0 && remaining < Number(capacity?.minimum || 1);
     };
 
+    const getVariantUnavailableMessage = (product, variant) => {
+        if (isShopSlotBooked(product, variant)) {
+            return 'This variant is already booked on this date and time slot.';
+        }
+        const capacity = getProductCapacityConfig(product, variant);
+        return String(capacity?.bookingType || '').toUpperCase() === 'SINGLE'
+            ? 'This variant is already booked on this date.'
+            : 'This product is already fully booked on this date.';
+    };
+
     // Automatically derive selectedShop from selectedProducts that have a shop attached
     const activeSelectedShop = React.useMemo(() => {
         if (!selectedSeller?.capacityEnabled) return null;
@@ -861,13 +915,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         if (shops.length === 0) return null;
 
         for (const p of selectedProducts) {
-            const cap = getProductCapacityConfig(p, p.selectedVariant || p.variants?.[0]);
-            if (cap && (cap.uniqueCode || cap.shopNo)) {
-                const shops = Array.isArray(selectedSeller?.shopsAtLocation) ? selectedSeller.shopsAtLocation : [];
-                const found = shops.find(s => s.uniqueCode && cap.uniqueCode && s.uniqueCode.toUpperCase() === cap.uniqueCode.toUpperCase())
-                    || shops.find(s => cap.shopNo && String(s.shopNo) === String(cap.shopNo));
-                if (found) return found;
-            }
+            const variant = p.selectedVariant || p.variants?.[0];
+            if (!isShopCapacityVariant(p, variant)) continue;
+            const code = String(variant?.uniqueCode || p?.uniqueCode || '').trim().toUpperCase();
+            const shopNo = String(variant?.shopNo || p?.shopNo || '').trim();
+            const found = shops.find(s =>
+                (code && String(s.uniqueCode || '').trim().toUpperCase() === code) ||
+                (shopNo && String(s.shopNo || '').trim() === shopNo)
+            );
+            if (found) return found;
         }
         return selectedShop || null;
     }, [selectedProducts, selectedSeller?.capacityEnabled, selectedSeller?.shopsAtLocation, selectedShop]);
@@ -897,10 +953,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || 'default';
             const selectedProduct = prev.find(p => p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey);
             const currentQty = selectedProduct?.quantity || 0;
+            // Other product-capacity variants of the same product already in the cart
+            // share the same date capacity (backend sums them the same way).
+            const otherCartQty = prev
+                .filter(p => p._id === product._id
+                    && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') !== variantKey
+                    && !isShopCapacityVariant(p, p.selectedVariant))
+                .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
 
             if (currentQty === 0 && change > 0) {
                 const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
-                const used = getBookedVariantUsage(product, product.selectedVariant);
+                const used = getBookedVariantUsage(product, product.selectedVariant) + otherCartQty;
                 if (capConfig?.maximum > 0 && used + initialQty > capConfig.maximum) {
                     toast.error(`Only ${Math.max(0, capConfig.maximum - used)} capacity left for this variant`);
                     return prev;
@@ -917,7 +980,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
 
             if (change > 0) {
-                const used = getBookedVariantUsage(product, product.selectedVariant);
+                const used = getBookedVariantUsage(product, product.selectedVariant) + otherCartQty;
                 if (capConfig && capConfig.maximum > 0 && (used + currentQty + change) > capConfig.maximum) {
                     toast.error(`Maximum allowed capacity is ${capConfig.maximum}`);
                     return prev;
@@ -1033,7 +1096,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const handleProceed = () => {
         const bookedVariant = selectedProducts.find(product => isVariantBooked(product, product.selectedVariant));
         if (bookedVariant) {
-            toast.error('The selected variant is already booked for this date and time slot. Please choose another variant.');
+            toast.error(getVariantUnavailableMessage(bookedVariant, bookedVariant.selectedVariant));
             return;
         }
         if (isUploadingReferencePhoto) {
@@ -2964,15 +3027,27 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         ) : (
                                                             <button
                                                                 type="button"
-                                                                 disabled={isVariantBooked(imagePreview.product, modalSelectedVariant)}
+                                                                disabled={isVariantBooked(imagePreview.product, modalSelectedVariant)}
                                                                 onClick={() => {
-                                                                     if (isVariantBooked(imagePreview.product, modalSelectedVariant)) {
-                                                                         toast.error('This variant is already booked for the selected date and time slot.');
-                                                                         return;
-                                                                     }
+                                                                    if (isVariantBooked(imagePreview.product, modalSelectedVariant)) {
+                                                                        toast.error(getVariantUnavailableMessage(imagePreview.product, modalSelectedVariant));
+                                                                        return;
+                                                                    }
                                                                     const capConfig = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
                                                                     const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
                                                                     const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
+                                                                    if (capConfig && capConfig.maximum > 0) {
+                                                                        const otherCartQty = selectedProducts
+                                                                            .filter(p => p._id === imagePreview.product?._id
+                                                                                && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') !== targetVariantKey
+                                                                                && !isShopCapacityVariant(p, p.selectedVariant))
+                                                                            .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
+                                                                        const used = getBookedVariantUsage(imagePreview.product, modalSelectedVariant) + otherCartQty;
+                                                                        if (used + initialQty > capConfig.maximum) {
+                                                                            toast.error(`Only ${Math.max(0, capConfig.maximum - used)} capacity left for this variant`);
+                                                                            return;
+                                                                        }
+                                                                    }
                                                                     const resolvedVariant = capConfig ? {
                                                                         ...modalSelectedVariant,
                                                                         uniqueCode: capConfig.uniqueCode,
@@ -3007,13 +3082,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                         ];
                                                                     });
                                                                 }}
-                                                                 className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isVariantBooked(imagePreview.product, modalSelectedVariant)
-                                                                     ? 'bg-red-100 text-red-500 cursor-not-allowed shadow-none'
-                                                                     : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
-                                                                     }`}
+                                                                className={`px-6 py-3 rounded-xl font-black uppercase tracking-wider text-xs flex items-center gap-2 transition-all shadow-md active:scale-95 ${isVariantBooked(imagePreview.product, modalSelectedVariant)
+                                                                    ? 'bg-red-100 text-red-500 cursor-not-allowed shadow-none'
+                                                                    : 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white hover:from-purple-700 hover:to-indigo-700 shadow-purple-200'
+                                                                    }`}
                                                             >
                                                                 <ShoppingBag size={14} strokeWidth={2.5} />
-                                                                 {isVariantBooked(imagePreview.product, modalSelectedVariant) ? 'Already Booked' : 'Add to Selection'}
+                                                                {isVariantBooked(imagePreview.product, modalSelectedVariant) ? getVariantUnavailableMessage(imagePreview.product, modalSelectedVariant) : 'Add to Selection'}
                                                             </button>
                                                         )}
                                                     </div>
@@ -3058,11 +3133,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                             className={`px-4 py-2 font-bold rounded-lg text-xs transition-all border-2 ${isVariantAlreadyBooked
                                                                                 ? 'bg-red-50 border-red-200 text-red-500 cursor-not-allowed'
                                                                                 : isVariantActive
-                                                                                ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
-                                                                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                                                                                    ? 'bg-purple-50 border-purple-600 text-purple-700 shadow-sm'
+                                                                                    : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
                                                                                 }`}
                                                                         >
-                                                                            {v.name}{variantCapacity?.uniqueCode ? ` · ${variantCapacity.uniqueCode}` : ''}{isVariantAlreadyBooked ? ' · Already Booked' : ''}
+                                                                            {v.name}{variantCapacity?.uniqueCode ? ` · ${variantCapacity.uniqueCode}` : ''}{isVariantAlreadyBooked ? ` · ${getVariantUnavailableMessage(imagePreview.product, v)}` : ''}
                                                                         </button>
                                                                     );
                                                                 })}
