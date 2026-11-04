@@ -824,16 +824,25 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             return null;
         }
 
-        const minimum = Number(variant?.minimum ?? product?.minimum ?? 0);
-        const maximum = Number(variant?.maximum ?? product?.maximum ?? 0);
-        const totalCap = Number(variant?.totalCapacity ?? product?.totalCapacity ?? 0);
+        // Shop/Hall variants read Min/Max/type from the seller's CURRENT shop row
+        // (same source the shop lock uses), so limits set later in the seller
+        // profile still apply even if the product variant copy is empty/old.
+        const isShopVariant = String(variant?.capacityType || product?.capacityType || '').toUpperCase().includes('SHOP');
+        const shopRow = isShopVariant ? (selectedSeller?.shopsAtLocation || []).find(s =>
+            String(s.uniqueCode || '').trim().toUpperCase() === variantCode.toUpperCase()) : null;
+        const src = shopRow || variant;
+        const minimum = Number(src?.minimum || variant?.minimum || product?.minimum || 0);
+        const maximum = Number(src?.maximum || variant?.maximum || product?.maximum || 0);
+        const totalCap = Number(src?.totalCapacity || variant?.totalCapacity || product?.totalCapacity || 0);
         const maxLimit = maximum > 0 ? maximum : (totalCap > 0 ? totalCap : 0);
-        const bookingType = String(variant?.bookingType || product?.bookingType || 'MULTIPLE').toUpperCase();
+        const bookingType = String(src?.bookingType || variant?.bookingType || product?.bookingType || 'MULTIPLE').toUpperCase();
         const capacityType = String(variant?.capacityType || product?.capacityType || 'PRODUCT CAPACITY').toUpperCase();
 
-        // Shop-capacity variants are governed only by the selected shop/date
-        // availability. Do not treat their shop limits as product capacity.
-        if (capacityType.includes('SHOP')) return null;
+        // Shop-capacity variants: date/slot locking is handled only by the shop
+        // check (isShopSlotBooked). Here we only expose the shop row's Min/Max so
+        // the quantity is shown and bounded. Shop codes never appear in product
+        // date usage, so this never mixes with product capacity.
+        if (capacityType.includes('SHOP') && minimum === 0 && maxLimit === 0) return null;
 
         // SINGLE product capacity must stay active even when Min/Max are left empty,
         // so the variant shows "already booked" after one booking on the date.
@@ -948,7 +957,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const handleProductQuantityChange = (product, change) => {
-        const capConfig = getProductCapacityConfig(product, product.selectedVariant);
+        // Products added from the catalog card may not carry selectedVariant yet;
+        // fall back to the first variant so its unique code / capacity always apply.
+        const activeVariant = product.selectedVariant || product.variants?.[0];
+        const capConfig = getProductCapacityConfig(product, activeVariant);
+
+        // Strong lock: never allow adding/increasing a variant that is already booked.
+        if (change > 0 && isVariantBooked(product, activeVariant)) {
+            toast.error(getVariantUnavailableMessage(product, activeVariant));
+            return;
+        }
 
         setSelectedProducts(prev => {
             const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || 'default';
@@ -956,20 +974,20 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             const currentQty = selectedProduct?.quantity || 0;
             // Other cart lines (any product/variant) with the same unique code share
             // the same date capacity (backend sums them the same way).
-            const thisCode = String(product.selectedVariant?.uniqueCode || product.uniqueCode || '').trim().toUpperCase();
+            const thisCode = String(activeVariant?.uniqueCode || product.uniqueCode || '').trim().toUpperCase();
             const otherCartQty = !thisCode ? 0 : prev
-                .filter(p => String(p.selectedVariant?.uniqueCode || p.uniqueCode || '').trim().toUpperCase() === thisCode
+                .filter(p => String((p.selectedVariant || p.variants?.[0])?.uniqueCode || p.uniqueCode || '').trim().toUpperCase() === thisCode
                     && !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey))
                 .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
 
             if (currentQty === 0 && change > 0) {
                 const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
-                const used = getBookedVariantUsage(product, product.selectedVariant) + otherCartQty;
+                const used = getBookedVariantUsage(product, activeVariant) + otherCartQty;
                 if (capConfig?.maximum > 0 && used + initialQty > capConfig.maximum) {
                     toast.error(`Only ${Math.max(0, capConfig.maximum - used)} capacity left for this variant`);
                     return prev;
                 }
-                const autoFixedAddOns = getFixedAddOnsForProduct(product, product.selectedVariant);
+                const autoFixedAddOns = getFixedAddOnsForProduct(product, activeVariant);
                 const existingAddOns = Array.isArray(product.selectedAddOns) ? product.selectedAddOns : [];
                 // Merge if not already present
                 const fixedNames = new Set(existingAddOns.map(a => a.name?.trim().toLowerCase()));
@@ -977,11 +995,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     ...existingAddOns,
                     ...autoFixedAddOns.filter(f => !fixedNames.has(f.name?.trim().toLowerCase()))
                 ];
-                return [...prev, { ...product, quantity: initialQty, selectedAddOns: mergedAddOns }];
+                return [...prev, { ...product, selectedVariant: activeVariant, quantity: initialQty, selectedAddOns: mergedAddOns }];
             }
 
             if (change > 0) {
-                const used = getBookedVariantUsage(product, product.selectedVariant) + otherCartQty;
+                const used = getBookedVariantUsage(product, activeVariant) + otherCartQty;
                 if (capConfig && capConfig.maximum > 0 && (used + currentQty + change) > capConfig.maximum) {
                     toast.error(`Maximum allowed capacity is ${capConfig.maximum}`);
                     return prev;
@@ -1095,9 +1113,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     };
 
     const handleProceed = () => {
-        const bookedVariant = selectedProducts.find(product => isVariantBooked(product, product.selectedVariant));
+        const bookedVariant = selectedProducts.find(product => isVariantBooked(product, product.selectedVariant || product.variants?.[0]));
         if (bookedVariant) {
-            toast.error(getVariantUnavailableMessage(bookedVariant, bookedVariant.selectedVariant));
+            toast.error(getVariantUnavailableMessage(bookedVariant, bookedVariant.selectedVariant || bookedVariant.variants?.[0]));
             return;
         }
         if (isUploadingReferencePhoto) {
@@ -3143,7 +3161,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     );
                                                                 })}
                                                             </div>
-                                                            {!getProductCapacityConfig(imagePreview.product, modalSelectedVariant)?.uniqueCode && selectedSeller?.capacityEnabled && (
+                                                            {!getProductCapacityConfig(imagePreview.product, modalSelectedVariant)?.uniqueCode
+                                                                && !(isShopCapacityVariant(imagePreview.product, modalSelectedVariant) && String(modalSelectedVariant?.uniqueCode || imagePreview.product?.uniqueCode || '').trim())
+                                                                && selectedSeller?.capacityEnabled && (
                                                                 <p className="mt-2 text-[10px] font-semibold text-amber-700">
                                                                     Availability for this option has not been configured yet. Please contact the seller before booking.
                                                                 </p>

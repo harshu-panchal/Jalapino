@@ -135,9 +135,9 @@ const EventCheckoutPage = () => {
                         quantity: Number(product.quantity || 1),
                         price: pricing.baseUnitPrice,
                         selectedColors: product.selectedColors || [],
-                        selectedVariant: product.selectedVariant || null,
-                        uniqueCode: product.selectedVariant?.uniqueCode || product.uniqueCode || '',
-                        shopNo: product.selectedVariant?.shopNo || product.shopNo || '',
+                        selectedVariant: product.selectedVariant || product.variants?.[0] || null,
+                        uniqueCode: (product.selectedVariant || product.variants?.[0])?.uniqueCode || product.uniqueCode || '',
+                        shopNo: (product.selectedVariant || product.variants?.[0])?.shopNo || product.shopNo || '',
                         selectedAddOns: product.selectedAddOns || []
                     };
                 })
