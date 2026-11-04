@@ -65,8 +65,16 @@ export const createEventBooking = async (req, res) => {
                 const doc = productsById.get(String(line.productId));
                 const finalPrice = line.price > 0 ? line.price : (doc.salePrice || doc.price || 0);
                 const addOnTotal = (line.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+                // Strong lock: a line sent without a variant code falls back to the
+                // product's first variant (same default the customer UI uses), so
+                // capacity checks are never skipped.
+                const fallbackVariant = !line.uniqueCode ? (doc.variants || [])[0] : null;
                 return {
                     ...line,
+                    ...(fallbackVariant?.uniqueCode ? {
+                        uniqueCode: String(fallbackVariant.uniqueCode).trim(),
+                        shopNo: line.shopNo || String(fallbackVariant.shopNo || '').trim(),
+                    } : {}),
                     productName: doc.name,
                     price: finalPrice,
                     unitPrice: finalPrice,
@@ -213,10 +221,27 @@ export const createEventBooking = async (req, res) => {
                 const variant = (product?.variants || []).find(v => String(v.uniqueCode || '').trim().toUpperCase() === code);
                 if (!variant) return handleResponse(res, 400, `Product code ${code} is not configured for this product`);
                 const capacityType = String(variant.capacityType || '').trim().toUpperCase();
-                // Shop-capacity variants are validated only by the shop block above.
-                // Never apply product date capacity to a shop-capacity variant.
-                if (capacityType.includes('SHOP')) continue;
                 const lineCodeOf = (l) => String(l?.uniqueCode || l?.selectedVariant?.uniqueCode || '').trim().toUpperCase();
+                // Shop-capacity variants: date/slot locking is validated only by the
+                // shop block above. Here only the shop row's quantity Min/Max is
+                // enforced; product date capacity is never applied to them.
+                if (capacityType.includes('SHOP')) {
+                    // Use the seller's CURRENT shop row (same source as the shop lock),
+                    // falling back to the product variant copy.
+                    const shopRow = (seller.shopsAtLocation || []).find(s => String(s.uniqueCode || '').trim().toUpperCase() === code);
+                    const shopMin = Number(shopRow?.minimum || variant.minimum || 0);
+                    const shopMax = Number(shopRow?.maximum || shopRow?.totalCapacity || variant.maximum || variant.totalCapacity || 0);
+                    const shopQty = selectedProductLines
+                        .filter(selected => lineCodeOf(selected) === code)
+                        .reduce((sum, selected) => sum + (Number(selected.quantity) || 0), 0);
+                    if (shopMin > 0 && line.quantity < shopMin) {
+                        return handleResponse(res, 400, `Product code ${code} requires a minimum quantity of ${shopMin}.`);
+                    }
+                    if (shopMax > 0 && shopQty > shopMax) {
+                        return handleResponse(res, 400, `Product code ${code} allows a maximum quantity of ${shopMax}.`);
+                    }
+                    continue;
+                }
                 const productBookings = bookingsOnDate.flatMap(b => (b.selectedProducts || [])
                     .filter(existing => lineCodeOf(existing) === code));
                 const type = String(variant.bookingType || 'MULTIPLE').toUpperCase();
