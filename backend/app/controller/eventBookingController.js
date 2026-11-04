@@ -204,7 +204,8 @@ export const createEventBooking = async (req, res) => {
             }
 
             // Product capacity is date-only and independent from shop capacity.
-            // All variants of the same product share the product's date usage.
+            // Usage is counted per UNIQUE CODE: every variant/product that carries
+            // the same product-capacity code shares that code's date capacity.
             for (const line of (seller.capacityEnabled ? selectedProductLines : [])) {
                 const code = String(line.uniqueCode || '').trim().toUpperCase();
                 if (!code) continue;
@@ -215,16 +216,9 @@ export const createEventBooking = async (req, res) => {
                 // Shop-capacity variants are validated only by the shop block above.
                 // Never apply product date capacity to a shop-capacity variant.
                 if (capacityType.includes('SHOP')) continue;
-                // Only product-capacity variants count toward product date usage;
-                // shop-capacity variants of the same product are excluded.
-                const isShopVariantCode = (lineCode) => {
-                    const c = String(lineCode || '').trim().toUpperCase();
-                    const v = (product?.variants || []).find(pv => String(pv.uniqueCode || '').trim().toUpperCase() === c);
-                    return String(v?.capacityType || '').trim().toUpperCase().includes('SHOP');
-                };
+                const lineCodeOf = (l) => String(l?.uniqueCode || l?.selectedVariant?.uniqueCode || '').trim().toUpperCase();
                 const productBookings = bookingsOnDate.flatMap(b => (b.selectedProducts || [])
-                    .filter(existing => String(existing.productId || '') === String(line.productId)
-                        && !isShopVariantCode(existing.uniqueCode || existing.selectedVariant?.uniqueCode)));
+                    .filter(existing => lineCodeOf(existing) === code));
                 const type = String(variant.bookingType || 'MULTIPLE').toUpperCase();
                 const minimum = Number(variant.minimum || 0);
                 if (minimum > 0 && line.quantity < minimum) {
@@ -235,7 +229,7 @@ export const createEventBooking = async (req, res) => {
                 }
                 const max = Number(variant.maximum || variant.totalCapacity || 0);
                 const requestedProductQuantity = selectedProductLines
-                    .filter(selected => String(selected.productId) === String(line.productId) && !isShopVariantCode(selected.uniqueCode))
+                    .filter(selected => lineCodeOf(selected) === code)
                     .reduce((sum, selected) => sum + (Number(selected.quantity) || 0), 0);
                 const used = productBookings.reduce((sum, existing) => sum + (Number(existing.quantity) || 0), 0);
                 if (type !== 'SINGLE' && max > 0 && used + requestedProductQuantity > max) {
@@ -721,11 +715,13 @@ export const getSellerBookedSlots = async (req, res) => {
                 (productVariantUsageBySlot[normalizedProductId][normalizedCode][normalizedSlot] || 0) + (Number(quantity) || 1);
         };
 
-        const addProductDateUsage = (productId, quantity) => {
-            const normalizedProductId = String(productId || '').trim();
-            if (!normalizedProductId) return;
-            productVariantUsageByDate[normalizedProductId] =
-                (productVariantUsageByDate[normalizedProductId] || 0) + (Number(quantity) || 1);
+        // Product date usage is keyed by UNIQUE CODE (not productId), so every
+        // product/variant sharing a product-capacity code shares its capacity.
+        const addProductDateUsage = (code, quantity) => {
+            const normalizedCode = String(code || '').trim().toUpperCase();
+            if (!normalizedCode) return;
+            productVariantUsageByDate[normalizedCode] =
+                (productVariantUsageByDate[normalizedCode] || 0) + (Number(quantity) || 1);
         };
 
         const addShopUsage = (shop, slot) => {
@@ -762,7 +758,7 @@ export const getSellerBookedSlots = async (req, res) => {
                 .filter(product => !sellerShops.some(shop =>
                     String(shop.uniqueCode || '').trim().toUpperCase() === String(product.code).trim().toUpperCase()
                     && String(shop.capacityType || 'SHOP CAPECITY').trim().toUpperCase().includes('SHOP')))
-                .forEach(product => addProductDateUsage(product.productId, product.quantity));
+                .forEach(product => addProductDateUsage(product.code, product.quantity));
 
             bookingSlots.forEach(slot => {
                 bookedSlots.add(slot);

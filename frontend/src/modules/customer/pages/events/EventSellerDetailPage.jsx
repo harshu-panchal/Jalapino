@@ -852,10 +852,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         };
     };
 
+    // Product capacity usage is counted per UNIQUE CODE for the selected date.
     const getBookedVariantUsage = (product, variant) => {
-        const productId = String(product?._id || product?.productId || '').trim();
-        if (!productId) return 0;
-        return Number(productVariantUsageByDate?.[productId] || 0);
+        const code = String(variant?.uniqueCode || product?.uniqueCode || '').trim().toUpperCase();
+        if (!code) return 0;
+        return Number(productVariantUsageByDate?.[code] || 0);
     };
 
     const isShopCapacityVariant = (product, variant) => {
@@ -953,12 +954,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             const variantKey = product.selectedVariant?.sku || product.selectedVariant?.name || 'default';
             const selectedProduct = prev.find(p => p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey);
             const currentQty = selectedProduct?.quantity || 0;
-            // Other product-capacity variants of the same product already in the cart
-            // share the same date capacity (backend sums them the same way).
-            const otherCartQty = prev
-                .filter(p => p._id === product._id
-                    && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') !== variantKey
-                    && !isShopCapacityVariant(p, p.selectedVariant))
+            // Other cart lines (any product/variant) with the same unique code share
+            // the same date capacity (backend sums them the same way).
+            const thisCode = String(product.selectedVariant?.uniqueCode || product.uniqueCode || '').trim().toUpperCase();
+            const otherCartQty = !thisCode ? 0 : prev
+                .filter(p => String(p.selectedVariant?.uniqueCode || p.uniqueCode || '').trim().toUpperCase() === thisCode
+                    && !(p._id === product._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === variantKey))
                 .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
 
             if (currentQty === 0 && change > 0) {
@@ -3037,10 +3038,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     const initialQty = (capConfig && capConfig.minimum > 0) ? capConfig.minimum : 1;
                                                                     const targetVariantKey = modalSelectedVariant?.sku || modalSelectedVariant?.name || 'default';
                                                                     if (capConfig && capConfig.maximum > 0) {
+                                                                        const thisCode = String(capConfig.uniqueCode || '').trim().toUpperCase();
                                                                         const otherCartQty = selectedProducts
-                                                                            .filter(p => p._id === imagePreview.product?._id
-                                                                                && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') !== targetVariantKey
-                                                                                && !isShopCapacityVariant(p, p.selectedVariant))
+                                                                            .filter(p => String(p.selectedVariant?.uniqueCode || p.uniqueCode || '').trim().toUpperCase() === thisCode
+                                                                                && !(p._id === imagePreview.product?._id && (p.selectedVariant?.sku || p.selectedVariant?.name || 'default') === targetVariantKey))
                                                                             .reduce((sum, p) => sum + (Number(p.quantity) || 0), 0);
                                                                         const used = getBookedVariantUsage(imagePreview.product, modalSelectedVariant) + otherCartQty;
                                                                         if (used + initialQty > capConfig.maximum) {
