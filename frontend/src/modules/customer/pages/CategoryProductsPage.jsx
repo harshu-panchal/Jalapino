@@ -83,6 +83,7 @@ const CategoryProductsPage = () => {
             const queryParams = {
                 lat: currentLocation.latitude,
                 lng: currentLocation.longitude,
+                ...(currentLocation?.name ? { location: currentLocation.name } : {}),
             };
             if (isHeader) {
                 queryParams.header = catId;

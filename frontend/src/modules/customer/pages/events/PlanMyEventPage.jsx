@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useJsApiLoader } from '@react-google-maps/api';
 import SearchIcon from '@mui/icons-material/Search';
@@ -434,6 +434,29 @@ const PlanMyEventPage = () => {
     /* — dynamic cards state — */
     const [liveStreams, setLiveStreams] = useState([]);
     const [areaSellers, setAreaSellers] = useState([]);
+    // Reels card: event products that have a video and are visible here by their
+    // Location Coverage Type + Delivery Type (grouped by seller).
+    const [reelSellers, setReelSellers] = useState([]);
+    useEffect(() => {
+        const lat = currentLocation?.latitude;
+        const lng = currentLocation?.longitude;
+        if (!Number.isFinite(lat) || !Number.isFinite(lng)) { setReelSellers([]); return undefined; }
+        let cancelled = false;
+        customerApi.getProducts({ module: 'plan_my_event', hasVideo: 'true', limit: 50, lat, lng, ...(currentLocation?.name ? { location: currentLocation.name } : {}) })
+            .then((res) => {
+                if (cancelled) return;
+                const items = res?.data?.result?.items || res?.data?.results || [];
+                const bySeller = new Map();
+                items.filter(p => p.videoUrl && (p.sellerId?._id || p.sellerId)).forEach((p) => {
+                    const id = String(p.sellerId?._id || p.sellerId);
+                    if (!bySeller.has(id)) bySeller.set(id, { _id: id, shopName: p.sellerId?.shopName || '', image: p.mainImage || '', reelCount: 0 });
+                    bySeller.get(id).reelCount += 1;
+                });
+                setReelSellers([...bySeller.values()]);
+            })
+            .catch(() => { if (!cancelled) setReelSellers([]); });
+        return () => { cancelled = true; };
+    }, [currentLocation?.latitude, currentLocation?.longitude, currentLocation?.name]);
 
     const embeddedState = React.useMemo(() => ({
         selectedSeller: selectedSellerDetail,
@@ -754,6 +777,29 @@ const PlanMyEventPage = () => {
         fetchBookings();
     }, [filterDate, sellers]);
 
+    /* — open a seller chosen from the header search (seller or product result) — */
+    const routerLocation = useRouterLocation();
+    const openSellerFromSearch = useCallback((seller) => {
+        if (!seller?._id) return;
+        const sellerCatIds = (seller.serviceCategories || []).map(c => String(c?._id || c));
+        const matchedCat = categories.find(c => sellerCatIds.includes(String(c._id)));
+        setActiveCategory(matchedCat || null);
+        setSelectedSellerDetail(seller);
+    }, [categories]);
+
+    useEffect(() => {
+        const handler = (e) => openSellerFromSearch(e.detail?.seller);
+        window.addEventListener('plan-my-event:open-seller', handler);
+        return () => window.removeEventListener('plan-my-event:open-seller', handler);
+    }, [openSellerFromSearch]);
+
+    useEffect(() => {
+        const pending = routerLocation.state?.openSeller;
+        if (!pending || loadingCats) return;
+        openSellerFromSearch(pending);
+        navigate(routerLocation.pathname, { replace: true, state: {} });
+    }, [routerLocation.state, routerLocation.pathname, loadingCats, openSellerFromSearch, navigate]);
+
     useEffect(() => {
         if (!selectedSellerDetail?._id || sellers.length === 0) return;
         const fresh = sellers.find(s => String(s._id) === String(selectedSellerDetail._id));
@@ -871,18 +917,22 @@ const PlanMyEventPage = () => {
     /* ════════════════════ RENDER ════════════════════ */
     return (
         <div className="h-[100dvh] bg-slate-50 flex flex-col font-sans overflow-hidden">
-            <MainLocationHeader
-                hideSearchBar={false}
-                isAbsolute={false}
-                onLogoClick={() => {
-                    setActiveCategory(null);
-                    setSelectedSellerDetail(null);
-                }}
-            />
-            <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden transition-[padding] duration-200 ease-out" style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
+            {/* Mobile only: when a seller is open, hide the top header (like the
+                ticket booking page). Web (lg+) stays exactly as before. */}
+            <div className={selectedSellerDetail ? 'hidden lg:contents' : 'contents'}>
+                <MainLocationHeader
+                    hideSearchBar={false}
+                    isAbsolute={false}
+                    onLogoClick={() => {
+                        setActiveCategory(null);
+                        setSelectedSellerDetail(null);
+                    }}
+                />
+            </div>
+            <div className={`flex flex-col flex-1 min-h-0 w-full overflow-hidden transition-[padding] duration-200 ease-out ${selectedSellerDetail ? 'max-lg:[--header-height:0px] max-lg:[--header-shrink-offset:0px]' : ''}`} style={{ paddingTop: 'calc(var(--header-height, 140px) + 16px - var(--header-shrink-offset, 0px))' }}>
                 <div className="flex-1 flex flex-col lg:flex-row min-h-0 overflow-hidden w-full">
                     {/* ══════════════ LEFT SIDEBAR ══════════════ */}
-                    <div className="w-full lg:w-72 xl:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 flex flex-col shrink-0 shadow-sm z-10 lg:max-h-full">
+                    <div className={`w-full lg:w-72 xl:w-80 bg-white border-b lg:border-b-0 lg:border-r border-slate-200 ${selectedSellerDetail ? 'hidden lg:flex' : 'flex'} flex-col shrink-0 shadow-sm z-10 lg:max-h-full`}>
                         {/* Category Search */}
                         {!activeCategory && (
                             <div className="p-3 border-b border-slate-100">
@@ -1044,16 +1094,16 @@ const PlanMyEventPage = () => {
                                                 <h4 className="text-white font-black text-xs uppercase tracking-wider">REELS</h4>
                                             </div>
                                             <div className="z-10 flex-1 flex flex-col justify-center">
-                                                {areaSellers.length > 0 ? (
+                                                {reelSellers.length > 0 ? (
                                                     <div className="flex gap-3 overflow-x-auto pb-1 snap-x no-scrollbar" style={{ WebkitOverflowScrolling: 'touch' }}>
-                                                        {areaSellers.map(s => (
-                                                            <div key={s._id} className="snap-start shrink-0 w-32 bg-white/10 rounded-xl p-2 cursor-pointer hover:bg-white/20 transition-all border border-white/5 shadow-sm" onClick={() => navigate(`/reels?type=retail&sellerId=${s._id}`)}>
+                                                        {reelSellers.map(s => (
+                                                            <div key={s._id} className="snap-start shrink-0 w-32 bg-white/10 rounded-xl p-2 cursor-pointer hover:bg-white/20 transition-all border border-white/5 shadow-sm" onClick={() => navigate(`/reels?type=retail&module=plan_my_event&sellerId=${s._id}`)}>
                                                                 <div className="w-full h-16 bg-black/30 rounded-lg mb-2 overflow-hidden flex items-center justify-center relative shadow-inner group">
                                                                     <span className="text-2xl text-white/70 z-10 drop-shadow-md group-hover:scale-110 transition-transform">▶</span>
-                                                                    {s.profileImage ? <img src={resolveImageUrl(s.profileImage)} alt={s.shopName} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity" /> : <span className="text-white/50 text-[10px] font-medium absolute z-0">No image</span>}
+                                                                    {s.image ? <img src={resolveImageUrl(s.image)} alt={s.shopName} className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:opacity-50 transition-opacity" /> : <span className="text-white/50 text-[10px] font-medium absolute z-0">No image</span>}
                                                                 </div>
-                                                                <p className="text-white font-bold text-[11px] truncate leading-tight">{s.shopName || s.name}</p>
-                                                                <p className="text-amber-100 text-[9px] truncate">{s.city || 'Local Area'}</p>
+                                                                <p className="text-white font-bold text-[11px] truncate leading-tight">{s.shopName || 'Seller'}</p>
+                                                                <p className="text-amber-100 text-[9px] truncate">{s.reelCount} {s.reelCount === 1 ? 'reel' : 'reels'}</p>
                                                             </div>
                                                         ))}
                                                     </div>
@@ -1375,7 +1425,7 @@ const PlanMyEventPage = () => {
                                                                     type="radio"
                                                                     name="gender"
                                                                     value={g}
-                                                                    checked={eventInfo.gender === g}
+                                                                    checked={String(eventInfo.gender || '').toLowerCase() === g.toLowerCase()}
                                                                     onChange={e => handleEventInfoChange('gender', e.target.value)}
                                                                     className="accent-purple-600 w-4 h-4"
                                                                 />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Phone,
@@ -68,6 +68,13 @@ const DeliveryAuth = () => {
   const [aadharFile, setAadharFile] = useState(null);
   const [panFile, setPanFile] = useState(null);
   const [dlFile, setDlFile] = useState(null);
+  // Preview of the exact image the rider picked (camera photo or gallery file).
+  const docPreviews = useMemo(() => ({
+    aadhar: aadharFile ? URL.createObjectURL(aadharFile) : "",
+    pan: panFile ? URL.createObjectURL(panFile) : "",
+    dl: dlFile ? URL.createObjectURL(dlFile) : "",
+  }), [aadharFile, panFile, dlFile]);
+  useEffect(() => () => Object.values(docPreviews).forEach((u) => u && URL.revokeObjectURL(u)), [docPreviews]);
 
   // OTP state
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
@@ -168,7 +175,11 @@ const DeliveryAuth = () => {
       }
     } catch (error) {
       console.error("OCR Error:", error);
-      toast.error("Failed to scan document. Please try again.");
+      // Keep the picked image even if scanning fails, so camera photos upload too.
+      if (type === "dl") { setDlFile(file); setDlVerified(true); }
+      if (type === "pan") { setPanFile(file); setPanVerified(true); }
+      if (type === "aadhar") { setAadharFile(file); setAadharVerified(true); }
+      toast.success("Document uploaded");
     } finally {
       setIsScanning(false);
     }
@@ -414,20 +425,24 @@ const DeliveryAuth = () => {
                                   <User className="w-10 h-10 text-brand-300" />
                                 )}
                               </div>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                capture="user"
-                                id="profile-upload"
-                                className="hidden"
-                                onChange={(e) => {
-                                  const file = e.target.files[0];
-                                  if (file) {
-                                    setProfileImageFile(file);
-                                    setProfileImagePreview(URL.createObjectURL(file));
-                                  }
-                                }}
-                              />
+                              {["profile-upload", "profile-upload-file"].map((inputId) => (
+                                <input
+                                  key={inputId}
+                                  type="file"
+                                  accept="image/*"
+                                  {...(inputId === "profile-upload" ? { capture: "user" } : {})}
+                                  id={inputId}
+                                  className="hidden"
+                                  onChange={(e) => {
+                                    const file = e.target.files[0];
+                                    if (file) {
+                                      setProfileImageFile(file);
+                                      setProfileImagePreview(URL.createObjectURL(file));
+                                    }
+                                    e.target.value = "";
+                                  }}
+                                />
+                              ))}
                               <label
                                 htmlFor="profile-upload"
                                 className="absolute -bottom-2 -right-2 p-2.5 bg-black  text-primary-foreground rounded-2xl shadow-lg shadow-brand-200 cursor-pointer hover:bg-brand-700 hover:scale-110 active:scale-95 transition-all"
@@ -435,7 +450,15 @@ const DeliveryAuth = () => {
                                 <Camera className="w-4 h-4" />
                               </label>
                             </div>
-                            <p className="text-[10px] text-gray-400 font-bold mt-3">Upload a clear photo of your face</p>
+                            <div className="flex items-center gap-2 mt-3">
+                              <label htmlFor="profile-upload" className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase cursor-pointer">
+                                <Camera className="w-3 h-3" /> Camera
+                              </label>
+                              <label htmlFor="profile-upload-file" className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-gray-200 bg-white text-gray-700 text-[10px] font-black uppercase cursor-pointer">
+                                <Upload className="w-3 h-3" /> Upload
+                              </label>
+                            </div>
+                            <p className="text-[10px] text-gray-400 font-bold mt-2">Upload a clear photo of your face</p>
                           </div>
 
                           <div className="space-y-1.5">
@@ -714,19 +737,24 @@ const DeliveryAuth = () => {
                               { label: "Driving License", state: dlFile, setter: setDlFile, id: "dl" },
                             ].map((doc) => (
                               <div key={doc.id} className="relative">
-                                <input
-                                  type="file"
-                                  id={doc.id}
-                                  className="hidden"
-                                  accept="image/*"
-                                  onChange={(e) => {
-                                    const file = e.target.files[0];
-                                    if (doc.id === "dl") handleDLUpload(file);
-                                    else if (doc.id === "pan") handlePanUpload(file);
-                                    else if (doc.id === "aadhar") handleAadharUpload(file);
-                                    else doc.setter(file);
-                                  }}
-                                />
+                                {[doc.id, `${doc.id}-camera`].map((inputId) => (
+                                  <input
+                                    key={inputId}
+                                    type="file"
+                                    id={inputId}
+                                    className="hidden"
+                                    accept="image/*"
+                                    {...(inputId.endsWith("-camera") ? { capture: "environment" } : {})}
+                                    onChange={(e) => {
+                                      const file = e.target.files[0];
+                                      if (doc.id === "dl") handleDLUpload(file);
+                                      else if (doc.id === "pan") handlePanUpload(file);
+                                      else if (doc.id === "aadhar") handleAadharUpload(file);
+                                      else doc.setter(file);
+                                      e.target.value = "";
+                                    }}
+                                  />
+                                ))}
                                 <label
                                   htmlFor={doc.id}
                                   className={`flex items-center justify-between p-4 rounded-2xl border-2 border-dashed transition-all cursor-pointer ${doc.state
@@ -735,9 +763,13 @@ const DeliveryAuth = () => {
                                     }`}
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className={`p-2 rounded-xl ${doc.state ? "bg-brand-100 text-brand-600" : "bg-white text-gray-400 shadow-sm"}`}>
-                                      {doc.state ? <CheckCircle className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
-                                    </div>
+                                    {doc.state && docPreviews[doc.id] ? (
+                                      <img src={docPreviews[doc.id]} alt={doc.label} className="w-10 h-10 rounded-xl object-cover border border-brand-200 shrink-0" />
+                                    ) : (
+                                      <div className={`p-2 rounded-xl ${doc.state ? "bg-brand-100 text-brand-600" : "bg-white text-gray-400 shadow-sm"}`}>
+                                        {doc.state ? <CheckCircle className="w-4 h-4" /> : <Upload className="w-4 h-4" />}
+                                      </div>
+                                    )}
                                     <div className="text-left">
                                       <p className={`text-xs font-black uppercase tracking-tight ${doc.state ? "text-brand-700" : "text-gray-500"}`}>
                                         {doc.label}
@@ -747,6 +779,13 @@ const DeliveryAuth = () => {
                                       </p>
                                     </div>
                                   </div>
+                                  <label
+                                    htmlFor={`${doc.id}-camera`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="ml-auto mr-2 flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-gray-900 text-white text-[10px] font-black uppercase cursor-pointer shrink-0"
+                                  >
+                                    <Camera className="w-3 h-3" /> Camera
+                                  </label>
                                   {doc.state && (
                                     <button
                                       type="button"

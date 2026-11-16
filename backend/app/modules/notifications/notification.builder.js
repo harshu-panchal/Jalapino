@@ -369,8 +369,8 @@ function eventDefinition(eventType) {
       return {
         role: NOTIFICATION_ROLES.SELLER,
         recipientIds: (payload) => normalizeIdList(payload.userId),
-        title: () => "New Event Booking Request",
-        body: (payload) => payload.message || "You have received a new event booking request.",
+        title: () => "New Booking",
+        body: (payload) => payload.message || "New booking received",
       };
     case NOTIFICATION_EVENTS.EVENT_BOOKING_APPROVED:
       return {
@@ -392,6 +392,34 @@ function eventDefinition(eventType) {
         recipientIds: (payload) => normalizeIdList(payload.userId),
         title: () => "Remaining Payment Due",
         body: (payload) => payload.message || "Your event service is complete. Please pay the remaining balance.",
+      };
+    case NOTIFICATION_EVENTS.GST_LIMIT_REACHED:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Action Required: GST Certificate",
+        body: (payload) => payload.message || "Your transactions have crossed ₹10 Lakh in the last 12 months. Please upload your GST Certificate in your profile.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_BOOKING_SLOT_TAKEN:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Booking Closed - Slot Taken",
+        body: (payload) => payload.message || "An unpaid booking was closed because another customer paid for the same slot.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_BOOKING_PAYMENT_RECEIVED:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Payment Received",
+        body: (payload) => payload.message || "Payment has been received for an event booking.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_BOOKING_PAYMENT_CONFIRMED:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Payment Successful",
+        body: (payload) => payload.message || "Your payment for the event booking has been received.",
       };
     case NOTIFICATION_EVENTS.EVENT_CHECKED_IN:
       return {
@@ -453,18 +481,30 @@ function eventData(eventType, payload = {}, role) {
     };
   }
 
+  if (eventType === NOTIFICATION_EVENTS.GST_LIMIT_REACHED) {
+    return {
+      eventType,
+      link: `${getFrontendBaseUrl()}/seller/profile`,
+      ...(payload.data || {}),
+    };
+  }
+
   if (
     eventType === NOTIFICATION_EVENTS.NEW_EVENT_BOOKING_REQUEST ||
     eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_APPROVED ||
     eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REJECTED ||
     eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE ||
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_PAYMENT_RECEIVED ||
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_SLOT_TAKEN ||
+    eventType === NOTIFICATION_EVENTS.EVENT_BOOKING_PAYMENT_CONFIRMED ||
     eventType === NOTIFICATION_EVENTS.EVENT_REVIEW_REMINDER
   ) {
     const bookingId = String(payload.bookingId || "").trim() || undefined;
     const baseUrl = getFrontendBaseUrl();
+    // Seller opens the booking in Event Reservations; customer in My Orders > Events.
     const link = role === NOTIFICATION_ROLES.SELLER
-      ? `${baseUrl}/seller/bookings?bookingId=${encodeURIComponent(bookingId)}`
-      : `${baseUrl}/orders?bookingId=${encodeURIComponent(bookingId)}`;
+      ? `${baseUrl}/seller/reservations?id=${encodeURIComponent(bookingId)}`
+      : `${baseUrl}/orders?tab=events&bookingId=${encodeURIComponent(bookingId)}`;
     return {
       eventType,
       bookingId,

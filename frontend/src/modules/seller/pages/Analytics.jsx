@@ -78,6 +78,10 @@ const Analytics = () => {
             topProducts: Array.isArray(raw.topProducts) ? raw.topProducts : [],
             trafficSources: Array.isArray(raw.trafficSources) ? raw.trafficSources : [],
             insights: raw.insights ?? {},
+            // Keep the bookings/tickets ledger and module breakdown (used by the
+            // detailed report table and the CSV download).
+            moduleBreakdown: Array.isArray(raw.moduleBreakdown) ? raw.moduleBreakdown : [],
+            detailedReports: Array.isArray(raw.detailedReports) ? raw.detailedReports : [],
           });
         } else if (response?.data?.success && raw) {
           setStatsData(raw);

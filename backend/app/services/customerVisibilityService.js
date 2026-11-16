@@ -86,3 +86,67 @@ export async function getZoneSellerIdsForCustomer(location) {
 
   return sellers.map((seller) => String(seller._id));
 }
+
+// ---------------------------------------------------------------------------
+// Retail visibility by the product's "Location Coverage Type" + "Delivery Type"
+// (both chosen by the seller when adding the product, saved in DB):
+// - pan_india  -> every customer (active sellers)
+// - zone_wise  -> customers whose location is in one of the seller's zones
+// - hyperlocal -> customers inside the seller's service radius
+// - no coverage set (older products) -> same as before (inside service radius)
+// A product that has a coverage type also needs at least one Delivery Type
+// (Delivery / Service / Rental), same rule as Plan My Event.
+// ---------------------------------------------------------------------------
+export const RETAIL_COVERAGE_IDS = ["hyperlocal", "pan_india", "zone_wise"];
+
+async function getActiveSellerIds() {
+  const ids = await Seller.find({ $or: [{ isActive: true }, { sellerStatus: "active" }] }).distinct("_id");
+  return ids.map(String);
+}
+
+export async function getRetailVisibleSellerGroups({ nearbySellerIds = [], location = "" } = {}) {
+  const [activeIds, zoneIds] = await Promise.all([
+    getActiveSellerIds(),
+    location ? getZoneSellerIdsForCustomer(location) : Promise.resolve([]),
+  ]);
+  const activeSet = new Set(activeIds);
+  return {
+    nearby: nearbySellerIds.map(String),
+    panIndia: activeIds,
+    zone: zoneIds.map(String).filter((id) => activeSet.has(id)),
+  };
+}
+
+export function buildRetailCoverageConditions(groups, requestedSellerIds = []) {
+  const requested = new Set(requestedSellerIds.map(String));
+  const limit = (ids) => (requested.size ? ids.filter((id) => requested.has(String(id))) : ids);
+  return [
+    {
+      $or: [
+        { deliveryCoverage: "pan_india", sellerId: { $in: limit(groups.panIndia) } },
+        { deliveryCoverage: "zone_wise", sellerId: { $in: limit(groups.zone) } },
+        { deliveryCoverage: "hyperlocal", sellerId: { $in: limit(groups.nearby) } },
+        { deliveryCoverage: { $nin: RETAIL_COVERAGE_IDS }, sellerId: { $in: limit(groups.nearby) } },
+      ],
+    },
+    {
+      $or: [
+        { deliveryCoverage: { $nin: RETAIL_COVERAGE_IDS } },
+        { isDelivery: true },
+        { isService: true },
+        { isRental: true },
+      ],
+    },
+  ];
+}
+
+export function isProductVisibleForRetailCustomer(product, groups) {
+  const sellerId = String(product?.sellerId?._id || product?.sellerId || "");
+  const coverage = Array.isArray(product?.deliveryCoverage) ? product.deliveryCoverage : [];
+  const hasCoverage = coverage.some((c) => RETAIL_COVERAGE_IDS.includes(c));
+  if (hasCoverage && !(product.isDelivery || product.isService || product.isRental)) return false;
+  if (coverage.includes("pan_india") && groups.panIndia.includes(sellerId)) return true;
+  if (coverage.includes("zone_wise") && groups.zone.includes(sellerId)) return true;
+  if ((coverage.includes("hyperlocal") || !hasCoverage) && groups.nearby.includes(sellerId)) return true;
+  return false;
+}

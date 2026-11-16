@@ -129,6 +129,8 @@ export function formatSellerApplication(seller) {
     demoTrialDays: seller.demoTrialDays || 15,
     demoStartDate: seller.demoStartDate,
     shopHolidaysEnabled: seller.shopHolidaysEnabled ?? false,
+    sellerDescriptionEnabled: seller.sellerDescriptionEnabled ?? false,
+    accountRefundEnabled: seller.accountRefundEnabled ?? false,
     shopClosedDates: seller.shopClosedDates || [],
     wholesaleEnabled: seller.wholesaleEnabled ?? false,
     allowedRetailCategories: seller.allowedRetailCategories || [],

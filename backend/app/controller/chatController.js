@@ -1,13 +1,19 @@
 import EventChatSession from '../models/event/EventChatSession.js';
+import Seller from '../models/seller.js';
+
+// Customization options the admin enabled for this seller (read fresh from DB).
+const SELLER_CUSTOMIZATION_FIELDS = 'customizationEngineEnabled quoteThemeSelection quoteBudgetSelection quoteReferencePhotoUpload quoteColorCombination quoteCustomerNotes quoteSellerQuotation quoteQuoteRevision quoteCustomerApproval availableColors';
 
 export const getChatSession = async (req, res) => {
     try {
         const { sellerId } = req.query;
-        const customerId = req.user._id;
+        const customerId = req.user.id || req.user._id; // token gives { id, role }
 
         if (!sellerId) {
             return res.status(400).json({ status: false, message: 'sellerId is required' });
         }
+
+        const sellerSettings = await Seller.findById(sellerId).select(SELLER_CUSTOMIZATION_FIELDS).lean().catch(() => null);
 
         let session = await EventChatSession.findOne({
             customer: customerId,
@@ -18,10 +24,10 @@ export const getChatSession = async (req, res) => {
 
         if (!session) {
             // We do not create it here; it will be created on the first message via socket or explicit POST
-            return res.status(200).json({ status: true, result: null });
+            return res.status(200).json({ status: true, result: null, sellerSettings });
         }
 
-        res.status(200).json({ status: true, result: session });
+        res.status(200).json({ status: true, result: session, sellerSettings });
     } catch (error) {
         console.error('Error in getChatSession:', error);
         res.status(500).json({ status: false, message: 'Server error' });
@@ -30,7 +36,7 @@ export const getChatSession = async (req, res) => {
 
 export const getSellerChats = async (req, res) => {
     try {
-        const sellerId = req.user._id;
+        const sellerId = req.user.id || req.user._id; // token gives { id, role }
 
         const sessions = await EventChatSession.find({
             seller: sellerId,

@@ -16,6 +16,8 @@ const EventDashboard = () => {
     const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    // Ticket booking opened from "Manage" (tickets have no separate seller page).
+    const [selectedTicket, setSelectedTicket] = useState(null);
 
     useEffect(() => {
         fetchStats();
@@ -112,23 +114,33 @@ const EventDashboard = () => {
                             {stats.recentRequests.map(req => (
                                 <div key={req._id} className="p-6 hover:bg-slate-50 transition-colors flex items-center justify-between group">
                                     <div>
-                                        <div className="flex items-center gap-3 mb-1">
+                                        <div className="flex items-center gap-3 mb-1 flex-wrap">
                                             <h3 className="font-bold text-slate-800 text-lg">{req.customerInfo?.name || "Customer"}</h3>
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-md font-bold uppercase tracking-wide ${req.type === 'ticket' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                                                {req.type === 'ticket' ? '🎟️ Ticket' : '🎉 Event'}
+                                            </span>
                                             <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wide
                                                 ${req.status === 'pending' ? 'bg-amber-100 text-amber-700' :
                                                     req.status === 'confirmed' ? 'bg-green-100 text-green-700' :
-                                                        req.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                        (req.status === 'rejected' || req.status === 'cancelled') ? 'bg-red-100 text-red-700' :
                                                             'bg-slate-100 text-slate-700'}`}
                                             >
                                                 {req.status}
                                             </span>
                                         </div>
                                         <p className="text-sm text-slate-500 font-medium">
-                                            {new Date(req.eventDate).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })} • {req.guestCount} Guests
+                                            {new Date(req.eventDate).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                            {req.type === 'ticket'
+                                                ? <> • {req.guestCount} Ticket(s){req.venueName ? ` • ${req.venueName}` : ''}</>
+                                                : (req.guestCount ? <> • {req.guestCount} Guests</> : null)}
                                         </p>
                                     </div>
                                     <button
                                         onClick={() => {
+                                            if (req.type === 'ticket') {
+                                                setSelectedTicket(req);
+                                                return;
+                                            }
                                             sessionStorage.setItem('openReservationId', req._id);
                                             navigate(`/seller/reservations?id=${req._id}`);
                                         }}
@@ -147,6 +159,47 @@ const EventDashboard = () => {
                     )}
                 </div>
             </div>
+
+            {/* Ticket booking details (opened from "Manage") */}
+            {selectedTicket && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm" onClick={() => setSelectedTicket(null)}>
+                    <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100">
+                            <h3 className="font-bold text-slate-800">🎟️ Ticket Booking</h3>
+                            <button onClick={() => setSelectedTicket(null)} className="text-slate-400 hover:text-slate-600 text-xl leading-none" aria-label="Close">×</button>
+                        </div>
+                        <div className="p-5 space-y-3 text-sm">
+                            {[
+                                ['Customer', selectedTicket.customerInfo?.name || 'Customer'],
+                                ['Phone', selectedTicket.customerInfo?.phone || '—'],
+                                ['Ticket / Venue', selectedTicket.venueName || '—'],
+                                ['Date', selectedTicket.eventDate ? new Date(selectedTicket.eventDate).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) : '—'],
+                                ['Time Slot', selectedTicket.timeSlot || '—'],
+                                ['Booking Type', selectedTicket.bookingType || '—'],
+                                ['Tickets', selectedTicket.guestCount || 1],
+                                ['Amount', `₹${Number(selectedTicket.totalAmount || 0).toLocaleString('en-IN')}`],
+                                ['Payment', `${selectedTicket.paymentMethod || '—'} • ${selectedTicket.paymentStatus || '—'}`],
+                                ['Status', selectedTicket.status],
+                            ].map(([label, value]) => (
+                                <div key={label} className="flex justify-between gap-4">
+                                    <span className="text-slate-500 font-medium">{label}</span>
+                                    <span className="font-bold text-slate-800 text-right capitalize">{value}</span>
+                                </div>
+                            ))}
+                            {selectedTicket.ticketIds?.length > 0 && (
+                                <div className="pt-3 border-t border-slate-100">
+                                    <p className="text-slate-500 font-medium mb-1">Ticket IDs</p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {selectedTicket.ticketIds.map(id => (
+                                            <span key={id} className="text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 px-2 py-0.5 rounded">{id}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

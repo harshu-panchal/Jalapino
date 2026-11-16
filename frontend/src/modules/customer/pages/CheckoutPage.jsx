@@ -801,7 +801,7 @@ const CheckoutPage = () => {
               key: "rzp_test_S3IcSS1NbymL6D", 
               amount: rzpRes.data.result.amount,
               currency: "INR",
-              name: appName,
+              name: "Jalpaino",
               description: `Payment for Order ${paymentRef}`,
               order_id: rzpRes.data.result.id,
               handler: async function (response) {
@@ -823,7 +823,7 @@ const CheckoutPage = () => {
                   }, 3000);
                 } catch (err) {
                   setIsPlacingOrder(false);
-                  showToast("Payment verification failed", "error");
+                  showToast(err?.response?.data?.message || "Payment verification failed", "error");
                   navigate(`/orders/${mainOrderId}`);
                 }
               },
@@ -833,6 +833,15 @@ const CheckoutPage = () => {
               },
               theme: {
                 color: "#22c55e"
+              },
+              modal: {
+                // Customer closed Razorpay without paying: order is NOT confirmed and the
+                // seller doesn't see it. They can pay from the order page within 15 minutes.
+                ondismiss: function () {
+                  setIsPlacingOrder(false);
+                  showToast("Payment not completed. Pay within 15 minutes from the order page, otherwise the order is cancelled automatically.", "warning");
+                  navigate(`/orders/${mainOrderId}`);
+                }
               }
             };
 

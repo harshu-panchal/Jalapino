@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import Topbar from './Topbar';
 import BottomNav from './BottomNav';
 import { sellerApi } from '@/modules/seller/services/sellerApi';
+import { sellerEventApi } from '@/modules/seller/services/sellerEventApi';
 import { useAuth } from "@core/context/AuthContext";
 import { motion, AnimatePresence } from 'framer-motion';
 import { BellRing, Check, X, Clock, Truck } from 'lucide-react';
@@ -13,7 +14,10 @@ import { cn } from '@/lib/utils';
 import { useSettings } from '@core/context/SettingsContext';
 import SellerOrdersContext from '@/modules/seller/context/SellerOrdersContext';
 import SellerEarningsContext, { defaultEarnings } from '@/modules/seller/context/SellerEarningsContext';
-import { getOrderSocket, onSellerOrderNew, onReturnDropOtp } from '@/core/services/orderSocket';
+import { getOrderSocket, onSellerOrderNew, onReturnDropOtp, onNotificationNew } from '@/core/services/orderSocket';
+
+// Ringtone for a new Plan My Event booking (file in frontend/public).
+const EVENT_BOOKING_RINGTONE = '/ringtone-h25E_L1i.mp3';
 import { createSocketTokenReader } from '@core/utils/authStorage';
 import { STORAGE_KEYS } from '@core/utils/storage';
 import orderAlertSound from '@/assets/sounds/order_alert.mp3';
@@ -55,6 +59,13 @@ const DashboardLayout = ({ children, navItems, title }) => {
     const acceptWindowTotalRef = useRef(60);
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
     const [returnDropOtpAlert, setReturnDropOtpAlert] = useState(null); // { orderId, otp, expiresAt }
+    // New Plan My Event booking: rings until the seller opens or dismisses it.
+    const [eventBookingAlert, setEventBookingAlert] = useState(null); // { bookingId, body }
+    const eventRingtoneRef = useRef(null);
+    const eventRingtoneUnlockRef = useRef(null);
+    // Event bookings already alerted (so each booking rings only once).
+    const shownEventBookingIdsRef = useRef(new Set());
+    const eventPollFirstLoadRef = useRef(true);
     const { user, logout, role } = useAuth();
     const { settings } = useSettings();
     const location = useLocation();
@@ -139,6 +150,49 @@ const DashboardLayout = ({ children, navItems, title }) => {
         audio.pause();
         audio.currentTime = 0;
     };
+
+    // ---- Event booking ringtone (public/ringtone) ----
+    const stopEventRingtone = () => {
+        if (eventRingtoneUnlockRef.current && typeof document !== 'undefined') {
+            document.removeEventListener('pointerdown', eventRingtoneUnlockRef.current);
+            document.removeEventListener('keydown', eventRingtoneUnlockRef.current);
+            document.removeEventListener('touchstart', eventRingtoneUnlockRef.current);
+            eventRingtoneUnlockRef.current = null;
+        }
+        const audio = eventRingtoneRef.current;
+        if (!audio) return;
+        audio.pause();
+        audio.currentTime = 0;
+    };
+
+    const startEventRingtone = () => {
+        if (!eventRingtoneRef.current) {
+            const audio = new Audio(EVENT_BOOKING_RINGTONE);
+            audio.loop = true;
+            audio.preload = 'auto';
+            eventRingtoneRef.current = audio;
+        }
+        const audio = eventRingtoneRef.current;
+        audio.volume = 1;
+        audio.play().catch(() => {
+            // Browser blocked autoplay: start on the next tap/key press.
+            if (eventRingtoneUnlockRef.current || typeof document === 'undefined') return;
+            const unlock = () => {
+                if (eventRingtoneRef.current?.paused) eventRingtoneRef.current.play().catch(() => { });
+            };
+            eventRingtoneUnlockRef.current = unlock;
+            document.addEventListener('pointerdown', unlock);
+            document.addEventListener('keydown', unlock);
+            document.addEventListener('touchstart', unlock);
+        });
+    };
+
+    useEffect(() => {
+        if (eventBookingAlert) startEventRingtone();
+        else stopEventRingtone();
+    }, [eventBookingAlert]);
+
+    useEffect(() => () => stopEventRingtone(), []);
 
     useEffect(() => {
         shownOrderIdsRef.current = shownOrderIds;
@@ -266,11 +320,66 @@ const DashboardLayout = ({ children, navItems, title }) => {
             audio.play().catch(() => { });
         });
 
+        // New Plan My Event booking -> ringtone + popup (payment notifications don't ring).
+        const unsubscribeEventBooking = onNotificationNew(getToken, (payload) => {
+            if (payload?.eventType !== 'NEW_EVENT_BOOKING_REQUEST') return;
+            const bookingId = payload?.data?.bookingId ? String(payload.data.bookingId) : null;
+            if (bookingId && shownEventBookingIdsRef.current.has(bookingId)) return;
+            if (bookingId) shownEventBookingIdsRef.current.add(bookingId);
+            setEventBookingAlert({
+                bookingId,
+                body: payload?.body || 'New booking received',
+            });
+        });
+
         return () => {
             unsubscribeSellerNew();
             unsubscribeDrop();
+            unsubscribeEventBooking();
         };
     }, [role]);
+
+    // Backup for the event-booking ringtone when the socket is not connected:
+    // check the seller's latest pending event bookings every 20s (and on tab focus).
+    // The first check only remembers existing bookings, so old ones never ring.
+    const isEventSellerUser = user?.isEventSeller === true || user?.planMyEventEnabled === true;
+    useEffect(() => {
+        if (role !== 'seller' || !isEventSellerUser) return undefined;
+        let cancelled = false;
+        const checkNewEventBookings = async () => {
+            try {
+                const stats = await sellerEventApi.getDashboardStats();
+                if (cancelled) return;
+                const pending = (stats?.recentRequests || []).filter(r => r.type === 'event' && r.status === 'pending');
+                if (eventPollFirstLoadRef.current) {
+                    pending.forEach(r => shownEventBookingIdsRef.current.add(String(r._id)));
+                    eventPollFirstLoadRef.current = false;
+                    return;
+                }
+                const fresh = pending.find(r => !shownEventBookingIdsRef.current.has(String(r._id)));
+                if (!fresh) return;
+                shownEventBookingIdsRef.current.add(String(fresh._id));
+                setEventBookingAlert({
+                    bookingId: String(fresh._id),
+                    body: 'New booking received',
+                });
+            } catch {
+                // ignore; the next check will retry
+            }
+        };
+        checkNewEventBookings();
+        const timer = setInterval(checkNewEventBookings, 20000);
+        const onFocus = () => checkNewEventBookings();
+        const onVisible = () => { if (document.visibilityState === 'visible') checkNewEventBookings(); };
+        window.addEventListener('focus', onFocus);
+        document.addEventListener('visibilitychange', onVisible);
+        return () => {
+            cancelled = true;
+            clearInterval(timer);
+            window.removeEventListener('focus', onFocus);
+            document.removeEventListener('visibilitychange', onVisible);
+        };
+    }, [role, isEventSellerUser]);
 
     // Single earnings fetch when seller is on earnings/withdrawals/transactions – no duplicate calls
     useEffect(() => {
@@ -494,6 +603,47 @@ const DashboardLayout = ({ children, navItems, title }) => {
                                     >
                                         <Check className="h-5 w-5" />
                                         Accept
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {/* New Plan My Event booking (rings until opened or dismissed) */}
+                {eventBookingAlert && (
+                    <div className="fixed inset-0 z-[998] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                            className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100"
+                        >
+                            <div className="flex flex-col items-center text-center">
+                                <div className="h-20 w-20 bg-primary/10 rounded-full flex items-center justify-center mb-6 animate-bounce">
+                                    <BellRing className="h-10 w-10 text-primary" />
+                                </div>
+                                <h2 className="text-2xl font-black text-slate-900 mb-2">New Event Booking!</h2>
+                                <p className="text-slate-600 font-medium mb-8">{eventBookingAlert.body}</p>
+                                <div className="grid grid-cols-2 gap-4 w-full">
+                                    <button
+                                        onClick={() => setEventBookingAlert(null)}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-slate-100 text-slate-600 font-bold hover:bg-slate-200 transition-colors"
+                                    >
+                                        <X className="h-5 w-5" />
+                                        Dismiss
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const id = eventBookingAlert.bookingId;
+                                            setEventBookingAlert(null);
+                                            if (id) sessionStorage.setItem('openReservationId', id);
+                                            navigate(id ? `/seller/reservations?id=${id}` : '/seller/reservations');
+                                        }}
+                                        className="flex items-center justify-center gap-2 py-4 rounded-2xl bg-primary text-primary-foreground font-bold hover:bg-primary/90 shadow-xl shadow-primary/20 transition-all active:scale-95"
+                                    >
+                                        <Check className="h-5 w-5" />
+                                        View Booking
                                     </button>
                                 </div>
                             </div>

@@ -157,6 +157,8 @@ const PendingSellers = () => {
                         advanceBookingBufferUnit: s.advanceBookingBufferUnit || "days",
                         advanceBookingBufferEnabled: s.advanceBookingBufferEnabled ?? false,
                         shopHolidaysEnabled: s.shopHolidaysEnabled ?? false,
+                        sellerDescriptionEnabled: s.sellerDescriptionEnabled ?? false,
+                        accountRefundEnabled: s.accountRefundEnabled ?? false,
                         shopClosedDates: s.shopClosedDates || [],
                         wholesaleEnabled: s.wholesaleEnabled ?? false,
                         allowedRetailCategories: s.allowedRetailCategories || [],
@@ -330,6 +332,8 @@ const PendingSellers = () => {
                         retailEnabled: s.retailEnabled ?? true,
                         planMyEventEnabled: s.planMyEventEnabled ?? false,
                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                        sellerDescriptionEnabled: s.sellerDescriptionEnabled ?? false,
+                        accountRefundEnabled: s.accountRefundEnabled ?? false,
                         primaryContactEnabled: s.primaryContactEnabled ?? true,
                         coupleContactEnabled: s.coupleContactEnabled ?? true,
                         corporateContactEnabled: s.corporateContactEnabled ?? true,
@@ -670,6 +674,8 @@ const PendingSellers = () => {
                                                     retailEnabled: s.retailEnabled ?? true,
                                                     planMyEventEnabled: s.planMyEventEnabled ?? false,
                                                     eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                                                    sellerDescriptionEnabled: s.sellerDescriptionEnabled ?? false,
+                                                    accountRefundEnabled: s.accountRefundEnabled ?? false,
                                                     primaryContactEnabled: s.primaryContactEnabled ?? true,
                                                     coupleContactEnabled: s.coupleContactEnabled ?? true,
                                                     corporateContactEnabled: s.corporateContactEnabled ?? true,
@@ -758,6 +764,8 @@ const PendingSellers = () => {
                                                         retailEnabled: s.retailEnabled ?? true,
                                                         planMyEventEnabled: s.planMyEventEnabled ?? false,
                                                         eventDetailsEnabled: s.eventDetailsEnabled ?? false,
+                                                        sellerDescriptionEnabled: s.sellerDescriptionEnabled ?? false,
+                                                        accountRefundEnabled: s.accountRefundEnabled ?? false,
                                                         primaryContactEnabled: s.primaryContactEnabled ?? true,
                                                         coupleContactEnabled: s.coupleContactEnabled ?? true,
                                                         corporateContactEnabled: s.corporateContactEnabled ?? true,
@@ -1521,6 +1529,30 @@ const PendingSellers = () => {
                                                                     }}
                                                                 />
 
+                                                                {[
+                                                                    { key: 'quoteThemeSelection', label: 'Theme Selection', description: 'Show decoration type & theme name to customers' },
+                                                                    { key: 'quoteBudgetSelection', label: 'Budget Selection', description: 'Show custom budget limit to customers' },
+                                                                ].map(({ key, label, description }) => (
+                                                                    <PermissionToggle
+                                                                        key={key}
+                                                                        label={label}
+                                                                        description={description}
+                                                                        checked={permissions[key]}
+                                                                        activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                        onChange={async (e) => {
+                                                                            const checked = e.target.checked;
+                                                                            setPermissions(prev => ({ ...prev, [key]: checked }));
+                                                                            try {
+                                                                                await adminApi.updateSeller(viewingSeller.id, { [key]: checked });
+                                                                                toast.success(`${label} permission updated`);
+                                                                                setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, [key]: checked } : seller));
+                                                                            } catch {
+                                                                                setPermissions(prev => ({ ...prev, [key]: !checked }));
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                ))}
+
                                                                 <PermissionToggle
                                                                     label="Customer & Seller Chat"
                                                                     description="Allow chat for plan my event"
@@ -1895,6 +1927,46 @@ const PendingSellers = () => {
                                                                 } catch (err) {
                                                                     setPermissions(prev => ({ ...prev, shopHolidaysEnabled: !checked }));
                                                                     toast.error('Failed to toggle shop holidays');
+                                                                }
+                                                            }}
+                                                        />
+
+                                                        {/* Seller Description */}
+                                                        <PermissionToggle
+                                                            label="Seller Description"
+                                                            description="Enable so seller can write a shop description shown to customers in Plan My Event"
+                                                            checked={permissions.sellerDescriptionEnabled ?? false}
+                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, sellerDescriptionEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { sellerDescriptionEnabled: checked });
+                                                                    toast.success('Seller description toggle updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, sellerDescriptionEnabled: checked } : seller));
+                                                                } catch {
+                                                                    setPermissions(prev => ({ ...prev, sellerDescriptionEnabled: !checked }));
+                                                                    toast.error('Failed to toggle seller description');
+                                                                }
+                                                            }}
+                                                        />
+
+                                                        {/* Refund to Account */}
+                                                        <PermissionToggle
+                                                            label="Refund to Account"
+                                                            description="Let this seller's customers choose a cancellation refund to their original payment method instead of the wallet"
+                                                            checked={permissions.accountRefundEnabled ?? false}
+                                                            activeColor="bg-rose-500" hoverColor="group-hover:text-rose-600"
+                                                            onChange={async (e) => {
+                                                                const checked = e.target.checked;
+                                                                setPermissions(prev => ({ ...prev, accountRefundEnabled: checked }));
+                                                                try {
+                                                                    await adminApi.updateSeller(viewingSeller.id, { accountRefundEnabled: checked });
+                                                                    toast.success('Refund to account toggle updated');
+                                                                    setPendingSellers(prev => prev.map(seller => seller.id === viewingSeller.id ? { ...seller, accountRefundEnabled: checked } : seller));
+                                                                } catch {
+                                                                    setPermissions(prev => ({ ...prev, accountRefundEnabled: !checked }));
+                                                                    toast.error('Failed to toggle refund to account');
                                                                 }
                                                             }}
                                                         />

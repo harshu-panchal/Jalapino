@@ -78,7 +78,16 @@ export function buildSellerOrdersQuery({
   startDate,
   endDate,
 }) {
-  const base = role === "admin" ? {} : { seller: userId };
+  const base = role === "admin"
+    ? {}
+    : {
+        seller: userId,
+        // Unpaid online orders (waiting for payment / expired without payment) are not the seller's yet.
+        $nor: [
+          { paymentMode: "ONLINE", workflowStatus: "CREATED" },
+          { paymentMode: "ONLINE", cancelReason: { $in: ["Payment timeout", "Payment failed"] } },
+        ],
+      };
   const withStatus = {
     ...base,
     ...normalizeSellerStatusFilter(statusParam),

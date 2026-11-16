@@ -615,6 +615,8 @@ export async function generateOrderPaymentBreakdown({
       const advanceRequired = roundCurrency(grandTotal * (effectiveAdvancePercent / 100));
       breakdownResult.advanceAmountRequired = advanceRequired;
       breakdownResult.remainingAmountCOD = roundCurrency(grandTotal - advanceRequired);
+      // Kept so checkout can re-split after the tip / free delivery is added.
+      breakdownResult.advancePercentApplied = effectiveAdvancePercent;
     }
   }
 

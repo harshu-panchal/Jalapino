@@ -27,6 +27,22 @@ import { toast } from "sonner";
 import Card from "@shared/components/ui/Card";
 import Button from "@shared/components/ui/Button";
 import MapPicker from "../../../shared/components/MapPicker";
+import { resolveSocketBaseUrl } from "@core/api/resolveApiBaseUrl";
+
+// Same as admin Pending Sellers: open the uploaded document from the right server.
+const getNormalizedDocUrl = (url) => {
+  if (!url) return "";
+  if (url.includes("localhost") || url.includes("127.0.0.1")) {
+    const baseServerUrl = resolveSocketBaseUrl();
+    try {
+      const parsedUrl = new URL(url);
+      return `${baseServerUrl}${parsedUrl.pathname}${parsedUrl.search}`;
+    } catch (e) {
+      return url.replace(/https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/i, baseServerUrl);
+    }
+  }
+  return url;
+};
 
 const SellerProfile = () => {
   const navigate = useNavigate();
@@ -144,6 +160,7 @@ const SellerProfile = () => {
       setFormData({
         name: data.name,
         shopName: data.shopName,
+        description: data.description || "",
         phone: data.phone,
         email: data.email,
         lat: data.location?.coordinates[1] || null,
@@ -457,6 +474,12 @@ const SellerProfile = () => {
       payload.set("advanceBookingBufferTime", String(formData.advanceBookingBufferTime || "12"));
       payload.set("advanceBookingBufferAfter", String(Number(formData.advanceBookingBufferAfter) || 0));
       payload.set("keptBanners", JSON.stringify(keptBanners));
+      // Always send description (even empty, so seller can clear it) when admin enabled it.
+      if (profile?.sellerDescriptionEnabled) {
+        payload.set("description", String(formData.description || ""));
+      } else {
+        payload.delete("description");
+      }
       uploadedBanners.forEach(file => {
         payload.append("banners", file);
       });
@@ -623,6 +646,26 @@ const SellerProfile = () => {
                     />
                   </div>
                 </div>
+
+                {/* Shown only when admin has enabled "Seller Description" for this seller */}
+                {Boolean(profile?.sellerDescriptionEnabled) && (
+                  <div className="space-y-3 md:col-span-2">
+                    <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
+                      Shop Description
+                    </label>
+                    <textarea
+                      name="description"
+                      rows={4}
+                      maxLength={1000}
+                      value={formData.description || ""}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      disabled={!isEditing}
+                      placeholder="Tell customers about your shop, services and specialities"
+                      className="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-lg text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-slate-100 transition-all disabled:opacity-70 resize-y"
+                    />
+                    <p className="text-[10px] font-semibold text-slate-400 ml-1">This description is shown to customers on your Plan My Event page.</p>
+                  </div>
+                )}
 
                 <div className="space-y-3">
                   <label className="text-xs font-black uppercase tracking-widest text-slate-600 ml-1">
@@ -2276,6 +2319,30 @@ const SellerProfile = () => {
                 </div>
               )}
 
+              {/* GST: sales crossed ₹10 lakh in 12 months and no certificate yet */}
+              {profile.gstCertificateRequired && (
+                <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                  <p className="text-xs font-black text-amber-900">⚠ GST Certificate Required</p>
+                  <p className="text-[11px] font-semibold text-amber-800 mt-1">
+                    Your transactions in the last 12 months are ₹{Number(profile.gstTurnover12Months || 0).toLocaleString('en-IN')} (above ₹{Number(profile.gstLimit || 1000000).toLocaleString('en-IN')}). Please upload your GST Certificate.
+                  </p>
+                  <label className="mt-2 inline-flex cursor-pointer items-center rounded-lg bg-amber-600 px-3 py-1.5 text-[11px] font-black text-white hover:bg-amber-700">
+                    Upload GST Certificate
+                    <input
+                      type="file"
+                      className="hidden"
+                      accept="image/*,.pdf"
+                      onChange={async (e) => {
+                        if (e.target.files && e.target.files[0]) {
+                          await uploadReuploadDocument(e.target.files[0], 'gstCertificate');
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+                  </label>
+                </div>
+              )}
+
               {/* Document Statuses */}
               {profile.documents && Object.keys(profile.documents).length > 0 && (
                 <div>
@@ -2305,6 +2372,15 @@ const SellerProfile = () => {
                             )}
                           </div>
                           <div className="flex items-center gap-3">
+                            {url && (
+                              <button
+                                type="button"
+                                onClick={() => window.open(getNormalizedDocUrl(url), "_blank", "noopener,noreferrer")}
+                                className="text-[10px] font-bold text-slate-700 underline"
+                              >
+                                View
+                              </button>
+                            )}
                             {(status === 'pending_reupload' || status === 'rejected') && (
                               <label className="cursor-pointer text-[10px] font-bold text-blue-600 underline" onClick={(e) => { e.preventDefault(); setActiveDocAction(key); }}>
                                 Reupload

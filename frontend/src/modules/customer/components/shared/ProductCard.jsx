@@ -174,30 +174,6 @@ const ProductCard = React.memo(
         onClick={handleProductClick}>
         {/* Top Image Section */}
         <div className="relative">
-          {/* Badge (Custom or Discount) */}
-          {(badge ||
-            isWholesale ||
-            product.discount ||
-            product.originalPrice > product.price) && (
-              <div
-                className={cn(
-                  "absolute z-10 bg-primary text-primary-foreground font-[900] rounded-md shadow-sm uppercase tracking-wider flex items-center justify-center",
-                  compact
-                    ? "top-2 left-2 px-1.5 py-0.5 text-[7px]"
-                    : "top-2 left-2 px-1 py-0.5 text-[7px] sm:top-3 sm:left-3 sm:px-2 sm:py-1 sm:text-[9px]",
-                )}>
-                {badge ||
-                  (isWholesale
-                    ? "WHOLESALE 20% OFF"
-                    : product.discount ||
-                      `${Math.round(
-                        ((product.originalPrice - product.price) /
-                          product.originalPrice) *
-                          100,
-                      )}% OFF`)}
-              </div>
-            )}
-
           <button
             onClick={toggleWishlist}
             className={cn(
@@ -297,24 +273,48 @@ const ProductCard = React.memo(
             </h4>
           </div>
 
-          {/* Price Section */}
-          <div className="mt-auto flex items-baseline gap-1.5">
-            <span
-              className={cn(
-                "font-[1000] text-[#1A1A1A] leading-none",
-                compact ? "text-[12px] sm:text-[13px]" : "text-[14px] sm:text-base",
-              )}>
-              ₹{isWholesale ? Math.floor(product.price * 0.8) : product.price}
-            </span>
-            {(isWholesale || product.originalPrice > product.price) && (
+          {/* Price Section (offer badge shown just above the price) */}
+          <div className="mt-auto flex flex-col gap-1">
+            {(badge ||
+              isWholesale ||
+              product.discount ||
+              product.originalPrice > product.price) && (
+                <span
+                  className={cn(
+                    "self-start bg-primary text-primary-foreground font-[900] rounded-md shadow-sm uppercase tracking-wider",
+                    compact
+                      ? "px-1.5 py-0.5 text-[7px]"
+                      : "px-1.5 py-0.5 text-[8px] sm:px-2 sm:text-[9px]",
+                  )}>
+                  {badge ||
+                    (isWholesale
+                      ? "WHOLESALE 20% OFF"
+                      : product.discount ||
+                        `${Math.round(
+                          ((product.originalPrice - product.price) /
+                            product.originalPrice) *
+                            100,
+                        )}% OFF`)}
+                </span>
+              )}
+            <div className="flex items-baseline gap-1.5">
               <span
                 className={cn(
-                  "font-medium text-gray-400 line-through leading-none",
-                  compact ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-[12px]",
+                  "font-[1000] text-[#1A1A1A] leading-none",
+                  compact ? "text-[12px] sm:text-[13px]" : "text-[14px] sm:text-base",
                 )}>
-                ₹{isWholesale ? product.price : product.originalPrice}
+                ₹{isWholesale ? Math.floor(product.price * 0.8) : product.price}
               </span>
-            )}
+              {(isWholesale || product.originalPrice > product.price) && (
+                <span
+                  className={cn(
+                    "font-medium text-gray-400 line-through leading-none",
+                    compact ? "text-[9px] sm:text-[10px]" : "text-[10px] sm:text-[12px]",
+                  )}>
+                  ₹{isWholesale ? product.price : product.originalPrice}
+                </span>
+              )}
+            </div>
           </div>
 
           {/* ADD Button / Quantity Selector */}
@@ -345,6 +345,16 @@ const ProductCard = React.memo(
                   className="p-1 px-2.5 text-white active:scale-90 transition-transform">
                   <Plus size={compact ? 10 : 12} strokeWidth={3.5} />
                 </button>
+              </div>
+            ) : product.courierDeliveryComingSoon ? (
+              // Pan India / Zone product from a seller outside the customer's delivery
+              // radius: courier delivery is not live yet, so it can't be added.
+              <div
+                className={cn(
+                  "w-full rounded-lg border border-amber-200 bg-amber-50 text-amber-800 font-bold flex items-center justify-center text-center leading-tight px-1",
+                  compact ? "min-h-7 sm:min-h-8 text-[9px] sm:text-[10px]" : "min-h-8 sm:min-h-9 text-[10px] sm:text-xs"
+                )}>
+                Courier delivery coming soon
               </div>
             ) : (
               <button

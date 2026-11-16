@@ -568,8 +568,9 @@ const MainLocationHeader = ({
               display: displayCart,
             }}
             type="button"
-            aria-label="Open cart"
-            onClick={() => navigate("/checkout")}
+            aria-label={isPlanMyEventActive ? "Open event orders" : "Open cart"}
+            // Plan My Event -> event orders tab; Retail -> cart (as before).
+            onClick={() => (isPlanMyEventActive ? navigate("/orders?tab=events") : navigate("/checkout"))}
             className={cn(
               "absolute right-5 sm:right-6 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer",
               "top-[72px] sm:top-[76px] md:top-5",

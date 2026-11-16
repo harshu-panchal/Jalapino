@@ -349,12 +349,16 @@ const ReelsPage = () => {
                 if (sellerId) {
                     params.sellerId = sellerId;
                 }
+                // From Plan My Event: event products (coverage + delivery type rules apply on the server).
+                const moduleParam = searchParamsObj.get('module');
+                if (moduleParam) params.module = moduleParam;
                 if (searchQuery.trim()) {
                     params.search = searchQuery.trim();
                 }
                 if (currentLocation?.latitude && currentLocation?.longitude) {
                     params.lat = currentLocation.latitude;
                     params.lng = currentLocation.longitude;
+                    if (currentLocation?.name) params.location = currentLocation.name;
                 }
 
                 const fetchPromises = [];

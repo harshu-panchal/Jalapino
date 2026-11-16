@@ -335,6 +335,8 @@ export const updateSellerDetails = async (req, res) => {
     }
     if (advanceBookingBufferTime !== undefined) updateData.advanceBookingBufferTime = advanceBookingBufferTime;
     if (req.body.shopHolidaysEnabled !== undefined) updateData.shopHolidaysEnabled = req.body.shopHolidaysEnabled;
+    if (req.body.sellerDescriptionEnabled !== undefined) updateData.sellerDescriptionEnabled = req.body.sellerDescriptionEnabled === true || req.body.sellerDescriptionEnabled === 'true';
+    if (req.body.accountRefundEnabled !== undefined) updateData.accountRefundEnabled = req.body.accountRefundEnabled === true || req.body.accountRefundEnabled === 'true';
     if (req.body.shopClosedDates !== undefined) updateData.shopClosedDates = req.body.shopClosedDates;
     if (req.body.ticketCancellationBufferEnabled !== undefined) updateData.ticketCancellationBufferEnabled = req.body.ticketCancellationBufferEnabled;
 

@@ -7,6 +7,118 @@ import Dialog from '@mui/material/Dialog';
 import { HiOutlineCheck, HiOutlineXMark, HiOutlineCalendarDays, HiOutlineUserGroup, HiOutlineMapPin, HiOutlineClock, HiOutlineCamera, HiOutlineVideoCamera } from 'react-icons/hi2';
 import axiosInstance from '@core/api/axios';
 
+// Customer's "Your Event Details" as [label, value] rows, ONLY for filled fields
+// (same rows the customer sees in Plan Summary / Checkout / My Orders).
+const getEventDetailRows = (info = {}) => {
+    const type = String(info?.bookingType || '').toLowerCase();
+    const fmtDate = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || ''))
+        ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN')
+        : (v || ''));
+    const cap = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : '');
+    const isSellerLocation = info?.serviceLocationType === 'seller';
+    const rows = [
+        ['Booking Type', cap(type)],
+        ...(type === 'corporate' ? [
+            ['Company Name', info?.corporateCompanyName],
+            ['Contact Person', info?.corporateContactPerson],
+            ['Mobile', info?.corporateMobile],
+            ['GST Number', info?.corporateGstNumber],
+        ] : type === 'couple' ? [
+            ['Couple Names', info?.coupleNames || info?.primaryContactName],
+            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+        ] : [
+            ['Primary Contact', info?.primaryContactName || info?.name],
+            ['Gender', cap(info?.gender)],
+            ['Date of Birth', fmtDate(info?.dateOfBirth)],
+        ]),
+        ['Phone', type !== 'corporate' ? info?.primaryPhone : ''],
+        ['No. of Guests', info?.noOfGuests],
+        [isSellerLocation ? 'Seller Location' : 'Function Location', isSellerLocation ? (info?.sellerLocation || info?.functionLocation) : info?.functionLocation],
+    ];
+    return rows.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '0');
+};
+
+// Amount shown next to TOTAL, by payment mode:
+// - Online: advance amount (as before)
+// - COD: full cash the seller collects (minus any online part already paid);
+//   after "Save COD Paid" it shows as collected. No "advance" for COD.
+const getSecondAmount = (res) => {
+    const total = Number(res?.amount || res?.totalAmount || 0);
+    const mode = String(res?.paymentMode || 'COD').toUpperCase();
+    if (mode === 'COD') {
+        const codCollected = Number(res?.codAmountCollected) || 0;
+        const onlinePaid = Math.max(0, (Number(res?.amountPaid) || 0) - codCollected);
+        const isCollected = String(res?.paymentStatus || '').toUpperCase() === 'PAID';
+        const cash = isCollected && codCollected > 0 ? codCollected : Math.max(0, total - onlinePaid);
+        return { label: isCollected ? 'COD Collected (Cash)' : 'COD Amount (Cash)', value: cash, isCod: true };
+    }
+    const pct = Number(res?.advancePaymentPercentage && res.advancePaymentPercentage > 0 ? res.advancePaymentPercentage : 30);
+    const advance = (res?.advancePaymentAmount !== undefined && res?.advancePaymentAmount !== null && Number(res.advancePaymentAmount) > 0)
+        ? Number(res.advancePaymentAmount)
+        : Math.round((total * pct) / 100);
+    return { label: `Advance Amount (${pct}%)`, value: advance, isCod: false };
+};
+
+// How much has actually been paid, split into online and COD (cash).
+const getPaidBreakdown = (res) => {
+    const total = Number(res?.amount || res?.totalAmount || 0);
+    const mode = String(res?.paymentMode || 'COD').toUpperCase();
+    const status = String(res?.paymentStatus || 'PENDING').toUpperCase();
+    let cod = Number(res?.codAmountCollected) || 0;
+    let online = Math.max(0, (Number(res?.amountPaid) || 0) - cod);
+    // Older bookings (before paid amounts were recorded): work it out from the status.
+    if (cod === 0 && online === 0) {
+        if (status === 'PAID') {
+            if (mode === 'COD') cod = total; else online = total;
+        } else if (status === 'ADVANCE_PAID') {
+            online = Number(res?.advancePaymentAmount) || 0;
+        }
+    }
+    // Just marked "COD Paid" on this screen: the rest was collected in cash.
+    if (mode === 'COD' && status === 'PAID' && cod === 0 && online < total) cod = total - online;
+    const paid = Math.min(total, cod + online);
+    return { online, cod, paid, balance: Math.max(0, total - paid), isCod: mode === 'COD' };
+};
+
+// When the booked event ends, in India time (same rule as the backend):
+// slot "10:30 AM - 4:00 PM" -> 4:00 PM, single (start) time or no time -> end of
+// that day (23:59), slot past midnight -> next day, multiple dates -> the latest one.
+const getEventEndIST = (res) => {
+    const toMinutes = (value) => {
+        const m = String(value || '').trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+        if (!m) return null;
+        let h = Number(m[1]);
+        const min = Number(m[2] || 0);
+        const p = m[3]?.toUpperCase();
+        if (p) { if (h === 12) h = p === 'AM' ? 0 : 12; else if (p === 'PM') h += 12; }
+        return h * 60 + min;
+    };
+    const toDateStr = (value) => {
+        if (!value) return '';
+        const text = String(value);
+        if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+    };
+    const endOf = (dateValue, time) => {
+        const dateStr = toDateStr(dateValue);
+        if (!dateStr) return null;
+        const parts = String(time || '').split('-').map(p => p.trim()).filter(Boolean);
+        const startMin = parts.length ? toMinutes(parts[0]) : null;
+        let endMin = parts.length > 1 ? toMinutes(parts[parts.length - 1]) : null;
+        if (endMin === null) endMin = 23 * 60 + 59;
+        const end = new Date(`${dateStr}T${String(Math.floor(endMin / 60)).padStart(2, '0')}:${String(endMin % 60).padStart(2, '0')}:00+05:30`);
+        if (Number.isNaN(end.getTime())) return null;
+        if (parts.length > 1 && startMin !== null && endMin < startMin) end.setTime(end.getTime() + 24 * 60 * 60 * 1000);
+        return end;
+    };
+    const ends = [
+        endOf(res?.eventDate, res?.eventTime),
+        ...((res?.multipleEvents || []).map(e => endOf(e?.date || res?.eventDate, e?.time || res?.eventTime))),
+    ].filter(Boolean);
+    return ends.length ? new Date(Math.max(...ends.map(d => d.getTime()))) : null;
+};
+
 const EventReservations = () => {
     const [reservations, setReservations] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -81,7 +193,7 @@ const EventReservations = () => {
                 setSelectedRes({ ...selectedRes, status });
             }
         } catch (error) {
-            alert('Failed to update status');
+            alert(error?.response?.data?.message || 'Failed to update status');
         } finally {
             setActionLoading(false);
         }
@@ -178,10 +290,13 @@ const EventReservations = () => {
         if (res.status === 'cancelled' || res.overallStatus === 'CANCELLED') {
             return { label: 'CANCELLED', color: 'bg-red-100 text-red-700 border-red-200' };
         }
-        const payStatus = String(res.paymentStatus || '').toUpperCase();
-        const isPaymentConfirmed = payStatus === 'PAID' || payStatus === 'ADVANCE_PAID';
-        if (isPaymentConfirmed) {
+        // COMPLETED only after the seller pressed "Mark as Completed" (after the event).
+        if (res.status === 'completed') {
             return { label: 'COMPLETED', color: 'bg-blue-100 text-blue-700 border-blue-200' };
+        }
+        // CONFIRMED once the seller accepted (payment pending or done — shown separately below).
+        if (res.status === 'confirmed') {
+            return { label: 'CONFIRMED', color: 'bg-green-100 text-green-700 border-green-200' };
         }
         return { label: 'REQUESTED', color: 'bg-amber-100 text-amber-700 border-amber-200' };
     };
@@ -208,22 +323,16 @@ const EventReservations = () => {
         return { label: 'Payment Pending', color: 'bg-amber-100 text-amber-800 border-amber-200', isPendingCOD: false };
     };
 
+    // Each tab shows exactly the bookings whose badge (shown on the card) matches it.
     const filteredReservations = reservations.filter(r => {
         if (filter === 'all') return true;
         const disp = getDisplayStatus(r).label.toLowerCase();
-        if (filter === 'pending') {
-            return r.status === 'pending' || disp === 'requested';
-        }
-        if (filter === 'confirmed') {
-            return r.status === 'confirmed' || disp === 'confirmed';
-        }
-        if (filter === 'rejected') {
-            return r.status === 'rejected' || r.status === 'cancelled' || disp === 'rejected' || disp === 'cancelled';
-        }
-        if (filter === 'completed') {
-            return r.status === 'completed' || disp === 'completed';
-        }
-        return r.status === filter;
+        if (filter === 'pending') return disp === 'requested';
+        if (filter === 'confirmed') return disp === 'confirmed';
+        // No separate "Cancelled" tab, so cancelled bookings are listed under Rejected.
+        if (filter === 'rejected') return disp === 'rejected' || disp === 'cancelled';
+        if (filter === 'completed') return disp === 'completed';
+        return disp === filter;
     });
 
     const getStatusColor = (status) => {
@@ -269,12 +378,6 @@ const EventReservations = () => {
                         const displayStatus = getDisplayStatus(res);
                         const paymentBadge = getPaymentBadge(res);
                         const totalAmt = Number(res.amount || res.totalAmount || 0);
-                        const advancePct = Number(res.advancePaymentPercentage && res.advancePaymentPercentage > 0 ? res.advancePaymentPercentage : 30);
-                        const advanceAmt = Number(
-                            (res.advancePaymentAmount !== undefined && res.advancePaymentAmount !== null && Number(res.advancePaymentAmount) > 0)
-                                ? res.advancePaymentAmount
-                                : Math.round((totalAmt * advancePct) / 100)
-                        );
 
                         return (
                             <motion.div 
@@ -301,6 +404,10 @@ const EventReservations = () => {
                                             {formatCreatedDateTime(res.createdAt) || new Date(res.createdAt).toLocaleDateString()}
                                         </span>
                                     </div>
+
+                                    {res.closedReason && (
+                                        <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-[11px] font-bold text-rose-700">🚫 {res.closedReason}</p>
+                                    )}
 
                                     {/* Customer Details */}
                                     <h3 className="text-lg sm:text-xl font-black text-slate-800 mb-1 group-hover:text-red-600 transition-colors break-words">
@@ -346,10 +453,10 @@ const EventReservations = () => {
                                             </div>
                                             <div>
                                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                                    Advance Amount ({advancePct}%)
+                                                    {getSecondAmount(res).label}
                                                 </span>
-                                                <span className="text-xs sm:text-sm font-black text-purple-700">
-                                                    ₹{advanceAmt.toLocaleString('en-IN')}/-
+                                                <span className={`text-xs sm:text-sm font-black ${getSecondAmount(res).isCod ? 'text-amber-700' : 'text-purple-700'}`}>
+                                                    ₹{getSecondAmount(res).value.toLocaleString('en-IN')}/-
                                                 </span>
                                             </div>
                                         </div>
@@ -450,6 +557,10 @@ const EventReservations = () => {
                             </span>
                         </div>
 
+                        {selectedRes.closedReason && (
+                            <p className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-bold text-rose-700">🚫 {selectedRes.closedReason}</p>
+                        )}
+
                         <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 space-y-4 mb-5 border border-slate-100">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div>
@@ -475,13 +586,16 @@ const EventReservations = () => {
                                         </p>
                                     </div>
                                 )}
-                                <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Location</p>
-                                    <p className="font-bold text-slate-700 flex items-center gap-2 text-xs sm:text-sm">
-                                        <HiOutlineMapPin className="w-4 h-4 text-red-500 shrink-0" />
-                                        <span className="truncate">{selectedRes.location?.address || "Not specified"}</span>
-                                    </p>
-                                </div>
+                                {/* Location only if the customer actually filled it */}
+                                {selectedRes.location?.address && !['Pending Address', 'Pending Location', 'Not specified'].includes(selectedRes.location.address) && (
+                                    <div>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Location</p>
+                                        <p className="font-bold text-slate-700 flex items-center gap-2 text-xs sm:text-sm">
+                                            <HiOutlineMapPin className="w-4 h-4 text-red-500 shrink-0" />
+                                            <span className="truncate">{selectedRes.location.address}</span>
+                                        </p>
+                                    </div>
+                                )}
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">TOTAL Amount</p>
                                     <p className="font-extrabold text-slate-800 text-xs sm:text-sm">
@@ -490,14 +604,10 @@ const EventReservations = () => {
                                 </div>
                                 <div>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                                        Advance Amount ({Number(selectedRes.advancePaymentPercentage && selectedRes.advancePaymentPercentage > 0 ? selectedRes.advancePaymentPercentage : 30)}%)
+                                        {getSecondAmount(selectedRes).label}
                                     </p>
-                                    <p className="font-extrabold text-purple-700 text-xs sm:text-sm">
-                                        ₹{Number(
-                                            (selectedRes.advancePaymentAmount !== undefined && selectedRes.advancePaymentAmount !== null && Number(selectedRes.advancePaymentAmount) > 0)
-                                                ? selectedRes.advancePaymentAmount
-                                                : Math.round((Number(selectedRes.amount || selectedRes.totalAmount || 0) * Number(selectedRes.advancePaymentPercentage && selectedRes.advancePaymentPercentage > 0 ? selectedRes.advancePaymentPercentage : 30)) / 100)
-                                        ).toLocaleString('en-IN')}/-
+                                    <p className={`font-extrabold text-xs sm:text-sm ${getSecondAmount(selectedRes).isCod ? 'text-amber-700' : 'text-purple-700'}`}>
+                                        ₹{getSecondAmount(selectedRes).value.toLocaleString('en-IN')}/-
                                     </p>
                                 </div>
                                 <div className="col-span-1 sm:col-span-2">
@@ -521,6 +631,26 @@ const EventReservations = () => {
                                             </button>
                                         )}
                                     </div>
+                                    {/* Amount actually paid (online / COD cash) */}
+                                    {(() => {
+                                        const p = getPaidBreakdown(selectedRes);
+                                        const rows = [
+                                            p.online > 0 && ['Paid Online', p.online, 'text-purple-700'],
+                                            p.cod > 0 && ['Paid in Cash (COD)', p.cod, 'text-emerald-700'],
+                                            ['Total Paid', p.paid, 'text-slate-900'],
+                                            p.balance > 0 && [p.isCod ? 'Balance Due (Cash)' : 'Balance Due', p.balance, 'text-amber-700'],
+                                        ].filter(Boolean);
+                                        return (
+                                            <div className="mt-2.5 rounded-lg border border-slate-200 bg-white px-3 py-2 space-y-1 text-xs">
+                                                {rows.map(([label, value, color]) => (
+                                                    <div key={label} className="flex items-center justify-between gap-3">
+                                                        <span className="font-semibold text-slate-500">{label}</span>
+                                                        <span className={`font-extrabold ${color}`}>₹{Number(value).toLocaleString('en-IN')}/-</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
                                 </div>
                                 {selectedRes.eventType && (
                                     <div>
@@ -530,7 +660,22 @@ const EventReservations = () => {
                                         </p>
                                     </div>
                                 )}
-                                {selectedRes.remarks && (
+                                {Array.isArray(selectedRes.multipleEvents) && selectedRes.multipleEvents.length > 0 ? (
+                                    <div className="col-span-1 sm:col-span-2">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Dates & Remarks</p>
+                                        <div className="space-y-1">
+                                            {selectedRes.multipleEvents.map((item, idx) => (
+                                                <div key={item.id || idx} className="flex flex-wrap justify-between gap-2 rounded-lg bg-slate-50 px-2 py-1.5 text-xs sm:text-sm">
+                                                    <span className="font-bold text-slate-700">{item.typeName || ''}</span>
+                                                    <span className="font-semibold text-slate-700 text-right">
+                                                        {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` · ${item.time}` : ''}`}
+                                                        {String(item.remarks || '').trim() && <span className="block text-[11px] font-medium italic text-slate-500">📝 {item.remarks}</span>}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ) : selectedRes.remarks && (
                                     <div className="col-span-1 sm:col-span-2">
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Remarks / Occasion</p>
                                         <p className="font-semibold text-slate-700 text-xs sm:text-sm">
@@ -547,55 +692,14 @@ const EventReservations = () => {
                                 <h3 className="text-xs font-black text-purple-900 uppercase tracking-wider mb-3 pb-1 border-b border-purple-200">
                                     👤 Event & Contact Details
                                 </h3>
+                                {/* Same details the customer filled (only filled fields). */}
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 text-xs">
-                                    {(selectedRes.eventInfo.primaryContactName || selectedRes.eventInfo.name) && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Primary Contact</span>
-                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.primaryContactName || selectedRes.eventInfo.name}</span>
+                                    {getEventDetailRows(selectedRes.eventInfo).map(([label, value]) => (
+                                        <div key={label} className="min-w-0">
+                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">{label}</span>
+                                            <span className="font-bold text-slate-800 break-words">{value}</span>
                                         </div>
-                                    )}
-                                    {selectedRes.eventInfo.bookingType && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Booking Type</span>
-                                            <span className="font-bold text-slate-800 capitalize">{selectedRes.eventInfo.bookingType}</span>
-                                        </div>
-                                    )}
-                                    {selectedRes.eventInfo.gender && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Gender</span>
-                                            <span className="font-bold text-slate-800 capitalize">{selectedRes.eventInfo.gender}</span>
-                                        </div>
-                                    )}
-                                    {selectedRes.eventInfo.dateOfBirth && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Date of Birth</span>
-                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.dateOfBirth}</span>
-                                        </div>
-                                    )}
-                                    {selectedRes.eventInfo.anniversaryDate && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Anniversary Date</span>
-                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.anniversaryDate}</span>
-                                        </div>
-                                    )}
-                                    {selectedRes.eventInfo.coupleNames && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Couple Names</span>
-                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.coupleNames}</span>
-                                        </div>
-                                    )}
-                                    {selectedRes.eventInfo.corporateCompanyName && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Company Name</span>
-                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.corporateCompanyName}</span>
-                                        </div>
-                                    )}
-                                    {selectedRes.eventInfo.corporateContactPerson && (
-                                        <div>
-                                            <span className="text-[10px] text-slate-400 uppercase block font-bold">Contact Person</span>
-                                            <span className="font-bold text-slate-800">{selectedRes.eventInfo.corporateContactPerson}</span>
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
                             </div>
                         )}
@@ -763,15 +867,30 @@ const EventReservations = () => {
                                     </button>
                                 </>
                             )}
-                            {selectedRes.status === 'confirmed' && (
-                                <button 
-                                    onClick={() => { handleStatusUpdate(selectedRes._id, 'completed'); setModalOpen(false); }}
-                                    disabled={actionLoading}
-                                    className="px-5 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors w-full disabled:opacity-50 text-xs sm:text-sm"
-                                >
-                                    Mark as Completed
-                                </button>
-                            )}
+                            {selectedRes.status === 'confirmed' && (() => {
+                                // Allowed only after the booked event date & time is over.
+                                const eventEnd = getEventEndIST(selectedRes);
+                                const notEndedYet = Boolean(eventEnd) && Date.now() < eventEnd.getTime();
+                                const endLabel = eventEnd
+                                    ? eventEnd.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                                    : '';
+                                return (
+                                    <div className="w-full flex flex-col gap-1">
+                                        <button
+                                            onClick={() => { handleStatusUpdate(selectedRes._id, 'completed'); setModalOpen(false); }}
+                                            disabled={actionLoading || notEndedYet}
+                                            className="px-5 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 transition-colors w-full disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm"
+                                        >
+                                            Mark as Completed
+                                        </button>
+                                        {notEndedYet && (
+                                            <p className="text-[11px] font-semibold text-slate-500 text-center">
+                                                Available after the event ends ({endLabel})
+                                            </p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 )}

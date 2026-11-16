@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { sellerEventApi } from '../../services/sellerEventApi';
 import { sellerCalendarApi } from '../../services/sellerCalendarApi';
 import { HiOutlineCalendar, HiChevronLeft, HiChevronRight, HiOutlineInformationCircle } from 'react-icons/hi2';
+import { toast } from 'sonner';
 
 const EventCalendar = () => {
     const [reservations, setReservations] = useState([]);
@@ -53,17 +54,34 @@ const EventCalendar = () => {
         }
     };
 
-    const toggleDate = (dayDate) => {
+    // Block / unblock saves right away (customers see it immediately).
+    // A date that has bookings cannot be blocked.
+    const toggleDate = async (dayDate, hasBookings = false) => {
         const isPast = dayDate < new Date(new Date().setHours(0, 0, 0, 0));
         if (isPast) return;
 
         const dateStr = dayDate.toDateString();
         const exists = blockedDates.find(d => d.toDateString() === dateStr);
+        if (!exists && hasBookings) {
+            toast.info('This date has a paid booking, so it cannot be blocked.');
+            return;
+        }
 
-        if (exists) {
-            setBlockedDates(blockedDates.filter(d => d.toDateString() !== dateStr));
-        } else {
-            setBlockedDates([...blockedDates, dayDate]);
+        const previous = blockedDates;
+        const next = exists
+            ? blockedDates.filter(d => d.toDateString() !== dateStr)
+            : [...blockedDates, dayDate];
+        setBlockedDates(next);
+        try {
+            const formattedDates = next.map(d => {
+                const offset = d.getTimezoneOffset() * 60000;
+                return new Date(d.getTime() - offset).toISOString().split('T')[0];
+            });
+            await sellerCalendarApi.updateBlockedDates(formattedDates);
+            toast.success(exists ? 'Date unblocked' : 'Date blocked');
+        } catch (error) {
+            setBlockedDates(previous);
+            toast.error(typeof error === 'string' ? error : 'Failed to update date');
         }
     };
 
@@ -100,7 +118,11 @@ const EventCalendar = () => {
                 <div 
                     key={`day-${d}`} 
                     onClick={() => {
-                        toggleDate(dayDate);
+                        // Only paid bookings (advance/full, or COD confirmed) lock the date.
+                        const hasPaidBooking = dayReservations.some(r => (Number(r.amountPaid) || 0) > 0
+                            || ['ADVANCE_PAID', 'PAID'].includes(r.paymentStatus)
+                            || (r.paymentMode === 'COD' && ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(r.overallStatus)));
+                        toggleDate(dayDate, hasPaidBooking);
                         if (dayReservations.length > 0) {
                             setSelectedDayBookings(isSelected ? null : { date: dateStr, bookings: dayReservations });
                         }

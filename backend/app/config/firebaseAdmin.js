@@ -25,9 +25,10 @@ export const getFirebaseAdminApp = () => {
     if (jsonString) {
       serviceAccount = JSON.parse(jsonString);
     } else {
-      // Fallback to the json file provided
-      const jsonPath = path.resolve(__dirname, 'jalapino-a9ea3-firebase-adminsdk-fbsvc-30c9a93c40.json');
-      if (fs.existsSync(jsonPath)) {
+      // Service account key file kept in this config folder (*firebase-adminsdk*.json)
+      const keyFile = fs.readdirSync(__dirname).find((name) => /firebase-adminsdk.*\.json$/i.test(name));
+      const jsonPath = keyFile ? path.resolve(__dirname, keyFile) : "";
+      if (jsonPath && fs.existsSync(jsonPath)) {
         serviceAccount = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
       }
     }

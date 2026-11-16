@@ -479,6 +479,16 @@ export async function buildCheckoutPricingSnapshot({
     applyFreeDeliveryToSellerBreakdowns(sellerBreakdownEntries);
   }
   allocateCheckoutTipToSellerBreakdowns(sellerBreakdownEntries, tipAmount);
+  // Advance / pay-on-delivery must split the FINAL total (after tip & free delivery),
+  // otherwise Advance + COD would be less than the total shown (tip missing).
+  for (const entry of sellerBreakdownEntries) {
+    const breakdown = entry?.breakdown;
+    const percent = Number(breakdown?.advancePercentApplied || 0);
+    if (!breakdown || !(percent > 0)) continue;
+    const total = round2(Number(breakdown.grandTotal || 0));
+    breakdown.advanceAmountRequired = round2(total * (percent / 100));
+    breakdown.remainingAmountCOD = round2(total - breakdown.advanceAmountRequired);
+  }
   // Audit Phase 4 (C-1): subtract wallet redemption from each seller's
   // grandTotal proportionate to their share. No-op when the flag is off.
   applyWalletAllocationToSellerBreakdowns(sellerBreakdownEntries, walletAmount);

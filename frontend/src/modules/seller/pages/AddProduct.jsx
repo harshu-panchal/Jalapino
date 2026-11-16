@@ -396,6 +396,7 @@ const AddProduct = () => {
     maxOrderQty: "",
     advanceOrderSetting: "",
     cancellationPolicy: "",
+    cancellationRules: [],
     ticketingSystem: "",
     tickets: [],
     tickets: [],
@@ -587,7 +588,8 @@ const AddProduct = () => {
       const firstTicket = tickets[0] || {};
       data.append("price", firstVariant.price !== undefined && firstVariant.price !== "" ? firstVariant.price : (firstTicket.price || 0));
       data.append("salePrice", firstVariant.salePrice !== undefined && firstVariant.salePrice !== "" ? firstVariant.salePrice : (firstTicket.salePrice || 0));
-      data.append("stock", firstVariant.stock !== undefined && firstVariant.stock !== "" ? firstVariant.stock : (firstTicket.capacity || 0));
+      // Stock OFF (empty / null) must not be sent as the text "null".
+      data.append("stock", firstVariant.stock !== undefined && firstVariant.stock !== null && firstVariant.stock !== "" ? firstVariant.stock : (firstTicket.capacity || 0));
 
 
       // Category IDs â€” sirf tab append karo jab value ho (empty string ObjectId error deta hai)
@@ -644,6 +646,11 @@ const AddProduct = () => {
       data.append("maxOrderQty", formData.maxOrderQty || "");
       data.append("advanceOrderSetting", profileAdvanceOrderSetting || formData.advanceOrderSetting || "");
       data.append("cancellationPolicy", formData.cancellationPolicy || "");
+      data.append("cancellationRules", JSON.stringify(
+        (formData.cancellationRules || [])
+          .filter(r => r.hoursBefore !== "" && r.refundPercent !== "")
+          .map(r => ({ hoursBefore: Number(r.hoursBefore), refundPercent: Number(r.refundPercent) }))
+      ));
       data.append("ticketingSystem", formData.ticketingSystem || "");
 
       // Venue Info Appends
@@ -1171,6 +1178,55 @@ const AddProduct = () => {
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold min-h-[80px] outline-none transition-all focus:ring-2 focus:ring-brand-500 resize-none"
                       placeholder="Describe cancellation timings and refund percentages..."
                     />
+                    {/* RedBus-style refund slabs: used to auto-calculate refund on cancellation */}
+                    <div className="mt-2 rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">Refund Rules (time before event)</p>
+                        <button
+                          type="button"
+                          onClick={() => setFormData(prev => ({ ...prev, cancellationRules: [...(prev.cancellationRules || []), { hoursBefore: "", refundPercent: "" }] }))}
+                          className="text-[11px] font-bold text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg hover:bg-brand-100"
+                        >
+                          + Add Rule
+                        </button>
+                      </div>
+                      {(formData.cancellationRules || []).length === 0 && (
+                        <p className="text-[11px] text-slate-400">No refund rules added. Customer gets no automatic refund on cancellation.</p>
+                      )}
+                      {(formData.cancellationRules || []).map((rule, idx) => (
+                        <div key={idx} className="flex items-center gap-2 flex-wrap text-xs text-slate-600">
+                          <span>Cancel at least</span>
+                          <input
+                            type="number"
+                            min="0"
+                            value={rule.hoursBefore}
+                            onChange={(e) => setFormData(prev => ({ ...prev, cancellationRules: prev.cancellationRules.map((r, i) => i === idx ? { ...r, hoursBefore: e.target.value } : r) }))}
+                            className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                            placeholder="48"
+                          />
+                          <span>hours before event →</span>
+                          <input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={rule.refundPercent}
+                            onChange={(e) => setFormData(prev => ({ ...prev, cancellationRules: prev.cancellationRules.map((r, i) => i === idx ? { ...r, refundPercent: e.target.value } : r) }))}
+                            className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                            placeholder="100"
+                          />
+                          <span>% refund</span>
+                          <button
+                            type="button"
+                            onClick={() => setFormData(prev => ({ ...prev, cancellationRules: prev.cancellationRules.filter((_, i) => i !== idx) }))}
+                            className="ml-auto text-rose-500 font-bold px-2 py-1 rounded hover:bg-rose-50"
+                            aria-label="Remove rule"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                      <p className="text-[10px] text-slate-400">Example: 48 hrs → 100%, 24 hrs → 50%. Cancelling later than the smallest hours = no refund. Refund goes to the customer's wallet.</p>
+                    </div>
                   </div>
                 </div>
 
@@ -1388,9 +1444,15 @@ const AddProduct = () => {
                         </option>
                       ))}
                     </select>
-                    <p className="text-[10px] text-slate-500 font-medium ml-1">
-                      This will determine the exact tax calculated at checkout.
-                    </p>
+                    {(selectedModule || sellerModule) === "plan_my_event" ? (
+                      <p className="text-[10px] text-amber-700 font-semibold ml-1">
+                        Plan My Event: the price you enter is inclusive of all taxes. GST is not added separately to event bookings.
+                      </p>
+                    ) : (
+                      <p className="text-[10px] text-slate-500 font-medium ml-1">
+                        This will determine the exact tax calculated at checkout.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

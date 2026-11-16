@@ -199,6 +199,8 @@ const SellerDetail = () => {
                 isShopActive: data.isShopActive ?? true,
                 shopTimingsEnabled: data.shopTimingsEnabled ?? false,
                 shopHolidaysEnabled: data.shopHolidaysEnabled ?? false,
+                sellerDescriptionEnabled: data.sellerDescriptionEnabled ?? false,
+                accountRefundEnabled: data.accountRefundEnabled ?? false,
                 ticketCancellationBufferEnabled: data.ticketCancellationBufferEnabled ?? false,
                 advanceBookingBufferEnabled: data.advanceBookingBufferEnabled ?? false,
                 advanceBookingBuffer: data.advanceBookingBuffer ?? 0,
@@ -302,6 +304,8 @@ const SellerDetail = () => {
                 isShopActive: seller.isShopActive,
                 shopTimingsEnabled: seller.shopTimingsEnabled,
                 shopHolidaysEnabled: seller.shopHolidaysEnabled,
+                sellerDescriptionEnabled: seller.sellerDescriptionEnabled ?? false,
+                accountRefundEnabled: seller.accountRefundEnabled ?? false,
                 ticketCancellationBufferEnabled: seller.ticketCancellationBufferEnabled,
                 advanceBookingBufferEnabled: seller.advanceBookingBufferEnabled,
                 advanceBookingBuffer: seller.advanceBookingBuffer,
@@ -913,6 +917,24 @@ const SellerDetail = () => {
                                                         />
 
                                                         <PermissionToggle
+                                                            label="Seller Description"
+                                                            description="Allow seller to write a shop description in their profile (shown to customers in Plan My Event)"
+                                                            checked={seller.sellerDescriptionEnabled ?? false}
+                                                            disabled={!isEditMode}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={handlePermissionChange('sellerDescriptionEnabled')}
+                                                        />
+
+                                                        <PermissionToggle
+                                                            label="Refund to Account"
+                                                            description="Let this seller's customers choose a cancellation refund to their original payment method (UPI / card / bank) instead of the wallet"
+                                                            checked={seller.accountRefundEnabled ?? false}
+                                                            disabled={!isEditMode}
+                                                            activeColor="bg-fuchsia-600" hoverColor="group-hover:text-fuchsia-700"
+                                                            onChange={handlePermissionChange('accountRefundEnabled')}
+                                                        />
+
+                                                        <PermissionToggle
                                                             label="Ticket Cancellation Buffer Settings"
                                                             description="Allow seller to define how many days/hours before event customer can cancel ticket"
                                                             checked={seller.ticketCancellationBufferEnabled ?? false}
@@ -1170,6 +1192,22 @@ const SellerDetail = () => {
                                                                 disabled={!isEditMode}
                                                                 activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
                                                                 onChange={handlePermissionChange('quoteColorCombination')}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Theme Selection"
+                                                                description="Show decoration type & theme name to customers"
+                                                                checked={seller.quoteThemeSelection}
+                                                                disabled={!isEditMode}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={handlePermissionChange('quoteThemeSelection')}
+                                                            />
+                                                            <PermissionToggle
+                                                                label="Budget Selection"
+                                                                description="Show custom budget limit to customers"
+                                                                checked={seller.quoteBudgetSelection}
+                                                                disabled={!isEditMode}
+                                                                activeColor="bg-indigo-500" hoverColor="group-hover:text-indigo-600"
+                                                                onChange={handlePermissionChange('quoteBudgetSelection')}
                                                             />
                                                             <PermissionToggle
                                                                 label="Customer & Seller Chat"

@@ -8,13 +8,15 @@ import {
   getNearbySellerIdsForCustomer,
   getZoneSellerIdsForCustomer,
 } from "../services/customerVisibilityService.js";
-import { getBookingStart, getMinimumBookingAt } from "../utils/advanceBooking.js";
+import { getBookingStart, getMinimumBookingAt, getAdvanceNoticeCheckAt, isEventBookingCalendarLocked } from "../utils/advanceBooking.js";
 
 export const searchEventSellers = async (req, res) => {
   try {
-    const { date, time, guestCount, location, categories, budget, lat, lng } = req.query;
+    const { date, time, guestCount, location, categories, budget, lat, lng, q } = req.query;
+    // Optional header search (Plan My Event): case-insensitive seller/product name.
+    const searchTerm = String(q || '').trim();
 
-    if (!categories) {
+    if (!categories && !searchTerm) {
       return res.status(400).json({
         success: false,
         error: true,
@@ -22,7 +24,7 @@ export const searchEventSellers = async (req, res) => {
       });
     }
 
-    const categoryIds = categories.split(',').map(id => id.trim()).filter(Boolean);
+    const categoryIds = categories ? categories.split(',').map(id => id.trim()).filter(Boolean) : [];
 
     // Fetch category names for categoryIds to allow matching seller category/mainProducts by string
     let catNames = [];
@@ -62,9 +64,24 @@ export const searchEventSellers = async (req, res) => {
             { eventDetailsEnabled: true },
           ],
         },
-        { $or: catOrConditions },
+        // Category filter applies only when categories were sent (normal flow).
+        ...(categoryIds.length > 0 ? [{ $or: catOrConditions }] : []),
       ],
     };
+
+    // Header search: match seller shop/name, or sellers that have a matching
+    // active product. Case-insensitive (upper/lower case both match).
+    if (searchTerm) {
+      const nameRegex = new RegExp(searchTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "i");
+      const productSellerIds = await Product.distinct("sellerId", { name: nameRegex, status: "active" });
+      query.$and.push({
+        $or: [
+          { shopName: nameRegex },
+          { name: nameRegex },
+          { _id: { $in: productSellerIds } },
+        ],
+      });
+    }
 
     // Apply guest count filter only if provided
     if (guestCount) {
@@ -175,7 +192,7 @@ export const searchEventSellers = async (req, res) => {
         // Check Advance Booking Buffer (Minimum Before Notice & Maximum After Days)
         if (seller.advanceBookingBufferEnabled) {
           const currentTime = Date.now();
-          const targetDateTime = getBookingStart(date, time);
+          const targetDateTime = getAdvanceNoticeCheckAt(seller, date, time);
           const targetTime = targetDateTime?.getTime() || new Date(date).getTime();
           const daysDiff = (targetTime - currentTime) / (1000 * 60 * 60 * 24);
 
@@ -359,9 +376,10 @@ export const getSellerBookedDates = async (req, res) => {
       query.eventDate = { $gte: startOfDay, $lte: endOfDay };
     }
 
-    const bookings = await EventBooking.find(query)
-      .select('eventDate eventTime eventType guestCount services multipleEvents')
-      .lean();
+    // Only paid bookings hold the date (unpaid requests don't lock the calendar).
+    const bookings = (await EventBooking.find(query)
+      .select('eventDate eventTime eventType guestCount services multipleEvents amountPaid paymentStatus paymentMode overallStatus')
+      .lean()).filter(isEventBookingCalendarLocked);
 
     // Format response - only show non-sensitive info to customer
     const bookedDates = bookings.map(b => {

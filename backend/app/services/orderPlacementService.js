@@ -740,7 +740,8 @@ export async function placeOrderAtomic({
         customerId,
         userId: customerId,
       });
-      if (order.seller) {
+      // Online orders reach the seller only after the payment is confirmed.
+      if (order.seller && shouldStartSellerWorkflow) {
         emitNotificationEvent(NOTIFICATION_EVENTS.NEW_ORDER, {
           orderId: order.orderId,
           checkoutGroupId,

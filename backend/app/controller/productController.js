@@ -6,6 +6,9 @@ import {
   parseCustomerCoordinates,
   getNearbySellerIdsForCustomer,
   getZoneSellerIdsForCustomer,
+  getRetailVisibleSellerGroups,
+  buildRetailCoverageConditions,
+  isProductVisibleForRetailCustomer,
 } from "../services/customerVisibilityService.js";
 import {
   enqueueProductIndex,
@@ -44,6 +47,26 @@ function buildProductListKey(queryParams) {
       return acc;
     }, {});
   return buildKey("catalog", "productList", JSON.stringify(sorted));
+}
+
+// Cancellation refund slabs from the seller form (FormData sends JSON string).
+// Keeps only valid rows, clamps %, removes duplicate hours, sorts high -> low.
+function normalizeCancellationRules(value) {
+  let rows = value;
+  if (typeof rows === "string") {
+    try { rows = JSON.parse(rows); } catch { return []; }
+  }
+  if (!Array.isArray(rows)) return [];
+  const byHours = new Map();
+  for (const row of rows) {
+    const hoursBefore = Number(row?.hoursBefore);
+    const refundPercent = Number(row?.refundPercent);
+    if (!Number.isFinite(hoursBefore) || hoursBefore < 0 || !Number.isFinite(refundPercent)) continue;
+    byHours.set(hoursBefore, Math.min(100, Math.max(0, refundPercent)));
+  }
+  return [...byHours.entries()]
+    .map(([hoursBefore, refundPercent]) => ({ hoursBefore, refundPercent }))
+    .sort((a, b) => b.hoursBefore - a.hoursBefore);
 }
 
 function isCustomerVisibilityRequest(req) {
@@ -295,7 +318,18 @@ export const getProducts = async (req, res) => {
         "lat and lng are required for customer product visibility",
       );
     }
-    if (shouldApplyLocationFilter) {
+    // Retail: who sees a product depends on the Location Coverage Type + Delivery Type
+    // the seller chose for that product (from DB). Plan My Event keeps its own rules below.
+    const isRetailCoverageRequest =
+      shouldApplyLocationFilter && coords.valid &&
+      (String(module || "").toLowerCase() !== "plan_my_event" || hasVideo === "true");
+    let retailNearbySet = null;
+    if (isRetailCoverageRequest) {
+      const nearbySellerIds = await getNearbySellerIdsForCustomer(coords.lat, coords.lng);
+      retailNearbySet = new Set(nearbySellerIds.map(String));
+      const groups = await getRetailVisibleSellerGroups({ nearbySellerIds, location });
+      query.$and = [...(query.$and || []), ...buildRetailCoverageConditions(groups, requestedSellerIds)];
+    } else if (shouldApplyLocationFilter) {
       const nearbySellerIds = await getNearbySellerIdsForCustomer(
         coords.lat,
         coords.lng,
@@ -359,6 +393,11 @@ export const getProducts = async (req, res) => {
       requestedModule = 'retail';
     }
 
+    // Plan My Event header search must also find ticket products (e.g. "FUN TICKET"),
+    // the same way a seller's Plan My Event product list already includes them.
+    const isPlanEventSearch =
+      String(requestedModule || "").toLowerCase() === "plan_my_event" && Boolean(String(search || "").trim());
+
     if (requestedModule) {
       const Category = (await import("../models/category.js")).default;
       const targetCategories = await Category.find({ applicableModules: requestedModule }).select('_id').lean();
@@ -368,7 +407,7 @@ export const getProducts = async (req, res) => {
           query.categoryId.$in = query.categoryId.$in.filter(id => targetCatIds.includes(id));
         } else if (query.categoryId) {
           if (!targetCatIds.includes(String(query.categoryId))) query.categoryId = "000000000000000000000000";
-        } else if (requestedModule === "plan_my_event" && isSellerSpecificRequest) {
+        } else if (requestedModule === "plan_my_event" && (isSellerSpecificRequest || isPlanEventSearch)) {
           query.$and = [
             ...(query.$and || []),
             {
@@ -382,7 +421,7 @@ export const getProducts = async (req, res) => {
           query.categoryId = { $in: targetCatIds };
         }
       } else {
-        if (requestedModule === "plan_my_event" && isSellerSpecificRequest) {
+        if (requestedModule === "plan_my_event" && (isSellerSpecificRequest || isPlanEventSearch)) {
           query.tickets = { $exists: true, $ne: [] };
         } else {
           query.categoryId = "000000000000000000000000";
@@ -449,7 +488,7 @@ export const getProducts = async (req, res) => {
       const [rawProducts, total] = await Promise.all([
         Product.find(finalQuery)
         .select(
-            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt deliveryCoverage isDelivery isService isRental colors",
+            "name slug description sku price salePrice stock brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt deliveryCoverage isDelivery isService isRental colors cancellationPolicy cancellationRules",
           )
           // No .populate() — names resolved via cache-backed entityNameCache
           .sort(sortQuery)
@@ -496,6 +535,9 @@ export const getProducts = async (req, res) => {
         sellerId: p.sellerId
           ? { _id: p.sellerId, shopName: nameMap[String(p.sellerId)] ?? null }
           : null,
+        // Shown by coverage (Pan India / Zone) but the seller is outside the customer's
+        // delivery radius: normal rider delivery can't book it yet (courier not live).
+        ...(retailNearbySet ? { courierDeliveryComingSoon: Boolean(p.sellerId) && !retailNearbySet.has(String(p.sellerId)) } : {}),
       }));
 
       // If a search query is present and sorting is default/newest, sort by brand relevance (Flipkart style)
@@ -775,6 +817,9 @@ export const createProduct = async (req, res) => {
         // Not JSON, keep as is
       }
     }
+    if (productData.cancellationRules !== undefined) {
+      productData.cancellationRules = normalizeCancellationRules(productData.cancellationRules);
+    }
 
     if (!productData.name) {
       return handleResponse(res, 400, "Product name is required");
@@ -952,6 +997,9 @@ export const updateProduct = async (req, res) => {
       } catch (e) {
         // Not JSON, keep as is
       }
+    }
+    if (productData.cancellationRules !== undefined) {
+      productData.cancellationRules = normalizeCancellationRules(productData.cancellationRules);
     }
 
     // Handle deliveryCoverage if string (multipart/form-data sends as string)
@@ -1184,6 +1232,7 @@ export const getProductById = async (req, res) => {
     const enforceRadius = isCustomerVisibilityRequest(req);
 
     let nearbySellerSet = null;
+    let retailGroups = null;
     const coords = parseCustomerCoordinates(req.query || {});
     if (enforceRadius) {
       if (!coords.valid) {
@@ -1198,6 +1247,7 @@ export const getProductById = async (req, res) => {
         coords.lng,
       );
       nearbySellerSet = new Set(nearbySellerIds.map(String));
+      retailGroups = await getRetailVisibleSellerGroups({ nearbySellerIds, location: req.query?.location || "" });
     }
 
     const cacheKey = buildKey("catalog", "product", id);
@@ -1206,7 +1256,7 @@ export const getProductById = async (req, res) => {
       async () =>
         Product.findById(id)
           .select(
-            "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt",
+            "name slug description sku price salePrice stock lowStockAlert brand weight mainImage galleryImages headerId categoryId subcategoryId sellerId status approvalStatus approvalRequestedAt approvalReviewedAt approvalReviewedBy approvalNote lastSubmittedByRole isFeatured variants tickets ticketingSystem videoUrl createdAt deliveryCoverage isDelivery isService isRental",
           )
           .populate("headerId", "name")
           .populate("categoryId", "name")
@@ -1229,16 +1279,25 @@ export const getProductById = async (req, res) => {
 
     if (enforceRadius) {
       const sellerIdForProduct = String(product?.sellerId?._id || product?.sellerId);
-      if (!nearbySellerSet || !nearbySellerSet.has(sellerIdForProduct)) {
+      // Ticket / event products keep the old radius rule; retail products follow their coverage type.
+      const isTicketProduct = Array.isArray(product?.tickets) && product.tickets.length > 0;
+      const visible = isTicketProduct
+        ? Boolean(nearbySellerSet && nearbySellerSet.has(sellerIdForProduct))
+        : Boolean(retailGroups && isProductVisibleForRetailCustomer(product, retailGroups));
+      if (!visible) {
         return handleResponse(res, 404, "Product not available in your area");
       }
     }
 
+    const productPayload = { ...normalizeProductDocumentModeration(product) }; // copy: never change the cached product
+    if (enforceRadius && nearbySellerSet && !(Array.isArray(product?.tickets) && product.tickets.length > 0)) {
+      productPayload.courierDeliveryComingSoon = !nearbySellerSet.has(String(product?.sellerId?._id || product?.sellerId));
+    }
     return handleResponse(
       res,
       200,
       "Product details fetched",
-      normalizeProductDocumentModeration(product),
+      productPayload,
     );
   } catch (error) {
     return handleResponse(res, 500, error.message);

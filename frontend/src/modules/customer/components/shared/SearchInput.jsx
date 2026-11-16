@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, X, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation as useRouterLocation } from 'react-router-dom';
+import { Search, X, Loader2, Store } from 'lucide-react';
 import { customerApi } from '../../services/customerApi';
+import axiosInstance from '@core/api/axios';
+import { resolveImageUrl } from '@/core/utils/imageUtils';
 import { useProductDetail } from '../../context/ProductDetailContext';
 import { useLocation } from '../../context/LocationContext';
 import { cn } from '@/lib/utils';
@@ -17,8 +19,79 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
     const { openProduct } = useProductDetail();
     const { currentLocation } = useLocation();
 
+    // Plan My Event mode: search event sellers + event products (DB, case-insensitive).
+    // Retail search below stays exactly as before.
+    const routerLocation = useRouterLocation();
+    const isPlanMyEvent = routerLocation.pathname.startsWith('/plan-my-event');
+    const [sellerResults, setSellerResults] = useState([]);
+
+    useEffect(() => {
+        if (!isPlanMyEvent) return;
+        const term = query.trim();
+        if (!term) {
+            setSellerResults([]);
+            setSearchResults([]);
+            return;
+        }
+        let cancelled = false;
+        const timer = setTimeout(async () => {
+            if (!isFocused) return;
+            const hasValidLocation =
+                Number.isFinite(currentLocation?.latitude) &&
+                Number.isFinite(currentLocation?.longitude);
+            const geo = hasValidLocation ? { lat: currentLocation.latitude, lng: currentLocation.longitude } : {};
+            setIsLoading(true);
+            try {
+                const [sellerRes, productRes] = await Promise.allSettled([
+                    axiosInstance.get('/events/sellers/search', { params: { q: term, ...geo } }),
+                    customerApi.getProducts({ search: term, limit: 20, module: 'plan_my_event', ...geo }),
+                ]);
+                if (cancelled) return;
+                const termLower = term.toLowerCase();
+                const rank = (name) => {
+                    const n = String(name || '').toLowerCase();
+                    return n.startsWith(termLower) ? 0 : n.includes(termLower) ? 1 : 2;
+                };
+                const sellers = sellerRes.status === 'fulfilled' && Array.isArray(sellerRes.value?.data?.result)
+                    ? sellerRes.value.data.result.filter(s => String(s.isShopActive) !== 'false')
+                    : [];
+                const sellerById = new Map(sellers.map(s => [String(s._id), s]));
+                const rawProducts = productRes.status === 'fulfilled'
+                    ? (productRes.value?.data?.result?.items || productRes.value?.data?.results || (Array.isArray(productRes.value?.data?.result) ? productRes.value.data.result : []))
+                    : [];
+                // Only show products whose seller can be opened in Plan My Event.
+                const products = rawProducts
+                    .map(p => ({ ...p, _sellerKey: String(p.sellerId?._id || p.sellerId || '') }))
+                    .filter(p => sellerById.has(p._sellerKey))
+                    .sort((a, b) => rank(a.name) - rank(b.name) || String(a.name || '').localeCompare(String(b.name || '')));
+                const nameMatchedSellers = sellers
+                    .filter(s => String(s.shopName || s.name || '').toLowerCase().includes(termLower))
+                    .sort((a, b) => rank(a.shopName || a.name) - rank(b.shopName || b.name));
+                // Sellers matched by name first, then sellers of matching products.
+                const productSellerIds = new Set(products.map(p => p._sellerKey));
+                const otherSellers = sellers.filter(s => !nameMatchedSellers.includes(s) && productSellerIds.has(String(s._id)));
+                setSellerResults([...nameMatchedSellers, ...otherSellers].slice(0, 8));
+                setSearchResults(products.slice(0, 12).map(p => ({ ...p, _seller: sellerById.get(p._sellerKey) })));
+            } finally {
+                if (!cancelled) setIsLoading(false);
+            }
+        }, 300);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [isPlanMyEvent, query, currentLocation, isFocused]);
+
+    const handleSelectPlanSeller = (seller) => {
+        setIsFocused(false);
+        setQuery('');
+        if (routerLocation.pathname === '/plan-my-event') {
+            window.dispatchEvent(new CustomEvent('plan-my-event:open-seller', { detail: { seller } }));
+        } else {
+            navigate('/plan-my-event', { state: { openSeller: seller } });
+        }
+    };
+
     // Dynamically fetch products when query changes
     useEffect(() => {
+        if (isPlanMyEvent) return;
         const fetchProducts = async () => {
             if (!query.trim()) {
                 setSearchResults([]);
@@ -36,6 +109,7 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
                     limit: 50,
                     lat: currentLocation.latitude,
                     lng: currentLocation.longitude,
+                    ...(currentLocation?.name ? { location: currentLocation.name } : {}),
                 });
                 if (response.data.success) {
                     const rawResult = response.data.result;
@@ -123,7 +197,7 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
         }, 300);
 
         return () => clearTimeout(timer);
-    }, [query, currentLocation, isFocused]);
+    }, [isPlanMyEvent, query, currentLocation, isFocused]);
 
     // Handle outside clicks to close dropdown
     useEffect(() => {
@@ -159,6 +233,12 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
                     }}
                     onKeyDown={(e) => {
                         if (e.key === 'Enter' && query.trim()) {
+                            if (isPlanMyEvent) {
+                                // Plan My Event: Enter opens the top matching seller.
+                                const top = sellerResults[0] || searchResults[0]?._seller;
+                                if (top) handleSelectPlanSeller(top);
+                                return;
+                            }
                             navigate(`/search?q=${encodeURIComponent(query.trim())}`);
                             setIsFocused(false);
                         }
@@ -179,8 +259,80 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
                 )}
             </div>
 
+            {/* Plan My Event dropdown: Sellers + Products */}
+            {isPlanMyEvent && isFocused && query.trim() && (
+                <div
+                    className="absolute left-0 right-0 z-[1000] mt-1 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-96 overflow-y-auto font-sans animate-in fade-in slide-in-from-top-1 duration-200"
+                >
+                    {sellerResults.length > 0 || searchResults.length > 0 ? (
+                        <div className="py-1">
+                            {sellerResults.length > 0 && (
+                                <>
+                                    <p className="px-4 pt-2 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Sellers</p>
+                                    <div className="divide-y divide-slate-50">
+                                        {sellerResults.map((seller) => (
+                                            <div
+                                                key={`s-${seller._id}`}
+                                                onClick={() => handleSelectPlanSeller(seller)}
+                                                className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                                            >
+                                                <div className="w-10 h-10 rounded-md border border-slate-100 bg-purple-50 flex items-center justify-center shrink-0 overflow-hidden">
+                                                    {seller.profileImage
+                                                        ? <img src={resolveImageUrl(seller.profileImage)} alt={seller.shopName || seller.name} className="w-full h-full object-cover" />
+                                                        : <Store size={18} className="text-purple-500" />}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-sm font-bold text-slate-800 truncate">{seller.shopName || seller.name}</h4>
+                                                    <p className="text-xs text-slate-400 font-medium truncate">{seller.category || seller.city || 'Event Seller'}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                            {searchResults.length > 0 && (
+                                <>
+                                    <p className="px-4 pt-3 pb-1 text-[10px] font-black uppercase tracking-widest text-slate-400">Products</p>
+                                    <div className="divide-y divide-slate-50">
+                                        {searchResults.map((product) => (
+                                            <div
+                                                key={`p-${product._id}`}
+                                                onClick={() => handleSelectPlanSeller(product._seller)}
+                                                className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                                            >
+                                                <img
+                                                    src={resolveImageUrl(product.mainImage || product.image) || "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=150&h=150"}
+                                                    alt={product.name}
+                                                    onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = "https://images.unsplash.com/photo-1550989460-0adf9ea622e2?auto=format&fit=crop&q=80&w=150&h=150"; }}
+                                                    className="w-10 h-10 object-contain rounded-md border border-slate-100 bg-white shrink-0"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <h4 className="text-sm font-bold text-slate-800 truncate">{product.name}</h4>
+                                                    <p className="text-xs text-slate-400 font-medium truncate">by {product._seller?.shopName || product._seller?.name || product.sellerId?.shopName}</p>
+                                                </div>
+                                                {(() => {
+                                                    // Ticket products keep their price on the ticket.
+                                                    const shownPrice = product.salePrice || product.price || product.tickets?.[0]?.salePrice || product.tickets?.[0]?.price;
+                                                    return shownPrice ? (
+                                                        <span className="text-sm font-black text-slate-800 shrink-0">₹{shownPrice}</span>
+                                                    ) : null;
+                                                })()}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="p-6 text-center text-slate-500 font-bold text-sm uppercase">
+                            {isLoading ? 'Searching...' : 'No seller or product found'}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Dropdown Suggestions List */}
-            {isFocused && query.trim() && (
+            {!isPlanMyEvent && isFocused && query.trim() && (
                 <div
                     className="absolute left-0 right-0 z-[1000] mt-1 bg-white border border-slate-100 rounded-2xl shadow-2xl max-h-96 overflow-y-auto font-sans animate-in fade-in slide-in-from-top-1 duration-200"
                 >

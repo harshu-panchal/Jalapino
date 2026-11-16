@@ -131,9 +131,7 @@ const autoCancelExpiredOrders = async () => {
             orderId: updated.orderId,
             customerId: updated.customer,
             userId: updated.customer,
-            sellerId: updated.seller,
-            customerMessage: "Order cancelled due to payment timeout.",
-            sellerMessage: `Order #${updated.orderId} cancelled due to payment timeout.`,
+            customerMessage: "Order cancelled because payment was not completed in time.",
           });
         }
       } catch (err) {

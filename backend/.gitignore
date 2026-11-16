@@ -5,3 +5,5 @@ logs/
 *.log
 
 coverage/
+# Firebase service account key (secret)
+app/config/*firebase-adminsdk*.json

@@ -659,6 +659,19 @@ const sellerSchema = new mongoose.Schema(
       type: Boolean,
       default: false
     },
+    // Admin toggle: when ON, this seller can write a shop description in their
+    // profile, and it is shown to customers in Plan My Event.
+    sellerDescriptionEnabled: {
+      type: Boolean,
+      default: false
+    },
+    // Admin toggle: when ON, customers of this seller can choose to get a
+    // cancellation refund back to their original payment method (Razorpay)
+    // instead of the wallet.
+    accountRefundEnabled: {
+      type: Boolean,
+      default: false
+    },
     shopClosedDates: [{
       type: String // YYYY-MM-DD format
     }],

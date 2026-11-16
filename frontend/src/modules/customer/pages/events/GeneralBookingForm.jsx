@@ -232,7 +232,7 @@ const GeneralBookingForm = () => {
                     key: orderData.keyId,
                     amount: orderData.amount * 100,
                     currency: 'INR',
-                    name: 'Jalapino Venues',
+                    name: 'Jalpaino Venues',
                     description: `Event Booking for ${venue.name}`,
                     order_id: orderData.razorpayOrderId,
                     handler: async (response) => {

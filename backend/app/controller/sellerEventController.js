@@ -1,5 +1,8 @@
 import EventBooking from '../models/event/EventBooking.js';
+import GeneralBooking from '../models/event/GeneralBooking.js';
+import MemberTicket from '../models/event/MemberTicket.js';
 import handleResponse from '../utils/helper.js';
+import { getEventEndIST, formatIST } from '../utils/advanceBooking.js';
 
 // Get dashboard stats
 export const getEventDashboardStats = async (req, res) => {
@@ -42,20 +45,74 @@ export const getEventDashboardStats = async (req, res) => {
 
             return {
                 _id: booking._id,
+                type: 'event',
                 customerInfo: {
                     name: booking.customer?.name || "Customer",
                 },
                 status: mappedStatus,
                 eventDate: booking.eventDate,
-                guestCount: booking.guestCount
+                // Guests only if the customer actually filled them (default 1 is not real data)
+                guestCount: booking.eventInfo?.noOfGuests ? booking.guestCount : null,
+                createdAt: booking.createdAt
             };
         });
 
+        // ---- Ticket bookings (GeneralBooking) from DB ----
+        // Abandoned online checkouts (Pending, never paid) are not real bookings.
+        const ticketQuery = {
+            sellerId,
+            $nor: [{ paymentMethod: 'Razorpay', bookingStatus: 'Pending' }],
+        };
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const [ticketTotal, ticketPending, ticketUpcoming, recentTicketsRaw] = await Promise.all([
+            GeneralBooking.countDocuments(ticketQuery),
+            GeneralBooking.countDocuments({ ...ticketQuery, bookingStatus: 'Pending' }),
+            GeneralBooking.countDocuments({ ...ticketQuery, bookingStatus: 'Confirmed', bookingDate: { $gte: startOfToday } }),
+            GeneralBooking.find(ticketQuery)
+                .sort({ createdAt: -1 })
+                .limit(5)
+                .populate('customerId', 'name phone')
+                .populate('venueId', 'name')
+                .lean(),
+        ]);
+        const ticketIdsByBooking = new Map();
+        if (recentTicketsRaw.length > 0) {
+            const memberTickets = await MemberTicket.find({ bookingId: { $in: recentTicketsRaw.map(t => t._id) } })
+                .select('bookingId ticketId')
+                .lean();
+            memberTickets.forEach(mt => {
+                const key = String(mt.bookingId);
+                ticketIdsByBooking.set(key, [...(ticketIdsByBooking.get(key) || []), mt.ticketId].filter(Boolean));
+            });
+        }
+        const recentTickets = recentTicketsRaw.map(t => ({
+            _id: t._id,
+            type: 'ticket',
+            customerInfo: { name: t.customerId?.name || 'Customer', phone: t.customerId?.phone || '' },
+            status: String(t.bookingStatus || 'Pending').toLowerCase(),
+            eventDate: t.bookingDate,
+            guestCount: t.totalMembers,
+            timeSlot: t.timeSlot,
+            venueName: t.venueId?.name || 'Ticket',
+            bookingType: t.bookingType,
+            totalAmount: t.totalAmount,
+            paymentMethod: t.paymentMethod,
+            paymentStatus: t.paymentStatus,
+            ticketIds: ticketIdsByBooking.get(String(t._id)) || [],
+            createdAt: t.createdAt
+        }));
+
+        // Events + tickets together, newest first.
+        const combinedRecent = [...recentRequests, ...recentTickets]
+            .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+            .slice(0, 6);
+
         const stats = {
-            totalReservations,
-            pendingRequests,
-            upcomingEvents,
-            recentRequests
+            totalReservations: totalReservations + ticketTotal,
+            pendingRequests: pendingRequests + ticketPending,
+            upcomingEvents: upcomingEvents + ticketUpcoming,
+            recentRequests: combinedRecent
         };
 
         return handleResponse(res, 200, 'Dashboard stats fetched successfully', stats);
@@ -114,7 +171,8 @@ export const getEventReservations = async (req, res) => {
                 eventDate: booking.eventDate,
                 eventTime: booking.eventTime,
                 remarks: booking.remarks,
-                guestCount: booking.guestCount,
+                // Guests only if the customer actually filled them (default 1 is not real data)
+                guestCount: booking.eventInfo?.noOfGuests ? booking.guestCount : null,
                 location: booking.location,
                 eventInfo: booking.eventInfo || {},
                 selectedProducts: booking.selectedProducts || [],
@@ -122,7 +180,13 @@ export const getEventReservations = async (req, res) => {
                 advancePaymentPercentage: advancePercentage,
                 paymentStatus: booking.paymentStatus || 'PENDING',
                 paymentMode: booking.paymentMode || 'COD',
+                // Money already received (verified online + COD cash) so the seller
+                // sees the correct COD amount to collect.
+                amountPaid: Number(booking.amountPaid) || 0,
+                codAmountCollected: Number(booking.codAmountCollected) || 0,
                 overallStatus: booking.overallStatus || 'PENDING',
+                // Why the booking was closed automatically (another customer paid for the slot).
+                closedReason: sellerService?.sellerNotes === 'Slot booked by another customer (payment done).' ? sellerService.sellerNotes : '',
                 multipleEvents: booking.multipleEvents || [],
                 customerPreferences: customerPreferences,
                 sellerRating: booking.sellerRating || sellerService?.rating || 0,
@@ -156,6 +220,14 @@ export const updateReservationStatus = async (req, res) => {
         const booking = await EventBooking.findOne({ _id: id, "services.seller": sellerId });
         if (!booking) {
             return handleResponse(res, 404, 'Reservation not found');
+        }
+
+        // Service can be marked completed only after the booked date & time is over.
+        if (status === 'completed') {
+            const eventEnd = getEventEndIST(booking);
+            if (eventEnd && Date.now() < eventEnd.getTime()) {
+                return handleResponse(res, 400, `You can mark this booking as completed only after the event ends (${formatIST(eventEnd)}).`);
+            }
         }
 
         // Map frontend status back to schema status
@@ -325,11 +397,48 @@ export const confirmCODPayment = async (req, res) => {
             return handleResponse(res, 404, 'Reservation not found');
         }
 
+        if (booking.overallStatus === 'CANCELLED') {
+            return handleResponse(res, 400, 'Booking is cancelled');
+        }
+        const { isEventBookingCalendarLocked } = await import('../utils/advanceBooking.js');
+        const wasLockedBeforeCash = isEventBookingCalendarLocked(booking);
+        // Record the cash the seller collected (the unpaid balance), once.
+        // Any online (Razorpay) part is already in amountPaid.
+        const total = Number(booking.totalAmount) || 0;
+        const codPart = Math.round(Math.max(0, total - (Number(booking.amountPaid) || 0)) * 100) / 100;
+        if (codPart > 0) {
+            booking.amountPaid = Math.round(((Number(booking.amountPaid) || 0) + codPart) * 100) / 100;
+            booking.codAmountCollected = Math.round(((Number(booking.codAmountCollected) || 0) + codPart) * 100) / 100;
+        }
+        if (!booking.refundBaseEventDate) {
+            booking.refundBaseEventDate = booking.eventDate;
+            booking.refundBaseEventTime = booking.eventTime;
+        }
+        const wasAlreadyPaid = booking.paymentStatus === 'PAID';
         booking.paymentStatus = 'PAID';
         if (booking.overallStatus === 'PENDING' || booking.overallStatus === 'PAYMENT_PENDING') {
             booking.overallStatus = 'CONFIRMED';
         }
         await booking.save();
+        // Booking just got paid -> close other unpaid bookings that no longer fit this slot.
+        if (!wasLockedBeforeCash) {
+            const { closeConflictingUnpaidBookings } = await import('./eventBookingController.js');
+            await closeConflictingUnpaidBookings(booking);
+        }
+
+        // Payment done (cash) -> customer gets a notification (no ringtone). Sent once.
+        if (!wasAlreadyPaid && codPart > 0) {
+            try {
+                const { emitCustomerNotification } = await import('../modules/notifications/notification.service.js');
+                emitCustomerNotification('EVENT_BOOKING_PAYMENT_CONFIRMED', {
+                    userId: booking.customer,
+                    bookingId: booking._id,
+                    message: `Cash payment of ₹${codPart.toLocaleString('en-IN')} for booking ${booking.bookingId} has been received by the seller.`
+                });
+            } catch (notifyError) {
+                console.error('COD payment notification error:', notifyError);
+            }
+        }
 
         return handleResponse(res, 200, 'COD payment confirmed successfully', {
             _id: booking._id,

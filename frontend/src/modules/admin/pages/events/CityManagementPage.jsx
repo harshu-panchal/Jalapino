@@ -23,6 +23,35 @@ const CityManagementPage = () => {
     });
     const [editingId, setEditingId] = useState(null);
     const [errors, setErrors] = useState({});
+    const [isVerifyingCity, setIsVerifyingCity] = useState(false);
+
+    // Real city/town in this state? Uses the existing server geocode API.
+    // Accepts only: a city/town-level result, in the same state, with the same name
+    // (a corrected spelling like "gayaa" -> "Gaya" is rejected).
+    const verifyCityWithGoogle = async (typedCity, stateName) => {
+        try {
+            const res = await axiosInstance.get('/maps/geocode', {
+                params: { address: `${typedCity}, ${stateName}, India`, country: 'IN' },
+            });
+            const result = res.data?.result || res.data?.data || {};
+            const types = Array.isArray(result.types) ? result.types : [];
+            const formatted = String(result.formattedAddress || '').toLowerCase();
+            const cityLevelTypes = ['locality', 'sublocality', 'sublocality_level_1', 'administrative_area_level_2', 'administrative_area_level_3', 'administrative_area_level_4', 'postal_town', 'neighborhood', 'colloquial_area'];
+            const isCityLevel = types.some(t => cityLevelTypes.includes(t));
+            const inSameState = formatted.includes(stateName.toLowerCase());
+            const firstPart = formatted.split(',')[0].trim();
+            const sameName = firstPart === typedCity || firstPart.replace(/\s+(city|town|ji)$/, '') === typedCity;
+            return isCityLevel && inSameState && sameName;
+        } catch {
+            return false;
+        }
+    };
+
+    // City suggestions for the typed state (from the library).
+    const stateCitySuggestions = (() => {
+        const st = State.getStatesOfCountry('IN').find(s => s.name.toLowerCase() === newCity.state.toLowerCase().trim());
+        return st ? City.getCitiesOfState('IN', st.isoCode).map(c => c.name) : [];
+    })();
 
     useEffect(() => {
         fetchCities();
@@ -62,12 +91,19 @@ const CityManagementPage = () => {
             }
 
             const cityMatch = allCities.find(c => c.name.toLowerCase() === typedCity);
-            
+
             // Allow certain valid cities that might be missing or spelled differently in the library
             const allowedCustomCities = ['mhow'];
-            
+
             if (!cityMatch && !allowedCustomCities.includes(typedCity)) {
-                validationErrors.cityName = "Please enter a valid city name for the given state";
+                // The library only has bigger cities. For smaller cities/towns, confirm with
+                // Google (existing /maps/geocode API) that this place really exists in this state.
+                setIsVerifyingCity(true);
+                const isRealCity = await verifyCityWithGoogle(typedCity, stateMatch.name);
+                setIsVerifyingCity(false);
+                if (!isRealCity) {
+                    validationErrors.cityName = "Please enter a valid city name for the given state";
+                }
             }
         }
 
@@ -168,11 +204,16 @@ const CityManagementPage = () => {
                                 type="text"
                                 className={`w-full border rounded-xl p-2 ${errors.cityName ? 'border-red-500' : ''}`}
                                 value={newCity.cityName}
+                                list="city-suggestions"
                                 onChange={(e) => {
                                     setNewCity({...newCity, cityName: e.target.value});
                                     if(errors.cityName) setErrors({...errors, cityName: null});
                                 }}
                             />
+                            {/* Suggestions from the selected state; smaller towns can still be typed */}
+                            <datalist id="city-suggestions">
+                                {stateCitySuggestions.map(name => <option key={name} value={name} />)}
+                            </datalist>
                             {errors.cityName && <p className="text-red-500 text-xs mt-1">{errors.cityName}</p>}
                         </div>
                         <div>
@@ -225,8 +266,8 @@ const CityManagementPage = () => {
                             </label>
                         </div>
 
-                        <button type="submit" className="w-full bg-purple-600 text-white rounded-xl p-3 font-bold hover:bg-purple-700">
-                            {editingId ? 'Update City' : 'Add City'}
+                        <button type="submit" disabled={isVerifyingCity} className="w-full bg-purple-600 text-white rounded-xl p-3 font-bold hover:bg-purple-700 disabled:opacity-60">
+                            {isVerifyingCity ? 'Checking city...' : (editingId ? 'Update City' : 'Add City')}
                         </button>
                     </form>
                 </div>

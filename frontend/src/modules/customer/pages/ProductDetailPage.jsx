@@ -68,7 +68,8 @@ const ProductDetailPage = () => {
 
             const params = hasValidLocation ? {
                 lat: currentLocation.latitude,
-                lng: currentLocation.longitude
+                lng: currentLocation.longitude,
+                ...(currentLocation?.name ? { location: currentLocation.name } : {}),
             } : {};
 
             const res = await customerApi.getProductById(id, params);
@@ -539,6 +540,10 @@ const ProductDetailPage = () => {
                                                 <Plus size={16} strokeWidth={2.5} />
                                             </motion.button>
                                         </div>
+                                    ) : product?.courierDeliveryComingSoon ? (
+                                    <div className="h-12 px-4 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 font-bold text-xs flex items-center justify-center text-center">
+                                        Courier delivery coming soon
+                                    </div>
                                     ) : (
                                     <motion.button
                                         whileHover={{ scale: 1.02, y: -2 }}
@@ -996,6 +1001,10 @@ const ProductDetailPage = () => {
                                     >
                                         <Plus size={18} strokeWidth={3.5} />
                                     </motion.button>
+                                </div>
+                            ) : product?.courierDeliveryComingSoon ? (
+                                <div className="flex-1 h-[56px] rounded-2xl border border-amber-200 bg-amber-50 text-amber-800 font-bold text-sm flex items-center justify-center text-center px-4">
+                                    Courier delivery coming soon
                                 </div>
                             ) : (
                                 <motion.button

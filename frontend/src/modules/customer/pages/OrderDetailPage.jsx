@@ -455,7 +455,16 @@ const OrderDetailPage = () => {
     Boolean(order) &&
     order.paymentMode === "ONLINE" &&
     order.paymentStatus !== "PAID" &&
+    String(order.workflowStatus || "CREATED").toUpperCase() === "CREATED" &&
     status !== "cancelled";
+  // Amount still to pay online (advance if the seller asks for one, else full), minus wallet.
+  const pendingOnlineAmount = order
+    ? Math.max(0, Math.round(((Number(order.paymentBreakdown?.advanceAmountRequired || 0) > 0
+        ? Number(order.paymentBreakdown.advanceAmountRequired)
+        : Number(order.paymentBreakdown?.grandTotal ?? order.pricing?.total ?? 0)) - Number(order.pricing?.walletAmount || 0)) * 100) / 100)
+    : 0;
+  const paymentDeadline = order?.stockReservation?.expiresAt ? new Date(order.stockReservation.expiresAt) : null;
+  const paymentMinutesLeft = paymentDeadline ? Math.max(0, Math.ceil((paymentDeadline.getTime() - clockTick) / 60000)) : null;
   const sellerLocation = coordsToLatLng(order?.seller?.location?.coordinates);
   const routePhase = getTrackingRoutePhase(order);
   const routeMatchesPhase =
@@ -730,14 +739,41 @@ const OrderDetailPage = () => {
         Number(order.checkoutGroupSize || 1) > 1
           ? (order.checkoutGroupId || order.orderId)
           : order.orderId;
-      const response = await customerApi.createPaymentOrder({
-        orderRef: paymentRef,
-      });
-      if (response.data.success && response.data.result?.redirectUrl) {
-        window.location.href = response.data.result.redirectUrl;
-      } else {
-        toast.error(response.data.message || "Failed to initiate payment");
+      // Same Razorpay flow as checkout; the server decides the amount.
+      const rzpRes = await customerApi.createRazorpayOrder(paymentRef, {});
+      const rzpOrder = rzpRes?.data?.result;
+      if (!rzpOrder?.id || !window.Razorpay) {
+        toast.error(rzpRes?.data?.message || "Failed to initiate payment");
+        return;
       }
+      const rzp = new window.Razorpay({
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_S3IcSS1NbymL6D",
+        amount: rzpOrder.amount,
+        currency: "INR",
+        name: "Jalpaino",
+        description: `Payment for Order ${paymentRef}`,
+        order_id: rzpOrder.id,
+        handler: async (response) => {
+          try {
+            await customerApi.verifyRazorpayOrder(paymentRef, {
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            toast.success("Payment successful! Your order is confirmed.");
+            const fresh = await customerApi.getOrderDetails(orderId);
+            if (fresh?.data?.result) setOrder(fresh.data.result);
+          } catch (verifyErr) {
+            toast.error(verifyErr?.response?.data?.message || "Payment verification failed");
+          }
+        },
+        modal: {
+          ondismiss: () => toast("Payment not completed."),
+        },
+        theme: { color: "#22c55e" },
+      });
+      rzp.on("payment.failed", (resp) => toast.error(`Payment failed: ${resp?.error?.description || "Please try again"}`));
+      rzp.open();
     } catch (err) {
       console.error("[OrderDetailPage] Retry payment error:", err);
       toast.error(
@@ -806,7 +842,14 @@ const OrderDetailPage = () => {
                   <h3 className="text-sm font-black text-brand-900 uppercase tracking-tight">Payment Required</h3>
                 </div>
                 <p className="text-xs text-brand-700 font-medium leading-relaxed">
-                  Complete your payment of <span className="font-bold">₹{order.pricing.total}</span> to proceed with this order.
+                  Complete your payment of <span className="font-bold">₹{pendingOnlineAmount}</span> to confirm this order.
+                  {paymentMinutesLeft !== null && (
+                    <span className="block mt-0.5 font-bold">
+                      {paymentMinutesLeft > 0
+                        ? `Pay within ${paymentMinutesLeft} min, otherwise the order is cancelled automatically.`
+                        : "Payment time is over. This order will be cancelled shortly."}
+                    </span>
+                  )}
                 </p>
               </div>
               <button

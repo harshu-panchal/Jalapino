@@ -258,6 +258,13 @@ const productSchema = new mongoose.Schema(
             trim: true,
             default: "",
         },
+        // RedBus-style refund slabs: cancel at least `hoursBefore` hours before
+        // the event start => `refundPercent` % refund. Below the smallest slab => 0%.
+        cancellationRules: [{
+            _id: false,
+            hoursBefore: { type: Number, min: 0, default: 0 },
+            refundPercent: { type: Number, min: 0, max: 100, default: 0 },
+        }],
         ticketingSystem: {
             type: String,
             trim: true,

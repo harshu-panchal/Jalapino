@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, Link, useLocation as useRouterLocation } from 'react-router-dom';
-import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle, CreditCard, Star } from 'lucide-react';
+import { Package, ChevronRight, Clock, CheckCircle, Loader2, ChevronLeft, Edit2, XCircle, X, AlertCircle, CreditCard, Star, Download } from 'lucide-react';
 import { customerApi } from '../services/customerApi';
 import { getOrderStatusLabel, getLegacyStatusFromOrder } from '@/shared/utils/orderStatus';
 import { applyCloudinaryTransform } from '@/core/utils/imageUtils';
@@ -8,6 +8,87 @@ import { useSettings } from '@/core/context/SettingsContext';
 import { toast } from 'sonner';
 import { useLocation } from '../context/LocationContext';
 import { useCustomerMode } from '../context/CustomerModeContext';
+
+// "Your Event Details" as [label, value] rows, ONLY for fields the customer filled
+// (same rows as the Plan Summary and Checkout).
+const getEventDetailRows = (info = {}) => {
+    const type = String(info?.bookingType || '').toLowerCase();
+    const fmtDate = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || ''))
+        ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN')
+        : (v || ''));
+    const cap = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : '');
+    const isSellerLocation = info?.serviceLocationType === 'seller';
+    const rows = [
+        ['Booking Type', cap(type)],
+        ...(type === 'corporate' ? [
+            ['Company Name', info?.corporateCompanyName],
+            ['Contact Person', info?.corporateContactPerson],
+            ['Mobile', info?.corporateMobile],
+            ['GST Number', info?.corporateGstNumber],
+        ] : type === 'couple' ? [
+            ['Couple Names', info?.coupleNames || info?.primaryContactName],
+            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+        ] : [
+            ['Primary Contact', info?.primaryContactName || info?.name],
+            ['Gender', cap(info?.gender)],
+            ['Date of Birth', fmtDate(info?.dateOfBirth)],
+        ]),
+        ['Phone', type !== 'corporate' ? info?.primaryPhone : ''],
+        ['No. of Guests', info?.noOfGuests],
+        [isSellerLocation ? 'Seller Location' : 'Function Location', isSellerLocation ? (info?.sellerLocation || info?.functionLocation) : info?.functionLocation],
+    ];
+    return rows.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '0');
+};
+
+// RedBus-style refund slabs -> readable rows ("48+ hrs: 100% refund", ...).
+const formatRefundRules = (rules = []) => {
+    const sorted = [...rules].sort((a, b) => b.hoursBefore - a.hoursBefore);
+    if (sorted.length === 0) return [];
+    const rows = sorted.map((r, i) => `${i === 0 ? `${r.hoursBefore}+ hrs` : `${r.hoursBefore}–${sorted[i - 1].hoursBefore} hrs`} before event: ${Number(r.refundPercent) > 0 ? `${r.refundPercent}% refund` : 'No refund'}`);
+    const last = sorted[sorted.length - 1];
+    if (Number(last.hoursBefore) > 0) rows.push(`Less than ${last.hoursBefore} hrs before event: No refund`);
+    return rows;
+};
+
+// Same calculation as the backend (event start in India time, % of amount paid).
+const previewEventRefund = (booking) => {
+    const minutesOf = (time) => {
+        const m = String(time || '').trim().split('-')[0].trim().match(/^(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?$/i);
+        if (!m) return 0;
+        let h = Number(m[1]);
+        const min = Number(m[2] || 0);
+        const p = m[3]?.toUpperCase();
+        if (p) { if (h === 12) h = p === 'AM' ? 0 : 12; else if (p === 'PM') h += 12; }
+        return h * 60 + min;
+    };
+    // Hours are counted from the event date at first payment (same as backend).
+    const baseDate = booking.refundBaseEventDate || booking.eventDate;
+    const baseTime = booking.refundBaseEventDate ? booking.refundBaseEventTime : booking.eventTime;
+    const dateStr = baseDate ? new Date(baseDate).toISOString().slice(0, 10) : '';
+    const mins = minutesOf(baseTime);
+    const start = dateStr ? new Date(`${dateStr}T${String(Math.floor(mins / 60)).padStart(2, '0')}:${String(mins % 60).padStart(2, '0')}:00+05:30`) : null;
+    const hoursLeft = start ? (start.getTime() - Date.now()) / 3600000 : 0;
+    const total = Number(booking.totalAmount) || 0;
+    const verifiedPaid = Math.min(total, Number(booking.amountPaid) || 0);
+    const legacyPaid = booking.paymentStatus === 'PAID' ? total : booking.paymentStatus === 'ADVANCE_PAID' ? Math.min(total, Number(booking.advancePaymentAmount) || 0) : 0;
+    const isVerified = verifiedPaid > 0;
+    const paid = isVerified ? verifiedPaid : legacyPaid;
+    const lines = (booking.selectedProducts || []).map(line => {
+        const addOns = (line.selectedAddOns || []).reduce((s, a) => s + (Number(a.price) || 0), 0);
+        const lineTotal = (Number(line.price || line.unitPrice) || 0) * (Number(line.quantity) || 1) + addOns;
+        const rules = [...(line.cancellationRules || [])].sort((a, b) => b.hoursBefore - a.hoursBefore);
+        const slab = rules.find(r => hoursLeft >= Number(r.hoursBefore));
+        const refundPercent = slab ? Math.min(100, Math.max(0, Number(slab.refundPercent) || 0)) : 0;
+        const linePaid = total > 0 ? paid * (lineTotal / total) : 0;
+        return { name: line.productId?.name || line.productName || 'Product', refundPercent, refundAmount: Math.round(linePaid * refundPercent) / 100, hasRules: rules.length > 0 };
+    });
+    const refundAmount = Math.round(lines.reduce((s, l) => s + l.refundAmount, 0) * 100) / 100;
+    // COD cash part can only go to the wallet; the online part can go back to the account.
+    const codShare = isVerified && verifiedPaid > 0
+        ? Math.round(refundAmount * Math.min(1, (Number(booking.codAmountCollected) || 0) / verifiedPaid) * 100) / 100
+        : 0;
+    return { hoursLeft, paid, lines, isVerified, refundAmount, onlineRefund: Math.round((refundAmount - codShare) * 100) / 100, codRefund: codShare };
+};
 
 const OrdersPage = () => {
     const navigate = useNavigate();
@@ -62,6 +143,8 @@ const OrdersPage = () => {
     const [editingEvent, setEditingEvent] = useState(null);
     const [editFormData, setEditFormData] = useState({ guestCount: '', budget: '', date: '', time: '', location: '' });
     const [quotationBusy, setQuotationBusy] = useState('');
+    // Cancel popup with Wallet / Account refund choice (only for sellers allowed by admin).
+    const [refundChoice, setRefundChoice] = useState(null);
 
     const handleQuotationResponse = async (booking, service, action) => {
         let note = '';
@@ -213,14 +296,222 @@ const OrdersPage = () => {
     }, []);
 
     const handleCancelEvent = async (id) => {
-        if (!window.confirm("Are you sure you want to cancel this event booking?")) return;
+        // Show the seller's policy + the refund the customer will get if they cancel now.
+        const booking = eventBookings.find(b => b._id === id);
+        const policies = (booking?.selectedProducts || [])
+            .filter(p => String(p.cancellationPolicy || '').trim() !== '')
+            .map(p => `• ${p.productId?.name || p.productName || 'Product'}: ${String(p.cancellationPolicy).trim()}`);
+        const preview = booking ? previewEventRefund(booking) : null;
+        const refundLines = preview && preview.lines.some(l => l.hasRules)
+            ? [
+                `Refund if you cancel now:`,
+                ...preview.lines.filter(l => l.hasRules).map(l => `• ${l.name}: ${l.refundPercent}%`),
+                preview.paid > 0
+                    ? (preview.isVerified
+                        ? `Total refund to wallet: ₹${preview.refundAmount.toLocaleString('en-IN')} (of ₹${preview.paid.toLocaleString('en-IN')} paid)`
+                        : `Refund of ₹${preview.refundAmount.toLocaleString('en-IN')} will be reviewed before it is credited.`)
+                    : 'No payment made yet, so nothing to refund.',
+            ]
+            : [];
+        // Admin allowed "Refund to Account" for this seller and there is an online amount
+        // to send back -> let the customer choose Wallet or Account.
+        const canChooseAccount = !!preview?.isVerified && Number(preview?.onlineRefund) > 0
+            && (booking?.services || []).some(s => s?.seller?.accountRefundEnabled === true);
+        if (canChooseAccount) {
+            setRefundChoice({ id, policies, preview, method: 'WALLET' });
+            return;
+        }
+        const confirmText = [
+            policies.length > 0 ? `Cancellation & Refund Policy:\n${policies.join('\n')}` : '',
+            refundLines.join('\n'),
+            'Are you sure you want to cancel this event booking?',
+        ].filter(Boolean).join('\n\n');
+        if (!window.confirm(confirmText)) return;
+        await performCancelEvent(id);
+    };
+
+    const performCancelEvent = async (id, refundMethod) => {
         try {
             toast.loading("Cancelling booking...", { id: 'cancel' });
-            await customerApi.cancelEventBooking(id);
-            setEventBookings(prev => prev.map(b => b._id === id ? { ...b, overallStatus: 'CANCELLED' } : b));
+            const res = await customerApi.cancelEventBooking(id, refundMethod ? { refundMethod } : undefined);
+            const cancellationRefund = res?.data?.result?.cancellationRefund || res?.data?.data?.cancellationRefund;
+            const refunded = ['CREDITED_TO_WALLET', 'REFUNDED_TO_ACCOUNT', 'ACCOUNT_AND_WALLET'].includes(cancellationRefund?.refundStatus);
+            setEventBookings(prev => prev.map(b => b._id === id
+                ? { ...b, overallStatus: 'CANCELLED', ...(cancellationRefund ? { cancellationRefund, paymentStatus: refunded ? 'REFUNDED' : b.paymentStatus } : {}) }
+                : b));
+            const fmt = (v) => `₹${Number(v || 0).toLocaleString('en-IN')}`;
+            if (cancellationRefund?.refundStatus === 'REFUNDED_TO_ACCOUNT') {
+                toast.success(`Booking cancelled. ${fmt(cancellationRefund.accountRefundAmount)} will be refunded to your original payment method in 5-7 working days.`, { id: 'cancel' });
+                return;
+            }
+            if (cancellationRefund?.refundStatus === 'ACCOUNT_AND_WALLET') {
+                toast.success(`Booking cancelled. ${fmt(cancellationRefund.accountRefundAmount)} to your account (5-7 working days) and ${fmt(cancellationRefund.walletRefundAmount)} to your wallet.`, { id: 'cancel' });
+                return;
+            }
+            if (cancellationRefund?.refundStatus === 'CREDITED_TO_WALLET') {
+                toast.success(`Booking cancelled. ${fmt(cancellationRefund.walletRefundAmount || cancellationRefund.refundAmount)} refunded to your wallet.`, { id: 'cancel' });
+                return;
+            }
+            if (cancellationRefund?.refundStatus === 'PENDING_REVIEW') {
+                toast.success(`Booking cancelled. Refund of ₹${Number(cancellationRefund.refundAmount).toLocaleString('en-IN')} is under review.`, { id: 'cancel' });
+                return;
+            }
             toast.success("Booking cancelled successfully", { id: 'cancel' });
         } catch (error) {
             toast.error("Failed to cancel booking", { id: 'cancel' });
+        }
+    };
+
+    // Bill PDF for one event booking, built from the same booking data (from DB) shown on the card.
+    const handleDownloadEventBill = async (booking) => {
+        try {
+            const { jsPDF } = await import('jspdf');
+            const doc = new jsPDF('p', 'mm', 'a4');
+            const W = doc.internal.pageSize.getWidth();
+            const H = doc.internal.pageSize.getHeight();
+            const M = 14;
+            let y = 16;
+            const rs = (v) => `Rs. ${Number(v || 0).toLocaleString('en-IN', { maximumFractionDigits: 2 })}`;
+            const ensure = (h) => { if (y + h > H - 16) { doc.addPage(); y = 16; } };
+            const line = () => { doc.setDrawColor(226, 232, 240); doc.line(M, y, W - M, y); y += 5; };
+            const heading = (t) => { ensure(10); doc.setFont('helvetica', 'bold'); doc.setFontSize(10); doc.setTextColor(88, 28, 135); doc.text(t.toUpperCase(), M, y); y += 6; doc.setTextColor(30, 41, 59); };
+            const row = (label, value) => {
+                const text = doc.splitTextToSize(String(value ?? ''), W - M * 2 - 45);
+                ensure(text.length * 4.5 + 1);
+                doc.setFont('helvetica', 'bold'); doc.setFontSize(9); doc.text(`${label}:`, M, y);
+                doc.setFont('helvetica', 'normal'); doc.text(text, M + 45, y);
+                y += text.length * 4.5 + 0.5;
+            };
+
+            const total = Number(booking.totalAmount) || 0;
+            const advance = Math.round((total * getEventAdvancePercentage(booking)) / 100);
+            const paid = Number(booking.amountPaid) > 0
+                ? Math.min(total, Number(booking.amountPaid))
+                : booking.paymentStatus === 'PAID' ? total : booking.paymentStatus === 'ADVANCE_PAID' ? advance : 0;
+            const service = (booking.services || [])[0] || {};
+            const seller = service.seller || {};
+
+            // Header
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(185, 28, 28);
+            doc.text(settings?.appName || 'Jalpaino', M, y);
+            doc.setFontSize(12); doc.setTextColor(30, 41, 59);
+            doc.text('BOOKING BILL', W - M, y, { align: 'right' });
+            y += 6;
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+            doc.text(`Booking ID: #${booking.bookingId || booking._id}`, W - M, y, { align: 'right' });
+            y += 4.5;
+            if (booking.createdAt) doc.text(`Booked on: ${new Date(booking.createdAt).toLocaleString('en-IN')}`, W - M, y, { align: 'right' });
+            y += 4.5;
+            doc.text(`Status: ${booking.overallStatus || ''}`, W - M, y, { align: 'right' });
+            y += 6; doc.setTextColor(30, 41, 59); line();
+
+            heading('Seller');
+            row('Name', seller.name || seller.businessName || 'Assigned Seller');
+            if (seller.phone || seller.mobile) row('Mobile', seller.phone || seller.mobile);
+            if (service.category?.name) row('Service', service.category.name);
+            y += 2; line();
+
+            heading('Event Details');
+            row('Event', `${booking.eventType || ''} Event`);
+            if (Array.isArray(booking.multipleEvents) && booking.multipleEvents.length > 0) {
+                // Every date with its own time & remarks (remarks only if filled).
+                booking.multipleEvents.forEach((item, idx) => {
+                    const dateText = item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : '';
+                    const remarks = String(item.remarks || '').trim();
+                    row(`Date ${idx + 1}`, `${item.typeName ? `${item.typeName}: ` : ''}${dateText}${item.time ? ` at ${item.time}` : ''}${remarks ? ` - ${remarks}` : ''}`);
+                });
+            } else if (booking.eventDate) row('Event Date', `${new Date(booking.eventDate).toLocaleDateString('en-IN')}${booking.eventTime ? ` at ${booking.eventTime}` : ''}`);
+            const rows = getEventDetailRows(booking.eventInfo || {});
+            const address = typeof booking.location === 'string' ? booking.location : booking.location?.address;
+            if (!rows.some(([label]) => label.endsWith('Location')) && address && !['Pending Address', 'Pending Location'].includes(address)) rows.push(['Location', address]);
+            rows.forEach(([label, value]) => row(label, value));
+            if (booking.selectedShop?.uniqueCode || booking.selectedShop?.shopNo) {
+                row('Shop / Area', `${booking.selectedShop.uniqueCode || `Shop ${booking.selectedShop.shopNo || ''}`}${booking.selectedShop.bookingType ? ` (${booking.selectedShop.bookingType})` : ''}`);
+            }
+            y += 2; line();
+
+            // Products table
+            heading('Products');
+            const cols = [M, W - M - 75, W - M - 50, W - M];
+            ensure(8);
+            doc.setFillColor(245, 243, 255); doc.rect(M, y - 4, W - M * 2, 7, 'F');
+            doc.setFont('helvetica', 'bold'); doc.setFontSize(9);
+            doc.text('Item', cols[0] + 1, y); doc.text('Qty', cols[1], y); doc.text('Rate', cols[2], y); doc.text('Amount', cols[3] - 1, y, { align: 'right' });
+            y += 7;
+            doc.setFont('helvetica', 'normal');
+            (booking.selectedProducts || []).forEach((p) => {
+                const name = `${p.productId?.name || p.productName || 'Product'}${p.selectedVariant?.name ? ` (${p.selectedVariant.name})` : ''}`;
+                const nameLines = doc.splitTextToSize(name, cols[1] - cols[0] - 4);
+                const rate = Number(p.price || p.unitPrice || 0);
+                const amount = Number(p.lineTotal || (rate * (p.quantity || 1)));
+                ensure(nameLines.length * 4.5 + 2);
+                doc.setFontSize(9);
+                doc.text(nameLines, cols[0] + 1, y);
+                doc.text(String(p.quantity || 1), cols[1], y);
+                doc.text(rs(rate), cols[2], y);
+                doc.text(rs(amount), cols[3] - 1, y, { align: 'right' });
+                y += nameLines.length * 4.5;
+                if (p.selectedAddOns?.length > 0) {
+                    const addOns = doc.splitTextToSize(`Add-ons: ${p.selectedAddOns.map(a => `${a.name} (${rs(a.price)})`).join(', ')}`, W - M * 2 - 6);
+                    ensure(addOns.length * 4);
+                    doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+                    doc.text(addOns, cols[0] + 3, y); y += addOns.length * 4;
+                    doc.setTextColor(30, 41, 59);
+                }
+                const refundRows = formatRefundRules(p.cancellationRules);
+                const policy = String(p.cancellationPolicy || '').trim();
+                if (refundRows.length > 0 || policy) {
+                    const txt = doc.splitTextToSize(`Cancellation & Refund: ${[refundRows.join(' | '), policy].filter(Boolean).join(' - ')}`, W - M * 2 - 6);
+                    ensure(txt.length * 4);
+                    doc.setFontSize(8); doc.setTextColor(159, 18, 57);
+                    doc.text(txt, cols[0] + 3, y); y += txt.length * 4;
+                    doc.setTextColor(30, 41, 59);
+                }
+                y += 2;
+            });
+            line();
+
+            // Totals (same numbers as the booking card)
+            const totalRow = (label, value, bold = false) => {
+                ensure(6);
+                doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setFontSize(bold ? 11 : 9.5);
+                doc.text(label, W - M - 60, y); doc.text(value, W - M - 1, y, { align: 'right' });
+                y += bold ? 6.5 : 5.5;
+            };
+            totalRow('Total Amount', rs(total), true);
+            doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(100, 116, 139);
+            doc.text('Inclusive of all taxes', W - M - 1, y - 2, { align: 'right' });
+            doc.setTextColor(30, 41, 59); y += 2;
+            totalRow('Payment Mode', String(booking.paymentMode || 'ONLINE'));
+            totalRow('Payment Status', String(booking.paymentStatus || 'PENDING'));
+            totalRow('Amount Paid', rs(paid));
+            if (booking.overallStatus !== 'CANCELLED') totalRow('Balance Due', rs(Math.max(0, total - paid)), true);
+
+            const cr = booking.cancellationRefund;
+            if (booking.overallStatus === 'CANCELLED' && cr?.cancelledAt) {
+                y += 2; line();
+                heading('Cancellation & Refund');
+                row('Cancelled on', new Date(cr.cancelledAt).toLocaleString('en-IN'));
+                row('Refund Amount', rs(cr.refundAmount));
+                const status = {
+                    CREDITED_TO_WALLET: 'Refunded to wallet',
+                    REFUNDED_TO_ACCOUNT: `Refunded to original payment method (${rs(cr.accountRefundAmount)})`,
+                    ACCOUNT_AND_WALLET: `${rs(cr.accountRefundAmount)} to account + ${rs(cr.walletRefundAmount)} to wallet`,
+                    PROCESSING: 'Refund is being processed',
+                    PENDING_REVIEW: 'Refund under review',
+                }[cr.refundStatus] || 'No refund';
+                row('Refund Status', status);
+            }
+
+            ensure(14); y += 6;
+            doc.setFont('helvetica', 'italic'); doc.setFontSize(8); doc.setTextColor(148, 163, 184);
+            doc.text('This is a computer-generated bill and does not need a signature.', W / 2, y, { align: 'center' });
+
+            doc.save(`Bill_${booking.bookingId || booking._id}.pdf`);
+            toast.success('Bill downloaded');
+        } catch (error) {
+            console.error('Bill PDF failed:', error);
+            toast.error('Failed to download bill');
         }
     };
 
@@ -243,7 +534,7 @@ const OrdersPage = () => {
             setEditingEvent(null);
             toast.success("Event updated successfully", { id: 'edit' });
         } catch (error) {
-            toast.error("Failed to update event", { id: 'edit' });
+            toast.error(error?.response?.data?.message || "Failed to update event", { id: 'edit' });
         }
     };
 
@@ -255,7 +546,7 @@ const OrdersPage = () => {
             const eventRes = await customerApi.getMyEventBookings();
             setEventBookings(eventRes.data?.results || eventRes.data?.result || []);
         } catch (error) {
-            toast.error("Failed to confirm booking.", { id: 'payment' });
+            toast.error(error?.response?.data?.message || "Failed to confirm booking.", { id: 'payment' });
         }
     };
 
@@ -278,25 +569,25 @@ const OrdersPage = () => {
                 key: "rzp_test_S3IcSS1NbymL6D", 
                 amount: rzpRes.data.result.amount,
                 currency: "INR",
-                name: "Jalapino Events",
+                name: "Jalpaino Events",
                 description: `Payment for Booking ${booking.bookingId}`,
                 order_id: rzpRes.data.result.id,
                 handler: async function (response) {
                     try {
                         toast.loading("Verifying payment...", { id: 'payment' });
-                        // We trust Razorpay success and update the booking
-                        await customerApi.updateEventBooking(booking._id, { 
-                            paymentMode: 'ONLINE', 
-                            paymentStatus: 'ADVANCE_PAID', 
-                            overallStatus: 'CONFIRMED' 
+                        // Server verifies the payment with Razorpay before marking it paid.
+                        const { data } = await customerApi.verifyEventPayment(booking._id, {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
                         });
-                        
-                        toast.success("Advance Payment successful! Booking confirmed.", { id: 'payment' });
-                        setEventBookings(prev => prev.map(b => b._id === booking._id 
-                            ? { ...b, paymentMode: 'ONLINE', paymentStatus: 'ADVANCE_PAID', overallStatus: 'CONFIRMED' } 
+                        const updated = data?.result || data?.data;
+                        toast.success(updated?.paymentStatus === 'PAID' ? "Payment successful! Booking confirmed." : "Advance Payment successful! Booking confirmed.", { id: 'payment' });
+                        setEventBookings(prev => prev.map(b => b._id === booking._id
+                            ? { ...b, ...(updated ? { paymentMode: updated.paymentMode, paymentStatus: updated.paymentStatus, overallStatus: updated.overallStatus, amountPaid: updated.amountPaid, refundBaseEventDate: updated.refundBaseEventDate, refundBaseEventTime: updated.refundBaseEventTime } : {}) }
                             : b));
                     } catch (err) {
-                        toast.error("Failed to confirm booking after payment.", { id: 'payment' });
+                        toast.error(err?.response?.data?.message || "Failed to confirm booking after payment.", { id: 'payment' });
                     }
                 },
                 theme: {
@@ -311,7 +602,7 @@ const OrdersPage = () => {
             rzp.open();
             toast.dismiss('payment');
         } catch (error) {
-            toast.error(error.message || "Failed to initiate Razorpay payment", { id: 'payment' });
+            toast.error(error?.response?.data?.message || error.message || "Failed to initiate Razorpay payment", { id: 'payment' });
         }
     };
 
@@ -333,22 +624,25 @@ const OrdersPage = () => {
                 key: "rzp_test_S3IcSS1NbymL6D", 
                 amount: rzpRes.data.result.amount,
                 currency: "INR",
-                name: "Jalapino Events",
+                name: "Jalpaino Events",
                 description: `Remaining Payment for Booking ${booking.bookingId}`,
                 order_id: rzpRes.data.result.id,
                 handler: async function (response) {
                     try {
                         toast.loading("Verifying payment...", { id: 'payment' });
-                        await customerApi.updateEventBooking(booking._id, { 
-                            paymentStatus: 'PAID' 
+                        // Server verifies the payment with Razorpay before marking it paid.
+                        const { data } = await customerApi.verifyEventPayment(booking._id, {
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
                         });
-                        
+                        const updated = data?.result || data?.data;
                         toast.success("Remaining Payment successful!", { id: 'payment' });
-                        setEventBookings(prev => prev.map(b => b._id === booking._id 
-                            ? { ...b, paymentStatus: 'PAID' } 
+                        setEventBookings(prev => prev.map(b => b._id === booking._id
+                            ? { ...b, ...(updated ? { paymentStatus: updated.paymentStatus, overallStatus: updated.overallStatus, amountPaid: updated.amountPaid } : { paymentStatus: 'PAID' }) }
                             : b));
                     } catch (err) {
-                        toast.error("Failed to confirm payment.", { id: 'payment' });
+                        toast.error(err?.response?.data?.message || "Failed to confirm payment.", { id: 'payment' });
                     }
                 },
                 theme: { color: "#9333ea" }
@@ -704,22 +998,52 @@ const OrdersPage = () => {
                                         {new Date(booking.eventDate).toLocaleDateString()} at {booking.eventTime}
                                     </p>
                                 </div>
-                                <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase shrink-0 ${booking.overallStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}>
-                                    {booking.overallStatus || booking.status}
-                                </span>
+                                <div className="flex flex-col items-end gap-1 shrink-0">
+                                    <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase shrink-0 ${booking.overallStatus === 'CANCELLED' ? 'bg-rose-50 text-rose-700 border-rose-100' : 'bg-purple-50 text-purple-700 border-purple-100'}`}>
+                                        {booking.overallStatus || booking.status}
+                                    </span>
+                                    {/* Booking date & time (same as the seller's reservation card) */}
+                                    {booking.createdAt && !isNaN(new Date(booking.createdAt).getTime()) && (
+                                        <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">
+                                            {`${new Date(booking.createdAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} / ${new Date(booking.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
+                            {/* Multiple dates: every date with its own time & remarks (remarks only if filled). */}
+                            {Array.isArray(booking.multipleEvents) && booking.multipleEvents.length > 0 && (
+                                <div className="mb-3 rounded-xl border border-amber-100 bg-amber-50/60 p-3 text-xs">
+                                    <p className="mb-1.5 font-bold uppercase tracking-wider text-amber-800">Dates & Remarks</p>
+                                    <div className="space-y-1">
+                                        {booking.multipleEvents.map((item, idx) => (
+                                            <div key={item.id || idx} className="flex flex-wrap justify-between gap-2 text-slate-700">
+                                                <span className="font-semibold">{item.typeName || `Date ${idx + 1}`}</span>
+                                                <span className="font-semibold text-right">
+                                                    {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` at ${item.time}` : ''}`}
+                                                    {String(item.remarks || '').trim() && <span className="block text-[11px] font-medium italic text-slate-500">📝 {item.remarks}</span>}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                            {/* Same event details the customer filled (only filled fields). */}
                             <div className="text-xs text-slate-600 mb-3 space-y-1">
-                                <p><span className="font-medium">Location:</span> {booking.location?.address || booking.location || 'Pending Location'}</p>
-                                <p><span className="font-medium">Guests:</span> {booking.guestCount} People</p>
-                                {booking.eventInfo?.primaryContactName || booking.eventInfo?.coupleNames || booking.eventInfo?.corporateCompanyName ? (
-                                    <p><span className="font-medium">Contact:</span> {booking.eventInfo.primaryContactName || booking.eventInfo.coupleNames || booking.eventInfo.corporateCompanyName}</p>
-                                ) : null}
-                                {booking.eventInfo?.gender && <p><span className="font-medium">Gender:</span> {booking.eventInfo.gender}</p>}
-                                {booking.eventInfo?.dateOfBirth && <p><span className="font-medium">Date of Birth:</span> {booking.eventInfo.dateOfBirth}</p>}
-                                {booking.eventInfo?.anniversaryDate && <p><span className="font-medium">Anniversary Date:</span> {booking.eventInfo.anniversaryDate}</p>}
+                                {(() => {
+                                    const rows = getEventDetailRows(booking.eventInfo || {});
+                                    const address = typeof booking.location === 'string' ? booking.location : booking.location?.address;
+                                    const hasLocationRow = rows.some(([label]) => label.endsWith('Location'));
+                                    if (!hasLocationRow && address && !['Pending Address', 'Pending Location'].includes(address)) {
+                                        rows.push(['Location', address]);
+                                    }
+                                    return rows.map(([label, value]) => (
+                                        <p key={label}><span className="font-medium">{label}:</span> {value}</p>
+                                    ));
+                                })()}
                             </div>
 
-                            {booking.selectedShop && (
+                            {/* Only when a shop/hall was really selected (DB keeps an empty object otherwise) */}
+                            {(booking.selectedShop?.uniqueCode || booking.selectedShop?.shopNo) && (
                                 <div className="mb-3 flex items-center justify-between gap-3 rounded-xl border border-purple-200 bg-purple-50 p-3 text-xs">
                                     <span className="font-black text-purple-900">📍 Selected Shop / Area</span>
                                     <span className="font-extrabold text-purple-700">
@@ -742,9 +1066,25 @@ const OrdersPage = () => {
                                                 </div>
                                                 <div className="pl-2 text-[10px] font-semibold text-slate-500">({product.quantity || 1} × ₹{Number(product.price || product.unitPrice || 0).toLocaleString('en-IN')})</div>
                                                 {product.selectedAddOns?.length > 0 && <div className="pl-2 text-[10px] text-purple-700">Add-ons: {product.selectedAddOns.map(addOn => `${addOn.name} (₹${addOn.price})`).join(', ')}</div>}
+                                                {(String(product.cancellationPolicy || '').trim() !== '' || (product.cancellationRules || []).length > 0) && (
+                                                    <div className="mt-1 ml-2 rounded-md border border-rose-100 bg-rose-50/70 px-2 py-1 text-[10px] text-rose-800 whitespace-pre-line">
+                                                        <span className="font-bold uppercase tracking-wider">Cancellation & Refund: </span>
+                                                        {formatRefundRules(product.cancellationRules).length > 0 && (
+                                                            <div className="font-semibold">{formatRefundRules(product.cancellationRules).join(' · ')}</div>
+                                                        )}
+                                                        {String(product.cancellationPolicy || '').trim() !== '' && <div>{product.cancellationPolicy}</div>}
+                                                    </div>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleDownloadEventBill(booking)}
+                                        className="mt-3 inline-flex w-full sm:w-auto items-center justify-center gap-1.5 rounded-lg border border-purple-200 bg-white px-3 py-2 text-xs font-bold text-purple-700 hover:bg-purple-100 transition-colors"
+                                    >
+                                        <Download size={14} /> Download Bill (PDF)
+                                    </button>
                                 </div>
                             )}
 
@@ -776,12 +1116,12 @@ const OrdersPage = () => {
                                             </div>
                                             {service.quotation?.status && service.quotation.status !== 'NOT_SENT' && (
                                                 <div className="w-full mt-2 rounded-lg border border-indigo-100 bg-indigo-50 p-3">
-                                                    <p className="text-xs font-bold text-indigo-900">Seller quotation: ₹{Number(service.quotation.amount || 0).toLocaleString('en-IN')} · {service.quotation.status.replaceAll('_', ' ')}</p>
+                                                    <p className="text-xs font-bold text-indigo-900">Seller Quotation: ₹{Number(service.quotation.amount || 0).toLocaleString('en-IN')} · {service.quotation.status.replaceAll('_', ' ')}</p>
                                                     {service.quotation.note && <p className="text-xs text-slate-600 mt-1">{service.quotation.note}</p>}
                                                     {(service.quotation.status === 'PENDING_CUSTOMER' || (service.quotation.status === 'APPROVED' && service.quotePermissions?.revision && service.status !== 'ACCEPTED')) && (
                                                         <div className="flex flex-wrap gap-2 mt-3">
-                                                            {service.quotation.status === 'PENDING_CUSTOMER' && service.quotePermissions?.customerApproval && <button disabled={quotationBusy === `${booking._id}:${service.seller?._id || service.seller}`} onClick={() => handleQuotationResponse(booking, service, 'APPROVE')} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold disabled:opacity-50">Approve quotation</button>}
-                                                            {service.quotePermissions?.revision && <button disabled={quotationBusy === `${booking._id}:${service.seller?._id || service.seller}`} onClick={() => handleQuotationResponse(booking, service, 'REQUEST_REVISION')} className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 text-xs font-bold disabled:opacity-50">Request revision</button>}
+                                                            {service.quotation.status === 'PENDING_CUSTOMER' && service.quotePermissions?.customerApproval && <button disabled={quotationBusy === `${booking._id}:${service.seller?._id || service.seller}`} onClick={() => handleQuotationResponse(booking, service, 'APPROVE')} className="px-3 py-1.5 rounded-lg bg-green-600 text-white text-xs font-bold disabled:opacity-50">Customer Approval · Approve</button>}
+                                                            {service.quotePermissions?.revision && <button disabled={quotationBusy === `${booking._id}:${service.seller?._id || service.seller}`} onClick={() => handleQuotationResponse(booking, service, 'REQUEST_REVISION')} className="px-3 py-1.5 rounded-lg border border-amber-300 bg-white text-amber-800 text-xs font-bold disabled:opacity-50">Quote Revision</button>}
                                                         </div>
                                                     )}
                                                 </div>
@@ -800,6 +1140,7 @@ const OrdersPage = () => {
                                         Total: ₹{booking.totalAmount?.toLocaleString()}
                                     </span>
                                 </div>
+                                <p className="text-right text-[10px] font-medium text-slate-400 -mt-1">Inclusive of all taxes</p>
                                 {booking.paymentStatus === 'ADVANCE_PAID' && (
                                     <>
                                         <div className="flex justify-between items-center">
@@ -836,6 +1177,38 @@ const OrdersPage = () => {
                                             Pay ₹{Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100).toLocaleString()} Online
                                         </button>
                                     )}
+                                </div>
+                            )}
+
+                            {/* Closed automatically: another customer paid for the same slot */}
+                            {booking.overallStatus === 'CANCELLED' && (booking.services || []).some(s => s?.sellerNotes === 'Slot booked by another customer (payment done).') && (
+                                <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs font-bold text-rose-700">
+                                    🚫 Slot booked by another customer (payment done). Please choose another date or time.
+                                </div>
+                            )}
+
+                            {/* Refund result after cancellation (worked out from the refund rules) */}
+                            {booking.overallStatus === 'CANCELLED' && booking.cancellationRefund?.cancelledAt && (
+                                <div className={`mb-3 rounded-xl border p-3 text-xs ${['CREDITED_TO_WALLET', 'REFUNDED_TO_ACCOUNT', 'ACCOUNT_AND_WALLET'].includes(booking.cancellationRefund.refundStatus) ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : ['PENDING_REVIEW', 'PROCESSING'].includes(booking.cancellationRefund.refundStatus) ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
+                                    <p className="font-bold">
+                                        {booking.cancellationRefund.refundStatus === 'REFUNDED_TO_ACCOUNT'
+                                            ? `₹${Number(booking.cancellationRefund.accountRefundAmount || 0).toLocaleString('en-IN')} refunded to your original payment method (5-7 working days)`
+                                            : booking.cancellationRefund.refundStatus === 'ACCOUNT_AND_WALLET'
+                                            ? `₹${Number(booking.cancellationRefund.accountRefundAmount || 0).toLocaleString('en-IN')} to your account (5-7 working days) + ₹${Number(booking.cancellationRefund.walletRefundAmount || 0).toLocaleString('en-IN')} to your wallet`
+                                            : booking.cancellationRefund.refundStatus === 'PROCESSING'
+                                            ? `Refund of ₹${Number(booking.cancellationRefund.refundAmount).toLocaleString('en-IN')} is being processed`
+                                            : booking.cancellationRefund.refundStatus === 'CREDITED_TO_WALLET'
+                                            ? `₹${Number(booking.cancellationRefund.refundAmount).toLocaleString('en-IN')} refunded to your wallet`
+                                            : booking.cancellationRefund.refundStatus === 'PENDING_REVIEW'
+                                                ? `Refund of ₹${Number(booking.cancellationRefund.refundAmount).toLocaleString('en-IN')} is under review`
+                                                : 'No refund for this cancellation'}
+                                    </p>
+                                    <p className="text-[10px] mt-0.5 opacity-80">
+                                        Cancelled {Math.max(0, Math.floor(booking.cancellationRefund.hoursBeforeEvent || 0))} hrs before the event · Paid ₹{Number(booking.cancellationRefund.paidAmount || 0).toLocaleString('en-IN')}
+                                    </p>
+                                    {(booking.cancellationRefund.lines || []).filter(l => l.hasRules).map((l, i) => (
+                                        <p key={i} className="text-[10px]">• {l.productName}: {l.refundPercent}% (₹{Number(l.refundAmount || 0).toLocaleString('en-IN')})</p>
+                                    ))}
                                 </div>
                             )}
 
@@ -936,16 +1309,29 @@ const OrdersPage = () => {
                                     className="w-full text-sm p-2.5 border rounded-xl disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" 
                                 />
                             </div>
-                            <div className="flex gap-3">
-                                <div className="flex-1">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
-                                    <input type="date" value={editFormData.date} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl" />
-                                </div>
-                                <div className="flex-1">
-                                    <label className="block text-xs font-semibold text-slate-600 mb-1">Time</label>
-                                    <input type="time" value={editFormData.time} onChange={(e) => setEditFormData({...editFormData, time: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl" />
-                                </div>
-                            </div>
+                            {(() => {
+                                // Date & time are locked once payment is done (same rule as backend).
+                                const dateTimeLocked = (Number(editingEvent?.amountPaid) || 0) > 0
+                                    || ['ADVANCE_PAID', 'PAID', 'REFUNDED'].includes(editingEvent?.paymentStatus)
+                                    || (editingEvent?.paymentMode === 'COD' && ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(editingEvent?.overallStatus));
+                                return (
+                                    <div>
+                                        <div className="flex gap-3">
+                                            <div className="flex-1">
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Date</label>
+                                                <input type="date" value={editFormData.date} disabled={dateTimeLocked} onChange={(e) => setEditFormData({...editFormData, date: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <label className="block text-xs font-semibold text-slate-600 mb-1">Time</label>
+                                                <input type="time" value={editFormData.time} disabled={dateTimeLocked} onChange={(e) => setEditFormData({...editFormData, time: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed" />
+                                            </div>
+                                        </div>
+                                        {dateTimeLocked && (
+                                            <p className="mt-1 text-[10px] text-rose-500 font-semibold">Date & time are locked after payment.</p>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                             <div>
                                 <label className="block text-xs font-semibold text-slate-600 mb-1">Location</label>
                                 <input type="text" value={editFormData.location} onChange={(e) => setEditFormData({...editFormData, location: e.target.value})} className="w-full text-sm p-2.5 border rounded-xl" />
@@ -1029,6 +1415,63 @@ const OrdersPage = () => {
             )}
 
             {/* Raise Support Ticket Modal */}
+            {refundChoice && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+                    <div className="bg-white rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto shadow-2xl">
+                        <div className="flex justify-between items-center p-4 border-b border-slate-100">
+                            <h3 className="font-bold text-slate-800 flex items-center gap-2"><XCircle size={18} className="text-red-500" /> Cancel Booking</h3>
+                            <button onClick={() => setRefundChoice(null)} className="p-1 hover:bg-slate-100 rounded-full"><X size={20} className="text-slate-500" /></button>
+                        </div>
+                        <div className="p-4 space-y-3 text-sm">
+                            {refundChoice.policies.length > 0 && (
+                                <div className="rounded-xl bg-slate-50 p-3 text-xs text-slate-600">
+                                    <p className="font-bold text-slate-700 mb-1">Cancellation & Refund Policy</p>
+                                    {refundChoice.policies.map((p, i) => <p key={i}>{p}</p>)}
+                                </div>
+                            )}
+                            <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-3 text-xs text-emerald-800">
+                                {refundChoice.preview.lines.filter(l => l.hasRules).map((l, i) => <p key={i}>• {l.name}: {l.refundPercent}%</p>)}
+                                <p className="font-bold mt-1">Refund if you cancel now: ₹{refundChoice.preview.refundAmount.toLocaleString('en-IN')} (of ₹{refundChoice.preview.paid.toLocaleString('en-IN')} paid)</p>
+                            </div>
+                            <p className="text-xs font-semibold text-slate-600">Where do you want your refund?</p>
+                            {[
+                                { key: 'WALLET', title: 'Wallet', note: 'Instant credit to your wallet' },
+                                { key: 'ACCOUNT', title: 'Bank / Original payment method', note: refundChoice.preview.codRefund > 0
+                                    ? `₹${refundChoice.preview.onlineRefund.toLocaleString('en-IN')} in 5-7 working days · Cash (COD) part ₹${refundChoice.preview.codRefund.toLocaleString('en-IN')} goes to wallet`
+                                    : '5-7 working days' },
+                            ].map(opt => (
+                                <label key={opt.key} className={`flex items-start gap-3 rounded-xl border p-3 cursor-pointer ${refundChoice.method === opt.key ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}>
+                                    <input
+                                        type="radio"
+                                        name="refundMethod"
+                                        className="mt-1"
+                                        checked={refundChoice.method === opt.key}
+                                        onChange={() => setRefundChoice(prev => ({ ...prev, method: opt.key }))}
+                                    />
+                                    <span>
+                                        <span className="block font-semibold text-slate-800">{opt.title}</span>
+                                        <span className="block text-[11px] text-slate-500">{opt.note}</span>
+                                    </span>
+                                </label>
+                            ))}
+                            <div className="flex gap-2 pt-1">
+                                <button onClick={() => setRefundChoice(null)} className="flex-1 py-2.5 rounded-xl border border-slate-200 font-semibold text-slate-600 hover:bg-slate-50">Keep Booking</button>
+                                <button
+                                    onClick={async () => {
+                                        const { id, method } = refundChoice;
+                                        setRefundChoice(null);
+                                        await performCancelEvent(id, method);
+                                    }}
+                                    className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold"
+                                >
+                                    Cancel Booking
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {ticketModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
                     <div className="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl">

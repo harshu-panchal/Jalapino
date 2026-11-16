@@ -121,7 +121,10 @@ export const customerApi = {
   createEventBooking: (data) => axiosInstance.post("/events/book", data),
   getMyEventBookings: () => axiosInstance.get("/events/my-bookings"),
   updateEventBooking: (id, data) => axiosInstance.put(`/events/${id}`, data),
-  cancelEventBooking: (id) => axiosInstance.delete(`/events/${id}`),
+  // data (optional): { refundMethod: 'WALLET' | 'ACCOUNT' }
+  cancelEventBooking: (id, data) => axiosInstance.delete(`/events/${id}`, data ? { data } : undefined),
+  // Existing route: verifies the Razorpay payment on the server, then marks the booking paid.
+  verifyEventPayment: (id, data) => axiosInstance.post(`/events/${id}/process-payment`, data),
   getEventBookingDetails: (id) => axiosInstance.get(`/events/${id}`),
   respondToEventQuotation: (id, data) => axiosInstance.post(`/events/${id}/quotation-response`, data),
   getAlternativeSellers: (bookingId, categoryId) => axiosInstance.get(`/events/${bookingId}/alternative-sellers/${categoryId}`),

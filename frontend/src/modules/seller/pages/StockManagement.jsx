@@ -78,16 +78,28 @@ const StockManagement = () => {
 
             const safeProducts = Array.isArray(collected) ? collected : [];
 
+            // Stock is OFF (not tracked) when the product has variants and none of them
+            // has a stock number. Such products are not "out of stock".
+            const isStockTracked = (p) => {
+                const variants = Array.isArray(p.variants) ? p.variants : [];
+                if (variants.length === 0) return true;
+                return variants.some(v => v?.stock !== null && v?.stock !== undefined && v?.stock !== '');
+            };
             setInventory(
-                safeProducts.map(p => ({
-                    ...p,
-                    id: p._id,
-                    threshold: p.lowStockAlert || 5,
-                    status:
-                        p.stock === 0
-                            ? 'Out of Stock'
-                            : (p.stock <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')
-                }))
+                safeProducts.map(p => {
+                    const tracked = isStockTracked(p);
+                    return {
+                        ...p,
+                        id: p._id,
+                        threshold: p.lowStockAlert || 5,
+                        tracked,
+                        status: !tracked
+                            ? 'Not Tracked'
+                            : p.stock === 0
+                                ? 'Out of Stock'
+                                : (p.stock <= (p.lowStockAlert || 5) ? 'Low Stock' : 'In Stock')
+                    };
+                })
             );
         } catch (error) {
             toast.error("Failed to load inventory");
@@ -122,12 +134,16 @@ const StockManagement = () => {
         }
     }, [activeView, filterStatus]);
 
-    const stats = useMemo(() => [
-        { label: 'Total Inventory', value: inventory.reduce((acc, item) => acc + item.stock, 0), icon: HiOutlineCube, color: 'text-brand-600', bg: 'bg-brand-50', status: 'All' },
-        { label: 'Low Stock Items', value: inventory.filter(i => i.stock > 0 && i.stock <= i.threshold).length, icon: HiOutlineExclamationTriangle, color: 'text-amber-600', bg: 'bg-amber-50', status: 'Low Stock' },
-        { label: 'Out of Stock', value: inventory.filter(i => i.stock === 0).length, icon: HiOutlineArchiveBoxXMark, color: 'text-rose-600', bg: 'bg-rose-50', status: 'Out of Stock' },
-        { label: 'Stock Valuation', value: `₹${inventory.reduce((acc, item) => acc + (item.stock * item.price), 0).toLocaleString()}`, icon: HiOutlineArrowsUpDown, color: 'text-brand-600', bg: 'bg-brand-50', status: 'In Stock' }
-    ], [inventory]);
+    // Counts include only products whose stock is tracked (stock ON).
+    const stats = useMemo(() => {
+        const tracked = inventory.filter(i => i.tracked !== false);
+        return [
+            { label: 'Total Inventory', value: tracked.reduce((acc, item) => acc + item.stock, 0), icon: HiOutlineCube, color: 'text-brand-600', bg: 'bg-brand-50', status: 'All' },
+            { label: 'Low Stock Items', value: tracked.filter(i => i.stock > 0 && i.stock <= i.threshold).length, icon: HiOutlineExclamationTriangle, color: 'text-amber-600', bg: 'bg-amber-50', status: 'Low Stock' },
+            { label: 'Out of Stock', value: tracked.filter(i => i.stock === 0).length, icon: HiOutlineArchiveBoxXMark, color: 'text-rose-600', bg: 'bg-rose-50', status: 'Out of Stock' },
+            { label: 'Stock Valuation', value: `₹${tracked.reduce((acc, item) => acc + (item.stock * item.price), 0).toLocaleString()}`, icon: HiOutlineArrowsUpDown, color: 'text-brand-600', bg: 'bg-brand-50', status: 'In Stock' }
+        ];
+    }, [inventory]);
 
     const filteredInventory = useMemo(() => {
         const term = searchTerm.toLowerCase();
@@ -321,6 +337,12 @@ const StockManagement = () => {
                                                             </td>
                                                             <td className="px-6 py-5">
                                                                 <div className="flex items-center gap-2">
+                                                                    {item.tracked === false ? (
+                                                                        <div className="flex flex-col">
+                                                                            <span className="text-sm font-black text-slate-400">Stock not tracked</span>
+                                                                            <span className="text-[9px] font-bold text-slate-400 mt-0.5">Stock is OFF for this product</span>
+                                                                        </div>
+                                                                    ) : (
                                                                     <div className="flex flex-col">
                                                                         <span
                                                                             className={cn(
@@ -336,11 +358,12 @@ const StockManagement = () => {
                                                                             </span>
                                                                         )}
                                                                     </div>
+                                                                    )}
                                                                 </div>
                                                             </td>
                                                             <td className="px-6 py-5">
                                                                 <Badge
-                                                                    variant={item.status === 'In Stock' ? 'success' : 'destructive'}
+                                                                    variant={item.status === 'In Stock' ? 'success' : item.status === 'Not Tracked' ? 'gray' : 'destructive'}
                                                                     className="text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg"
                                                                 >
                                                                     {item.status}

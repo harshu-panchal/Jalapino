@@ -45,17 +45,25 @@ export const signupDelivery = async (req, res) => {
         let dlUrl = delivery?.documents?.drivingLicense || "";
         let profileImageUrl = delivery?.profileImage || "";
 
-        // Handle File Uploads via Multer
+        // Handle File Uploads via Multer (saved on this server). The full URL uses the
+        // host the request came to: local upload -> local URL, live upload -> live URL.
         if (req.files && Array.isArray(req.files)) {
+            const forwardedProto = String(req.headers["x-forwarded-proto"] || "").split(",")[0].trim();
+            const forwardedHost = String(req.headers["x-forwarded-host"] || "").split(",")[0].trim();
+            const baseUrl = `${forwardedProto || req.protocol}://${forwardedHost || req.get("host")}`;
+            const fileUrl = (file) => {
+                const folder = file.fieldname === "profileImage" ? "profiles" : "documents";
+                return `${baseUrl}/api/images/delivery/${folder}/${file.filename}`;
+            };
             for (const file of req.files) {
                 if (file.fieldname === "profileImage") {
-                    profileImageUrl = await uploadToCloudinary(file.buffer, "delivery/profiles");
+                    profileImageUrl = fileUrl(file);
                 } else if (file.fieldname === "aadhar") {
-                    aadharUrl = await uploadToCloudinary(file.buffer, "delivery/documents");
+                    aadharUrl = fileUrl(file);
                 } else if (file.fieldname === "pan") {
-                    panUrl = await uploadToCloudinary(file.buffer, "delivery/documents");
+                    panUrl = fileUrl(file);
                 } else if (file.fieldname === "dl") {
-                    dlUrl = await uploadToCloudinary(file.buffer, "delivery/documents");
+                    dlUrl = fileUrl(file);
                 }
             }
         }

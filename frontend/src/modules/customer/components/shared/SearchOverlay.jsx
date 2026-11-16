@@ -119,6 +119,7 @@ const SearchOverlay = ({ isOpen, onClose }) => {
                     limit: 100,
                     lat: currentLocation.latitude,
                     lng: currentLocation.longitude,
+                    ...(currentLocation?.name ? { location: currentLocation.name } : {}),
                 });
                 if (response.data.success) {
                     const rawResult = response.data.result;

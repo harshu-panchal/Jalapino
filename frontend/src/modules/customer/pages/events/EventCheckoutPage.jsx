@@ -61,6 +61,37 @@ const readSavedCheckoutState = () => {
     }
 };
 
+// "Your Event Details" as [label, value] rows, ONLY for fields the customer filled
+// (same rows as the Plan Summary on the seller page).
+const getEventDetailRows = (info = {}) => {
+    const type = String(info?.bookingType || '').toLowerCase();
+    const fmtDate = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || ''))
+        ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN')
+        : (v || ''));
+    const cap = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : '');
+    const isSellerLocation = info?.serviceLocationType === 'seller';
+    const rows = [
+        ['Booking Type', cap(type)],
+        ...(type === 'corporate' ? [
+            ['Company Name', info?.corporateCompanyName],
+            ['Contact Person', info?.corporateContactPerson],
+            ['Mobile', info?.corporateMobile],
+            ['GST Number', info?.corporateGstNumber],
+        ] : type === 'couple' ? [
+            ['Couple Names', info?.coupleNames || info?.primaryContactName],
+            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+        ] : [
+            ['Primary Contact', info?.primaryContactName || info?.name],
+            ['Gender', cap(info?.gender)],
+            ['Date of Birth', fmtDate(info?.dateOfBirth)],
+        ]),
+        ['Phone', type !== 'corporate' ? info?.primaryPhone : ''],
+        ['No. of Guests', info?.noOfGuests],
+        [isSellerLocation ? 'Seller Location' : 'Function Location', isSellerLocation ? (info?.sellerLocation || info?.functionLocation) : info?.functionLocation],
+    ];
+    return rows.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '0');
+};
+
 const EventCheckoutPage = () => {
     const { state: routeState } = useLocation();
     const state = routeState || readSavedCheckoutState();
@@ -82,7 +113,7 @@ const EventCheckoutPage = () => {
     }, [eventData, selectedCategories, selectedSeller, navigate]);
 
     const [isSending, setIsSending] = useState(false);
-    const [customerProfile, setCustomerProfile] = useState(null);
+    const [, setCustomerProfile] = useState(null);
 
     useEffect(() => {
         customerApi.getProfile()
@@ -175,17 +206,9 @@ const EventCheckoutPage = () => {
 
                     {/* Customer Event Details Card */}
                     {(() => {
-                        const info = eventData?.eventInfo || customerProfile || {};
-                        const displayName = info.primaryContactName || info.name || customerProfile?.name || '';
-                        const displayGender = info.gender || customerProfile?.gender || '';
-                        const displayDob = info.dateOfBirth || customerProfile?.dateOfBirth || '';
-                        const displayLocation = info.functionLocation || customerProfile?.functionLocation || '';
-                        const displayAnniversary = info.anniversaryDate || customerProfile?.anniversaryDate || '';
-                        const displayCompany = info.corporateCompanyName || '';
-                        const displayCouple = info.coupleNames || '';
-
-                        const hasAnyDetail = displayName || displayGender || displayDob || displayLocation || displayAnniversary || displayCompany || displayCouple;
-                        if (!hasAnyDetail) return null;
+                        // Exactly what the customer filled for this booking (same rows as Plan Summary).
+                        const rows = getEventDetailRows(eventData?.eventInfo || {});
+                        if (rows.length === 0) return null;
 
                         return (
                             <div className="bg-white p-5 rounded-2xl shadow-sm border border-purple-100 relative overflow-hidden">
@@ -196,54 +219,12 @@ const EventCheckoutPage = () => {
                                     <span>🎉</span> Your Event Details
                                 </h2>
                                 <div className="grid grid-cols-2 gap-4">
-                                    {displayCompany ? (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">🏢 Company Name</span>
-                                            <span className="font-semibold text-slate-800">{displayCompany}</span>
+                                    {rows.map(([label, value]) => (
+                                        <div key={label} className="min-w-0">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">{label}</span>
+                                            <span className="font-semibold text-slate-800 break-words">{value}</span>
                                         </div>
-                                    ) : displayCouple ? (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">💑 Couple Names</span>
-                                            <span className="font-semibold text-slate-800">{displayCouple}</span>
-                                        </div>
-                                    ) : displayName ? (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">👤 Primary Contact</span>
-                                            <span className="font-semibold text-slate-800">{displayName}</span>
-                                        </div>
-                                    ) : null}
-
-                                    {displayGender && (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">⚧ Gender</span>
-                                            <span className="font-semibold text-slate-800 capitalize">{displayGender}</span>
-                                        </div>
-                                    )}
-
-                                    {displayDob ? (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">🎂 Date of Birth</span>
-                                            <span className="font-semibold text-slate-800">
-                                                {displayDob.includes('-') ? displayDob : new Date(displayDob).toLocaleDateString('en-IN')}
-                                            </span>
-                                        </div>
-                                    ) : displayAnniversary ? (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">💍 Anniversary Date</span>
-                                            <span className="font-semibold text-slate-800">
-                                                {displayAnniversary.includes('-') ? displayAnniversary : new Date(displayAnniversary).toLocaleDateString('en-IN')}
-                                            </span>
-                                        </div>
-                                    ) : null}
-
-                                    {displayLocation && (
-                                        <div>
-                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider block mb-1">
-                                                {info.serviceLocationType === 'seller' ? '🏢 Seller Location' : '📍 Function Location'}
-                                            </span>
-                                            <span className="font-semibold text-slate-800">{displayLocation}</span>
-                                        </div>
-                                    )}
+                                    ))}
                                 </div>
                             </div>
                         );
@@ -253,22 +234,44 @@ const EventCheckoutPage = () => {
                     <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
                         <h2 className="font-bold text-lg text-slate-800 mb-4 border-b pb-2">Booking Summary</h2>
                         <div className="space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Event Type</span>
-                                <span className="font-semibold text-slate-800 capitalize">{eventData?.eventType || 'Not selected'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Date & Time</span>
-                                <span className="font-semibold text-slate-800">
-                                    {eventData?.date ? `${eventData.date}${eventData.time ? ` at ${eventData.time}` : ''}${eventData.remarks ? ` (${eventData.remarks})` : ''}` : 'Not selected'}
-                                </span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-slate-500">Guests</span>
-                                <span className="font-semibold text-slate-800">
-                                    {eventData?.eventInfo?.noOfGuests ? `${eventData.eventInfo.noOfGuests} People${selectedShop && (selectedShop.minimum || selectedShop.maximum || selectedShop.totalCapacity) ? ` (Limit: ${selectedShop.minimum || 1}-${selectedShop.maximum || selectedShop.totalCapacity || 'Max'})` : ''}` : ''}
-                                </span>
-                            </div>
+                            {/* Only filled values are shown (no empty rows). */}
+                            {eventData?.eventType && (
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Event Type</span>
+                                    <span className="font-semibold text-slate-800 capitalize">{eventData.eventType}</span>
+                                </div>
+                            )}
+                            {Array.isArray(eventData?.multipleEvents) && eventData.multipleEvents.length > 0 ? (
+                                <div>
+                                    <span className="text-slate-500">Dates & Remarks</span>
+                                    <div className="mt-1 space-y-1">
+                                        {eventData.multipleEvents.map((item, idx) => (
+                                            <div key={item.id || idx} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-2 py-1">
+                                                <span className="font-semibold text-slate-700">{item.typeName || ''}</span>
+                                                <span className="font-semibold text-slate-800 text-right">
+                                                    {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` at ${item.time}` : ""}`}
+                                                    {String(item.remarks || '').trim() && <span className="block text-xs font-medium italic text-slate-500">📝 {item.remarks}</span>}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : eventData?.date && (
+                                <div className="flex justify-between gap-4">
+                                    <span className="text-slate-500">Date & Time</span>
+                                    <span className="font-semibold text-slate-800 text-right">
+                                        {`${eventData.date}${eventData.time ? ` at ${eventData.time}` : ''}${eventData.remarks ? ` (${eventData.remarks})` : ''}`}
+                                    </span>
+                                </div>
+                            )}
+                            {eventData?.eventInfo?.noOfGuests && (
+                                <div className="flex justify-between">
+                                    <span className="text-slate-500">Guests</span>
+                                    <span className="font-semibold text-slate-800">
+                                        {`${eventData.eventInfo.noOfGuests} People${selectedShop && (selectedShop.minimum || selectedShop.maximum || selectedShop.totalCapacity) ? ` (Limit: ${selectedShop.minimum || 1}-${selectedShop.maximum || selectedShop.totalCapacity || 'Max'})` : ''}`}
+                                    </span>
+                                </div>
+                            )}
                             {selectedShop && (
                                 <div className="flex justify-between items-center bg-purple-50 p-2.5 rounded-xl border border-purple-200">
                                     <span className="text-purple-900 font-bold text-xs">📍 Selected Shop/Area</span>
@@ -328,6 +331,19 @@ const EventCheckoutPage = () => {
                                                 ))}
                                             </div>
                                         )}
+                                        {(String(product.cancellationPolicy || '').trim() !== '' || (product.cancellationRules || []).length > 0) && (
+                                            <div className="mt-1 ml-2 rounded-md border border-rose-100 bg-rose-50/70 px-2 py-1 text-[10px] text-rose-800 whitespace-pre-line">
+                                                <span className="font-bold uppercase tracking-wider">Cancellation & Refund: </span>
+                                                {(product.cancellationRules || []).length > 0 && (() => {
+                                                    const rules = [...product.cancellationRules].sort((a, b) => b.hoursBefore - a.hoursBefore);
+                                                    const parts = rules.map((r, i) => `${i === 0 ? `${r.hoursBefore}+ hrs` : `${r.hoursBefore}–${rules[i - 1].hoursBefore} hrs`}: ${Number(r.refundPercent) > 0 ? `${r.refundPercent}%` : 'No'} refund`);
+                                                    const last = rules[rules.length - 1];
+                                                    if (Number(last.hoursBefore) > 0) parts.push(`Less than ${last.hoursBefore} hrs: No refund`);
+                                                    return <div className="font-semibold">{parts.join(' · ')}</div>;
+                                                })()}
+                                                {String(product.cancellationPolicy || '').trim() !== '' && <div>{product.cancellationPolicy}</div>}
+                                            </div>
+                                        )}
                                     </div>
                                 );
                             })}
@@ -344,6 +360,7 @@ const EventCheckoutPage = () => {
                                 <span className="font-bold text-slate-800">Total Amount</span>
                                 <span className="font-bold text-lg text-slate-500">₹{totalAmount.toLocaleString()}</span>
                             </div>
+                            <p className="text-right text-[10px] font-medium text-slate-400 -mt-1">Inclusive of all taxes</p>
                             {(() => {
                                 const isAdvanceEnabled = Boolean(selectedSeller?.advanceBookingEnabled);
                                 const sellerPercent = Number(selectedSeller?.advancePaymentPercentage);

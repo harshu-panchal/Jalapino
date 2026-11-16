@@ -139,6 +139,31 @@ async function computeSellerStats(sellerOid, range) {
     console.warn("[SellerStatsService] Error fetching memberTickets:", e.message);
   }
 
+  // --- Count only real sales (avoid mismatch) ---
+  // Events: only bookings this seller ACCEPTED / CONFIRMED / COMPLETED
+  // (not pending requests, not seller-rejected; cancelled already excluded).
+  const sellerServiceOf = (eb) => (eb.services || []).find(
+    (s) => s.seller?.toString() === sellerOid.toString()
+  );
+  eventBookings = eventBookings.filter((eb) =>
+    ["ACCEPTED", "CONFIRMED", "COMPLETED"].includes(sellerServiceOf(eb)?.status)
+  );
+  // Same amount for totals, reports and chart.
+  const eventAmountOf = (eb) => {
+    const sellerService = sellerServiceOf(eb);
+    const validCount = (eb.services || []).filter((s) =>
+      ["ACCEPTED", "CONFIRMED", "COMPLETED", "PENDING_APPROVAL"].includes(s.status)
+    ).length;
+    return Number(sellerService?.amount || (eb.totalAmount / (validCount || 1)) || 0);
+  };
+  // Tickets: only Confirmed / Completed bookings (an online booking becomes
+  // Confirmed only after verified payment; COD/Physical are Confirmed on booking).
+  // Failed / refunded payments are not sales.
+  generalBookings = generalBookings.filter((gb) =>
+    ["Confirmed", "Completed"].includes(gb.bookingStatus)
+    && !["Failed", "Refunded"].includes(gb.paymentStatus)
+  );
+
   // --- Aggregate Modules & Detailed Reports ---
   const detailedReports = [];
   const moduleMap = {
@@ -185,15 +210,8 @@ async function computeSellerStats(sellerOid, range) {
 
   // Process Event Bookings
   eventBookings.forEach((eb) => {
-    const sellerService = (eb.services || []).find(
-      (s) => s.seller?.toString() === sellerOid.toString()
-    );
-    const validCount = (eb.services || []).filter((s) =>
-      ["ACCEPTED", "CONFIRMED", "COMPLETED", "PENDING_APPROVAL"].includes(s.status)
-    ).length;
-    const amount = Number(
-      sellerService?.amount || (eb.totalAmount / (validCount || 1)) || 0
-    );
+    const sellerService = sellerServiceOf(eb);
+    const amount = eventAmountOf(eb);
     const categoryName = sellerService?.category?.name || eb.eventType || "Event Service";
 
     moduleMap["Plan My Event"].totalOrders++;
@@ -394,11 +412,8 @@ async function computeSellerStats(sellerOid, range) {
   // --- Build Trend Chart (combining all modules) ---
   const allEventsForTrend = [
     ...orders.map((o) => ({ date: new Date(o.createdAt), amount: Number(o.pricing?.total || 0) })),
-    ...eventBookings.map((eb) => {
-      const sellerService = (eb.services || []).find((s) => s.seller?.toString() === sellerOid.toString());
-      const amount = Number(sellerService?.amount || (eb.totalAmount / (eb.services?.length || 1)) || 0);
-      return { date: new Date(eb.createdAt), amount };
-    }),
+    // Same amount formula as the totals (no chart vs total mismatch).
+    ...eventBookings.map((eb) => ({ date: new Date(eb.createdAt), amount: eventAmountOf(eb) })),
     ...generalBookings.map((gb) => ({ date: new Date(gb.createdAt), amount: Number(gb.totalAmount || 0) })),
   ];
 
@@ -436,12 +451,14 @@ async function computeSellerStats(sellerOid, range) {
       });
     }
   } else {
+    // Day buckets in India time, so late-night bookings land on the right day.
+    const istDay = (date) => date.toLocaleDateString("en-CA", { timeZone: "Asia/Kolkata" });
     for (let i = 6; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
-      const targetDateStr = d.toISOString().split("T")[0];
+      const targetDateStr = istDay(d);
       const bucketEvents = allEventsForTrend.filter(
-        (e) => e.date.toISOString().split("T")[0] === targetDateStr
+        (e) => istDay(e.date) === targetDateStr
       );
       chartData.push({
         name: DAY_NAMES[d.getDay()],

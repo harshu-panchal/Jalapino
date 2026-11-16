@@ -139,12 +139,23 @@ export const initSocket = (io) => {
           session.lastMessageAt = new Date();
           await session.save();
 
-          // Broadcast back to room
-          _io.to(room).emit("chat_message", {
+          const savedMessage = session.messages[session.messages.length - 1];
+          const payload = {
               ...newMessage,
-              id: session.messages[session.messages.length - 1]._id,
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          });
+              id: savedMessage._id,
+              room,
+              sessionId: session._id,
+              customerId: String(customerId),
+              sellerId: String(sellerId),
+              createdAt: savedMessage.createdAt || session.lastMessageAt,
+              time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
+          };
+          // Broadcast back to room
+          _io.to(room).emit("chat_message", payload);
+          // Seller's inbox updates live even when this chat is not open.
+          if (payload.sender === 'customer') {
+              _io.to(`seller:${sellerId}`).emit("chat_inbox_update", payload);
+          }
       } catch (err) {
           console.error("Error saving chat message:", err);
       }

@@ -4,7 +4,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import BottomNav from "../components/BottomNav";
 import { Toaster, toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
-import { BellRing, MapPin } from "lucide-react";
+import { BellRing, MapPin, Package, Navigation as NavigationIcon, Clock, Wallet } from "lucide-react";
 import { deliveryApi } from "../services/deliveryApi";
 import { useAuth } from "@core/context/AuthContext";
 import {
@@ -16,7 +16,7 @@ import {
   loadHandledIncomingOrderIds,
   markIncomingOrderHandled,
 } from "../utils/deliveryHandledOrders";
-import { saveDeliveryPartnerLocation } from "../utils/deliveryLastLocation";
+import { saveDeliveryPartnerLocation, getCachedDeliveryPartnerLocation } from "../utils/deliveryLastLocation";
 import { createSocketTokenReader } from "@core/utils/authStorage";
 import { STORAGE_KEYS } from "@core/utils/storage";
 import orderAlertSound from "@/assets/sounds/order_alert.mp3";
@@ -28,6 +28,58 @@ function secondsLeftUntilDeliveryExpiry(expiresAt) {
   if (!expiresAt) return 60;
   const ms = new Date(expiresAt).getTime() - Date.now();
   return Math.max(0, Math.ceil(ms / 1000));
+}
+
+/** Straight-line km between two {lat,lng} points (null when either is missing). */
+function kmBetween(a, b) {
+  if (!a || !b) return null;
+  const vals = [a.lat, a.lng, b.lat, b.lng].map(Number);
+  if (vals.some((v) => !Number.isFinite(v))) return null;
+  if ((vals[0] === 0 && vals[1] === 0) || (vals[2] === 0 && vals[3] === 0)) return null;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(vals[2] - vals[0]);
+  const dLng = toRad(vals[3] - vals[1]);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(vals[0])) * Math.cos(toRad(vals[2])) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+const sellerPoint = (seller) => {
+  const c = seller?.location?.coordinates;
+  return Array.isArray(c) && c.length >= 2 ? { lat: c[1], lng: c[0] } : null;
+};
+const formatKm = (km) => (km == null ? null : km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`);
+
+/**
+ * Order-offer details from the order saved in DB (GET /available): real rider payout,
+ * distances from the rider / seller / customer coordinates, items and cash to collect.
+ */
+function buildOfferDetailsFromOrder(order) {
+  if (!order) return {};
+  const isReturnPickup = order.isReturnPickup || false;
+  const total = Number(order.pricing?.total || 0);
+  const payout = Number(order.paymentBreakdown?.riderPayoutTotal || order.riderEarnings || 0);
+  const rider = getCachedDeliveryPartnerLocation(0);
+  const shop = sellerPoint(order.seller);
+  const customer = order.address?.location || null;
+  const from = isReturnPickup ? customer : shop;
+  const to = isReturnPickup ? shop : customer;
+  const pickupKm = kmBetween(rider, from);
+  const tripKm = kmBetween(from, to);
+  const totalKm = (pickupKm || 0) + (tripKm || 0);
+  const method = String(order.payment?.method || "").toLowerCase();
+  const isCod = !isReturnPickup && (method === "cash" || method === "cod");
+  const items = Array.isArray(order.items) ? order.items : [];
+  return {
+    ...(payout > 0 ? { earnings: Math.round(payout * 100) / 100 } : {}),
+    pickupDistance: formatKm(pickupKm),
+    dropDistance: formatKm(tripKm),
+    // ~20 km/h city riding + 5 min at pickup
+    estMinutes: pickupKm != null || tripKm != null ? Math.max(5, Math.round((totalKm / 20) * 60) + 5) : null,
+    itemCount: items.reduce((sum, it) => sum + (Number(it.quantity) || 1), 0),
+    isCod,
+    cashToCollect: isCod ? Math.max(0, total - Number(order.pricing?.walletAmount || 0)) : 0,
+    pickupAddress: isReturnPickup ? "" : (typeof order.seller?.address === "string" ? order.seller.address : ""),
+    hasDbDetails: true,
+  };
 }
 
 const DeliveryLayout = () => {
@@ -207,7 +259,21 @@ const DeliveryLayout = () => {
       expiresAt: newOrder.deliverySearchExpiresAt || null,
       isReturnPickup,
       items: newOrder.items || [],
+      ...buildOfferDetailsFromOrder(newOrder),
     });
+  }, []);
+
+  /** Socket offer opens instantly from the preview; then fill real details from the DB order. */
+  const enrichActiveOfferFromList = useCallback((availableOrders) => {
+    const current = activeOrderRef.current;
+    if (!current || current.hasDbDetails) return;
+    const match = (availableOrders || []).find((o) => o.orderId === current.id);
+    if (!match) return;
+    setActiveOrder((prev) =>
+      prev && prev.id === match.orderId
+        ? { ...prev, mongoId: match._id, ...buildOfferDetailsFromOrder(match) }
+        : prev,
+    );
   }, []);
 
   useEffect(() => {
@@ -218,6 +284,13 @@ const DeliveryLayout = () => {
     stopOrderRingtone();
     return undefined;
   }, [activeOrder]);
+
+  useEffect(() => {
+    if (!activeOrder?.id) return;
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      try { navigator.vibrate([400, 200, 400, 200, 400]); } catch { /* ignore */ }
+    }
+  }, [activeOrder?.id]);
 
   useEffect(() => {
     return () => {
@@ -518,18 +591,19 @@ const DeliveryLayout = () => {
     return onDeliveryBroadcast(getToken, (payload) => {
       if (activeOrderRef.current || suppressIncomingModal) return;
       const opened = applyFromBroadcastPayload(payload);
-      if (opened) return;
       fetchAvailableOrders()
         .then((res) => {
           if (!res?.data?.success) return;
           const list = res.data.results || res.data.result || [];
-          applyAvailableOrdersList(list);
+          if (opened) enrichActiveOfferFromList(list);
+          else applyAvailableOrdersList(list);
         })
         .catch(() => { });
     });
   }, [
     user?.isOnline,
     applyAvailableOrdersList,
+    enrichActiveOfferFromList,
     applyFromBroadcastPayload,
     suppressIncomingModal,
     fetchAvailableOrders,
@@ -604,11 +678,11 @@ const DeliveryLayout = () => {
             deliverySearchExpiresAt: n.data.deliverySearchExpiresAt,
             type: n.data.type || (n.data.preview?.type),
           });
-          if (fromStored) return;
           const r2 = await fetchAvailableOrders();
           if (cancelled || !r2?.data?.success) return;
           const list = r2.data.results || r2.data.result || [];
-          applyAvailableOrdersList(list);
+          if (fromStored) enrichActiveOfferFromList(list);
+          else applyAvailableOrdersList(list);
           return;
         }
         consecutiveErrors = 0;
@@ -671,6 +745,7 @@ const DeliveryLayout = () => {
     user?.isOnline,
     applyFromBroadcastPayload,
     applyAvailableOrdersList,
+    enrichActiveOfferFromList,
     suppressIncomingModal,
     fetchNotifications,
     fetchAvailableOrders,
@@ -802,12 +877,37 @@ const DeliveryLayout = () => {
                     <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-4">
                       {activeOrder.isReturnPickup ? "Collect return item" : "Accept or reject"}
                     </p>
-                    <div className="flex items-center gap-2 mb-6">
+                    <div className="flex items-center gap-2 mb-3">
                       <span className="text-2xl font-black text-brand-600">₹{activeOrder.earnings}</span>
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider font-sans">
                         Earnings
                       </span>
                     </div>
+                    {(activeOrder.estMinutes || activeOrder.itemCount > 0 || activeOrder.hasDbDetails) && (
+                      <div className="flex flex-wrap items-center justify-center gap-1.5 mb-5">
+                        {activeOrder.estMinutes ? (
+                          <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black text-slate-700">
+                            <Clock className="h-3 w-3" /> ~{activeOrder.estMinutes} min
+                          </span>
+                        ) : null}
+                        {activeOrder.itemCount > 0 && (
+                          <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-100 text-[10px] font-black text-slate-700">
+                            <Package className="h-3 w-3" /> {activeOrder.itemCount} item{activeOrder.itemCount > 1 ? "s" : ""}
+                          </span>
+                        )}
+                        {activeOrder.hasDbDetails && !activeOrder.isReturnPickup && (
+                          activeOrder.isCod ? (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-orange-100 text-[10px] font-black text-orange-700">
+                              <Wallet className="h-3 w-3" /> Collect ₹{activeOrder.cashToCollect}
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-100 text-[10px] font-black text-emerald-700">
+                              <Wallet className="h-3 w-3" /> Prepaid
+                            </span>
+                          )
+                        )}
+                      </div>
+                    )}
 
                     <div className="w-full space-y-4 mb-6">
                       {/* Return Items "Small Cart" */}
@@ -851,6 +951,14 @@ const DeliveryLayout = () => {
                             {activeOrder.isReturnPickup ? "Customer Pickup" : "Pickup"}
                           </p>
                           <p className="text-sm font-bold text-slate-900">{activeOrder.pickup}</p>
+                          {activeOrder.pickupAddress ? (
+                            <p className="text-[11px] font-semibold text-slate-500 line-clamp-1">{activeOrder.pickupAddress}</p>
+                          ) : null}
+                          {activeOrder.pickupDistance ? (
+                            <p className="flex items-center gap-1 text-[10px] font-black text-slate-500 mt-0.5">
+                              <NavigationIcon className="h-3 w-3" /> {activeOrder.pickupDistance} from you
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                       <div className="flex items-start gap-3">
@@ -860,6 +968,11 @@ const DeliveryLayout = () => {
                             {activeOrder.isReturnPickup ? "Return To Seller" : "Drop"}
                           </p>
                           <p className="text-sm font-bold text-slate-900 line-clamp-2">{activeOrder.drop}</p>
+                          {activeOrder.dropDistance ? (
+                            <p className="flex items-center gap-1 text-[10px] font-black text-slate-500 mt-0.5">
+                              <NavigationIcon className="h-3 w-3" /> {activeOrder.dropDistance} {activeOrder.isReturnPickup ? "to seller" : "from pickup"}
+                            </p>
+                          ) : null}
                         </div>
                       </div>
                     </div>

@@ -241,6 +241,16 @@ export const getSellerProfile = async (req, res) => {
       }
     }
 
+    // GST: sales in last 12 months (from DB) and whether the certificate is required now.
+    try {
+      const { getSellerTwelveMonthTurnover, hasGstCertificate, GST_TURNOVER_LIMIT } = await import("../jobs/documentExpiryNotificationJob.js");
+      seller.gstTurnover12Months = await getSellerTwelveMonthTurnover(seller._id);
+      seller.gstLimit = GST_TURNOVER_LIMIT;
+      seller.gstCertificateRequired = !hasGstCertificate(seller) && seller.gstTurnover12Months >= GST_TURNOVER_LIMIT;
+    } catch (gstError) {
+      console.error("GST turnover check failed:", gstError.message);
+    }
+
     return handleResponse(
       res,
       200,
@@ -395,6 +405,11 @@ export const updateSellerProfile = async (req, res) => {
     // Seller can only update paymentQrCode if physicalPaymentEnabled is true.
     if (req.body.paymentQrCode !== undefined && seller.physicalPaymentEnabled) {
       seller.paymentQrCode = req.body.paymentQrCode;
+    }
+
+    // Shop description: seller can edit it only when admin has enabled the toggle.
+    if (req.body.description !== undefined && seller.sellerDescriptionEnabled) {
+      seller.description = String(req.body.description || '').trim();
     }
 
     // Shop Operation Settings

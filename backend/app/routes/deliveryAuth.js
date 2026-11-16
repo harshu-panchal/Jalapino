@@ -20,13 +20,45 @@ import { saveFcmToken } from "../modules/notifications/notification.controller.j
 
 import { verifyToken, allowRoles } from "../middleware/authMiddleware.js";
 import multer from "multer";
+import fs from "node:fs";
+import path from "node:path";
+import { randomUUID } from "node:crypto";
 
 const router = express.Router();
-const upload = multer({ storage: multer.memoryStorage() });
+
+// Signup photos/documents (camera or gallery) are saved on this server with multer
+// in uploads/delivery/<profiles|documents>, served at /api/images/...
+const STORAGE_BASE_PATH = process.env.STORAGE_BASE_PATH || path.join(process.cwd(), "uploads");
+const signupStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const folder = file.fieldname === "profileImage" ? "profiles" : "documents";
+    const dir = path.join(STORAGE_BASE_PATH, "delivery", folder);
+    fs.mkdir(dir, { recursive: true }, (error) => cb(error, dir));
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname || "").toLowerCase() || ".jpg";
+    cb(null, `${file.fieldname}-${randomUUID()}${ext}`);
+  },
+});
+const signupUpload = multer({
+  storage: signupStorage,
+  limits: { fileSize: 15 * 1024 * 1024 }, // camera photos can be large
+  fileFilter: (req, file, cb) => {
+    if (String(file.mimetype || "").startsWith("image/")) return cb(null, true);
+    cb(new Error("Only image files are allowed"));
+  },
+});
+const handleSignupUpload = (req, res, next) => {
+  signupUpload.any()(req, res, (error) => {
+    if (!error) return next();
+    const message = error.code === "LIMIT_FILE_SIZE" ? "Image is too large (max 15 MB)" : error.message || "Upload failed";
+    return res.status(400).json({ success: false, error: true, message });
+  });
+};
 
 router.post(
   "/send-signup-otp",
-  upload.any(),
+  handleSignupUpload,
   signupDelivery,
 );
 router.post("/send-login-otp", loginDelivery);

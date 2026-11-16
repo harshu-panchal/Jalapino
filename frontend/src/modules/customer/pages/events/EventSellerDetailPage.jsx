@@ -91,6 +91,37 @@ const getProductPricing = (product) => {
     return { originalPrice, unitPrice: baseUnitPrice + totalAddOnExtra, baseUnitPrice, hasSalePrice, fixedExtra, selectedClickBoxExtra, totalAddOnExtra };
 };
 
+// "Your Event Details" as [label, value] rows, ONLY for fields the customer filled.
+// Same rows are shown in Plan Summary, Checkout, My Orders and the seller's reservation.
+const getEventDetailRows = (info = {}) => {
+    const type = String(info?.bookingType || '').toLowerCase();
+    const fmtDate = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || ''))
+        ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN')
+        : (v || ''));
+    const cap = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : '');
+    const isSellerLocation = info?.serviceLocationType === 'seller';
+    const rows = [
+        ['Booking Type', cap(type)],
+        ...(type === 'corporate' ? [
+            ['Company Name', info?.corporateCompanyName],
+            ['Contact Person', info?.corporateContactPerson],
+            ['Mobile', info?.corporateMobile],
+            ['GST Number', info?.corporateGstNumber],
+        ] : type === 'couple' ? [
+            ['Couple Names', info?.coupleNames || info?.primaryContactName],
+            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+        ] : [
+            ['Primary Contact', info?.primaryContactName || info?.name],
+            ['Gender', cap(info?.gender)],
+            ['Date of Birth', fmtDate(info?.dateOfBirth)],
+        ]),
+        ['Phone', type !== 'corporate' ? info?.primaryPhone : ''],
+        ['No. of Guests', info?.noOfGuests],
+        [isSellerLocation ? 'Seller Location' : 'Function Location', isSellerLocation ? (info?.sellerLocation || info?.functionLocation) : info?.functionLocation],
+    ];
+    return rows.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '0');
+};
+
 const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const navigate = useNavigate();
     const { state: routerState } = useLocation();
@@ -253,8 +284,20 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     // Calculate minimum allowed booking date without UTC conversion. Date inputs
     // are local-calendar values, so using toISOString() can shift the date.
     const minBookingDate = React.useMemo(() => {
+        // Shop timing ON: if the notice ends after closing time, that day has no
+        // bookable time left, so the earliest date is the next day.
+        const openMin = selectedSeller?.shopTimingsEnabled ? parseSlotStartMinutes(selectedSeller.shopOpeningTime) : null;
+        const closeMin = selectedSeller?.shopTimingsEnabled ? parseSlotStartMinutes(selectedSeller.shopClosingTime) : null;
+        if (openMin !== null && closeMin !== null && openMin < closeMin) {
+            const cutoffMin = advanceBookingCutoff.getHours() * 60 + advanceBookingCutoff.getMinutes();
+            if (cutoffMin > closeMin) {
+                const nextDay = new Date(advanceBookingCutoff);
+                nextDay.setDate(nextDay.getDate() + 1);
+                return formatLocalDate(nextDay);
+            }
+        }
         return formatLocalDate(advanceBookingCutoff);
-    }, [advanceBookingCutoff]);
+    }, [advanceBookingCutoff, selectedSeller?.shopTimingsEnabled, selectedSeller?.shopOpeningTime, selectedSeller?.shopClosingTime]);
 
     const advanceNoticeLabel = React.useMemo(() => {
         const buffer = Number(selectedSeller?.advanceBookingBuffer) || 0;
@@ -277,21 +320,97 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     }, [bookingClock, selectedSeller?.advanceBookingBufferEnabled, selectedSeller?.advanceBookingBufferAfter]);
 
     // Check if a date is marked as shop closed / holiday (only if enabled on this seller)
+    // Dates the seller blocked in the seller calendar (live from DB per date).
+    const [sellerBlockedDates, setSellerBlockedDates] = useState({});
+    useEffect(() => {
+        const sellerId = selectedSeller?._id;
+        const dates = [activeDate, multiInputDate].filter(d => d && sellerBlockedDates[d] === undefined);
+        if (!sellerId || dates.length === 0) return;
+        let cancelled = false;
+        Promise.all(dates.map(d => axiosInstance.get(`/events/sellers/${sellerId}/booked-dates?date=${d}`)
+            .then(res => [d, Boolean(res.data?.isBlocked)])
+            .catch(() => [d, false])))
+            .then(pairs => { if (!cancelled) setSellerBlockedDates(prev => ({ ...prev, ...Object.fromEntries(pairs) })); });
+        return () => { cancelled = true; };
+    }, [selectedSeller?._id, activeDate, multiInputDate, sellerBlockedDates]);
+
+    // Live: seller blocks / unblocks a date -> update this screen right away.
+    useEffect(() => {
+        const sellerId = selectedSeller?._id;
+        const token = getStoredAuthToken('auth_customer');
+        if (!sellerId || !token) return undefined;
+        const socket = getOrderSocket(token);
+        if (!socket) return undefined;
+        const onCalendarUpdated = (payload) => {
+            if (String(payload?.sellerId) !== String(sellerId)) return;
+            const list = Array.isArray(payload.blockedDates) ? payload.blockedDates : [];
+            setSellerBlockedDates(prev => ({
+                ...Object.fromEntries(Object.keys(prev).map(d => [d, list.includes(d)])),
+                ...Object.fromEntries(list.map(d => [d, true])),
+            }));
+        };
+        socket.on('seller_calendar_updated', onCalendarUpdated);
+        return () => socket.off('seller_calendar_updated', onCalendarUpdated);
+    }, [selectedSeller?._id]);
+
     const isDateClosed = React.useCallback((dateStr) => {
         if (!dateStr || !selectedSeller) return false;
+        if (sellerBlockedDates[dateStr]) return true;
         if (!selectedSeller.shopHolidaysEnabled) return false;
         const closedDates = Array.isArray(selectedSeller.shopClosedDates) ? selectedSeller.shopClosedDates : [];
         return closedDates.includes(dateStr);
-    }, [selectedSeller]);
+    }, [selectedSeller, sellerBlockedDates]);
 
     const isCurrentDateClosed = React.useMemo(() => {
         return Boolean(activeDate && isDateClosed(activeDate));
     }, [activeDate, isDateClosed]);
 
+    // Seller's shop timing (Strict Operating Hours ON): shown to the customer and
+    // booking time can only be picked between opening and closing time.
+    const shopHours = React.useMemo(() => {
+        if (!selectedSeller?.shopTimingsEnabled) return null;
+        const openMin = parseSlotStartMinutes(selectedSeller.shopOpeningTime);
+        const closeMin = parseSlotStartMinutes(selectedSeller.shopClosingTime);
+        if (openMin === null || closeMin === null || openMin >= closeMin) return null;
+        const hhmm = (m) => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+        return {
+            openMin,
+            closeMin,
+            min: hhmm(openMin),
+            max: hhmm(closeMin),
+            label: `${selectedSeller.shopOpeningTime} - ${selectedSeller.shopClosingTime}`,
+        };
+    }, [selectedSeller?.shopTimingsEnabled, selectedSeller?.shopOpeningTime, selectedSeller?.shopClosingTime]);
+
+    const isTimeWithinShopHours = React.useCallback((value) => {
+        if (!shopHours || !value) return true;
+        const startMin = parseSlotStartMinutes(value);
+        if (startMin === null) return true;
+        if (startMin < shopHours.openMin || startMin > shopHours.closeMin) return false;
+        const endPart = String(value).split('-')[1];
+        const endMin = endPart ? parseSlotStartMinutes(endPart) : null;
+        return endMin === null || endMin <= shopHours.closeMin;
+    }, [shopHours]);
+
+    // Buffer check point: with shop timing ON a slot counts by its END time
+    // ("10:30 AM - 10:40 PM" -> 10:40 PM); otherwise by its start (unchanged).
+    const getBufferCheckMinutes = React.useCallback((value) => {
+        const endPart = String(value || '').split('-')[1];
+        if (shopHours && endPart) {
+            const endMin = parseSlotStartMinutes(endPart);
+            if (endMin !== null) return endMin;
+        }
+        return parseSlotStartMinutes(value);
+    }, [shopHours]);
+
+    const shopHoursError = shopHours ? `Please select a time within shop timing (${shopHours.label}).` : '';
+
     // Available time slots based on the specific seller's configured slots or opening & closing hours
     const sellerTimeSlots = React.useMemo(() => {
         if (Array.isArray(selectedSeller?.customTimeSlots) && selectedSeller.customTimeSlots.length > 0) {
-            return selectedSeller.customTimeSlots;
+            if (!shopHours) return selectedSeller.customTimeSlots;
+            const insideShopHours = selectedSeller.customTimeSlots.filter(isTimeWithinShopHours);
+            return insideShopHours.length > 0 ? insideShopHours : [shopHours.label];
         }
 
         const defaultSlots = [
@@ -336,7 +455,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         if (openMin === null || closeMin === null || openMin >= closeMin) return defaultSlots;
 
         return [`${formatTime12h(openMin)} - ${formatTime12h(closeMin)}`];
-    }, [selectedSeller?.customTimeSlots, selectedSeller?.shopOpeningTime, selectedSeller?.shopClosingTime]);
+    }, [selectedSeller?.customTimeSlots, selectedSeller?.shopOpeningTime, selectedSeller?.shopClosingTime, shopHours, isTimeWithinShopHours]);
 
     // When the selected date is today, hide only slots whose start time is
     // inside the live advance-booking window. Future dates keep all slots.
@@ -344,16 +463,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         if (!activeDate || !selectedSeller?.advanceBookingBufferEnabled || !(Number(selectedSeller.advanceBookingBuffer) > 0)) {
             return sellerTimeSlots;
         }
-        if (activeDate !== formatLocalDate(new Date())) return sellerTimeSlots;
+        if (activeDate > formatLocalDate(advanceBookingCutoff)) return sellerTimeSlots;
 
         return sellerTimeSlots.filter(slot => {
-            const startMinutes = parseSlotStartMinutes(slot);
-            if (startMinutes === null) return true;
-            const slotStart = new Date();
-            slotStart.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
-            return slotStart.getTime() >= advanceBookingCutoff.getTime();
+            const checkMinutes = getBufferCheckMinutes(slot);
+            if (checkMinutes === null) return true;
+            const slotAt = new Date(`${activeDate}T00:00:00`);
+            slotAt.setHours(Math.floor(checkMinutes / 60), checkMinutes % 60, 0, 0);
+            return slotAt.getTime() >= advanceBookingCutoff.getTime();
         });
-    }, [activeDate, advanceBookingCutoff, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferEnabled, sellerTimeSlots]);
+    }, [activeDate, advanceBookingCutoff, selectedSeller?.advanceBookingBuffer, selectedSeller?.advanceBookingBufferEnabled, sellerTimeSlots, getBufferCheckMinutes]);
 
     // Ensure the current booking type is valid for active permissions, else fallback to defaultBookingType
     const effectiveBookingType = (
@@ -450,6 +569,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     const [failedImages, setFailedImages] = useState(new Set());
     const [isFullScreenImage, setIsFullScreenImage] = useState(false);
+    // Full-screen photo: swipe / mouse drag / side-scroll to change photo (like retail).
+    const swipeStartXRef = useRef(null);
+    const wheelLockRef = useRef(0);
     const [modalSelectedVariant, setModalSelectedVariant] = useState(null);
     const [ticketSoldMap, setTicketSoldMap] = useState({});
     const [selectedShop, setSelectedShop] = useState(null);
@@ -557,6 +679,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     const [productPage, setProductPage] = useState(1);
     const PRODUCTS_PER_PAGE = 10;
 
+    // Customization options enabled by admin for this seller, read fresh from DB
+    // (so a toggle change in admin shows up without searching again).
+    const [liveSellerSettings, setLiveSellerSettings] = useState(null);
+    const sellerCfg = React.useMemo(() => ({ ...(selectedSeller || {}), ...(liveSellerSettings || {}) }), [selectedSeller, liveSellerSettings]);
+    const [isSendingCustomization, setIsSendingCustomization] = useState(false);
+
     // Chat States
     const [messages, setMessages] = useState([]);
     const [chatInput, setChatInput] = useState('');
@@ -654,7 +782,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 socket.emit('join_room', currentRoom);
 
                 socket.on('chat_message', (msg) => {
-                    // Make sure it doesn't duplicate our own message immediately (backend handles id, but we can just append)
+                    // Own messages are already shown when sent; only add seller replies for this chat.
+                    if (msg?.sender === 'customer' || (msg?.room && msg.room !== currentRoom)) return;
                     setMessages(prev => [...prev, {
                         ...msg,
                         time: msg.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -667,6 +796,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         const fetchChatHistory = async () => {
             try {
                 const res = await axiosInstance.get(`/chats/session?sellerId=${selectedSeller._id}`);
+                if (res.data?.sellerSettings) setLiveSellerSettings(res.data.sellerSettings);
                 if (res.data?.status && res.data.result) {
                     setMessages(res.data.result.messages || []);
                 } else {
@@ -786,6 +916,49 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     }, [messages]);
+
+    // Customization request goes to the seller's Messages (existing chat, saved in DB),
+    // separate from the booking.
+    const handleSendCustomization = () => {
+        const lines = [
+            sellerCfg?.quoteThemeSelection && materialPreference ? `Decoration Type: ${materialPreference}` : '',
+            sellerCfg?.quoteColorCombination && colorPreferences.length > 0 ? `Colors: ${colorPreferences.join(', ')}` : '',
+            sellerCfg?.quoteThemeSelection && themePreference.trim() ? `Theme: ${themePreference.trim()}` : '',
+            sellerCfg?.quoteBudgetSelection && Number(customBudget) > 0 ? `Budget: ₹${Number(customBudget).toLocaleString('en-IN')}` : '',
+            sellerCfg?.quoteReferencePhotoUpload && referencePhoto?.url ? `Reference Photo: ${referencePhoto.url}` : '',
+            sellerCfg?.quoteCustomerNotes && customNotes.trim() ? `Notes: ${customNotes.trim()}` : '',
+        ].filter(Boolean);
+        if (lines.length === 0) {
+            toast.error('Please fill at least one customization detail.');
+            return;
+        }
+        if (!user?._id || !socketRef.current) {
+            toast.error('Please login to send your customization request.');
+            return;
+        }
+        if (isUploadingReferencePhoto) {
+            toast.error('Please wait, reference image is still uploading.');
+            return;
+        }
+        setIsSendingCustomization(true);
+        const text = ['Customization Request', ...lines].join('\n');
+        socketRef.current.emit('send_chat_message', {
+            room: `seller_chat_${selectedSeller._id}_${user._id}`,
+            text,
+            senderId: 'customer',
+            customerId: user._id,
+            sellerId: selectedSeller._id
+        });
+        setMessages(prev => [...prev, { id: Date.now(), sender: 'customer', text, time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) }]);
+        toast.success('Customization request sent to the seller. Seller will reply in chat.');
+        setMaterialPreference('');
+        setColorPreferences([]);
+        setThemePreference('');
+        setCustomBudget('');
+        setReferencePhoto(null);
+        setCustomNotes('');
+        setIsSendingCustomization(false);
+    };
 
     const handleSendMessage = () => {
         if (!chatInput.trim()) return;
@@ -1164,6 +1337,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         }
 
         // 5. Seller closed & advance booking notice rules
+        const timesToCheck = [activeTime, ...(activeMultipleDates || []).map(item => item.time)].filter(Boolean);
+        if (timesToCheck.some(t => !isTimeWithinShopHours(t))) {
+            toast.error(shopHoursError);
+            const el = document.getElementById('event-filter-section');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
         if (isCurrentDateClosed) {
             toast.error(`Shop is closed on ${activeDate}. Please select another date.`);
             return;
@@ -1173,7 +1353,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             return;
         }
         if (activeDate && resolvedTime && selectedSeller?.advanceBookingBufferEnabled && Number(selectedSeller.advanceBookingBuffer) > 0) {
-            const startMinutes = parseSlotStartMinutes(resolvedTime);
+            const startMinutes = getBufferCheckMinutes(resolvedTime);
             if (startMinutes !== null) {
                 const selectedStart = new Date(`${activeDate}T00:00:00`);
                 selectedStart.setHours(Math.floor(startMinutes / 60), startMinutes % 60, 0, 0);
@@ -1325,12 +1505,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         const collectedPreferences = {
             ...preferences,
             [selectedCategories[0]]: {
-                themePreference,
-                colorPreferences,
-                materialPreference,
-                referencePhoto: referencePhoto?.url || '',
-                customNotes,
-                customBudget,
+                // Customization is sent to the seller separately (chat), not with the booking.
                 selectedProducts: selectedProducts.map(p => p._id),
                 selectedProductQuantities: selectedProducts.map(({ _id, quantity, selectedVariant, selectedAddOns }) => ({ productId: _id, quantity, selectedVariant, selectedAddOns })),
                 selectedProductColors: selectedProducts
@@ -1404,22 +1579,23 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             </div>
 
             {/* Colorful Poster Description Banner */}
-            <div className="relative overflow-hidden rounded-3xl p-8 mb-6 text-white shadow-lg bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-700">
+            <div className="relative overflow-hidden rounded-3xl p-5 sm:p-8 mb-6 text-white shadow-lg bg-gradient-to-r from-pink-500 via-purple-600 to-indigo-700">
                 <div className="absolute inset-0 bg-black/10 backdrop-blur-[1px]" />
                 <div className="relative z-10">
                     <span className="text-[10px] bg-white/20 text-white font-black uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-sm border border-white/20">
                         {selectedSeller?.category || 'Provider'}
                     </span>
-                    <h2 className="text-3xl font-black mt-3 leading-tight drop-shadow-md">
+                    <h2 className="text-2xl sm:text-3xl font-black mt-3 leading-tight drop-shadow-md break-words">
                         {selectedSeller?.shopName || selectedSeller?.name}
                     </h2>
                     <a
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedSeller?.address || 'Indore, Madhya Pradesh')}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-xs text-white/90 mt-1 font-semibold flex items-center gap-1.5 hover:text-white hover:underline w-fit cursor-pointer"
+                        className="text-xs text-white/90 mt-1 font-semibold flex items-start sm:items-center gap-1.5 hover:text-white hover:underline w-fit max-w-full cursor-pointer"
                     >
-                        📍 {selectedSeller?.address || 'Indore, Madhya Pradesh'}
+                        <span className="shrink-0">📍</span>
+                        <span className="min-w-0 break-words">{selectedSeller?.address || 'Indore, Madhya Pradesh'}</span>
                     </a>
                     {selectedSeller?.capacityEnabled && (
                         <div className="flex flex-col gap-0.5 mt-1">
@@ -1461,7 +1637,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     <div className="mt-5 p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 max-w-2xl">
                         <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-300">About Us / Description</h3>
                         <p className="text-sm mt-1 leading-relaxed text-white/95 font-medium">
-                            {selectedSeller?.description || 'Welcome to our shop! We offer customized catering, premium decorations, DJ, and total venue solutions. Contact us for custom package adjustments.'}
+                            {(selectedSeller?.sellerDescriptionEnabled && selectedSeller?.description) || 'Welcome to our shop! We offer customized catering, premium decorations, DJ, and total venue solutions. Contact us for custom package adjustments.'}
                         </p>
                     </div>
                 </div>
@@ -1513,6 +1689,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     </span>
                                 </div>
                             )}
+                            {shopHours && (
+                                <div className="flex flex-wrap items-center justify-between gap-2 bg-white/80 border border-amber-200 px-3.5 py-2 rounded-2xl">
+                                    <span className="text-xs font-black text-amber-900">🏪 Shop Timing: {shopHours.label}</span>
+                                    <span className="text-[11px] font-semibold text-amber-700">Booking time can be selected only within shop timing</span>
+                                </div>
+                            )}
                             <div className="flex flex-wrap gap-3 items-end">
                                 {/* Event Type */}
                                 <div className="flex flex-col gap-1 min-w-[170px] flex-1 sm:flex-initial">
@@ -1548,7 +1730,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             <input
                                                 type="time"
                                                 value={multiInputTime}
-                                                onChange={e => setMultiInputTime(e.target.value)}
+                                                min={shopHours?.min}
+                                                max={shopHours?.max}
+                                                onChange={e => {
+                                                    if (e.target.value && !isTimeWithinShopHours(e.target.value)) {
+                                                        toast.error(shopHoursError);
+                                                        return;
+                                                    }
+                                                    setMultiInputTime(e.target.value);
+                                                }}
                                                 className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                             />
                                         </div>
@@ -1566,6 +1756,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             type="button"
                                             onClick={() => {
                                                 if (!multiInputDate) return;
+                                                if (multiInputTime && !isTimeWithinShopHours(multiInputTime)) {
+                                                    toast.error(shopHoursError);
+                                                    return;
+                                                }
                                                 if (isDateClosed(multiInputDate)) {
                                                     toast.error(`Shop is closed on ${multiInputDate}. Please select another date.`);
                                                     return;
@@ -1637,7 +1831,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         </div>
                                         {dateMode === 'advancedSlot' && (
                                             <div className="flex flex-col gap-1 min-w-[170px]">
-                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time Slot</label>
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                 <select
                                                     value={activeTime}
                                                     onChange={e => handleTimeChange(e.target.value)}
@@ -1656,7 +1850,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <input
                                                     type="time"
                                                     value={activeTime}
-                                                    onChange={e => handleTimeChange(e.target.value)}
+                                                    min={shopHours?.min}
+                                                    max={shopHours?.max}
+                                                    onChange={e => {
+                                                        if (e.target.value && !isTimeWithinShopHours(e.target.value)) {
+                                                            toast.error(shopHoursError);
+                                                            return;
+                                                        }
+                                                        handleTimeChange(e.target.value);
+                                                    }}
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                                 />
                                             </div>
@@ -1667,7 +1869,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {(dateMode === 'standardSlot' || dateMode === 'standard') && (
                                     <>
                                         <div className="flex flex-col gap-1 min-w-[150px]">
-                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Date</label>
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Booking Date</label>
                                             <input
                                                 type="date"
                                                 value={activeDate}
@@ -1679,7 +1881,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         </div>
                                         {dateMode === 'standardSlot' && (
                                             <div className="flex flex-col gap-1 min-w-[170px]">
-                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time Slot</label>
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                 <select
                                                     value={activeTime}
                                                     onChange={e => handleTimeChange(e.target.value)}
@@ -1698,7 +1900,15 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <input
                                                     type="time"
                                                     value={activeTime}
-                                                    onChange={e => handleTimeChange(e.target.value)}
+                                                    min={shopHours?.min}
+                                                    max={shopHours?.max}
+                                                    onChange={e => {
+                                                        if (e.target.value && !isTimeWithinShopHours(e.target.value)) {
+                                                            toast.error(shopHoursError);
+                                                            return;
+                                                        }
+                                                        handleTimeChange(e.target.value);
+                                                    }}
                                                     className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400"
                                                 />
                                             </div>
@@ -1844,7 +2054,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         type="radio"
                                                         name="sellerDetailGender"
                                                         value={g}
-                                                        checked={activeEventInfo.gender === g}
+                                                        checked={String(activeEventInfo.gender || '').toLowerCase() === g.toLowerCase()}
                                                         onChange={e => handleEventInfoFieldChange('gender', e.target.value)}
                                                         className="accent-purple-600 w-4 h-4"
                                                     />
@@ -1968,12 +2178,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         : 'border-slate-100 hover:border-purple-200'
                                                     }`}
                                             >
-                                                <div className="flex gap-3">
+                                                {/* Image on top (full width, like the seller card), name & details below */}
+                                                <div className="flex flex-col gap-3">
                                                     <button
                                                         type="button"
                                                         onClick={() => openProductGallery(product)}
                                                         aria-label={`View product gallery for ${product.name}`}
-                                                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-slate-100 shrink-0 border border-slate-200/80 cursor-zoom-in shadow-sm hover:opacity-95 transition-all"
+                                                        className="w-full h-48 rounded-xl overflow-hidden bg-slate-100 border border-slate-200/80 cursor-zoom-in shadow-sm hover:opacity-95 transition-all"
                                                     >
                                                         <img
                                                             src={productImage}
@@ -2019,17 +2230,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             return null;
                                                         })()}
                                                         <p className="text-[11px] text-slate-400 line-clamp-2 mt-0.5">{product.description}</p>
-                                                        {(() => {
-                                                            const cap = getProductCapacityConfig(product, product.variants?.[0]);
-                                                            if (!cap || !selectedSeller?.capacityEnabled) return null;
-                                                            return (
-                                                                <div className="flex items-center gap-1.5 flex-wrap mt-1.5">
-                                                                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200/80 px-2 py-0.5 rounded">
-                                                                        Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
-                                                                    </span>
-                                                                </div>
-                                                            );
-                                                        })()}
                                                         {product.tickets?.length > 0 && (
                                                             <div className="mt-2 space-y-1.5">
                                                                 {product.tickets.map((ticket, ticketIndex) => {
@@ -2052,9 +2252,13 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                                 )}
                                                                             </div>
                                                                             {ticket.instructions && (
-                                                                                <p className="text-[10px] text-slate-600 mt-1 font-medium bg-white/70 p-1.5 rounded border border-purple-100/60">
-                                                                                    📋 {ticket.instructions}
-                                                                                </p>
+                                                                                // Card shows only 2 lines (like product description); full text is in the popup.
+                                                                                // Clamp is on the inner span so no half line peeks through the box padding.
+                                                                                <div className="mt-1 bg-white/70 p-1.5 rounded border border-purple-100/60">
+                                                                                    <p className="text-[11px] text-slate-500 font-medium line-clamp-2 break-words">
+                                                                                        📋 {ticket.instructions}
+                                                                                    </p>
+                                                                                </div>
                                                                             )}
                                                                             {ticket.timeSlotsEnabled && ticket.timeSlots?.length > 0 && (
                                                                                 <p className="text-[10px] text-slate-500 mt-1">
@@ -2100,32 +2304,44 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         </div>
                                                     </div>
                                                 )}
-                                                <div className="mt-4 flex items-center justify-between pt-3 border-t border-slate-100">
-                                                    <span className="flex flex-wrap items-center gap-x-2 font-extrabold text-sm text-purple-600">
-                                                        {isSelected ? (
-                                                            <>
-                                                                {hasAnySalePrice && totalOriginalPrice > totalPrice && (
-                                                                    <span className="text-xs font-semibold text-slate-400 line-through">
-                                                                        ₹{totalOriginalPrice.toLocaleString('en-IN')}
-                                                                    </span>
-                                                                )}
-                                                                <span>₹{totalPrice.toLocaleString('en-IN')}</span>
-                                                                {totalQuantity > 1 && (
-                                                                    <span className="text-[10px] font-semibold text-slate-400">({totalQuantity} items)</span>
-                                                                )}
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                {defaultPricing.hasSalePrice && (
-                                                                    <span className="text-xs font-semibold text-slate-400 line-through">
-                                                                        ₹{defaultPricing.originalPrice.toLocaleString('en-IN')}
-                                                                    </span>
-                                                                )}
-                                                                <span>₹{defaultPricing.baseUnitPrice.toLocaleString('en-IN')}</span>
-                                                            </>
-                                                        )}
-                                                    </span>
-                                                    <div className="flex items-center gap-2">
+                                                <div className="mt-4 flex items-center justify-between gap-2 pt-3 border-t border-slate-100">
+                                                    <div className="flex flex-col min-w-0">
+                                                        <span className="flex flex-wrap items-center gap-x-2 font-extrabold text-sm text-purple-600">
+                                                            {isSelected ? (
+                                                                <>
+                                                                    {hasAnySalePrice && totalOriginalPrice > totalPrice && (
+                                                                        <span className="text-xs font-semibold text-slate-400 line-through">
+                                                                            ₹{totalOriginalPrice.toLocaleString('en-IN')}
+                                                                        </span>
+                                                                    )}
+                                                                    <span>₹{totalPrice.toLocaleString('en-IN')}</span>
+                                                                    {totalQuantity > 1 && (
+                                                                        <span className="text-[10px] font-semibold text-slate-400">({totalQuantity} items)</span>
+                                                                    )}
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    {defaultPricing.hasSalePrice && (
+                                                                        <span className="text-xs font-semibold text-slate-400 line-through">
+                                                                            ₹{defaultPricing.originalPrice.toLocaleString('en-IN')}
+                                                                        </span>
+                                                                    )}
+                                                                    <span>₹{defaultPricing.baseUnitPrice.toLocaleString('en-IN')}</span>
+                                                                </>
+                                                            )}
+                                                        </span>
+                                                        {/* Capacity shown below the price */}
+                                                        {(() => {
+                                                            const cap = getProductCapacityConfig(product, product.variants?.[0]);
+                                                            if (!cap || !selectedSeller?.capacityEnabled) return null;
+                                                            return (
+                                                                <span className="mt-1 text-[10px] font-bold text-purple-700">
+                                                                    Capacity: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'}
+                                                                </span>
+                                                            );
+                                                        })()}
+                                                    </div>
+                                                    <div className="flex items-center gap-2 shrink-0">
                                                         {product.tickets?.length > 0 ? (() => {
                                                             const soldCount = ticketSoldMap[product._id] || 0;
                                                             const totalCap = Number(product.tickets[0]?.capacity ?? 0);
@@ -2256,17 +2472,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     </div>
 
                     {/* Customization Options form depending on Seller config */}
-                    {selectedSeller?.customizationEngineEnabled && (
+                    {sellerCfg?.customizationEngineEnabled && (sellerCfg?.quoteThemeSelection || sellerCfg?.quoteBudgetSelection || sellerCfg?.quoteColorCombination || sellerCfg?.quoteReferencePhotoUpload || sellerCfg?.quoteCustomerNotes) && (
                         <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm">
                             <div className="flex items-center justify-between gap-4 mb-4">
                                 <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
-                                    Request Customization
+                                    Customization & Quotation
                                 </h3>
                                 <button
                                     type="button"
                                     role="switch"
                                     aria-checked={isCustomizationRequested}
-                                    aria-label="Request Customization"
+                                    aria-label="Customization & Quotation"
                                     onClick={() => setIsCustomizationRequested((isOn) => !isOn)}
                                     className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 ${isCustomizationRequested ? 'bg-purple-600' : 'bg-slate-300'}`}
                                 >
@@ -2275,9 +2491,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                             </div>
 
                             {isCustomizationRequested && <div className="space-y-4">
-                                {/* Material Preference (Flower/Balloon) */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Decoration Type</label>
+                                {/* Material Preference (Flower/Balloon) - admin "Theme Selection" */}
+                                {sellerCfg?.quoteThemeSelection && <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Theme Selection · Decoration Type</label>
                                     <div className="flex items-center gap-6">
                                         <label className="flex items-center gap-2 cursor-pointer">
                                             <input
@@ -2313,17 +2529,17 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             <span className="text-sm font-semibold text-slate-700">Both</span>
                                         </label>
                                     </div>
-                                </div>
+                                </div>}
 
                                 {/* Color Combination Option (Multiple Colors) */}
-                                {selectedSeller?.quoteColorCombination && (
+                                {sellerCfg?.quoteColorCombination && (
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Theme Preference (Select Multiple)</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Color Combination (Select Multiple)</label>
 
                                         {/* Predefined Colors from Admin */}
-                                        {selectedSeller?.availableColors && selectedSeller.availableColors.length > 0 && (
+                                        {sellerCfg?.availableColors && sellerCfg.availableColors.length > 0 && (
                                             <div className="flex flex-wrap gap-2 mb-3">
-                                                {selectedSeller.availableColors.map((color, idx) => {
+                                                {sellerCfg.availableColors.map((color, idx) => {
                                                     const isSelected = colorPreferences.includes(color);
                                                     return (
                                                         <button
@@ -2402,9 +2618,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     </div>
                                 )}
 
-                                {/* Theme Selection Option */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Theme Name</label>
+                                {/* Theme Selection Option - admin "Theme Selection" */}
+                                {sellerCfg?.quoteThemeSelection && <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Theme Selection · Theme Name</label>
                                     <input
                                         type="text"
                                         placeholder="e.g. Fairy Tale Theme, Retro Bollywood Night"
@@ -2412,11 +2628,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         onChange={(e) => setThemePreference(e.target.value)}
                                         className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                     />
-                                </div>
+                                </div>}
 
-                                {/* Budget Selection Option */}
-                                <div>
-                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Your Custom Budget Limit (₹)</label>
+                                {/* Budget Selection Option - admin "Budget Selection" */}
+                                {sellerCfg?.quoteBudgetSelection && <div>
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Budget Selection (₹)</label>
                                     <input
                                         type="number"
                                         placeholder="e.g. 50000"
@@ -2424,12 +2640,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         onChange={(e) => setCustomBudget(e.target.value)}
                                         className="w-full border border-slate-200 rounded-xl p-3 outline-none text-sm font-semibold bg-slate-50 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
                                     />
-                                </div>
+                                </div>}
 
                                 {/* Reference Photo Upload Option */}
-                                {selectedSeller?.quoteReferencePhotoUpload && (
+                                {sellerCfg?.quoteReferencePhotoUpload && (
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Upload Reference Image / Layout Sketch</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Reference Photo Upload</label>
                                         <div className="border-2 border-dashed border-slate-200 rounded-xl p-4 bg-slate-50 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-100 transition-all">
                                             <input
                                                 type="file"
@@ -2449,9 +2665,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 )}
 
                                 {/* Customer Notes Option */}
-                                {selectedSeller?.quoteCustomerNotes && (
+                                {sellerCfg?.quoteCustomerNotes && (
                                     <div>
-                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Specific Guidelines / Notes</label>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Customer & Seller Chat · Notes</label>
                                         <textarea
                                             rows={3}
                                             placeholder="Write specific guidelines, food allergy notices, or schedule requests for the seller..."
@@ -2461,16 +2677,26 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         />
                                     </div>
                                 )}
+
+                                <button
+                                    type="button"
+                                    onClick={handleSendCustomization}
+                                    disabled={isSendingCustomization || isUploadingReferencePhoto}
+                                    className="w-full rounded-xl bg-purple-600 py-3 text-sm font-bold text-white hover:bg-purple-700 transition-colors disabled:opacity-60"
+                                >
+                                    Send Customization Request to Seller
+                                </button>
+                                <p className="text-[10px] text-slate-500 text-center -mt-2">Sent separately to the seller in chat. Your booking is not changed.</p>
                             </div>}
                         </div>
                     )}
                     {/* Live Chat with Seller (Socket.io) */}
-                    {selectedSeller?.customizationEngineEnabled && selectedSeller?.quoteCustomerNotes && (
+                    {sellerCfg?.customizationEngineEnabled && sellerCfg?.quoteCustomerNotes && (
                         <div className="bg-white rounded-3xl border border-slate-200 shadow-sm flex flex-col h-[380px] overflow-hidden">
                             <div className="bg-slate-50 px-5 py-3 border-b border-slate-150 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
-                                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Seller & Customer Chat Option</h4>
+                                    <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Customer & Seller Chat</h4>
                                 </div>
                                 <span className="text-[9px] font-bold text-slate-400 uppercase">Realtime</span>
                             </div>
@@ -2480,9 +2706,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {messages.map(msg => {
                                     const isCustomer = msg.sender === 'customer';
                                     return (
-                                        <div key={msg.id} className={`flex flex-col ${isCustomer ? 'items-end' : 'items-start'}`}>
+                                        <div key={msg.id || msg._id} className={`flex flex-col ${isCustomer ? 'items-end' : 'items-start'}`}>
                                             <div
-                                                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-xs font-medium shadow-sm leading-relaxed
+                                                className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-xs font-medium shadow-sm leading-relaxed whitespace-pre-line break-words
                                                         ${isCustomer
                                                         ? 'bg-purple-600 text-white rounded-tr-none'
                                                         : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
@@ -2490,7 +2716,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             >
                                                 {msg.text}
                                             </div>
-                                            <span className="text-[9px] text-slate-400 mt-1 px-1 font-semibold">{msg.time}</span>
+                                            <span className="text-[9px] text-slate-400 mt-1 px-1 font-semibold">{msg.time || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '')}</span>
                                         </div>
                                     );
                                 })}
@@ -2521,72 +2747,65 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                         <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-5">
                             <h3 className="text-xl font-bold text-slate-800">Plan Summary</h3>
                             <div className="mt-3 space-y-2 text-sm">
-                                <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Event Type</span><span className="font-semibold capitalize">{allEventTypes?.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || eventData?.eventType || 'Not selected'}</span>
-                                </div>
-                                <div className="flex justify-between gap-4 text-slate-600">
-                                    <span>Date & Time</span><span className="font-semibold">{(() => {
-                                        const dateVal = activeDate || eventData?.date || (activeMultipleDates?.[0]?.date) || '';
-                                        const timeVal = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
-                                        const remarksVal = activeRemarks || eventData?.remarks || (activeMultipleDates?.[0]?.remarks) || '';
-                                        if (!dateVal && !timeVal) return 'Not selected';
-                                        return `${dateVal}${timeVal ? ` · ${timeVal}` : ''}${remarksVal ? ` (${remarksVal})` : ''}`;
-                                    })()}</span>
-                                </div>
-                                {activeEventInfo && (
-                                    <>
-                                        {(activeEventInfo.primaryContactName || activeEventInfo.name || activeEventInfo.coupleNames || activeEventInfo.corporateCompanyName) && (
-                                            <div className="flex justify-between gap-4 text-slate-600">
-                                                <span>Contact</span>
-                                                <span className="font-semibold">
-                                                    {activeEventInfo.bookingType === 'corporate'
-                                                        ? (activeEventInfo.corporateCompanyName || activeEventInfo.corporateContactPerson)
-                                                        : activeEventInfo.bookingType === 'couple'
-                                                            ? activeEventInfo.coupleNames
-                                                            : (activeEventInfo.primaryContactName || activeEventInfo.name)}
-                                                    {activeEventInfo.primaryPhone ? ` (${activeEventInfo.primaryPhone})` : ''}
-                                                </span>
-                                            </div>
-                                        )}
-                                        {activeEventInfo.gender && activeEventInfo.bookingType === 'individual' && (
-                                            <div className="flex justify-between gap-4 text-slate-600">
-                                                <span>Gender</span><span className="font-semibold capitalize">{activeEventInfo.gender}</span>
-                                            </div>
-                                        )}
-                                        {(activeEventInfo.dateOfBirth || activeEventInfo.anniversaryDate) && (
-                                            <div className="flex justify-between gap-4 text-slate-600">
-                                                <span>{activeEventInfo.bookingType === 'couple' ? 'Anniversary Date' : 'Date of Birth'}</span>
-                                                <span className="font-semibold">{activeEventInfo.bookingType === 'couple' ? activeEventInfo.anniversaryDate : activeEventInfo.dateOfBirth}</span>
-                                            </div>
-                                        )}
-                                        {activeEventInfo.functionLocation && (
-                                            <div className="flex justify-between gap-4 text-slate-600">
-                                                <span>Function Location</span><span className="font-semibold">{activeEventInfo.functionLocation}</span>
-                                            </div>
-                                        )}
-                                    </>
-                                )}
-                                <div className="flex justify-between gap-4 text-slate-600">
-                                    {(() => {
-                                        const currentShop = activeSelectedShop || selectedShop;
-                                        let minCap = currentShop ? Number(currentShop.minimum) : null;
-                                        let maxCap = currentShop ? Number(currentShop.maximum || currentShop.totalCapacity) : null;
-                                        if (!minCap && !maxCap && Array.isArray(selectedSeller?.shopsAtLocation) && selectedSeller.shopsAtLocation.length > 0) {
-                                            const validMins = selectedSeller.shopsAtLocation.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
-                                            const validMaxs = selectedSeller.shopsAtLocation.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
-                                            if (validMins.length > 0) minCap = Math.min(...validMins);
-                                            if (validMaxs.length > 0) maxCap = Math.max(...validMaxs);
-                                        }
+                                {/* Only details the customer actually filled are shown. */}
+                                {(() => {
+                                    const typeName = allEventTypes?.find(t => (t.value || t._id) === activeEventType)?.name || activeEventType || eventData?.eventType || '';
+                                    return typeName ? (
+                                        <div className="flex justify-between gap-4 text-slate-600">
+                                            <span>Event Type</span><span className="font-semibold capitalize">{typeName}</span>
+                                        </div>
+                                    ) : null;
+                                })()}
+                                {(() => {
+                                    // Multiple dates: show every date with its own time & remarks (remarks only if filled).
+                                    if (Array.isArray(activeMultipleDates) && activeMultipleDates.length > 0) {
                                         return (
-                                            <>
-                                                <span>Guests</span>
-                                                <span className="font-semibold">
-                                                    {activeEventInfo?.noOfGuests ? `${activeEventInfo.noOfGuests}${minCap || maxCap ? ` (Limit: ${minCap || 1}-${maxCap || 'Max'})` : ''}` : ''}
-                                                </span>
-                                            </>
+                                            <div className="text-slate-600">
+                                                <span>Dates & Remarks</span>
+                                                <div className="mt-1 space-y-1">
+                                                    {activeMultipleDates.map((item, idx) => (
+                                                        <div key={item.id || idx} className="flex justify-between gap-3 rounded-lg bg-white/70 px-2 py-1">
+                                                            <span className="font-semibold">{item.typeName || ''}</span>
+                                                            <span className="font-semibold text-right">
+                                                                {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` · ${item.time}` : ""}`}
+                                                                {String(item.remarks || '').trim() && <span className="block text-xs font-medium italic text-slate-500">📝 {item.remarks}</span>}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
                                         );
-                                    })()}
-                                </div>
+                                    }
+                                    const dateVal = activeDate || eventData?.date || (activeMultipleDates?.[0]?.date) || '';
+                                    const timeVal = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
+                                    const remarksVal = activeRemarks || eventData?.remarks || (activeMultipleDates?.[0]?.remarks) || '';
+                                    if (!dateVal && !timeVal) return null;
+                                    return (
+                                        <div className="flex justify-between gap-4 text-slate-600">
+                                            <span>Date & Time</span>
+                                            <span className="font-semibold text-right">{`${dateVal}${timeVal ? ` · ${timeVal}` : ''}${remarksVal ? ` (${remarksVal})` : ''}`}</span>
+                                        </div>
+                                    );
+                                })()}
+                                {(() => {
+                                    const currentShop = activeSelectedShop || selectedShop;
+                                    let minCap = currentShop ? Number(currentShop.minimum) : null;
+                                    let maxCap = currentShop ? Number(currentShop.maximum || currentShop.totalCapacity) : null;
+                                    if (!minCap && !maxCap && Array.isArray(selectedSeller?.shopsAtLocation) && selectedSeller.shopsAtLocation.length > 0) {
+                                        const validMins = selectedSeller.shopsAtLocation.map(s => Number(s.minimum)).filter(n => !isNaN(n) && n > 0);
+                                        const validMaxs = selectedSeller.shopsAtLocation.map(s => Number(s.maximum || s.totalCapacity)).filter(n => !isNaN(n) && n > 0);
+                                        if (validMins.length > 0) minCap = Math.min(...validMins);
+                                        if (validMaxs.length > 0) maxCap = Math.max(...validMaxs);
+                                    }
+                                    return getEventDetailRows(activeEventInfo).map(([label, value]) => (
+                                        <div key={label} className="flex justify-between gap-4 text-slate-600">
+                                            <span>{label}</span>
+                                            <span className="font-semibold text-right">
+                                                {value}{label === 'No. of Guests' && (minCap || maxCap) ? ` (Limit: ${minCap || 1}-${maxCap || 'Max'})` : ''}
+                                            </span>
+                                        </div>
+                                    ));
+                                })()}
                                 {(activeSelectedShop || selectedShop) && (
                                     <div className="flex justify-between gap-4 text-purple-700 bg-purple-100/60 p-2 rounded-xl font-bold">
                                         <span>📍 Selected Shop / Area</span>
@@ -2612,7 +2831,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                     </span>
                                                     {cap && selectedSeller?.capacityEnabled && (
                                                         <span className="text-[10px] font-bold text-purple-700">
-                                                            👥 Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
+                                                            👥 Capacity: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'}
                                                         </span>
                                                     )}
                                                 </div>
@@ -2648,6 +2867,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 <div className="flex justify-between border-t border-purple-100 pt-3 font-bold text-slate-800">
                                     <span>Selected Products</span><span>{selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).reduce((total, product) => total + (Number(product.quantity) || 0), 0)} items · ₹{selectedProductsSubtotal.toLocaleString('en-IN')}</span>
                                 </div>
+                                <p className="text-right text-[10px] font-medium text-slate-400 -mt-1">Inclusive of all taxes</p>
                                 {selectedSeller?.advanceBookingEnabled && Number(selectedSeller?.advancePaymentPercentage) > 0 && selectedProductsSubtotal > 0 && (
                                     <div className="flex justify-between items-center bg-purple-100/60 p-2.5 rounded-xl border border-purple-200 mt-2">
                                         <div className="flex flex-col">
@@ -2907,15 +3127,6 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">
                                                             {imagePreview.product?.category || selectedSeller?.category || 'Service / Item'}
                                                         </span>
-                                                        {(() => {
-                                                            const cap = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
-                                                            if (!cap || !selectedSeller?.capacityEnabled) return null;
-                                                            return (
-                                                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-lg">
-                                                                    👥 Cap: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'} ({cap.bookingType})
-                                                                </span>
-                                                            );
-                                                        })()}
                                                     </div>
 
                                                     {/* Product Title & Unit */}
@@ -2959,6 +3170,16 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                     </span>
                                                                 ) : null}
                                                             </div>
+                                                            {/* Capacity shown below the price */}
+                                                            {(() => {
+                                                                const cap = getProductCapacityConfig(imagePreview.product, modalSelectedVariant);
+                                                                if (!cap || !selectedSeller?.capacityEnabled) return null;
+                                                                return (
+                                                                    <span className="mt-1.5 text-[11px] font-bold text-purple-700">
+                                                                        👥 Capacity: Min = {cap.minimum}, Max = {cap.maximum > 0 ? cap.maximum : 'No limit'}
+                                                                    </span>
+                                                                );
+                                                            })()}
                                                         </div>
 
                                                         {imagePreview.product?.tickets?.length > 0 ? (() => {
@@ -3164,10 +3385,10 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             {!getProductCapacityConfig(imagePreview.product, modalSelectedVariant)?.uniqueCode
                                                                 && !(isShopCapacityVariant(imagePreview.product, modalSelectedVariant) && String(modalSelectedVariant?.uniqueCode || imagePreview.product?.uniqueCode || '').trim())
                                                                 && selectedSeller?.capacityEnabled && (
-                                                                <p className="mt-2 text-[10px] font-semibold text-amber-700">
-                                                                    Availability for this option has not been configured yet. Please contact the seller before booking.
-                                                                </p>
-                                                            )}
+                                                                    <p className="mt-2 text-[10px] font-semibold text-amber-700">
+                                                                        Availability for this option has not been configured yet. Please contact the seller before booking.
+                                                                    </p>
+                                                                )}
                                                         </div>
                                                     )}
 
@@ -3422,6 +3643,39 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         </div>
                                                     )}
 
+                                                    {/* Cancellation & Refund policy + RedBus-style refund slabs set by the seller */}
+                                                    {(String(imagePreview.product?.cancellationPolicy || '').trim() !== '' || (imagePreview.product?.cancellationRules || []).length > 0) && (
+                                                        <div className="border-t border-slate-100 pt-3">
+                                                            <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                                                                <Clock size={14} className="text-rose-600" /> Cancellation & Refund Policy
+                                                            </h4>
+                                                            {(imagePreview.product?.cancellationRules || []).length > 0 && (
+                                                                <ul className="mb-2 space-y-1 bg-rose-50/60 border border-rose-100 rounded-lg p-2.5">
+                                                                    {(() => {
+                                                                        const rules = [...imagePreview.product.cancellationRules].sort((a, b) => b.hoursBefore - a.hoursBefore);
+                                                                        const rows = rules.map((r, i) => ({
+                                                                            label: i === 0 ? `${r.hoursBefore}+ hrs before event` : `${r.hoursBefore}–${rules[i - 1].hoursBefore} hrs before event`,
+                                                                            value: Number(r.refundPercent) > 0 ? `${r.refundPercent}% refund` : 'No refund',
+                                                                        }));
+                                                                        const last = rules[rules.length - 1];
+                                                                        if (Number(last.hoursBefore) > 0) rows.push({ label: `Less than ${last.hoursBefore} hrs before event`, value: 'No refund' });
+                                                                        return rows.map((row, i) => (
+                                                                            <li key={i} className="flex items-center justify-between gap-2 text-xs">
+                                                                                <span className="text-slate-600 font-medium">{row.label}</span>
+                                                                                <span className={`font-black ${row.value === 'No refund' ? 'text-rose-600' : 'text-emerald-600'}`}>{row.value}</span>
+                                                                            </li>
+                                                                        ));
+                                                                    })()}
+                                                                </ul>
+                                                            )}
+                                                            {String(imagePreview.product?.cancellationPolicy || '').trim() !== '' && (
+                                                                <p className="text-xs text-slate-600 leading-relaxed font-medium whitespace-pre-line bg-rose-50/60 border border-rose-100 rounded-lg p-2.5">
+                                                                    {imagePreview.product.cancellationPolicy}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+
                                                     {/* Additional details if available */}
                                                     {(imagePreview.product?.shelfLife || imagePreview.product?.countryOfOrigin) && (
                                                         <div className="border-t border-slate-100 pt-3 grid grid-cols-2 gap-2 text-xs">
@@ -3453,12 +3707,46 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
         </div>
     );
 
+    // Move to the previous (-1) / next (+1) photo, skipping photos that failed to load.
+    const goToPreviewImage = (direction) => {
+        setImagePreview(c => {
+            if (!c || !Array.isArray(c.images) || c.images.length < 2) return c;
+            let nextIndex = (c.activeIndex + direction + c.images.length) % c.images.length;
+            while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
+                nextIndex = (nextIndex + direction + c.images.length) % c.images.length;
+            }
+            return { ...c, activeIndex: nextIndex };
+        });
+    };
+    const canSwipePreview = () => zoomLevel === 1 && imagePreview && (imagePreview.images.length - failedImages.size) > 1;
+    const endSwipe = (endX) => {
+        const startX = swipeStartXRef.current;
+        swipeStartXRef.current = null;
+        if (startX === null || !canSwipePreview()) return;
+        const dx = endX - startX;
+        if (Math.abs(dx) > 50) goToPreviewImage(dx < 0 ? 1 : -1);
+    };
+
     const fullScreenViewer = isFullScreenImage && imagePreview && (
         <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-white animate-in fade-in duration-200"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-white animate-in fade-in duration-200 select-none"
             role="dialog"
             onClick={(e) => {
                 e.stopPropagation();
+            }}
+            // Finger swipe (mobile)
+            onTouchStart={(e) => { swipeStartXRef.current = e.touches[0]?.clientX ?? null; }}
+            onTouchEnd={(e) => endSwipe(e.changedTouches[0]?.clientX ?? 0)}
+            // Mouse drag (web)
+            onMouseDown={(e) => { swipeStartXRef.current = e.clientX; }}
+            onMouseUp={(e) => endSwipe(e.clientX)}
+            // Touchpad / mouse side-scroll (web)
+            onWheel={(e) => {
+                if (!canSwipePreview() || Math.abs(e.deltaX) < 30 || Math.abs(e.deltaX) < Math.abs(e.deltaY)) return;
+                const now = Date.now();
+                if (now - wheelLockRef.current < 500) return;
+                wheelLockRef.current = now;
+                goToPreviewImage(e.deltaX > 0 ? 1 : -1);
             }}
         >
             <button
@@ -3476,6 +3764,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                     alt={imagePreview.name}
                     className="max-w-full max-h-full object-contain transition-transform duration-300 ease-out origin-center"
                     style={{ transform: `scale(${zoomLevel})`, cursor: zoomLevel > 1 ? 'grab' : 'zoom-in' }}
+                    draggable={false}
                     onDoubleClick={(e) => {
                         e.stopPropagation();
                         setZoomLevel(prev => prev === 1 ? 2.5 : 1);
@@ -3486,35 +3775,26 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
             {(imagePreview.images.length - failedImages.size) > 1 && (
                 <>
+                    {/* Arrows only on web; on mobile the photo is changed by swiping. */}
                     <button
                         type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                             e.stopPropagation();
-                            setImagePreview(c => {
-                                let nextIndex = (c.activeIndex - 1 + c.images.length) % c.images.length;
-                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
-                                    nextIndex = (nextIndex - 1 + c.images.length) % c.images.length;
-                                }
-                                return { ...c, activeIndex: nextIndex };
-                            });
+                            goToPreviewImage(-1);
                         }}
-                        className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 flex h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
+                        className="hidden md:flex absolute left-4 md:left-6 top-1/2 -translate-y-1/2 h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
                     >
                         <span className="text-3xl text-slate-800 leading-none">‹</span>
                     </button>
                     <button
                         type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
                         onClick={(e) => {
                             e.stopPropagation();
-                            setImagePreview(c => {
-                                let nextIndex = (c.activeIndex + 1) % c.images.length;
-                                while (failedImages.has(nextIndex) && nextIndex !== c.activeIndex) {
-                                    nextIndex = (nextIndex + 1) % c.images.length;
-                                }
-                                return { ...c, activeIndex: nextIndex };
-                            });
+                            goToPreviewImage(1);
                         }}
-                        className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 flex h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
+                        className="hidden md:flex absolute right-4 md:right-6 top-1/2 -translate-y-1/2 h-14 w-10 md:h-16 md:w-12 items-center justify-center bg-white shadow-[0_0_15px_rgba(0,0,0,0.1)] hover:bg-slate-50 transition-colors rounded-sm"
                     >
                         <span className="text-3xl text-slate-800 leading-none">›</span>
                     </button>

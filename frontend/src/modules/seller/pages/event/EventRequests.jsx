@@ -5,6 +5,38 @@ import { toast } from 'sonner';
 import { HiOutlineCheckCircle, HiOutlineXCircle, HiOutlineClock } from 'react-icons/hi2';
 import { resolveImageUrl } from '@/core/utils/imageUtils';
 
+// Customer's "Your Event Details" as [label, value] rows, ONLY for filled fields
+// (same rows the customer sees in Plan Summary / Checkout / My Orders).
+const getEventDetailRows = (info = {}) => {
+    const type = String(info?.bookingType || '').toLowerCase();
+    const fmtDate = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || ''))
+        ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN')
+        : (v || ''));
+    const cap = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : '');
+    const isSellerLocation = info?.serviceLocationType === 'seller';
+    const rows = [
+        ['Booking Type', cap(type)],
+        ...(type === 'corporate' ? [
+            ['Company Name', info?.corporateCompanyName],
+            ['Contact Person', info?.corporateContactPerson],
+            ['Mobile', info?.corporateMobile],
+            ['GST Number', info?.corporateGstNumber],
+        ] : type === 'couple' ? [
+            ['Couple Names', info?.coupleNames || info?.primaryContactName],
+            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+        ] : [
+            ['Primary Contact', info?.primaryContactName || info?.name],
+            ['Gender', cap(info?.gender)],
+            ['Date of Birth', fmtDate(info?.dateOfBirth)],
+        ]),
+        ['Phone', type !== 'corporate' ? info?.primaryPhone : ''],
+        ['No. of Guests', info?.noOfGuests],
+        [isSellerLocation ? 'Seller Location' : 'Function Location', isSellerLocation ? (info?.sellerLocation || info?.functionLocation) : info?.functionLocation],
+    ];
+    return rows.filter(([, value]) => value !== undefined && value !== null && String(value).trim() !== '' && String(value).trim() !== '0');
+};
+
+
 const EventRequests = () => {
     const [requests, setRequests] = useState([]);
     const [quoteForms, setQuoteForms] = useState({});
@@ -146,18 +178,30 @@ const EventRequests = () => {
                                 <div>
                                     <h3 className="text-xl font-bold text-slate-800 capitalize">{req.eventType} Event</h3>
                                     <p className="text-slate-600 mt-1">
-                                        For <strong>{req.eventInfo?.primaryContactName || req.eventInfo?.name || (req.eventInfo?.bookingType === 'corporate' ? (req.eventInfo?.corporateCompanyName || req.eventInfo?.corporateContactPerson) : req.eventInfo?.coupleNames) || req.customer?.name || 'Customer'}</strong> • {req.guestCount} Guests
+                                        For <strong>{req.eventInfo?.primaryContactName || req.eventInfo?.name || (req.eventInfo?.bookingType === 'corporate' ? (req.eventInfo?.corporateCompanyName || req.eventInfo?.corporateContactPerson) : req.eventInfo?.coupleNames) || req.customer?.name || 'Customer'}</strong>{req.eventInfo?.noOfGuests ? ` • ${req.eventInfo.noOfGuests} Guests` : ''}
                                         {req.customer?.phone ? ` • 📞 ${req.customer.phone}` : ''}
                                     </p>
                                 </div>
 
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4 bg-slate-50 p-4 rounded-xl">
-                                    <div>
-                                        <p className="text-xs text-slate-500 font-medium uppercase">Date & Time</p>
-                                        <p className="text-sm font-bold text-slate-800">
-                                            {req.eventDate ? new Date(req.eventDate).toLocaleDateString() : 'N/A'} {req.eventTime ? `at ${req.eventTime}` : ''}
-                                            {req.remarks ? ` (${req.remarks})` : ''}
-                                        </p>
+                                    <div className={Array.isArray(req.multipleEvents) && req.multipleEvents.length > 0 ? 'col-span-2' : ''}>
+                                        <p className="text-xs text-slate-500 font-medium uppercase">{Array.isArray(req.multipleEvents) && req.multipleEvents.length > 0 ? 'Dates & Remarks' : 'Date & Time'}</p>
+                                        {Array.isArray(req.multipleEvents) && req.multipleEvents.length > 0 ? (
+                                            <div className="space-y-1 mt-0.5">
+                                                {req.multipleEvents.map((item, idx) => (
+                                                    <p key={item.id || idx} className="text-sm font-bold text-slate-800">
+                                                        {item.typeName ? `${item.typeName}: ` : ''}
+                                                        {item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}{item.time ? ` at ${item.time}` : ''}
+                                                        {String(item.remarks || '').trim() && <span className="block text-xs font-medium italic text-slate-500">📝 {item.remarks}</span>}
+                                                    </p>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm font-bold text-slate-800">
+                                                {req.eventDate ? new Date(req.eventDate).toLocaleDateString() : 'N/A'} {req.eventTime ? `at ${req.eventTime}` : ''}
+                                                {req.remarks ? ` (${req.remarks})` : ''}
+                                            </p>
+                                        )}
                                     </div>
                                     <div>
                                         <p className="text-xs text-slate-500 font-medium uppercase">Total / Advance</p>
@@ -191,12 +235,12 @@ const EventRequests = () => {
                                     </div>
                                 )}
 
-                                {req.eventInfo && (
+                                {/* Customer's event details: ONLY the fields they filled (same as the other screens). */}
+                                {getEventDetailRows(req.eventInfo || {}).length > 0 && (
                                     <div className="mt-3 grid sm:grid-cols-2 lg:grid-cols-4 gap-3 rounded-xl border border-slate-200 bg-white p-4">
-                                        {req.eventInfo.gender && <div><p className="text-[10px] font-bold uppercase text-slate-500">Gender</p><p className="text-sm font-semibold text-slate-800 capitalize">{req.eventInfo.gender}</p></div>}
-                                        {req.eventInfo.dateOfBirth && <div><p className="text-[10px] font-bold uppercase text-slate-500">Date of Birth</p><p className="text-sm font-semibold text-slate-800">{req.eventInfo.dateOfBirth}</p></div>}
-                                        {req.eventInfo.anniversaryDate && <div><p className="text-[10px] font-bold uppercase text-slate-500">Anniversary Date</p><p className="text-sm font-semibold text-slate-800">{req.eventInfo.anniversaryDate}</p></div>}
-                                        {req.eventInfo.functionLocation && <div><p className="text-[10px] font-bold uppercase text-slate-500">Function Location</p><p className="text-sm font-semibold text-slate-800">{req.eventInfo.functionLocation}</p></div>}
+                                        {getEventDetailRows(req.eventInfo || {}).map(([label, value]) => (
+                                            <div key={label}><p className="text-[10px] font-bold uppercase text-slate-500">{label}</p><p className="text-sm font-semibold text-slate-800 break-words">{value}</p></div>
+                                        ))}
                                     </div>
                                 )}
 
