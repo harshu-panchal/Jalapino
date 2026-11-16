@@ -1144,7 +1144,7 @@ const PlanMyEventPage = () => {
                                         {dateMode === 'multiple' && (
                                             <>
                                                 <div className="flex flex-col gap-1">
-                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Select Date</label>
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Booking Date</label>
                                                     <input
                                                         type="date"
                                                         min={new Date().toISOString().split('T')[0]}
@@ -1154,7 +1154,7 @@ const PlanMyEventPage = () => {
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-1 min-w-[140px]">
-                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time</label>
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                     <input
                                                         type="time"
                                                         value={multiInputTime}
@@ -1219,7 +1219,7 @@ const PlanMyEventPage = () => {
                                         {(dateMode === 'advancedSlot' || dateMode === 'advanced') && (
                                             <>
                                                 <div className="flex flex-col gap-1 min-w-[160px]">
-                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Start Date</label>
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Booking Start Date</label>
                                                     <input
                                                         type="date"
                                                         value={filterDate}
@@ -1229,7 +1229,7 @@ const PlanMyEventPage = () => {
                                                     />
                                                 </div>
                                                 <div className="flex flex-col gap-1 min-w-[160px]">
-                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 End Date</label>
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Booking End Date</label>
                                                     <input
                                                         type="date"
                                                         value={filterEndDate}
@@ -1240,7 +1240,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                                 {dateMode === 'advancedSlot' && (
                                                     <div className="flex flex-col gap-1 min-w-[180px]">
-                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time Slot</label>
+                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                         <select value={filterTime} onChange={e => setFilterTime(e.target.value)} className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
                                                             <option value="">-- Select Slot --</option>
                                                             {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM"].map(slot => (
@@ -1251,7 +1251,7 @@ const PlanMyEventPage = () => {
                                                 )}
                                                 {dateMode === 'advanced' && (
                                                     <div className="flex flex-col gap-1 min-w-[180px]">
-                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time</label>
+                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                         <input
                                                             type="time"
                                                             value={filterTime}
@@ -1265,7 +1265,7 @@ const PlanMyEventPage = () => {
                                         {(dateMode === 'standardSlot' || dateMode === 'standard') && (
                                             <>
                                                 <div className="flex flex-col gap-1 min-w-[160px]">
-                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Date</label>
+                                                    <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">📅 Booking Date</label>
                                                     <input
                                                         type="date"
                                                         value={filterDate}
@@ -1276,7 +1276,7 @@ const PlanMyEventPage = () => {
                                                 </div>
                                                 {dateMode === 'standardSlot' && (
                                                     <div className="flex flex-col gap-1 min-w-[180px]">
-                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time Slot</label>
+                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                         <select value={filterTime} onChange={e => setFilterTime(e.target.value)} className="border border-amber-300 rounded-xl px-3 py-2 text-sm font-semibold bg-white text-slate-700 outline-none focus:ring-2 focus:ring-amber-400 cursor-pointer">
                                                             <option value="">-- Select Slot --</option>
                                                             {["07:00 AM - 08:00 AM", "08:00 AM - 09:00 AM", "09:00 AM - 10:00 AM", "10:00 AM - 11:00 AM", "11:00 AM - 12:00 PM", "12:00 PM - 01:00 PM", "01:00 PM - 02:00 PM", "02:00 PM - 03:00 PM", "03:00 PM - 04:00 PM"].map(slot => (
@@ -1287,7 +1287,7 @@ const PlanMyEventPage = () => {
                                                 )}
                                                 {dateMode === 'standard' && (
                                                     <div className="flex flex-col gap-1 min-w-[180px]">
-                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Time</label>
+                                                        <label className="text-[10px] font-black text-amber-700 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                         <input
                                                             type="time"
                                                             value={filterTime}

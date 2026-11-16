@@ -1716,7 +1716,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {dateMode === 'multiple' && (
                                     <>
                                         <div className="flex flex-col gap-1 min-w-[150px]">
-                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Event Date</label>
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Booking Date</label>
                                             <input
                                                 type="date"
                                                 value={multiInputDate}
@@ -1726,7 +1726,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1 min-w-[130px]">
-                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time</label>
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                             <input
                                                 type="time"
                                                 value={multiInputTime}
@@ -1810,7 +1810,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {(dateMode === 'advancedSlot' || dateMode === 'advanced') && (
                                     <>
                                         <div className="flex flex-col gap-1 min-w-[150px]">
-                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Start Date</label>
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Booking Start Date</label>
                                             <input
                                                 type="date"
                                                 value={activeDate}
@@ -1820,7 +1820,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             />
                                         </div>
                                         <div className="flex flex-col gap-1 min-w-[150px]">
-                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 End Date</label>
+                                            <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">📅 Booking End Date</label>
                                             <input
                                                 type="date"
                                                 value={activeEndDate}
@@ -1846,7 +1846,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         )}
                                         {dateMode === 'advanced' && (
                                             <div className="flex flex-col gap-1 min-w-[140px]">
-                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time</label>
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                 <input
                                                     type="time"
                                                     value={activeTime}
@@ -1896,7 +1896,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         )}
                                         {dateMode === 'standard' && (
                                             <div className="flex flex-col gap-1 min-w-[140px]">
-                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Time</label>
+                                                <label className="text-[10px] font-black text-amber-800 uppercase tracking-wider">🕐 Booking Time Slot</label>
                                                 <input
                                                     type="time"
                                                     value={activeTime}
