@@ -134,6 +134,9 @@ export const initSocket = (io) => {
               text: text,
               isRead: false
           };
+          // First message from the customer to this seller -> alert the seller.
+          const isFirstCustomerMessage = newMessage.sender === 'customer'
+              && !(session.messages || []).some(m => m.sender === 'customer');
 
           session.messages.push(newMessage);
           session.lastMessageAt = new Date();
@@ -155,6 +158,20 @@ export const initSocket = (io) => {
           // Seller's inbox updates live even when this chat is not open.
           if (payload.sender === 'customer') {
               _io.to(`seller:${sellerId}`).emit("chat_inbox_update", payload);
+          }
+          if (isFirstCustomerMessage) {
+              try {
+                  const User = mongoose.model('User');
+                  const customer = await User.findById(customerId).select('name').lean().catch(() => null);
+                  const { emitSellerNotification } = await import('../modules/notifications/notification.service.js');
+                  emitSellerNotification('NEW_CUSTOMER_CHAT', {
+                      userId: sellerId,
+                      sessionId: session._id,
+                      message: `${customer?.name || 'A customer'} started a chat with you: "${String(text).slice(0, 80)}"`,
+                  });
+              } catch (notifyError) {
+                  console.error('New chat notification error:', notifyError);
+              }
           }
       } catch (err) {
           console.error("Error saving chat message:", err);

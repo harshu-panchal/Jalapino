@@ -6,6 +6,12 @@ const citySchema = new mongoose.Schema({
         required: true,
         trim: true
     },
+    // District of the city (inside the state). Checked together with state + city in admin.
+    district: {
+        type: String,
+        trim: true,
+        default: ''
+    },
     cityName: {
         type: String,
         required: true,

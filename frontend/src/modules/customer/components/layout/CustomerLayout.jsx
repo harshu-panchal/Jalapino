@@ -121,9 +121,9 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
     // Route-based visibility logic
     const path = location.pathname.replace(/\/$/, '') || '/';
 
-    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
-    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
-    const hideCartRoutes = ['/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
+    const hideHeaderRoutes = ['/', '/categories', '/orders', '/transactions', '/profile', '/profile/edit', '/wishlist', '/addresses', '/wallet', '/support', '/privacy', '/about', '/terms', '/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/plan-my-event/wishlist', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
+    const hideBottomNavRoutes = ['/checkout', '/search', '/chat', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/plan-my-event/wishlist', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
+    const hideCartRoutes = ['/checkout', '/search', '/chat', '/reels', '/spin', '/refer-earn', '/plan-my-event', '/plan-my-event/categories', '/plan-my-event/sellers', '/plan-my-event/packages', '/plan-my-event/checkout', '/plan-my-event/venues', '/plan-my-event/wishlist', '/profile/visit-requests', '/plan-my-event/booking', '/profile/tickets'];
 
 
     // If props are passed, use them. Otherwise, use route-based logic.
@@ -160,7 +160,7 @@ const CustomerLayout = ({ children, showHeader: showHeaderProp, fullHeight = fal
                 </>
             )}
 
-            <main className={cn("flex-1 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage || isPlanMyEventPage) ? "pb-0" : "pb-16")}>
+            <main className={cn("flex-1 flex flex-col min-h-0", !showHeader && "pt-0", (fullHeight || path === '/reels' || path === '/spin' || path === '/refer-earn' || isCategoryPage || isPlanMyEventPage) ? "pb-0" : "pb-[calc(70px+env(safe-area-inset-bottom))] md:pb-16")}>
                 <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
                     {children}
                 </div>

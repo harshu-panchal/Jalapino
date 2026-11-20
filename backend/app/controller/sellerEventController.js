@@ -2,7 +2,7 @@ import EventBooking from '../models/event/EventBooking.js';
 import GeneralBooking from '../models/event/GeneralBooking.js';
 import MemberTicket from '../models/event/MemberTicket.js';
 import handleResponse from '../utils/helper.js';
-import { getEventEndIST, formatIST } from '../utils/advanceBooking.js';
+import { getEventEndIST, getEventStartIST, formatIST, isEventBookingCalendarLocked } from '../utils/advanceBooking.js';
 
 // Get dashboard stats
 export const getEventDashboardStats = async (req, res) => {
@@ -38,7 +38,8 @@ export const getEventDashboardStats = async (req, res) => {
             const sellerService = booking.services.find(s => s.seller?.toString() === sellerId?.toString());
             let mappedStatus = 'pending';
             if (sellerService) {
-                if (sellerService.status === 'ACCEPTED') mappedStatus = 'confirmed';
+                // Accepted but customer not paid yet -> still a request (same as Reservations screen).
+                if (sellerService.status === 'ACCEPTED') mappedStatus = isEventBookingCalendarLocked(booking) ? 'confirmed' : 'pending';
                 if (sellerService.status === 'REJECTED') mappedStatus = 'rejected';
                 if (sellerService.status === 'COMPLETED') mappedStatus = 'completed';
             }
@@ -222,11 +223,15 @@ export const updateReservationStatus = async (req, res) => {
             return handleResponse(res, 404, 'Reservation not found');
         }
 
-        // Service can be marked completed only after the booked date & time is over.
+        // Service can be marked completed only after the booked slot's start date & time.
         if (status === 'completed') {
-            const eventEnd = getEventEndIST(booking);
-            if (eventEnd && Date.now() < eventEnd.getTime()) {
-                return handleResponse(res, 400, `You can mark this booking as completed only after the event ends (${formatIST(eventEnd)}).`);
+            // Only a CONFIRMED (paid) booking can be completed.
+            if (!isEventBookingCalendarLocked(booking)) {
+                return handleResponse(res, 400, 'This booking can be marked as completed only after the customer has made the payment.');
+            }
+            const eventStart = getEventStartIST(booking);
+            if (eventStart && Date.now() < eventStart.getTime()) {
+                return handleResponse(res, 400, `You can mark this booking as completed only after the event starts (${formatIST(eventStart)}).`);
             }
         }
 
@@ -292,7 +297,7 @@ export const updateReservationStatus = async (req, res) => {
                             emitCustomerNotification(NOTIFICATION_EVENTS.EVENT_BOOKING_REMAINING_PAYMENT_DUE, {
                                 userId: booking.customer,
                                 bookingId: booking._id,
-                                message: `The seller has completed your event service. Please pay the remaining balance of ₹${remainingAmount}.`,
+                                message: `Your event service has started / been delivered by the seller. Please pay the remaining balance of ₹${remainingAmount}.`,
                                 data: { remainingAmount },
                             });
                         }
@@ -405,7 +410,18 @@ export const confirmCODPayment = async (req, res) => {
         // Record the cash the seller collected (the unpaid balance), once.
         // Any online (Razorpay) part is already in amountPaid.
         const total = Number(booking.totalAmount) || 0;
-        const codPart = Math.round(Math.max(0, total - (Number(booking.amountPaid) || 0)) * 100) / 100;
+        // part = 'advance': seller got only the ADVANCE in cash (same advance as online).
+        // Otherwise: the whole unpaid balance in cash (as before).
+        const alreadyPaid = Number(booking.amountPaid) || 0;
+        const advancePct = Number(booking.advancePaymentPercentage) > 0 ? Number(booking.advancePaymentPercentage) : 30;
+        const advanceAmount = Number(booking.advancePaymentAmount) > 0
+            ? Number(booking.advancePaymentAmount)
+            : Math.round((total * advancePct) / 100);
+        const isAdvance = String(req.body?.part || '').toLowerCase() === 'advance'
+            && alreadyPaid <= 0 && advanceAmount > 0 && advanceAmount < total;
+        const codPart = isAdvance
+            ? Math.round(advanceAmount * 100) / 100
+            : Math.round(Math.max(0, total - alreadyPaid) * 100) / 100;
         if (codPart > 0) {
             booking.amountPaid = Math.round(((Number(booking.amountPaid) || 0) + codPart) * 100) / 100;
             booking.codAmountCollected = Math.round(((Number(booking.codAmountCollected) || 0) + codPart) * 100) / 100;
@@ -415,7 +431,7 @@ export const confirmCODPayment = async (req, res) => {
             booking.refundBaseEventTime = booking.eventTime;
         }
         const wasAlreadyPaid = booking.paymentStatus === 'PAID';
-        booking.paymentStatus = 'PAID';
+        booking.paymentStatus = isAdvance ? 'ADVANCE_PAID' : 'PAID';
         if (booking.overallStatus === 'PENDING' || booking.overallStatus === 'PAYMENT_PENDING') {
             booking.overallStatus = 'CONFIRMED';
         }
@@ -433,7 +449,9 @@ export const confirmCODPayment = async (req, res) => {
                 emitCustomerNotification('EVENT_BOOKING_PAYMENT_CONFIRMED', {
                     userId: booking.customer,
                     bookingId: booking._id,
-                    message: `Cash payment of ₹${codPart.toLocaleString('en-IN')} for booking ${booking.bookingId} has been received by the seller.`
+                    message: isAdvance
+                        ? `Advance cash payment of ₹${codPart.toLocaleString('en-IN')} for booking ${booking.bookingId} has been received by the seller. Balance due: ₹${Math.max(0, total - codPart).toLocaleString('en-IN')} (cash).`
+                        : `Cash payment of ₹${codPart.toLocaleString('en-IN')} for booking ${booking.bookingId} has been received by the seller.`
                 });
             } catch (notifyError) {
                 console.error('COD payment notification error:', notifyError);
@@ -443,7 +461,9 @@ export const confirmCODPayment = async (req, res) => {
         return handleResponse(res, 200, 'COD payment confirmed successfully', {
             _id: booking._id,
             paymentStatus: booking.paymentStatus,
-            overallStatus: booking.overallStatus
+            overallStatus: booking.overallStatus,
+            amountPaid: Number(booking.amountPaid) || 0,
+            codAmountCollected: Number(booking.codAmountCollected) || 0
         });
     } catch (error) {
         console.error('Error confirming COD payment:', error);

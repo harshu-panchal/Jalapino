@@ -391,7 +391,35 @@ function eventDefinition(eventType) {
         role: NOTIFICATION_ROLES.CUSTOMER,
         recipientIds: (payload) => normalizeIdList(payload.userId),
         title: () => "Remaining Payment Due",
-        body: (payload) => payload.message || "Your event service is complete. Please pay the remaining balance.",
+        body: (payload) => payload.message || "Your event service has started / been delivered by the seller. Please pay the remaining balance.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_CUSTOMIZATION_REQUEST:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "New Customization Request",
+        body: (payload) => payload.message || "A customer sent a customization request.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_CUSTOMIZATION_UPDATE:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Customization Update",
+        body: (payload) => payload.message || "A customization request was updated.",
+      };
+    case NOTIFICATION_EVENTS.EVENT_CUSTOMIZATION_CUSTOMER:
+      return {
+        role: NOTIFICATION_ROLES.CUSTOMER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "Customization & Quotation",
+        body: (payload) => payload.message || "Your customization request was updated.",
+      };
+    case NOTIFICATION_EVENTS.NEW_CUSTOMER_CHAT:
+      return {
+        role: NOTIFICATION_ROLES.SELLER,
+        recipientIds: (payload) => normalizeIdList(payload.userId),
+        title: () => "New Chat Message",
+        body: (payload) => payload.message || "A customer has started a chat with you.",
       };
     case NOTIFICATION_EVENTS.GST_LIMIT_REACHED:
       return {
@@ -477,6 +505,30 @@ function eventData(eventType, payload = {}, role) {
       eventType,
       link: `${baseUrl}/seller/profile`,
       type: "document_expiry",
+      ...(payload.data || {}),
+    };
+  }
+
+  if (
+    eventType === NOTIFICATION_EVENTS.EVENT_CUSTOMIZATION_REQUEST ||
+    eventType === NOTIFICATION_EVENTS.EVENT_CUSTOMIZATION_UPDATE ||
+    eventType === NOTIFICATION_EVENTS.EVENT_CUSTOMIZATION_CUSTOMER
+  ) {
+    const requestId = String(payload.requestId || "").trim() || undefined;
+    const baseUrl = getFrontendBaseUrl();
+    // Seller -> Customizations page; customer -> My Orders > Events (customization list).
+    const link = role === NOTIFICATION_ROLES.SELLER
+      ? `${baseUrl}/seller/customizations${requestId ? `?id=${encodeURIComponent(requestId)}` : ""}`
+      : `${baseUrl}/orders?tab=events${requestId ? `&customization=${encodeURIComponent(requestId)}` : ""}`;
+    return { eventType, requestId, link, ...(payload.data || {}) };
+  }
+
+  if (eventType === NOTIFICATION_EVENTS.NEW_CUSTOMER_CHAT) {
+    const sessionId = String(payload.sessionId || "").trim() || undefined;
+    return {
+      eventType,
+      sessionId,
+      link: `${getFrontendBaseUrl()}/seller/chat-inbox${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ""}`,
       ...(payload.data || {}),
     };
   }

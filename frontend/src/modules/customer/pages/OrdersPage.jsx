@@ -8,6 +8,7 @@ import { useSettings } from '@/core/context/SettingsContext';
 import { toast } from 'sonner';
 import { useLocation } from '../context/LocationContext';
 import { useCustomerMode } from '../context/CustomerModeContext';
+import CustomizationRequestsList from '../components/events/CustomizationRequestsList';
 
 // "Your Event Details" as [label, value] rows, ONLY for fields the customer filled
 // (same rows as the Plan Summary and Checkout).
@@ -27,7 +28,7 @@ const getEventDetailRows = (info = {}) => {
             ['GST Number', info?.corporateGstNumber],
         ] : type === 'couple' ? [
             ['Couple Names', info?.coupleNames || info?.primaryContactName],
-            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+            ['Marriage Anniversary Date', fmtDate(info?.anniversaryDate)],
         ] : [
             ['Primary Contact', info?.primaryContactName || info?.name],
             ['Gender', cap(info?.gender)],
@@ -408,7 +409,14 @@ const OrdersPage = () => {
             heading('Seller');
             row('Name', seller.name || seller.businessName || 'Assigned Seller');
             if (seller.phone || seller.mobile) row('Mobile', seller.phone || seller.mobile);
-            if (service.category?.name) row('Service', service.category.name);
+            // Company name + address of the seller (from DB)
+            const companyName = seller.shopName || seller.businessName || service.category?.name;
+            if (companyName) row('Company Name', companyName);
+            const sellerAddress = [seller.address, seller.locality, seller.city, seller.pincode]
+                .map(v => String(v || '').trim())
+                .filter((v, i, arr) => v && !arr.slice(0, i).some(prev => prev.toLowerCase().includes(v.toLowerCase())))
+                .join(', ');
+            if (sellerAddress) row('Address', sellerAddress);
             y += 2; line();
 
             heading('Event Details');
@@ -420,7 +428,12 @@ const OrdersPage = () => {
                     const remarks = String(item.remarks || '').trim();
                     row(`Date ${idx + 1}`, `${item.typeName ? `${item.typeName}: ` : ''}${dateText}${item.time ? ` at ${item.time}` : ''}${remarks ? ` - ${remarks}` : ''}`);
                 });
-            } else if (booking.eventDate) row('Event Date', `${new Date(booking.eventDate).toLocaleDateString('en-IN')}${booking.eventTime ? ` at ${booking.eventTime}` : ''}`);
+            } else if (booking.eventDate) {
+                // Same labels as the booking form / order card: Booking Date + Booking Time Slot
+                row('Booking Date', new Date(booking.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }));
+                if (booking.eventTime) row('Booking Time Slot', booking.eventTime);
+                if (String(booking.remarks || '').trim()) row('Remarks / Occasion', String(booking.remarks).trim());
+            }
             const rows = getEventDetailRows(booking.eventInfo || {});
             const address = typeof booking.location === 'string' ? booking.location : booking.location?.address;
             if (!rows.some(([label]) => label.endsWith('Location')) && address && !['Pending Address', 'Pending Location'].includes(address)) rows.push(['Location', address]);
@@ -965,6 +978,9 @@ const OrdersPage = () => {
                     })
                 )}
 
+                {/* Customization & Quotation requests (separate from bookings) */}
+                {activeTab === 'events' && <CustomizationRequestsList />}
+
                 {activeTab === 'events' && filteredEventBookings.length === 0 && (
                     <div className="flex flex-col items-center justify-center py-20 text-center">
                         <Clock size={56} className="text-slate-300 mb-4" />
@@ -994,8 +1010,10 @@ const OrdersPage = () => {
                                             Order ID: #{booking.bookingId || booking._id}
                                         </span>
                                     </div>
+                                    {/* Event date & time slot the customer booked (same date/slot the seller sees) */}
                                     <p className="text-xs text-slate-500 mt-0.5">
-                                        {new Date(booking.eventDate).toLocaleDateString()} at {booking.eventTime}
+                                        <span className="font-semibold text-slate-600">Booking Date:</span> {booking.eventDate ? new Date(booking.eventDate).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-'}
+                                        {booking.eventTime ? <><span className="mx-1">·</span><span className="font-semibold text-slate-600">Booking Time Slot:</span> {booking.eventTime}</> : null}
                                     </p>
                                 </div>
                                 <div className="flex flex-col items-end gap-1 shrink-0">
@@ -1005,7 +1023,7 @@ const OrdersPage = () => {
                                     {/* Booking date & time (same as the seller's reservation card) */}
                                     {booking.createdAt && !isNaN(new Date(booking.createdAt).getTime()) && (
                                         <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap">
-                                            {`${new Date(booking.createdAt).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })} / ${new Date(booking.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}`}
+                                            {`Ordered on: ${new Date(booking.createdAt).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${new Date(booking.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`}
                                         </span>
                                     )}
                                 </div>
@@ -1016,9 +1034,9 @@ const OrdersPage = () => {
                                     <p className="mb-1.5 font-bold uppercase tracking-wider text-amber-800">Dates & Remarks</p>
                                     <div className="space-y-1">
                                         {booking.multipleEvents.map((item, idx) => (
-                                            <div key={item.id || idx} className="flex flex-wrap justify-between gap-2 text-slate-700">
+                                            <div key={item.id || idx} className="flex flex-col gap-0.5 text-slate-700 sm:flex-row sm:justify-between sm:gap-2">
                                                 <span className="font-semibold">{item.typeName || `Date ${idx + 1}`}</span>
-                                                <span className="font-semibold text-right">
+                                                <span className="min-w-0 break-words font-semibold sm:text-right">
                                                     {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` at ${item.time}` : ''}`}
                                                     {String(item.remarks || '').trim() && <span className="block text-[11px] font-medium italic text-slate-500">📝 {item.remarks}</span>}
                                                 </span>
@@ -1037,7 +1055,7 @@ const OrdersPage = () => {
                                         rows.push(['Location', address]);
                                     }
                                     return rows.map(([label, value]) => (
-                                        <p key={label}><span className="font-medium">{label}:</span> {value}</p>
+                                        <p key={label} className="break-words"><span className="font-medium">{label}:</span> {value}</p>
                                     ));
                                 })()}
                             </div>
@@ -1141,22 +1159,42 @@ const OrdersPage = () => {
                                     </span>
                                 </div>
                                 <p className="text-right text-[10px] font-medium text-slate-400 -mt-1">Inclusive of all taxes</p>
-                                {booking.paymentStatus === 'ADVANCE_PAID' && (
-                                    <>
-                                        <div className="flex justify-between items-center">
-                                            <span className="text-[11px] font-medium text-slate-400">Advance Paid</span>
-                                            <span className="text-xs font-bold text-emerald-600">
-                                            - ₹{Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100).toLocaleString()}
-                                            </span>
+                                {/* Amount actually paid (same as seller's booking view): online / COD cash / total / balance */}
+                                {booking.overallStatus !== 'CANCELLED' && (() => {
+                                    const total = Number(booking.totalAmount || 0);
+                                    const mode = String(booking.paymentMode || 'ONLINE').toUpperCase();
+                                    const status = String(booking.paymentStatus || 'PENDING').toUpperCase();
+                                    let cod = Number(booking.codAmountCollected) || 0;
+                                    let online = Math.max(0, (Number(booking.amountPaid) || 0) - cod);
+                                    if (cod === 0 && online === 0) {
+                                        if (status === 'PAID') { if (mode === 'COD') cod = total; else online = total; }
+                                        else if (status === 'ADVANCE_PAID') online = Number(booking.advancePaymentAmount) > 0 ? Number(booking.advancePaymentAmount) : Math.round((total * getEventAdvancePercentage(booking)) / 100);
+                                    }
+                                    if (mode === 'COD' && status === 'PAID' && cod === 0 && online < total) cod = total - online;
+                                    const paid = Math.min(total, cod + online);
+                                    const balance = Math.max(0, total - paid);
+                                    // COD booked, nothing paid yet: advance to give in cash (same advance as online).
+                                    const advancePct = Number(booking.advancePaymentPercentage) > 0 ? Number(booking.advancePaymentPercentage) : 30;
+                                    const codAdvance = Number(booking.advancePaymentAmount) > 0 ? Number(booking.advancePaymentAmount) : Math.round((total * advancePct) / 100);
+                                    const showCodAdvance = mode === 'COD' && paid <= 0 && codAdvance > 0 && codAdvance < total && booking.overallStatus !== 'PAYMENT_PENDING';
+                                    const rows = [
+                                        showCodAdvance && [`Advance to pay in Cash (${advancePct}%)`, codAdvance, 'text-purple-700'],
+                                        online > 0 && ['Paid Online', online, 'text-purple-700'],
+                                        cod > 0 && ['Paid in Cash (COD)', cod, 'text-emerald-700'],
+                                        ['Total Paid', paid, 'text-slate-900'],
+                                        balance > 0 && [mode === 'COD' ? 'Balance Due (Cash)' : 'Balance Due', balance, 'text-amber-700'],
+                                    ].filter(Boolean);
+                                    return (
+                                        <div className="mt-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 space-y-1">
+                                            {rows.map(([label, value, color]) => (
+                                                <div key={label} className="flex justify-between items-center gap-3">
+                                                    <span className="text-[11px] font-semibold text-slate-500">{label}</span>
+                                                    <span className={`text-xs font-extrabold ${color}`}>₹{Number(value).toLocaleString('en-IN')}/-</span>
+                                                </div>
+                                            ))}
                                         </div>
-                                        <div className="flex justify-between items-center border-t border-slate-50 pt-1 mt-1">
-                                            <span className="text-[11px] font-bold text-slate-600">Remaining Balance</span>
-                                            <span className="text-xs font-bold text-slate-800">
-                                            ₹{(booking.totalAmount - Math.round((booking.totalAmount * getEventAdvancePercentage(booking)) / 100)).toLocaleString()}
-                                            </span>
-                                        </div>
-                                    </>
-                                )}
+                                    );
+                                })()}
                             </div>
 
                             {booking.overallStatus === 'PAYMENT_PENDING' && (

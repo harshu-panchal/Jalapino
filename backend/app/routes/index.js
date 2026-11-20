@@ -57,6 +57,7 @@ import bookingManagementRoute from "./bookingManagementRoutes.js";
 import venueVisitRoute from "./venueVisitRoutes.js";
 import generalBookingRoute from "./generalBookingRoutes.js";
 import chatRoute from "./chatRoutes.js";
+import customizationRoute from "./customizationRoutes.js";
 
 const setupRoutes = (app) => {
     const router = express.Router();
@@ -135,6 +136,7 @@ const setupRoutes = (app) => {
     router.use("/", venueVisitRoute);
     router.use("/", generalBookingRoute);
     router.use("/chats", chatRoute);
+    router.use("/customizations", customizationRoute);
     
     // Add live streaming routes
     router.use("/live", liveStreamingRoute);

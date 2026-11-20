@@ -17,7 +17,8 @@ import {
     updateFacility,
     deleteFacility
 } from '../controller/adminEventConfigController.js';
-import { getCities, createCity, updateCity, deleteCity } from '../controller/adminCityController.js';
+import { getCities, createCity, updateCity, deleteCity, verifyCityLocation } from '../controller/adminCityController.js';
+import { verifyToken, allowRoles } from '../middleware/authMiddleware.js';
 import { getAllEventBookings, deleteAdminEventBooking, getAllVenueBookings, deleteAdminVenueBooking } from '../controller/adminEventBookingController.js';
 
 const router = express.Router();
@@ -50,6 +51,8 @@ router.delete('/facilities/:id', deleteFacility);
 
 // City Management
 router.get('/cities', getCities);
+// State + District + City check (calls Google, so admin login is required)
+router.get('/cities/verify-location', verifyToken, allowRoles('admin'), verifyCityLocation);
 router.post('/cities', createCity);
 router.put('/cities/:id', updateCity);
 router.delete('/cities/:id', deleteCity);

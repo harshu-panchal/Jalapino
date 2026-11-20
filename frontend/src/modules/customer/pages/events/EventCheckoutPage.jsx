@@ -79,7 +79,7 @@ const getEventDetailRows = (info = {}) => {
             ['GST Number', info?.corporateGstNumber],
         ] : type === 'couple' ? [
             ['Couple Names', info?.coupleNames || info?.primaryContactName],
-            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+            ['Marriage Anniversary Date', fmtDate(info?.anniversaryDate)],
         ] : [
             ['Primary Contact', info?.primaryContactName || info?.name],
             ['Gender', cap(info?.gender)],
@@ -246,9 +246,9 @@ const EventCheckoutPage = () => {
                                     <span className="text-slate-500">Dates & Remarks</span>
                                     <div className="mt-1 space-y-1">
                                         {eventData.multipleEvents.map((item, idx) => (
-                                            <div key={item.id || idx} className="flex justify-between gap-3 rounded-lg bg-slate-50 px-2 py-1">
+                                            <div key={item.id || idx} className="flex flex-col gap-0.5 rounded-lg bg-slate-50 px-2 py-1 sm:flex-row sm:justify-between sm:gap-3">
                                                 <span className="font-semibold text-slate-700">{item.typeName || ''}</span>
-                                                <span className="font-semibold text-slate-800 text-right">
+                                                <span className="min-w-0 break-words font-semibold text-slate-800 sm:text-right">
                                                     {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` at ${item.time}` : ""}`}
                                                     {String(item.remarks || '').trim() && <span className="block text-xs font-medium italic text-slate-500">📝 {item.remarks}</span>}
                                                 </span>
@@ -257,12 +257,28 @@ const EventCheckoutPage = () => {
                                     </div>
                                 </div>
                             ) : eventData?.date && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="text-slate-500">Date & Time</span>
-                                    <span className="font-semibold text-slate-800 text-right">
-                                        {`${eventData.date}${eventData.time ? ` at ${eventData.time}` : ''}${eventData.remarks ? ` (${eventData.remarks})` : ''}`}
-                                    </span>
-                                </div>
+                                <>
+                                    <div className="flex justify-between gap-4">
+                                        <span className="shrink-0 text-slate-500">Booking Date</span>
+                                        <span className="font-semibold text-slate-800 text-right">
+                                            {/^d{4}-d{2}-d{2}/.test(String(eventData.date))
+                                                ? new Date(`${String(eventData.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                                : eventData.date}
+                                        </span>
+                                    </div>
+                                    {eventData.time && (
+                                        <div className="flex justify-between gap-4">
+                                            <span className="shrink-0 text-slate-500">Booking Time Slot</span>
+                                            <span className="font-semibold text-slate-800 text-right">{eventData.time}</span>
+                                        </div>
+                                    )}
+                                    {String(eventData.remarks || '').trim() && (
+                                        <div className="flex justify-between gap-4">
+                                            <span className="shrink-0 text-slate-500">Remarks / Occasion</span>
+                                            <span className="min-w-0 break-words font-semibold text-slate-800 text-right">{eventData.remarks}</span>
+                                        </div>
+                                    )}
+                                </>
                             )}
                             {eventData?.eventInfo?.noOfGuests && (
                                 <div className="flex justify-between">
@@ -276,7 +292,7 @@ const EventCheckoutPage = () => {
                                 <div className="flex justify-between items-center bg-purple-50 p-2.5 rounded-xl border border-purple-200">
                                     <span className="text-purple-900 font-bold text-xs">📍 Selected Shop/Area</span>
                                     <span className="font-extrabold text-purple-700 text-xs">
-                                        {selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`} {selectedShop.bookingType ? `(${selectedShop.bookingType})` : ''}
+                                        {selectedShop.uniqueCode || `Shop ${selectedShop.shopNo}`}
                                     </span>
                                 </div>
                             )}
@@ -319,7 +335,7 @@ const EventCheckoutPage = () => {
                                         </span>
                                         {(product.selectedVariant?.minimum || product.selectedVariant?.maximum || product.selectedVariant?.totalCapacity) && (
                                             <span className="text-[10px] font-bold text-purple-700 pl-2">
-                                                👥 Cap: Min = {product.selectedVariant.minimum || 1}, Max = {product.selectedVariant.maximum || product.selectedVariant.totalCapacity || 'No limit'} ({String(product.selectedVariant.bookingType || 'MULTIPLE').toUpperCase()})
+                                                👥 Cap: Min = {product.selectedVariant.minimum || 1}, Max = {product.selectedVariant.maximum || product.selectedVariant.totalCapacity || 'No limit'}
                                             </span>
                                         )}
                                         {product.selectedAddOns?.length > 0 && (

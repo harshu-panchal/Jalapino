@@ -123,6 +123,35 @@ export const getEventEndIST = (booking) => {
     return ends.length ? new Date(Math.max(...ends.map(d => d.getTime()))) : null;
 };
 
+// When the booked slot STARTS, in India time (IST, +05:30).
+// Slot "10:30 AM - 4:00 PM" -> 10:30 AM; single time -> that time; no time -> start
+// of that day (00:00). For multiple dates the latest date's start counts.
+export const getEventStartIST = (booking) => {
+    const toDateStr = (value) => {
+        if (!value) return '';
+        const text = String(value);
+        if (/^d{4}-d{2}-d{2}/.test(text)) return text.slice(0, 10);
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+    };
+    const startOf = (dateValue, time) => {
+        const dateStr = toDateStr(dateValue);
+        if (!dateStr) return null;
+        const parts = String(time || '').split('-').map(p => p.trim()).filter(Boolean);
+        let startMin = parts.length ? parseTimeToMinutes(parts[0]) : null;
+        if (startMin === null) startMin = 0;
+        const hh = String(Math.floor(startMin / 60)).padStart(2, '0');
+        const mm = String(startMin % 60).padStart(2, '0');
+        const start = new Date(`${dateStr}T${hh}:${mm}:00+05:30`);
+        return Number.isNaN(start.getTime()) ? null : start;
+    };
+    const starts = [
+        startOf(booking?.eventDate, booking?.eventTime),
+        ...((booking?.multipleEvents || []).map(e => startOf(e?.date || booking?.eventDate, e?.time || booking?.eventTime))),
+    ].filter(Boolean);
+    return starts.length ? new Date(Math.max(...starts.map(d => d.getTime()))) : null;
+};
+
 export const formatIST = (date) => date
     ? date.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
     : '';

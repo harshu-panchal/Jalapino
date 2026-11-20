@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, LayoutGrid, ShoppingBag, User, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import CustomerNotificationBell from '../shared/CustomerNotificationBell';
 
 const navItems = [
     { label: 'Home', icon: Home, path: '/' },
@@ -24,7 +25,7 @@ const BottomNav = () => {
     return (
         <div 
             className={cn(
-                "fixed bottom-0 left-0 right-0 z-[500] flex items-center justify-around h-[70px] shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pb-[env(safe-area-inset-bottom)] transition-colors duration-300 md:hidden",
+                "fixed bottom-0 left-0 right-0 z-[500] flex items-center justify-around h-[calc(70px+env(safe-area-inset-bottom))] shadow-[0_-8px_30px_rgba(0,0,0,0.06)] px-4 pb-[env(safe-area-inset-bottom)] transition-colors duration-300 md:hidden",
                 isReelsPage ? "bg-black border-t border-slate-900" : "bg-white border-t border-gray-100"
             )}
         >
@@ -32,7 +33,21 @@ const BottomNav = () => {
                 const isActive = location.pathname === item.path ||
                     (item.path !== '/' && location.pathname.startsWith(item.path));
 
+                // Retail: notifications sit between Orders and Profile.
+                const bellBeforeProfile = !isPlanMyEventActive && item.label === 'Profile' ? (
+                    <div key="retail-notifications" className="flex-1 h-full">
+                        <CustomerNotificationBell
+                            category="retail"
+                            variant="bottomnav"
+                            className="w-full h-full"
+                            inactiveClassName={isReelsPage ? "text-slate-600" : "text-gray-400"}
+                        />
+                    </div>
+                ) : null;
+
                 return (
+                    <React.Fragment key={item.path}>
+                    {bellBeforeProfile}
                     <Link
                         key={item.path}
                         to={item.path}
@@ -79,6 +94,7 @@ const BottomNav = () => {
                             <div className="absolute -top-[1px] w-8 h-[3px] bg-primary rounded-full transition-opacity duration-300" />
                         )}
                     </Link>
+                    </React.Fragment>
                 );
             })}
         </div>

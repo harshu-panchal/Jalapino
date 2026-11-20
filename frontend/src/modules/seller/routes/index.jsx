@@ -53,6 +53,7 @@ const EventCalendar = React.lazy(() => import("../pages/event/EventCalendar"));
 
 const EventRequests = React.lazy(() => import("../pages/event/EventRequests"));
 const SellerChatInbox = React.lazy(() => import("../pages/event/SellerChatInbox"));
+const SellerCustomizations = React.lazy(() => import("../pages/event/SellerCustomizations"));
 
 const navItems = [
   { label: "Dashboard", path: "/seller", icon: HiOutlineSquares2X2, end: true },
@@ -86,6 +87,7 @@ const navItems = [
     icon: HiOutlineCurrencyDollar,
   },
   { label: "Messages", path: "/seller/chat-inbox", icon: HiOutlineChatBubbleLeftRight },
+  { label: "Customizations", path: "/seller/customizations", icon: HiOutlineClipboardDocumentList },
   { label: "Video Plans", path: "/seller/video-subscriptions", icon: HiOutlineVideoCamera },
   { label: "Physical Visits", path: "/seller/visit-requests", icon: HiOutlineCalendar },
   { label: "Ticket Scanner", path: "/seller/scanner", icon: HiOutlineClipboardDocumentList },
@@ -103,6 +105,7 @@ const eventNavItems = [
   { label: "Reservations", path: "/seller/reservations", icon: HiOutlineClipboardDocumentList },
   { label: "Calendar", path: "/seller/calendar", icon: HiOutlineCalendar },
   { label: "Messages", path: "/seller/chat-inbox", icon: HiOutlineChatBubbleLeftRight },
+  { label: "Customizations", path: "/seller/customizations", icon: HiOutlineClipboardDocumentList },
   { label: "Video Plans", path: "/seller/video-subscriptions", icon: HiOutlineVideoCamera },
   { label: "Physical Visits", path: "/seller/visit-requests", icon: HiOutlineCalendar },
   { label: "Ticket Scanner", path: "/seller/scanner", icon: HiOutlineClipboardDocumentList },
@@ -252,6 +255,7 @@ const SellerRoutes = () => {
         <Route path="/customer-images" element={<CustomerImageReview />} />
         <Route path="/advance-bookings" element={<AdvanceBookings />} />
         <Route path="/chat-inbox" element={<SellerChatInbox />} />
+        <Route path="/customizations" element={<SellerCustomizations />} />
         <Route path="/booking-management" element={<BookingManagement />} />
         <Route path="/visit-requests" element={<SellerVisitManagement />} />
         <Route path="/scanner" element={<QRScannerView />} />

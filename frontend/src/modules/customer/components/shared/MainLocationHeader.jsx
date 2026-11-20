@@ -11,6 +11,7 @@ import CustomOrderModal from "./CustomOrderModal";
 import { useSearch } from "../../context/SearchContext";
 import { useSettings } from "@core/context/SettingsContext";
 import SearchInput from "./SearchInput";
+import CustomerNotificationBell from "./CustomerNotificationBell";
 import { cn } from "@/lib/utils";
 import { applyCloudinaryTransform } from "@/core/utils/imageUtils";
 import { toast } from 'sonner';
@@ -573,7 +574,7 @@ const MainLocationHeader = ({
             onClick={() => (isPlanMyEventActive ? navigate("/orders?tab=events") : navigate("/checkout"))}
             className={cn(
               "absolute right-5 sm:right-6 md:right-8 z-20 w-12 h-12 sm:w-14 sm:h-14 md:w-20 md:h-20 cursor-pointer",
-              "top-[72px] sm:top-[76px] md:top-5",
+              "top-[72px] sm:top-[76px] md:top-1",
               !isSwitcherVisible && "pointer-events-none"
             )}>
             {cartAnimData ? (
@@ -644,23 +645,25 @@ const MainLocationHeader = ({
             {!hideSearchBar && (
               <div className="flex-1 max-w-[450px] lg:max-w-2xl px-6 flex items-center gap-3">
                 <SearchInput placeholder={searchPlaceholder} />
-                {/* Spin & Win Icon */}
-                <motion.div
-                  onClick={() => navigate('/spin')}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="w-11 h-11 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 border-2 border-amber-300 relative overflow-hidden"
-                  title="Spin & Win"
-                >
-                  <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
-                    <DotLottieReact
-                      src={spinWheelAnim}
-                      loop
-                      autoplay
-                      style={{ width: '100%', height: '100%' }}
-                    />
-                  </div>
-                </motion.div>
+                {/* Spin & Win Icon (Retail only, hidden in Plan My Event) */}
+                {!isPlanMyEventActive && (
+                  <motion.div
+                    onClick={() => navigate('/spin')}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="w-11 h-11 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 border-2 border-amber-300 relative overflow-hidden"
+                    title="Spin & Win"
+                  >
+                    <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
+                      <DotLottieReact
+                        src={spinWheelAnim}
+                        loop
+                        autoplay
+                        style={{ width: '100%', height: '100%' }}
+                      />
+                    </div>
+                  </motion.div>
+                )}
               </div>
             )}
 
@@ -676,14 +679,20 @@ const MainLocationHeader = ({
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-6 w-6"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
               </motion.button> */}
 
-              <motion.button
-                whileHover={{ scale: 1.15, rotate: 5 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/wishlist")}
-                className="transition-all text-white hover:opacity-80"
-              >
-                <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
-              </motion.button>
+              {/* Notifications: Plan My Event -> event bookings, Retail -> retail */}
+              <CustomerNotificationBell category={isPlanMyEventActive ? "event" : "retail"} />
+
+              {/* Wishlist: Retail -> retail wishlist, Plan My Event -> Plan My Event wishlist */}
+              {(
+                <motion.button
+                  whileHover={{ scale: 1.15, rotate: 5 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => navigate(isPlanMyEventActive ? "/plan-my-event/wishlist" : "/wishlist")}
+                  className="transition-all text-white hover:opacity-80"
+                >
+                  <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
+                </motion.button>
+              )}
 
               {!isPlanMyEventActive && (
                 <motion.button
@@ -696,17 +705,20 @@ const MainLocationHeader = ({
                 </motion.button>
               )}
 
-              <motion.button
-                whileHover={{ scale: 1.15, rotate: -5 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={() => navigate("/checkout")}
-                className="transition-all text-white hover:opacity-80 relative group"
-              >
-                <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
-                <span className="absolute -top-1.5 -right-1.5 bg-[var(--customer-header-base-color)] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm transition-transform group-hover:-translate-y-0.5">
-                  0
-                </span>
-              </motion.button>
+              {/* Cart only in Retail (hidden in Plan My Event) */}
+              {!isPlanMyEventActive && (
+                <motion.button
+                  whileHover={{ scale: 1.15, rotate: -5 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => navigate("/checkout")}
+                  className="transition-all text-white hover:opacity-80 relative group"
+                >
+                  <ShoppingCartOutlinedIcon sx={{ fontSize: 24 }} />
+                  <span className="absolute -top-1.5 -right-1.5 bg-[var(--customer-header-base-color)] text-white text-[9px] font-black w-4.5 h-4.5 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm transition-transform group-hover:-translate-y-0.5">
+                    0
+                  </span>
+                </motion.button>
+              )}
 
               <motion.button
                 whileHover={{ scale: 1.15 }}
@@ -754,8 +766,8 @@ const MainLocationHeader = ({
                   </span>
                 )}
               </div>
-              <div className="flex justify-between items-start">
-                <div className="flex flex-col">
+              <div className="flex justify-between items-center gap-2">
+                <div className="flex flex-col min-w-0">
                   <button
                     type="button"
                     data-lenis-prevent
@@ -766,7 +778,7 @@ const MainLocationHeader = ({
                     className="flex items-center gap-1 text-white hover:text-gray-200 cursor-pointer group active:scale-95 transition-transform border-0 bg-transparent p-0 text-left">
                     <LocationOnIcon sx={{ fontSize: 14, color: "#FFFFFF" }} />
                     <div
-                      className="text-[10px] font-medium leading-tight max-w-[160px] truncate text-gray-200"
+                      className="text-[10px] font-medium leading-tight max-w-[110px] min-[380px]:max-w-[160px] truncate text-gray-200"
                     >
                       {isFetchingLocation
                         ? "Detecting location..."
@@ -777,6 +789,53 @@ const MainLocationHeader = ({
                     />
                   </button>
                 </div>
+              </div>
+
+              {/* Mobile icons (same as desktop): notifications, wishlist, cart, profile.
+                  Own row on the right, just below the corner cart animation. */}
+              {/* Retail mobile: no icon row here (notifications are in the bottom bar). */}
+              <div className={cn("flex justify-end", (isPlanMyEventActive && hideSearchBar) && "mt-3")}>
+                {(isPlanMyEventActive && hideSearchBar) && (
+                <div className="flex items-center gap-3.5 shrink-0 rounded-full bg-white/15 border border-white/20 backdrop-blur-sm px-3 py-1.5 shadow-sm">
+                  <CustomerNotificationBell category={isPlanMyEventActive ? "event" : "retail"} iconSize={22} />
+                  {/* Wishlist: Retail -> retail wishlist, Plan My Event -> Plan My Event wishlist */}
+                  {(
+                    <motion.button
+                      type="button"
+                      aria-label="Wishlist"
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => navigate(isPlanMyEventActive ? "/plan-my-event/wishlist" : "/wishlist")}
+                      className="transition-all text-white hover:opacity-80"
+                    >
+                      <FavoriteBorderOutlinedIcon sx={{ fontSize: 22 }} />
+                    </motion.button>
+                  )}
+                  {/* Cart only in Retail (hidden in Plan My Event) */}
+                  {!isPlanMyEventActive && (
+                    <motion.button
+                      type="button"
+                      aria-label="Cart"
+                      whileTap={{ scale: 0.9 }}
+                      onClick={() => navigate("/checkout")}
+                      className="transition-all text-white hover:opacity-80 relative"
+                    >
+                      <ShoppingCartOutlinedIcon sx={{ fontSize: 22 }} />
+                      <span className="absolute -top-1.5 -right-1.5 bg-[var(--customer-header-base-color)] text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center border-2 border-[#1F2937] shadow-sm">
+                        0
+                      </span>
+                    </motion.button>
+                  )}
+                  <motion.button
+                    type="button"
+                    aria-label="Profile"
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => navigate("/profile")}
+                    className="transition-all text-white hover:opacity-80"
+                  >
+                    <AccountCircleOutlinedIcon sx={{ fontSize: 22 }} />
+                  </motion.button>
+                </div>
+                )}
 
                 {/* Mobile Custom Request Button */}
                 {/* <motion.button
@@ -795,25 +854,53 @@ const MainLocationHeader = ({
           {/* Search Bar (MOBILE ONLY) */}
           {!hideSearchBar && (
             <div className="relative z-10 mt-1 flex items-center gap-2 md:hidden">
-              <SearchInput placeholder={searchPlaceholder} />
+              {/* min-w-0 + flex-1: search box shrinks so the icons next to it always fit */}
+              <SearchInput placeholder={searchPlaceholder} className="min-w-0 flex-1" />
 
-              {/* Spin & Win Icon */}
-              <motion.div
-                onClick={() => navigate('/spin')}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="w-11 h-11 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 border-2 border-amber-300 relative overflow-hidden"
-                title="Spin & Win"
-              >
-                <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
-                  <DotLottieReact
-                    src={spinWheelAnim}
-                    loop
-                    autoplay
-                    style={{ width: '100%', height: '100%' }}
-                  />
+              {/* Plan My Event (mobile): notifications, wishlist, profile next to search */}
+              {isPlanMyEventActive && (
+                <div className="flex items-center gap-2.5 shrink-0 pl-1">
+                  <CustomerNotificationBell category="event" iconSize={24} />
+                  <motion.button
+                    type="button"
+                    aria-label="Plan My Event wishlist"
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => navigate("/plan-my-event/wishlist")}
+                    className="flex items-center transition-all text-white hover:opacity-80"
+                  >
+                    <FavoriteBorderOutlinedIcon sx={{ fontSize: 24 }} />
+                  </motion.button>
+                  <motion.button
+                    type="button"
+                    aria-label="Profile"
+                    whileTap={{ scale: 0.9 }}
+                    onClick={() => navigate("/profile")}
+                    className="flex items-center transition-all text-white hover:opacity-80"
+                  >
+                    <AccountCircleOutlinedIcon sx={{ fontSize: 24 }} />
+                  </motion.button>
                 </div>
-              </motion.div>
+              )}
+
+              {/* Spin & Win Icon (Retail only, hidden in Plan My Event) */}
+              {!isPlanMyEventActive && (
+                <motion.div
+                  onClick={() => navigate('/spin')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  className="w-11 h-11 shrink-0 cursor-pointer rounded-full bg-white shadow-sm flex items-center justify-center p-0.5 border-2 border-amber-300 relative overflow-hidden"
+                  title="Spin & Win"
+                >
+                  <div className="w-full h-full flex items-center justify-center scale-[1.3] shrink-0">
+                    <DotLottieReact
+                      src={spinWheelAnim}
+                      loop
+                      autoplay
+                      style={{ width: '100%', height: '100%' }}
+                    />
+                  </div>
+                </motion.div>
+              )}
             </div>
           )}
 

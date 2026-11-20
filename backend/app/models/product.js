@@ -264,6 +264,8 @@ const productSchema = new mongoose.Schema(
             _id: false,
             hoursBefore: { type: Number, min: 0, default: 0 },
             refundPercent: { type: Number, min: 0, max: 100, default: 0 },
+            // Only how the seller typed it (hours / days). hoursBefore is always in hours.
+            unit: { type: String, enum: ["hours", "days"], default: "hours" },
         }],
         ticketingSystem: {
             type: String,

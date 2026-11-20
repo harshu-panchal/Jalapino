@@ -109,7 +109,7 @@ const getEventDetailRows = (info = {}) => {
             ['GST Number', info?.corporateGstNumber],
         ] : type === 'couple' ? [
             ['Couple Names', info?.coupleNames || info?.primaryContactName],
-            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+            ['Marriage Anniversary Date', fmtDate(info?.anniversaryDate)],
         ] : [
             ['Primary Contact', info?.primaryContactName || info?.name],
             ['Gender', cap(info?.gender)],
@@ -561,6 +561,29 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
     }, [currentState.eventInfo]);
 
     const [products, setProducts] = useState([]);
+
+    // Plan My Event wishlist (separate from retail) - ids of saved products, from DB.
+    const [eventWishIds, setEventWishIds] = useState(() => new Set());
+    useEffect(() => {
+        if (!getStoredAuthToken('auth_customer')) return;
+        axiosInstance.get('/wishlist/events', { params: { idsOnly: 'true' } })
+            .then((res) => setEventWishIds(new Set((res.data?.result?.products || []).map(String))))
+            .catch(() => {});
+    }, []);
+    const toggleEventWish = async (product) => {
+        if (!getStoredAuthToken('auth_customer')) {
+            toast.error('Please login to save to your wishlist');
+            return;
+        }
+        try {
+            const res = await axiosInstance.post('/wishlist/events/toggle', { productId: product._id });
+            const result = res.data?.result || {};
+            setEventWishIds(new Set((result.products || []).map(String)));
+            toast.success(result.added ? 'Added to Plan My Event wishlist' : 'Removed from Plan My Event wishlist');
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Could not update wishlist');
+        }
+    };
     const [isLoadingProducts, setIsLoadingProducts] = useState(true);
     const [selectedProducts, setSelectedProducts] = useState([]);
     const [imagePreview, setImagePreview] = useState(null);
@@ -687,6 +710,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     // Chat States
     const [messages, setMessages] = useState([]);
+    const [chatSessionId, setChatSessionId] = useState(null);
     const [chatInput, setChatInput] = useState('');
     const chatContainerRef = useRef(null);
     const socketRef = useRef(null);
@@ -782,8 +806,23 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 socket.emit('join_room', currentRoom);
 
                 socket.on('chat_message', (msg) => {
-                    // Own messages are already shown when sent; only add seller replies for this chat.
-                    if (msg?.sender === 'customer' || (msg?.room && msg.room !== currentRoom)) return;
+                    if (msg?.room && msg.room !== currentRoom) return;
+                    if (msg?.sessionId) setChatSessionId(msg.sessionId);
+                    // Own messages are already shown when sent: just attach the saved id.
+                    if (msg?.sender === 'customer') {
+                        setMessages(prev => {
+                            const idx = [...prev].reverse().findIndex(m => m.sender === 'customer' && !m._id && m.text === msg.text);
+                            if (idx === -1) {
+                                if (prev.some(m => String(m._id || m.id) === String(msg.id))) return prev;
+                                return [...prev, { ...msg, _id: msg.id }];
+                            }
+                            const realIdx = prev.length - 1 - idx;
+                            const next = [...prev];
+                            next[realIdx] = { ...next[realIdx], _id: msg.id };
+                            return next;
+                        });
+                        return;
+                    }
                     setMessages(prev => [...prev, {
                         ...msg,
                         time: msg.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -798,6 +837,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                 const res = await axiosInstance.get(`/chats/session?sellerId=${selectedSeller._id}`);
                 if (res.data?.sellerSettings) setLiveSellerSettings(res.data.sellerSettings);
                 if (res.data?.status && res.data.result) {
+                    setChatSessionId(res.data.result._id || null);
                     setMessages(res.data.result.messages || []);
                 } else {
                     // Default welcome message if no history
@@ -919,7 +959,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
 
     // Customization request goes to the seller's Messages (existing chat, saved in DB),
     // separate from the booking.
-    const handleSendCustomization = () => {
+    const handleSendCustomization = async () => {
         const lines = [
             sellerCfg?.quoteThemeSelection && materialPreference ? `Decoration Type: ${materialPreference}` : '',
             sellerCfg?.quoteColorCombination && colorPreferences.length > 0 ? `Colors: ${colorPreferences.join(', ')}` : '',
@@ -932,7 +972,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             toast.error('Please fill at least one customization detail.');
             return;
         }
-        if (!user?._id || !socketRef.current) {
+        if (!user?._id) {
             toast.error('Please login to send your customization request.');
             return;
         }
@@ -941,16 +981,26 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             return;
         }
         setIsSendingCustomization(true);
-        const text = ['Customization Request', ...lines].join('\n');
-        socketRef.current.emit('send_chat_message', {
-            room: `seller_chat_${selectedSeller._id}_${user._id}`,
-            text,
-            senderId: 'customer',
-            customerId: user._id,
-            sellerId: selectedSeller._id
-        });
-        setMessages(prev => [...prev, { id: Date.now(), sender: 'customer', text, time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) }]);
-        toast.success('Customization request sent to the seller. Seller will reply in chat.');
+        // Saved as a separate Customization request (not a booking); the server also
+        // posts it in the chat with the reference photo.
+        try {
+            await axiosInstance.post('/customizations', {
+                sellerId: selectedSeller._id,
+                details: {
+                    decorationType: sellerCfg?.quoteThemeSelection ? materialPreference : '',
+                    colors: sellerCfg?.quoteColorCombination ? colorPreferences : [],
+                    theme: sellerCfg?.quoteThemeSelection ? themePreference : '',
+                    budget: sellerCfg?.quoteBudgetSelection ? customBudget : '',
+                    referencePhotoUrl: sellerCfg?.quoteReferencePhotoUpload ? (referencePhoto?.url || '') : '',
+                    notes: sellerCfg?.quoteCustomerNotes ? customNotes : '',
+                },
+            });
+        } catch (error) {
+            toast.error(error?.response?.data?.message || 'Could not send customization request');
+            setIsSendingCustomization(false);
+            return;
+        }
+        toast.success('Customization request sent. The seller will send a quotation (see My Orders > Events).');
         setMaterialPreference('');
         setColorPreferences([]);
         setThemePreference('');
@@ -1401,7 +1451,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
             }
             const annivDate = activeEventInfo?.anniversaryDate || eventData?.eventInfo?.anniversaryDate;
             if (!annivDate) {
-                toast.error("Please select Anniversary Date.");
+                toast.error("Please select Marriage Anniversary Date.");
                 const el = document.getElementById('event-details-section');
                 if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return;
@@ -1786,11 +1836,11 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <div className="flex flex-col gap-2">
                                                     {activeMultipleDates.map((item, idx) => (
                                                         <div key={item.id || idx} className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 rounded-xl border border-amber-200">
-                                                            <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700 items-center">
+                                                            <div className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-700 items-center">
                                                                 <span className="text-purple-700 font-bold bg-purple-50 px-2 py-1 rounded-md">🎉 {item.typeName || item.typeId}</span>
                                                                 <span className="flex items-center gap-1">📅 {item.date}</span>
                                                                 {item.time && <span className="flex items-center gap-1">🕐 {item.time}</span>}
-                                                                {item.remarks && <span className="text-slate-500 font-normal italic flex items-center gap-1">📝 {item.remarks}</span>}
+                                                                {item.remarks && <span className="w-full sm:w-auto min-w-0 break-words text-slate-500 font-normal italic">📝 {item.remarks}</span>}
                                                             </div>
                                                             <button
                                                                 type="button"
@@ -2069,7 +2119,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {(effectiveBookingType === 'couple' ? isCoupleContactEnabled : effectiveBookingType === 'individual' ? isPrimaryContactEnabled : false) && (
                                     <div className="flex flex-col gap-1">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                            {effectiveBookingType === 'couple' ? '💍 Anniversary Date' : '🎂 Date of Birth'}
+                                            {effectiveBookingType === 'couple' ? '💍 Marriage Anniversary Date' : '🎂 Date of Birth'}
                                         </label>
                                         <input
                                             type="date"
@@ -2180,6 +2230,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                             >
                                                 {/* Image on top (full width, like the seller card), name & details below */}
                                                 <div className="flex flex-col gap-3">
+                                                    <div className="relative">
                                                     <button
                                                         type="button"
                                                         onClick={() => openProductGallery(product)}
@@ -2193,6 +2244,19 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             onError={(e) => { e.target.src = 'https://cdn-icons-png.flaticon.com/128/2321/2321801.png' }}
                                                         />
                                                     </button>
+                                                    {/* Save to Plan My Event wishlist */}
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => { e.stopPropagation(); toggleEventWish(product); }}
+                                                        aria-label={eventWishIds.has(String(product._id)) ? 'Remove from wishlist' : 'Add to wishlist'}
+                                                        className="absolute top-2 right-2 w-9 h-9 rounded-full bg-white/95 shadow-md flex items-center justify-center hover:scale-105 transition-transform"
+                                                    >
+                                                        <Heart
+                                                            size={18}
+                                                            className={eventWishIds.has(String(product._id)) ? 'text-rose-500 fill-rose-500' : 'text-slate-500'}
+                                                        />
+                                                    </button>
+                                                    </div>
                                                     <div className="min-w-0 flex-1">
                                                         <h4 className="font-bold text-sm text-slate-800 truncate">
                                                             {product.name}
@@ -2571,6 +2635,12 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                         <div className="border border-slate-200 rounded-xl p-2 bg-slate-50 flex flex-wrap gap-2 items-center focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 transition-all">
                                             {colorPreferences.map((color, idx) => (
                                                 <span key={idx} className="flex items-center gap-1 bg-white border border-slate-200 px-2.5 py-1 rounded-lg text-xs font-bold text-slate-700 shadow-sm">
+                                                    {/* Colour swatch next to the colour code */}
+                                                    <span
+                                                        className="inline-block w-4 h-4 rounded-full border border-slate-300 shrink-0"
+                                                        style={{ backgroundColor: color }}
+                                                        aria-hidden="true"
+                                                    />
                                                     {color}
                                                     <button
                                                         onClick={() => setColorPreferences(prev => prev.filter((_, i) => i !== idx))}
@@ -2698,7 +2768,37 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse" />
                                     <h4 className="text-xs font-black text-slate-700 uppercase tracking-wider">Customer & Seller Chat</h4>
                                 </div>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase">Realtime</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-[9px] font-bold text-slate-400 uppercase">Realtime</span>
+                                    {/* Delete this chat (only for this customer; seller keeps their copy) */}
+                                    <button
+                                        type="button"
+                                        title="Delete chat"
+                                        aria-label="Delete chat"
+                                        onClick={async () => {
+                                            let sessionId = chatSessionId;
+                                            if (!sessionId) {
+                                                try {
+                                                    const r = await axiosInstance.get(`/chats/session?sellerId=${selectedSeller._id}`);
+                                                    sessionId = r.data?.result?._id || null;
+                                                } catch (e) { sessionId = null; }
+                                            }
+                                            if (!sessionId) { toast.info('No chat to delete yet'); return; }
+                                            if (!window.confirm('Delete this chat?')) return;
+                                            try {
+                                                await axiosInstance.delete(`/chats/session/${sessionId}`);
+                                                setChatSessionId(null);
+                                                setMessages([]);
+                                                toast.success('Chat deleted');
+                                            } catch (error) {
+                                                toast.error(error?.response?.data?.message || 'Could not delete chat');
+                                            }
+                                        }}
+                                        className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                    >
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Messages Board */}
@@ -2714,9 +2814,48 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         : 'bg-white text-slate-700 border border-slate-100 rounded-tl-none'
                                                     }`}
                                             >
-                                                {msg.text}
+                                                {(() => {
+                                                    const legacyImg = String(msg.text || '').match(/Reference Photo:\s*(\S+)/);
+                                                    const img = resolveImageUrl(msg.imageUrl || legacyImg?.[1] || '');
+                                                    const text = legacyImg ? String(msg.text).replace(/\n?Reference Photo:\s*\S+/, '') : msg.text;
+                                                    return (
+                                                        <>
+                                                            {text}
+                                                            {img && (
+                                                                <a href={img} target="_blank" rel="noreferrer" className="block mt-2">
+                                                                    <img src={img} alt="Reference" className="max-h-40 rounded-lg border border-white/40 bg-white object-cover" />
+                                                                </a>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
-                                            <span className="text-[9px] text-slate-400 mt-1 px-1 font-semibold">{msg.time || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '')}</span>
+                                            <span className="text-[9px] text-slate-400 mt-1 px-1 font-semibold flex items-center gap-1.5">
+                                                {msg.time || (msg.createdAt ? new Date(msg.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '')}
+                                                {/* Delete this message (only for me) */}
+                                                {(msg._id || (msg.id && chatSessionId && typeof msg.id === 'string')) && (
+                                                    <button
+                                                        type="button"
+                                                        title="Delete message"
+                                                        aria-label="Delete message"
+                                                        onClick={async () => {
+                                                            const messageId = msg._id || msg.id;
+                                                            const sessionId = chatSessionId || msg.sessionId;
+                                                            if (!sessionId || !messageId) return;
+                                                            if (!window.confirm('Delete this message?')) return;
+                                                            try {
+                                                                await axiosInstance.delete(`/chats/session/${sessionId}/messages/${messageId}`);
+                                                                setMessages(prev => prev.filter(m => String(m._id || m.id) !== String(messageId)));
+                                                            } catch (error) {
+                                                                toast.error(error?.response?.data?.message || 'Could not delete message');
+                                                            }
+                                                        }}
+                                                        className="text-slate-300 hover:text-red-600 transition-colors"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                                    </button>
+                                                )}
+                                            </span>
                                         </div>
                                     );
                                 })}
@@ -2764,9 +2903,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                 <span>Dates & Remarks</span>
                                                 <div className="mt-1 space-y-1">
                                                     {activeMultipleDates.map((item, idx) => (
-                                                        <div key={item.id || idx} className="flex justify-between gap-3 rounded-lg bg-white/70 px-2 py-1">
+                                                        <div key={item.id || idx} className="flex flex-col gap-0.5 rounded-lg bg-white/70 px-2 py-1 sm:flex-row sm:justify-between sm:gap-3">
                                                             <span className="font-semibold">{item.typeName || ''}</span>
-                                                            <span className="font-semibold text-right">
+                                                            <span className="min-w-0 break-words font-semibold sm:text-right">
                                                                 {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` · ${item.time}` : ""}`}
                                                                 {String(item.remarks || '').trim() && <span className="block text-xs font-medium italic text-slate-500">📝 {item.remarks}</span>}
                                                             </span>
@@ -2780,11 +2919,30 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     const timeVal = activeTime || eventData?.time || (activeMultipleDates?.[0]?.time) || '';
                                     const remarksVal = activeRemarks || eventData?.remarks || (activeMultipleDates?.[0]?.remarks) || '';
                                     if (!dateVal && !timeVal) return null;
+                                    const dateText = /^d{4}-d{2}-d{2}/.test(String(dateVal))
+                                        ? new Date(`${String(dateVal).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN', { day: '2-digit', month: '2-digit', year: 'numeric' })
+                                        : dateVal;
                                     return (
-                                        <div className="flex justify-between gap-4 text-slate-600">
-                                            <span>Date & Time</span>
-                                            <span className="font-semibold text-right">{`${dateVal}${timeVal ? ` · ${timeVal}` : ''}${remarksVal ? ` (${remarksVal})` : ''}`}</span>
-                                        </div>
+                                        <>
+                                            {dateText && (
+                                                <div className="flex justify-between gap-4 text-slate-600">
+                                                    <span className="shrink-0">Booking Date</span>
+                                                    <span className="font-semibold text-right">{dateText}</span>
+                                                </div>
+                                            )}
+                                            {timeVal && (
+                                                <div className="flex justify-between gap-4 text-slate-600">
+                                                    <span className="shrink-0">Booking Time Slot</span>
+                                                    <span className="font-semibold text-right">{timeVal}</span>
+                                                </div>
+                                            )}
+                                            {String(remarksVal || '').trim() && (
+                                                <div className="flex justify-between gap-4 text-slate-600">
+                                                    <span className="shrink-0">Remarks / Occasion</span>
+                                                    <span className="min-w-0 break-words font-semibold text-right">{remarksVal}</span>
+                                                </div>
+                                            )}
+                                        </>
                                     );
                                 })()}
                                 {(() => {
@@ -2799,8 +2957,8 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                     }
                                     return getEventDetailRows(activeEventInfo).map(([label, value]) => (
                                         <div key={label} className="flex justify-between gap-4 text-slate-600">
-                                            <span>{label}</span>
-                                            <span className="font-semibold text-right">
+                                            <span className="shrink-0">{label}</span>
+                                            <span className="min-w-0 break-words font-semibold text-right">
                                                 {value}{label === 'No. of Guests' && (minCap || maxCap) ? ` (Limit: ${minCap || 1}-${maxCap || 'Max'})` : ''}
                                             </span>
                                         </div>
@@ -2809,7 +2967,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                 {(activeSelectedShop || selectedShop) && (
                                     <div className="flex justify-between gap-4 text-purple-700 bg-purple-100/60 p-2 rounded-xl font-bold">
                                         <span>📍 Selected Shop / Area</span>
-                                        <span>{(activeSelectedShop || selectedShop).uniqueCode || `Shop ${(activeSelectedShop || selectedShop).shopNo}`} ({(activeSelectedShop || selectedShop).bookingType || 'MULTIPLE'})</span>
+                                        <span>{(activeSelectedShop || selectedShop).uniqueCode || `Shop ${(activeSelectedShop || selectedShop).shopNo}`}</span>
                                     </div>
                                 )}
                                 {selectedProducts.filter(p => !p.tickets || p.tickets.length === 0).map((product, pIdx) => {
@@ -3219,6 +3377,14 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 </button>
                                                             );
                                                         })() : isItemAdded ? (
+                                                            <div className="flex flex-col items-stretch gap-2">
+                                                            {/* Already in the selection but this date is booked -> show the lock right away
+                                                                (same check as the "Add to Selection" button; lock rules unchanged). */}
+                                                            {isVariantBooked(imagePreview.product, modalSelectedVariant) && (
+                                                                <div className="px-4 py-2.5 rounded-xl bg-red-100 text-red-500 font-black uppercase tracking-wider text-[11px] text-center">
+                                                                    {getVariantUnavailableMessage(imagePreview.product, modalSelectedVariant)}
+                                                                </div>
+                                                            )}
                                                             <div className="flex items-center gap-2 rounded-xl border border-purple-200 bg-purple-50 p-1.5 shadow-sm">
                                                                 <button
                                                                     type="button"
@@ -3263,6 +3429,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                                 >
                                                                     <AddIcon fontSize="small" />
                                                                 </button>
+                                                            </div>
                                                             </div>
                                                         ) : (
                                                             <button
@@ -3508,7 +3675,9 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                         </div>
                                                     )}
 
-                                                    {/* Total Price / Add-ons Breakdown Box with View Details button (Above Brand/Ingredients) */}
+                                                    {/* Total Price / Add-ons Breakdown Box with View Details button (Above Brand/Ingredients).
+                                                        Not shown for ticket products (they use "Book Tickets"). */}
+                                                    {!(imagePreview.product?.tickets?.length > 0) && (
                                                     <div className="rounded-2xl border border-purple-200 bg-gradient-to-r from-purple-50 via-indigo-50/50 to-purple-50 p-3.5 shadow-sm flex items-center justify-between gap-3">
                                                         <div className="flex flex-col gap-0.5">
                                                             <span className="text-[10px] font-black uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
@@ -3574,6 +3743,7 @@ const EventSellerDetailPage = ({ embeddedState, onBack }) => {
                                                             {isItemAdded ? 'View Details →' : 'View Summary →'}
                                                         </button>
                                                     </div>
+                                                    )}
 
                                                     {/* Dynamic Brand Name & Ingredients for Selected Variant */}
                                                     {modalSelectedVariant && (modalSelectedVariant.brand || modalSelectedVariant.ingredients) && (

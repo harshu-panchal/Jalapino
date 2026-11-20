@@ -62,10 +62,13 @@ function normalizeCancellationRules(value) {
     const hoursBefore = Number(row?.hoursBefore);
     const refundPercent = Number(row?.refundPercent);
     if (!Number.isFinite(hoursBefore) || hoursBefore < 0 || !Number.isFinite(refundPercent)) continue;
-    byHours.set(hoursBefore, Math.min(100, Math.max(0, refundPercent)));
+    byHours.set(hoursBefore, {
+      refundPercent: Math.min(100, Math.max(0, refundPercent)),
+      unit: row?.unit === "days" ? "days" : "hours",
+    });
   }
   return [...byHours.entries()]
-    .map(([hoursBefore, refundPercent]) => ({ hoursBefore, refundPercent }))
+    .map(([hoursBefore, v]) => ({ hoursBefore, refundPercent: v.refundPercent, unit: v.unit }))
     .sort((a, b) => b.hoursBefore - a.hoursBefore);
 }
 

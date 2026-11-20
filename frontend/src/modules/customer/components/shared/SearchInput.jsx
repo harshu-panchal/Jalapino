@@ -219,7 +219,7 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
     return (
         <div ref={containerRef} className={cn("relative w-full", className)}>
             <div
-                className="w-full rounded-full px-4 h-11 bg-white shadow-sm flex items-center border border-slate-200 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/50"
+                className="w-full min-w-0 overflow-hidden rounded-full px-4 h-11 bg-white shadow-sm flex items-center border border-slate-200 transition-all duration-200 focus-within:ring-2 focus-within:ring-primary/50"
             >
                 <Search size={18} className="text-slate-400 shrink-0" />
                 <input
@@ -244,7 +244,7 @@ const SearchInput = ({ placeholder = "Search Products...", className }) => {
                         }
                     }}
                     placeholder={placeholder}
-                    className="flex-1 bg-transparent border-none outline-none pl-2 text-slate-800 font-bold placeholder:text-slate-400 placeholder:font-medium text-[15px]"
+                    className="flex-1 min-w-0 w-full text-ellipsis bg-transparent border-none outline-none pl-2 text-slate-800 font-bold placeholder:text-slate-400 placeholder:font-medium text-[15px]"
                 />
                 {query && (
                     <button

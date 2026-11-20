@@ -266,6 +266,15 @@ export const getNotifications = async (req, res) => {
     const status = String(req.query?.status || "").trim() || undefined;
     const baseFilter = resolveNotificationFilter(req);
     const query = queryFromFilter(baseFilter, { unreadOnly, status });
+    // Optional: ?category=event (Plan My Event bookings) or ?category=retail (everything else).
+    const category = String(req.query?.category || "").trim().toLowerCase();
+    const EVENT_TYPE_RE = /^(NEW_)?EVENT_/;
+    const categoryFilter = category === "event"
+      ? { type: EVENT_TYPE_RE }
+      : category === "retail"
+        ? { type: { $not: EVENT_TYPE_RE } }
+        : {};
+    Object.assign(query, categoryFilter);
 
     const [notifications, total, unreadCount] = await Promise.all([
       Notification.find(query)
@@ -276,6 +285,7 @@ export const getNotifications = async (req, res) => {
       Notification.countDocuments(query),
       Notification.countDocuments({
         ...queryFromFilter(baseFilter, { status }),
+        ...categoryFilter,
         isRead: false,
       }),
     ]);

@@ -191,3 +191,91 @@ export const toggleWishlist = async (req, res) => {
     return handleResponse(res, 500, error.message);
   }
 };
+
+/* ===============================
+   PLAN MY EVENT WISHLIST (separate from retail)
+================================ */
+async function loadEventWishlist(customerId) {
+  const wishlist = await Wishlist.findOne({ customerId })
+    .select("eventProducts")
+    .populate({
+      path: "eventProducts.product",
+      select: "name slug price salePrice mainImage galleryImages description sellerId status approvalStatus",
+      match: CUSTOMER_VISIBLE_PRODUCT_MATCH,
+    })
+    .populate({ path: "eventProducts.seller", select: "shopName name" })
+    .lean();
+  const items = (wishlist?.eventProducts || [])
+    .filter((item) => item && item.product)
+    .sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
+  return items;
+}
+
+export const getEventWishlist = async (req, res) => {
+  try {
+    const items = await loadEventWishlist(req.user.id);
+    if (String(req.query?.idsOnly) === "true") {
+      return handleResponse(res, 200, "Event wishlist IDs fetched", {
+        products: items.map((item) => String(item.product._id)),
+      });
+    }
+    return handleResponse(res, 200, "Event wishlist fetched successfully", { items });
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+export const toggleEventWishlist = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const { productId } = req.body;
+    let wishlist = await Wishlist.findOne({ customerId });
+    if (!wishlist) wishlist = new Wishlist({ customerId, products: [], eventProducts: [] });
+
+    const index = (wishlist.eventProducts || []).findIndex(
+      (item) => String(item.product) === String(productId),
+    );
+    let message;
+    let added;
+    if (index > -1) {
+      wishlist.eventProducts.splice(index, 1);
+      message = "Removed from Plan My Event wishlist";
+      added = false;
+    } else {
+      const product = await Product.findOne({ _id: productId, ...CUSTOMER_VISIBLE_PRODUCT_MATCH })
+        .select("_id sellerId")
+        .lean();
+      if (!product) return handleResponse(res, 404, "Product is not available for wishlist");
+      wishlist.eventProducts.push({ product: product._id, seller: product.sellerId, addedAt: new Date() });
+      message = "Added to Plan My Event wishlist";
+      added = true;
+    }
+    await wishlist.save();
+    const items = await loadEventWishlist(customerId);
+    return handleResponse(res, 200, message, {
+      added,
+      products: items.map((item) => String(item.product._id)),
+      items,
+    });
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};
+
+export const removeFromEventWishlist = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+    const { productId } = req.params;
+    const wishlist = await Wishlist.findOne({ customerId });
+    if (wishlist) {
+      wishlist.eventProducts = (wishlist.eventProducts || []).filter(
+        (item) => String(item.product) !== String(productId),
+      );
+      await wishlist.save();
+    }
+    const items = await loadEventWishlist(customerId);
+    return handleResponse(res, 200, "Removed from Plan My Event wishlist", { items });
+  } catch (error) {
+    return handleResponse(res, 500, error.message);
+  }
+};

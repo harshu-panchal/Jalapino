@@ -15,7 +15,9 @@ import {
 import { useAuth } from '@core/context/AuthContext';
 
 const BottomNav = ({ navItems }) => {
-    const { role } = useAuth();
+    const { role, user } = useAuth();
+    // Event seller (no retail): 'Orders' opens Reservations (event bookings), same rule as the seller panel.
+    const isEventOnlySeller = (user?.isEventSeller === true || user?.planMyEventEnabled === true) && !user?.retailEnabled;
     const location = useLocation();
 
     // Define the primary bottom nav items based on user role
@@ -26,7 +28,7 @@ const BottomNav = ({ navItems }) => {
         { label: 'Wallet', path: '/admin/wallet', icon: Wallet },
     ] : [
         { label: 'Dashboard', path: '/seller', icon: LayoutDashboard, end: true },
-        { label: 'Orders', path: '/seller/orders', icon: ClipboardList },
+        { label: 'Orders', path: isEventOnlySeller ? '/seller/reservations' : '/seller/orders', icon: ClipboardList },
         { label: 'Products', path: '/seller/products', icon: Box },
         { label: 'Earnings', path: '/seller/earnings', icon: Wallet },
     ];

@@ -14,6 +14,7 @@ const CityManagementPage = () => {
 
     const [newCity, setNewCity] = useState({
         state: '',
+        district: '',
         cityName: '',
         readinessStatus: 'Ready',
         isActive: true,
@@ -107,6 +108,35 @@ const CityManagementPage = () => {
             }
         }
 
+        if (!newCity.district.trim()) {
+            validationErrors.district = "Please enter the district";
+        }
+
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+
+        // State + District + City must match each other (city inside this district, district inside this state).
+        setIsVerifyingCity(true);
+        try {
+            const res = await axiosInstance.get('/admin/event-config/cities/verify-location', {
+                params: { state: stateMatch.name, district: newCity.district.trim(), cityName: newCity.cityName.trim() },
+            });
+            const check = res.data?.result || res.data?.data || {};
+            const isCustomCity = ['mhow'].includes(newCity.cityName.toLowerCase().trim());
+            if (!check.stateOk || !check.districtOk) {
+                validationErrors.district = check.foundDistrict
+                    ? `District does not match. This city is in ${check.foundDistrict} district`
+                    : "District does not match this state and city";
+            } else if (!check.cityOk && !isCustomCity) {
+                validationErrors.cityName = "City does not match this district";
+            }
+        } catch {
+            validationErrors.district = "Could not verify district right now. Please try again";
+        } finally {
+            setIsVerifyingCity(false);
+        }
         if (Object.keys(validationErrors).length > 0) {
             setErrors(validationErrors);
             return;
@@ -124,7 +154,7 @@ const CityManagementPage = () => {
                 alert('City added successfully');
                 fetchCities();
                 setEditingId(null);
-                setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false });
+                setNewCity({ state: '', district: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false });
             }
         } catch (error) {
             alert('Failed to save city');
@@ -136,6 +166,7 @@ const CityManagementPage = () => {
         setEditingId(city._id);
         setNewCity({
             state: city.state,
+            district: city.district || '',
             cityName: city.cityName,
             readinessStatus: city.readinessStatus,
             isActive: city.isActive,
@@ -175,7 +206,7 @@ const CityManagementPage = () => {
                         <h2 className="text-lg font-bold text-slate-800">{editingId ? 'Edit City' : 'Add New City'}</h2>
                         {editingId && (
                             <button 
-                                onClick={() => { setEditingId(null); setNewCity({ state: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false }); setErrors({}); }}
+                                onClick={() => { setEditingId(null); setNewCity({ state: '', district: '', cityName: '', readinessStatus: 'Ready', isActive: true, retailEnabled: true, planMyEventEnabled: false, wholesaleEnabled: false }); setErrors({}); }}
                                 className="text-xs text-blue-600 hover:underline"
                             >
                                 Cancel Edit
@@ -196,6 +227,20 @@ const CityManagementPage = () => {
                                 }}
                             />
                             {errors.state && <p className="text-red-500 text-xs mt-1">{errors.state}</p>}
+                        </div>
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-1">District</label>
+                            <input 
+                                required
+                                type="text"
+                                className={`w-full border rounded-xl p-2 ${errors.district ? 'border-red-500' : ''}`}
+                                value={newCity.district}
+                                onChange={(e) => {
+                                    setNewCity({...newCity, district: e.target.value});
+                                    if(errors.district) setErrors({...errors, district: null});
+                                }}
+                            />
+                            {errors.district && <p className="text-red-500 text-xs mt-1">{errors.district}</p>}
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-1">City Name</label>
@@ -278,7 +323,7 @@ const CityManagementPage = () => {
                         <div key={city._id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                             <div>
                                 <h3 className="font-bold text-slate-800 text-lg">{city.cityName}</h3>
-                                <p className="text-sm text-slate-500">{city.state}</p>
+                                <p className="text-sm text-slate-500">{city.district ? `${city.district}, ${city.state}` : city.state}</p>
                                 <div className="flex flex-wrap items-center gap-2 mt-2">
                                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${city.retailEnabled ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-400'}`}>
                                         RETAIL {city.retailEnabled ? 'ON' : 'OFF'}

@@ -19,6 +19,7 @@ import {
   HiOutlineCalendar,
   HiOutlineFilm,
   HiOutlineTicket,
+  HiOutlineTruck,
 } from "react-icons/hi2";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -649,7 +650,12 @@ const AddProduct = () => {
       data.append("cancellationRules", JSON.stringify(
         (formData.cancellationRules || [])
           .filter(r => r.hoursBefore !== "" && r.refundPercent !== "")
-          .map(r => ({ hoursBefore: Number(r.hoursBefore), refundPercent: Number(r.refundPercent) }))
+          // Days are converted to hours (refund is always worked out in hours).
+          .map(r => ({
+            hoursBefore: r.unit === "days" ? Number(r.hoursBefore) * 24 : Number(r.hoursBefore),
+            refundPercent: Number(r.refundPercent),
+            unit: r.unit === "days" ? "days" : "hours",
+          }))
       ));
       data.append("ticketingSystem", formData.ticketingSystem || "");
 
@@ -723,7 +729,7 @@ const AddProduct = () => {
 
       if (uploadRes.data.success) {
         toast.success('Video uploaded successfully!', { id: uploadToast });
-        setFormData({ ...formData, videoUrl: uploadRes.data.videoUrl });
+        setFormData(prev => ({ ...prev, videoUrl: uploadRes.data.videoUrl }));
         setVideoPayment(null);
       }
     } catch (error) {
@@ -1184,7 +1190,7 @@ const AddProduct = () => {
                         <p className="text-[10px] sm:text-xs font-bold text-slate-600 uppercase tracking-widest">Refund Rules (time before event)</p>
                         <button
                           type="button"
-                          onClick={() => setFormData(prev => ({ ...prev, cancellationRules: [...(prev.cancellationRules || []), { hoursBefore: "", refundPercent: "" }] }))}
+                          onClick={() => setFormData(prev => ({ ...prev, cancellationRules: [...(prev.cancellationRules || []), { hoursBefore: "", refundPercent: "", unit: "hours" }] }))}
                           className="text-[11px] font-bold text-brand-600 border border-brand-200 bg-brand-50 px-2.5 py-1 rounded-lg hover:bg-brand-100"
                         >
                           + Add Rule
@@ -1202,9 +1208,18 @@ const AddProduct = () => {
                             value={rule.hoursBefore}
                             onChange={(e) => setFormData(prev => ({ ...prev, cancellationRules: prev.cancellationRules.map((r, i) => i === idx ? { ...r, hoursBefore: e.target.value } : r) }))}
                             className="w-20 px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500"
-                            placeholder="48"
+                            placeholder={rule.unit === "days" ? "2" : "48"}
                           />
-                          <span>hours before event →</span>
+                          {/* Hours or Days (days are saved as hours: 1 day = 24 hours) */}
+                          <select
+                            value={rule.unit === "days" ? "days" : "hours"}
+                            onChange={(e) => setFormData(prev => ({ ...prev, cancellationRules: prev.cancellationRules.map((r, i) => i === idx ? { ...r, unit: e.target.value } : r) }))}
+                            className="px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm font-semibold outline-none focus:ring-2 focus:ring-brand-500"
+                          >
+                            <option value="hours">hours</option>
+                            <option value="days">days</option>
+                          </select>
+                          <span>before event →</span>
                           <input
                             type="number"
                             min="0"

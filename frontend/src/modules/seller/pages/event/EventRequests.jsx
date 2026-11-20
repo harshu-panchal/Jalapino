@@ -23,7 +23,7 @@ const getEventDetailRows = (info = {}) => {
             ['GST Number', info?.corporateGstNumber],
         ] : type === 'couple' ? [
             ['Couple Names', info?.coupleNames || info?.primaryContactName],
-            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+            ['Marriage Anniversary Date', fmtDate(info?.anniversaryDate)],
         ] : [
             ['Primary Contact', info?.primaryContactName || info?.name],
             ['Gender', cap(info?.gender)],

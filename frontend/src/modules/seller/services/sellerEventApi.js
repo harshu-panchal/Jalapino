@@ -35,9 +35,10 @@ export const sellerEventApi = {
     },
 
     // Confirm COD payment
-    confirmCODPayment: async (id) => {
+    // part = 'advance' -> only the advance received in cash; otherwise the full balance.
+    confirmCODPayment: async (id, part) => {
         try {
-            const response = await axiosInstance.put(`/seller/events/reservations/${id}/confirm-cod`);
+            const response = await axiosInstance.put(`/seller/events/reservations/${id}/confirm-cod`, part ? { part } : {});
             return response.data;
         } catch (error) {
             console.error('Error confirming COD payment:', error);

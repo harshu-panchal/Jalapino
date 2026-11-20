@@ -10,10 +10,15 @@ const messageSchema = new mongoose.Schema({
         type: String,
         required: true
     },
+    // Optional image (e.g. customization reference photo) shown in the chat.
+    imageUrl: { type: String, trim: true },
     isRead: {
         type: Boolean,
         default: false
-    }
+    },
+    // One message deleted by one side only ("delete for me").
+    hiddenForCustomer: { type: Boolean, default: false },
+    hiddenForSeller: { type: Boolean, default: false }
 }, { timestamps: true });
 
 const eventChatSessionSchema = new mongoose.Schema({
@@ -36,7 +41,10 @@ const eventChatSessionSchema = new mongoose.Schema({
     lastMessageAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    // "Delete chat" for one side only: messages up to this time are hidden for that side.
+    customerClearedAt: { type: Date, default: null },
+    sellerClearedAt: { type: Date, default: null }
 }, {
     timestamps: true
 });

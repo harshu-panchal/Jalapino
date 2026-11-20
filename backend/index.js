@@ -195,6 +195,11 @@ function createApp() {
   const STORAGE_BASE_PATH = process.env.STORAGE_BASE_PATH || path.join(process.cwd(), "uploads");
   app.use("/images", express.static(STORAGE_BASE_PATH));
   app.use("/api/images", express.static(STORAGE_BASE_PATH));
+  // Product reels are saved by multer in <server folder>/uploads/videos and stored in DB
+  // as /uploads/videos/<file>; serve only that videos folder so reels play.
+  const VIDEO_UPLOAD_PATH = path.join(process.cwd(), "uploads", "videos");
+  app.use("/uploads/videos", express.static(VIDEO_UPLOAD_PATH));
+  app.use("/api/uploads/videos", express.static(VIDEO_UPLOAD_PATH));
 
   // Root endpoint
   app.get("/", (req, res) => {

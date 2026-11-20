@@ -16,6 +16,15 @@ const wishlistSchema = new mongoose.Schema(
                 ref: "Product",
             },
         ],
+        // Plan My Event wishlist - kept separate from the retail `products` list.
+        eventProducts: [
+            {
+                _id: false,
+                product: { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+                seller: { type: mongoose.Schema.Types.ObjectId, ref: "Seller" },
+                addedAt: { type: Date, default: Date.now },
+            },
+        ],
     },
     { timestamps: true }
 );

@@ -710,7 +710,7 @@ const Analytics = () => {
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <div className="flex bg-slate-100 p-1 rounded-xl border border-slate-200 text-xs">
-                  {["All", "Plan My Event", "Tickets & Venues", "Retail"].map((mod) => (
+                  {["All", "Plan My Event", "Tickets & Venues", "Customization", "Retail"].map((mod) => (
                     <button
                       key={mod}
                       onClick={() => setSelectedModuleFilter(mod)}
@@ -763,6 +763,8 @@ const Analytics = () => {
                                 ? "bg-purple-50 text-purple-700 border-purple-200"
                                 : r.module === "Tickets & Venues"
                                 ? "bg-amber-50 text-amber-700 border-amber-200"
+                                : r.module === "Customization"
+                                ? "bg-pink-50 text-pink-700 border-pink-200"
                                 : "bg-emerald-50 text-emerald-700 border-emerald-200"
                             )}
                           >
@@ -770,6 +772,8 @@ const Analytics = () => {
                               ? "🎉 Event"
                               : r.module === "Tickets & Venues"
                               ? "🎟️ Ticket"
+                              : r.module === "Customization"
+                              ? "🎨 Customization"
                               : "🛍️ Retail"}
                           </span>
                         </td>

@@ -7,12 +7,33 @@ import Dialog from '@mui/material/Dialog';
 import { HiOutlineCheck, HiOutlineXMark, HiOutlineCalendarDays, HiOutlineUserGroup, HiOutlineMapPin, HiOutlineClock, HiOutlineCamera, HiOutlineVideoCamera } from 'react-icons/hi2';
 import axiosInstance from '@core/api/axios';
 
+// One date / time format on this screen: "20 Nov 2026" and "10:30 AM".
+const formatResDate = (value) => {
+    if (!value) return '';
+    const text = String(value);
+    const d = /^\d{4}-\d{2}-\d{2}/.test(text) ? new Date(`${text.slice(0, 10)}T00:00:00`) : new Date(value);
+    return Number.isNaN(d.getTime()) ? text : d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+};
+// "10:30" / "23:11" / "6:00 pm - 10:30 PM" -> "10:30 AM" / "11:11 PM" / "06:00 PM - 10:30 PM"
+const formatResTime = (value) => {
+    if (!value) return '';
+    return String(value).split('-').map((part) => {
+        const m = part.trim().match(/^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i);
+        if (!m) return part.trim();
+        let h = Number(m[1]);
+        const min = m[2];
+        let period = m[3] ? m[3].toUpperCase() : (h >= 12 ? 'PM' : 'AM');
+        if (!m[3]) h = h % 12 || 12;
+        return `${String(h).padStart(2, '0')}:${min} ${period}`;
+    }).join(' - ');
+};
+
 // Customer's "Your Event Details" as [label, value] rows, ONLY for filled fields
 // (same rows the customer sees in Plan Summary / Checkout / My Orders).
 const getEventDetailRows = (info = {}) => {
     const type = String(info?.bookingType || '').toLowerCase();
     const fmtDate = (v) => (/^\d{4}-\d{2}-\d{2}/.test(String(v || ''))
-        ? new Date(`${String(v).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN')
+        ? formatResDate(v)
         : (v || ''));
     const cap = (v) => (v ? String(v).charAt(0).toUpperCase() + String(v).slice(1) : '');
     const isSellerLocation = info?.serviceLocationType === 'seller';
@@ -25,7 +46,7 @@ const getEventDetailRows = (info = {}) => {
             ['GST Number', info?.corporateGstNumber],
         ] : type === 'couple' ? [
             ['Couple Names', info?.coupleNames || info?.primaryContactName],
-            ['Anniversary Date', fmtDate(info?.anniversaryDate)],
+            ['Marriage Anniversary Date', fmtDate(info?.anniversaryDate)],
         ] : [
             ['Primary Contact', info?.primaryContactName || info?.name],
             ['Gender', cap(info?.gender)],
@@ -45,17 +66,21 @@ const getEventDetailRows = (info = {}) => {
 const getSecondAmount = (res) => {
     const total = Number(res?.amount || res?.totalAmount || 0);
     const mode = String(res?.paymentMode || 'COD').toUpperCase();
-    if (mode === 'COD') {
-        const codCollected = Number(res?.codAmountCollected) || 0;
-        const onlinePaid = Math.max(0, (Number(res?.amountPaid) || 0) - codCollected);
-        const isCollected = String(res?.paymentStatus || '').toUpperCase() === 'PAID';
-        const cash = isCollected && codCollected > 0 ? codCollected : Math.max(0, total - onlinePaid);
-        return { label: isCollected ? 'COD Collected (Cash)' : 'COD Amount (Cash)', value: cash, isCod: true };
-    }
     const pct = Number(res?.advancePaymentPercentage && res.advancePaymentPercentage > 0 ? res.advancePaymentPercentage : 30);
     const advance = (res?.advancePaymentAmount !== undefined && res?.advancePaymentAmount !== null && Number(res.advancePaymentAmount) > 0)
         ? Number(res.advancePaymentAmount)
         : Math.round((total * pct) / 100);
+    if (mode === 'COD') {
+        const codCollected = Number(res?.codAmountCollected) || 0;
+        const isCollected = String(res?.paymentStatus || '').toUpperCase() === 'PAID';
+        if (isCollected) {
+            const onlinePaid = Math.max(0, (Number(res?.amountPaid) || 0) - codCollected);
+            const cash = codCollected > 0 ? codCollected : Math.max(0, total - onlinePaid);
+            return { label: 'COD Collected (Cash)', value: cash, isCod: true };
+        }
+        // Not fully paid yet: advance to take in cash (same advance as online).
+        return { label: `Advance Amount (${pct}%) · Cash`, value: advance, isCod: true };
+    }
     return { label: `Advance Amount (${pct}%)`, value: advance, isCod: false };
 };
 
@@ -117,6 +142,42 @@ const getEventEndIST = (res) => {
         ...((res?.multipleEvents || []).map(e => endOf(e?.date || res?.eventDate, e?.time || res?.eventTime))),
     ].filter(Boolean);
     return ends.length ? new Date(Math.max(...ends.map(d => d.getTime()))) : null;
+};
+
+// When the booked slot starts, in India time (same rule as the backend):
+// slot "10:30 AM - 4:00 PM" -> 10:30 AM, single time -> that time, no time -> 00:00,
+// multiple dates -> the latest date's start.
+const getEventStartIST = (res) => {
+    const toMinutes = (value) => {
+        const m = String(value || '').trim().match(/^(d{1,2})(?::(d{2}))?s*(AM|PM)?$/i);
+        if (!m) return null;
+        let h = Number(m[1]);
+        const min = Number(m[2] || 0);
+        const p = m[3]?.toUpperCase();
+        if (p) { if (h === 12) h = p === 'AM' ? 0 : 12; else if (p === 'PM') h += 12; }
+        return h * 60 + min;
+    };
+    const toDateStr = (value) => {
+        if (!value) return '';
+        const text = String(value);
+        if (/^d{4}-d{2}-d{2}/.test(text)) return text.slice(0, 10);
+        const d = new Date(value);
+        return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
+    };
+    const startOf = (dateValue, time) => {
+        const dateStr = toDateStr(dateValue);
+        if (!dateStr) return null;
+        const parts = String(time || '').split('-').map(p => p.trim()).filter(Boolean);
+        let startMin = parts.length ? toMinutes(parts[0]) : null;
+        if (startMin === null) startMin = 0;
+        const start = new Date(`${dateStr}T${String(Math.floor(startMin / 60)).padStart(2, '0')}:${String(startMin % 60).padStart(2, '0')}:00+05:30`);
+        return Number.isNaN(start.getTime()) ? null : start;
+    };
+    const starts = [
+        startOf(res?.eventDate, res?.eventTime),
+        ...((res?.multipleEvents || []).map(e => startOf(e?.date || res?.eventDate, e?.time || res?.eventTime))),
+    ].filter(Boolean);
+    return starts.length ? new Date(Math.max(...starts.map(d => d.getTime()))) : null;
 };
 
 const EventReservations = () => {
@@ -249,13 +310,21 @@ const EventReservations = () => {
         }
     };
 
-    const handleConfirmCOD = async (id) => {
+    const handleConfirmCOD = async (id, part) => {
         setLoadingResId(id);
         try {
-            await sellerEventApi.confirmCODPayment(id);
-            setReservations(prev => prev.map(r => r._id === id ? { ...r, paymentStatus: 'PAID', status: 'confirmed' } : r));
+            const response = await sellerEventApi.confirmCODPayment(id, part);
+            const saved = response?.result || response?.data || {};
+            const patch = {
+                paymentStatus: saved.paymentStatus || (part === 'advance' ? 'ADVANCE_PAID' : 'PAID'),
+                status: 'confirmed',
+                ...(saved.amountPaid !== undefined ? { amountPaid: saved.amountPaid } : {}),
+                ...(saved.codAmountCollected !== undefined ? { codAmountCollected: saved.codAmountCollected } : {}),
+                ...(saved.overallStatus ? { overallStatus: saved.overallStatus } : {}),
+            };
+            setReservations(prev => prev.map(r => r._id === id ? { ...r, ...patch } : r));
             if (selectedRes?._id === id) {
-                setSelectedRes(prev => ({ ...prev, paymentStatus: 'PAID', status: 'confirmed' }));
+                setSelectedRes(prev => ({ ...prev, ...patch }));
             }
         } catch (error) {
             console.error('Failed to confirm COD payment:', error);
@@ -277,9 +346,9 @@ const EventReservations = () => {
         if (!dateStr) return '';
         const d = new Date(dateStr);
         if (isNaN(d.getTime())) return '';
-        const datePart = d.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
-        const timePart = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-        return `${datePart} / ${timePart}`;
+        const datePart = formatResDate(d);
+        const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        return `${datePart} · ${timePart}`;
     };
 
     const getDisplayStatus = (res) => {
@@ -294,8 +363,14 @@ const EventReservations = () => {
         if (res.status === 'completed') {
             return { label: 'COMPLETED', color: 'bg-blue-100 text-blue-700 border-blue-200' };
         }
-        // CONFIRMED once the seller accepted (payment pending or done — shown separately below).
-        if (res.status === 'confirmed') {
+        // CONFIRMED only after the seller accepted AND the customer paid (advance / full,
+        // or COD booking confirmed by the customer). Accepted but not paid -> still REQUESTED.
+        const payStatus = String(res.paymentStatus || '').toUpperCase();
+        const overall = String(res.overallStatus || '').toUpperCase();
+        const customerPaid = Number(res.amountPaid) > 0
+            || payStatus === 'ADVANCE_PAID' || payStatus === 'PAID'
+            || (String(res.paymentMode || '').toUpperCase() === 'COD' && ['CONFIRMED', 'IN_PROGRESS', 'COMPLETED'].includes(overall));
+        if (res.status === 'confirmed' && customerPaid) {
             return { label: 'CONFIRMED', color: 'bg-green-100 text-green-700 border-green-200' };
         }
         return { label: 'REQUESTED', color: 'bg-amber-100 text-amber-700 border-amber-200' };
@@ -309,6 +384,9 @@ const EventReservations = () => {
         if (mode === 'COD') {
             if (status === 'PAID') {
                 return { label: 'COD Paid', color: 'bg-emerald-100 text-emerald-800 border-emerald-200', isPendingCOD: false };
+            }
+            if (status === 'ADVANCE_PAID') {
+                return { label: 'Advance Paid (COD)', color: 'bg-purple-100 text-purple-800 border-purple-200', isPendingCOD: true };
             }
             return { label: 'COD Pending', color: 'bg-amber-100 text-amber-800 border-amber-200', isPendingCOD: true };
         }
@@ -422,12 +500,12 @@ const EventReservations = () => {
                                         <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-600">
                                             <HiOutlineCalendarDays className="w-4 h-4 text-slate-400 shrink-0" />
                                             <span className="font-semibold text-slate-700">
-                                                {new Date(res.eventDate).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}
+                                                {formatResDate(res.eventDate)}
                                             </span>
                                         </div>
                                         <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-600">
                                             <HiOutlineClock className="w-4 h-4 text-slate-400 shrink-0" />
-                                            <span className="font-semibold text-slate-700">{res.eventTime || "Time not specified"}</span>
+                                            <span className="font-semibold text-slate-700">{formatResTime(res.eventTime) || "Time not specified"}</span>
                                         </div>
                                         {/* Guests: only reflect if guestCount is active / > 0 */}
                                         {Boolean(res.guestCount && Number(res.guestCount) > 0) && (
@@ -564,17 +642,17 @@ const EventReservations = () => {
                         <div className="bg-slate-50 rounded-2xl p-4 sm:p-5 space-y-4 mb-5 border border-slate-100">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Date</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Booking Date</p>
                                     <p className="font-bold text-slate-700 flex items-center gap-2 text-xs sm:text-sm">
                                         <HiOutlineCalendarDays className="w-4 h-4 text-red-500 shrink-0" />
-                                        {new Date(selectedRes.eventDate).toLocaleDateString()}
+                                        {formatResDate(selectedRes.eventDate)}
                                     </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Time</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Booking Time Slot</p>
                                     <p className="font-bold text-slate-700 flex items-center gap-2 text-xs sm:text-sm">
                                         <HiOutlineClock className="w-4 h-4 text-red-500 shrink-0" />
-                                        {selectedRes.eventTime}
+                                        {formatResTime(selectedRes.eventTime)}
                                     </p>
                                 </div>
                                 {Boolean(selectedRes.guestCount && Number(selectedRes.guestCount) > 0) && (
@@ -616,6 +694,16 @@ const EventReservations = () => {
                                         <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-bold border ${getPaymentBadge(selectedRes).color}`}>
                                             {getPaymentBadge(selectedRes).label}
                                         </span>
+                                        {getPaymentBadge(selectedRes).isPendingCOD && getPaidBreakdown(selectedRes).paid <= 0 && getSecondAmount(selectedRes).value > 0 && getSecondAmount(selectedRes).value < Number(selectedRes.amount || selectedRes.totalAmount || 0) && (
+                                            <button
+                                                onClick={() => handleConfirmCOD(selectedRes._id, 'advance')}
+                                                disabled={loadingResId === selectedRes._id}
+                                                className="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 disabled:opacity-50"
+                                            >
+                                                <HiOutlineCheck className="w-3.5 h-3.5" />
+                                                Save Advance Paid (₹{getSecondAmount(selectedRes).value.toLocaleString('en-IN')} Cash)
+                                            </button>
+                                        )}
                                         {getPaymentBadge(selectedRes).isPendingCOD && (
                                             <button
                                                 onClick={() => handleConfirmCOD(selectedRes._id)}
@@ -665,10 +753,10 @@ const EventReservations = () => {
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Dates & Remarks</p>
                                         <div className="space-y-1">
                                             {selectedRes.multipleEvents.map((item, idx) => (
-                                                <div key={item.id || idx} className="flex flex-wrap justify-between gap-2 rounded-lg bg-slate-50 px-2 py-1.5 text-xs sm:text-sm">
+                                                <div key={item.id || idx} className="flex flex-col gap-0.5 rounded-lg bg-slate-50 px-2 py-1.5 text-xs sm:flex-row sm:justify-between sm:gap-2 sm:text-sm">
                                                     <span className="font-bold text-slate-700">{item.typeName || ''}</span>
-                                                    <span className="font-semibold text-slate-700 text-right">
-                                                        {`${item.date ? new Date(`${String(item.date).slice(0, 10)}T00:00:00`).toLocaleDateString('en-IN') : ''}${item.time ? ` · ${item.time}` : ''}`}
+                                                    <span className="min-w-0 break-words font-semibold text-slate-700 sm:text-right">
+                                                        {`${item.date ? formatResDate(item.date) : ''}${item.time ? ` · ${formatResTime(item.time)}` : ''}`}
                                                         {String(item.remarks || '').trim() && <span className="block text-[11px] font-medium italic text-slate-500">📝 {item.remarks}</span>}
                                                     </span>
                                                 </div>
@@ -867,9 +955,9 @@ const EventReservations = () => {
                                     </button>
                                 </>
                             )}
-                            {selectedRes.status === 'confirmed' && (() => {
-                                // Allowed only after the booked event date & time is over.
-                                const eventEnd = getEventEndIST(selectedRes);
+                            {selectedRes.status === 'confirmed' && getDisplayStatus(selectedRes).label === 'CONFIRMED' && (() => {
+                                // Allowed only after the booked slot's start date & time.
+                                const eventEnd = getEventStartIST(selectedRes);
                                 const notEndedYet = Boolean(eventEnd) && Date.now() < eventEnd.getTime();
                                 const endLabel = eventEnd
                                     ? eventEnd.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
@@ -885,7 +973,7 @@ const EventReservations = () => {
                                         </button>
                                         {notEndedYet && (
                                             <p className="text-[11px] font-semibold text-slate-500 text-center">
-                                                Available after the event ends ({endLabel})
+                                                Available after the event starts ({endLabel})
                                             </p>
                                         )}
                                     </div>

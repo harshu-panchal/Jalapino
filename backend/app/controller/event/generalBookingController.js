@@ -4,6 +4,7 @@ import SellerVenueAvailability from '../../models/event/SellerVenueAvailability.
 import Product from '../../models/product.js';
 import Notification from '../../models/notification.js';
 import handleResponse from '../../utils/helper.js';
+import { parseTimeToMinutes } from '../../utils/advanceBooking.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { notify } from '../../modules/notifications/notification.service.js';
@@ -41,6 +42,18 @@ export const createBooking = async (req, res) => {
 
     const Seller = await import('../../models/seller.js').then((m) => m.default);
     const seller = await Seller.findById(venue.sellerId);
+
+    // Shop timing ON: bookings are taken only while the shop is open (between
+    // opening and closing time, India time) - for any booking date.
+    const shopOpenMin = parseTimeToMinutes(seller?.shopOpeningTime);
+    const shopCloseMin = parseTimeToMinutes(seller?.shopClosingTime);
+    if (seller?.shopTimingsEnabled && shopOpenMin !== null && shopCloseMin !== null && shopCloseMin > shopOpenMin) {
+      const nowIST = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+      const nowMin = nowIST.getUTCHours() * 60 + nowIST.getUTCMinutes();
+      if (nowMin < shopOpenMin || nowMin >= shopCloseMin) {
+        return handleResponse(res, 400, `Shop is closed right now. Bookings are accepted only between ${seller.shopOpeningTime} and ${seller.shopClosingTime}.`);
+      }
+    }
 
     // 1. Validate Member details & Age Eligibility
     const isChildPolicyEnabled = Boolean(seller?.childTicketPolicyEnabled);

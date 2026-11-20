@@ -114,11 +114,12 @@ const GeneralBookingForm = () => {
 
         // 2. If seller has strict operating hours set by admin (shopTimingsEnabled)
         const seller = currentVenue?.sellerId;
-        if (seller && seller.shopTimingsEnabled && (seller.shopOpeningTime || seller.shopClosingTime)) {
-            const openMinutes = parseTimeToMinutes(seller.shopOpeningTime) ?? (10 * 60); // default 10:00 AM
-            const closeMinutes = parseTimeToMinutes(seller.shopClosingTime) ?? (18 * 60); // default 06:00 PM
+        if (seller && seller.shopTimingsEnabled && seller.shopOpeningTime && seller.shopClosingTime) {
+            // Only this seller's own saved hours (no default times).
+            const openMinutes = parseTimeToMinutes(seller.shopOpeningTime);
+            const closeMinutes = parseTimeToMinutes(seller.shopClosingTime);
 
-            if (closeMinutes > openMinutes) {
+            if (openMinutes !== null && closeMinutes !== null && closeMinutes > openMinutes) {
                 // Return direct full shop operating hours as single time slot
                 return [`${formatTime12h(openMinutes)} - ${formatTime12h(closeMinutes)}`];
             }
@@ -181,10 +182,28 @@ const GeneralBookingForm = () => {
         setMembers(updated);
     };
 
+    // Shop timing ON: bookings only while the shop is open (opening to closing time), any date.
+    const getShopClosedNowMessage = () => {
+        const seller = activeVenue?.sellerId || venue?.sellerId;
+        if (!seller?.shopTimingsEnabled) return '';
+        const openMin = parseTimeToMinutes(seller.shopOpeningTime);
+        const closeMin = parseTimeToMinutes(seller.shopClosingTime);
+        if (openMin === null || openMin === undefined || closeMin === null || closeMin === undefined || closeMin <= openMin) return '';
+        const now = new Date();
+        const nowMin = now.getHours() * 60 + now.getMinutes();
+        if (nowMin >= openMin && nowMin < closeMin) return '';
+        return `Shop is closed right now. Bookings are accepted only between ${seller.shopOpeningTime} and ${seller.shopClosingTime}.`;
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!bookingDate || !timeSlot) {
             toast.error("Please select date and time slot.");
+            return;
+        }
+        const shopClosedNow = getShopClosedNowMessage();
+        if (shopClosedNow) {
+            toast.error(shopClosedNow);
             return;
         }
 
@@ -434,9 +453,10 @@ const GeneralBookingForm = () => {
                                 Booking Schedule & Details
                             </h3>
                             <div className="flex flex-wrap items-center gap-2">
-                                {activeVenue?.sellerId?.shopTimingsEnabled && (
+                                {/* Hours = this seller's own saved times only (no default times) */}
+                                {activeVenue?.sellerId?.shopTimingsEnabled && activeVenue.sellerId.shopOpeningTime && activeVenue.sellerId.shopClosingTime && (
                                     <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-purple-50 text-[10px] font-bold text-purple-700 border border-purple-100">
-                                        ⏰ Hours: {activeVenue.sellerId.shopOpeningTime || '09:00 AM'} - {activeVenue.sellerId.shopClosingTime || '09:00 PM'}
+                                        ⏰ Hours: {activeVenue.sellerId.shopOpeningTime} - {activeVenue.sellerId.shopClosingTime}
                                     </span>
                                 )}
                                 {activeVenue?.sellerId?.shopTimingsEnabled && activeVenue?.sellerId?.childTicketPolicyEnabled && (
@@ -505,6 +525,11 @@ const GeneralBookingForm = () => {
                                         ))}
                                     </select>
                                 </div>
+                                {getShopClosedNowMessage() && (
+                                    <p className="text-[11px] font-bold text-rose-600 mt-1 flex items-center gap-1">
+                                        ⚠️ {getShopClosedNowMessage()}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>

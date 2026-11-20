@@ -18,6 +18,7 @@ import Product from "../../models/product.js";
 import EventBooking from "../../models/event/EventBooking.js";
 import GeneralBooking from "../../models/event/GeneralBooking.js";
 import MemberTicket from "../../models/event/MemberTicket.js";
+import CustomizationRequest from "../../models/event/CustomizationRequest.js";
 import EventCategory from "../../models/event/EventCategory.js";
 import User from "../../models/customer.js";
 import { buildKey, getOrSet, getTTL } from "../cacheService.js";
@@ -139,6 +140,18 @@ async function computeSellerStats(sellerOid, range) {
     console.warn("[SellerStatsService] Error fetching memberTickets:", e.message);
   }
 
+  // 5. Customization & Quotation bookings (separate from event bookings).
+  //    Counted as a sale once CONFIRMED (customer paid online or chose COD).
+  let customizations = [];
+  try {
+    customizations = await CustomizationRequest.find({ seller: sellerOid, status: "CONFIRMED" })
+      .populate("customer", "name phone")
+      .sort({ createdAt: -1 })
+      .lean();
+  } catch (e) {
+    console.warn("[SellerStatsService] Error fetching customizations:", e.message);
+  }
+
   // --- Count only real sales (avoid mismatch) ---
   // Events: only bookings this seller ACCEPTED / CONFIRMED / COMPLETED
   // (not pending requests, not seller-rejected; cancelled already excluded).
@@ -196,6 +209,14 @@ async function computeSellerStats(sellerOid, range) {
       module: "Wholesale",
       name: "Wholesale",
       icon: "📦",
+      totalOrders: 0,
+      totalSales: 0,
+      categories: {},
+    },
+    Customization: {
+      module: "Customization",
+      name: "Customization",
+      icon: "🎨",
       totalOrders: 0,
       totalSales: 0,
       categories: {},
@@ -311,19 +332,31 @@ async function computeSellerStats(sellerOid, range) {
     );
     const ticketIds = linkedTickets.map((t) => t.ticketId).filter(Boolean);
 
+    // Show the member(s) the ticket was booked for (name / mobile from the ticket),
+    // and "Checked-In" once the seller has scanned the ticket.
+    const ticketMembers = linkedTickets.filter((t) => t.name || t.mobileNumber);
+    const firstMember = ticketMembers[0];
+    const checkedInCount = linkedTickets.filter((t) => t.status === "Checked-In" || t.scannedAt).length;
+    const ticketStatus = checkedInCount > 0 ? "Checked-In" : (gb.bookingStatus || "Confirmed");
+    const memberNames = ticketMembers.map((t) => t.name).filter(Boolean);
+
     detailedReports.push({
       id: ticketIds.length > 0 ? ticketIds.join(", ") : `TKT-${String(gb._id).slice(-6).toUpperCase()}`,
       module: "Tickets & Venues",
       category: categoryName,
-      customerName: gb.customerId?.name || "Customer",
-      customerPhone: gb.customerId?.phone || "",
+      customerName: firstMember?.name
+        ? `${firstMember.name}${ticketMembers.length > 1 ? ` +${ticketMembers.length - 1}` : ""}`
+        : (gb.customerId?.name || "Customer"),
+      customerPhone: firstMember?.mobileNumber || gb.customerId?.phone || "",
       date: gb.bookingDate
         ? new Date(gb.bookingDate).toLocaleDateString("en-IN")
         : new Date(gb.createdAt).toLocaleDateString("en-IN"),
       time: gb.timeSlot || "—",
-      status: gb.bookingStatus || "Confirmed",
+      status: ticketStatus,
       amount: Math.round(amount),
-      details: `${members} Ticket(s) (${gb.bookingType || "General"})`,
+      details: `${members} Ticket(s) (${gb.bookingType || "General"})`
+        + (memberNames.length ? ` · Members: ${memberNames.join(", ")}` : "")
+        + (linkedTickets.length ? ` · Checked-in: ${checkedInCount}/${linkedTickets.length}` : ""),
       createdAt: gb.createdAt,
     });
   });
@@ -381,6 +414,50 @@ async function computeSellerStats(sellerOid, range) {
     });
   });
 
+  // Process Customization bookings (own section in the report)
+  customizations.forEach((cr) => {
+    const amount = Number(cr.quotation?.amount || 0);
+    const categoryName = cr.details?.decorationType ? `${cr.details.decorationType} Decoration` : "Customization";
+    const mc = moduleMap.Customization;
+    mc.totalOrders++;
+    mc.totalSales += amount;
+    if (!mc.categories[categoryName]) mc.categories[categoryName] = { name: categoryName, count: 0, revenue: 0 };
+    mc.categories[categoryName].count++;
+    mc.categories[categoryName].revenue += amount;
+
+    const cDate = new Date(cr.createdAt);
+    if (cDate >= sevenDaysAgo) {
+      currentWeekSales += amount;
+      currentWeekOrders++;
+    } else if (cDate >= fourteenDaysAgo) {
+      prevWeekSales += amount;
+      prevWeekOrders++;
+    }
+
+    const cod = Number(cr.codAmountCollected || 0);
+    const paid = Math.min(amount, Number(cr.amountPaid || 0));
+    const paymentText = cr.paymentMode === "COD"
+      ? (cr.paymentStatus === "PAID" ? "COD Paid" : cr.paymentStatus === "ADVANCE_PAID" ? "Advance Paid (COD)" : "COD Pending")
+      : (cr.paymentStatus === "PAID" ? "Paid (Online)" : "Advance Paid (Online)");
+    detailedReports.push({
+      id: cr.requestId || `CUS-${String(cr._id).slice(-6).toUpperCase()}`,
+      module: "Customization",
+      category: categoryName,
+      customerName: cr.customer?.name || "Customer",
+      customerPhone: cr.customer?.phone || "",
+      date: new Date(cr.createdAt).toLocaleDateString("en-IN"),
+      time: new Date(cr.createdAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      status: "Confirmed",
+      amount: Math.round(amount),
+      details: [
+        cr.details?.theme ? `Theme: ${cr.details.theme}` : "",
+        cr.details?.colors?.length ? `Colors: ${cr.details.colors.join(", ")}` : "",
+        `${paymentText} · Paid ₹${Math.round(paid).toLocaleString("en-IN")}${cod > 0 ? ` (cash ₹${Math.round(cod).toLocaleString("en-IN")})` : ""}`,
+      ].filter(Boolean).join(" · "),
+      createdAt: cr.createdAt,
+    });
+  });
+
   // Sort detailed reports newest first
   detailedReports.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
@@ -415,6 +492,7 @@ async function computeSellerStats(sellerOid, range) {
     // Same amount formula as the totals (no chart vs total mismatch).
     ...eventBookings.map((eb) => ({ date: new Date(eb.createdAt), amount: eventAmountOf(eb) })),
     ...generalBookings.map((gb) => ({ date: new Date(gb.createdAt), amount: Number(gb.totalAmount || 0) })),
+    ...customizations.map((cr) => ({ date: new Date(cr.createdAt), amount: Number(cr.quotation?.amount || 0) })),
   ];
 
   let chartData = [];

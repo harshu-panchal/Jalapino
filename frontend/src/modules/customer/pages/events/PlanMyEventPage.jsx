@@ -346,6 +346,25 @@ const SellerCard = ({ seller, activeCategory, eventParams, onSelect, bookings = 
 const libraries = ['places'];
 const PLAN_MY_EVENT_VIEW_KEY = 'jalapino_plan_my_event_view';
 
+// Empty "Your Event Details" (used for a category / seller that has no details yet).
+const EMPTY_EVENT_INFO = {
+    bookingType: 'individual',
+    serviceLocationType: 'function', // 'function' or 'seller'
+    name: '',
+    gender: '',
+    dateOfBirth: '',
+    anniversaryDate: '',
+    corporateCompanyName: '',
+    corporateContactPerson: '',
+    corporateMobile: '',
+    corporateGstNumber: '',
+    functionLocation: '',
+    sellerLocation: '',
+    noOfGuests: '',
+    lat: null,
+    lng: null,
+};
+
 const readSavedPlanMyEventView = () => {
     try {
         return JSON.parse(sessionStorage.getItem(PLAN_MY_EVENT_VIEW_KEY) || 'null');
@@ -499,12 +518,9 @@ const PlanMyEventPage = () => {
     const [banners, setBanners] = useState([]);
     const [currentBannerIdx, setCurrentBannerIdx] = useState(0);
 
-    /* ── sync functionLocation with global location ── */
-    useEffect(() => {
-        if (currentLocation?.name) {
-            setEventInfo(prev => ({ ...prev, functionLocation: currentLocation.name }));
-        }
-    }, [currentLocation?.name]);
+    /* Function Location is NOT auto-filled from the header location any more: it shows in the
+       Plan Summary / booking details only when the customer fills it. (Seller search already
+       falls back to the header location when this field is empty.) */
 
     /* ── initialize google maps autocomplete for function location ── */
     useEffect(() => {
@@ -577,23 +593,8 @@ const PlanMyEventPage = () => {
 
         customerApi.getProfile().then(res => {
             const p = res?.data?.result || {};
-            setEventInfo(prev => ({
-                ...prev,
-                bookingType: p.bookingType || prev.bookingType || 'individual',
-                primaryContactName: p.primaryContactName || p.name || prev.primaryContactName || '',
-                name: p.name || '',
-                gender: p.gender || '',
-                dateOfBirth: p.dateOfBirth ? p.dateOfBirth.split('T')[0] : '',
-                anniversaryDate: p.anniversaryDate ? p.anniversaryDate.split('T')[0] : '',
-                functionLocation: p.functionLocation || prev.functionLocation || '',
-                coupleNames: p.coupleNames || prev.coupleNames || '',
-                corporateCompanyName: p.corporateCompanyName || prev.corporateCompanyName || '',
-                corporateContactPerson: p.corporateContactPerson || prev.corporateContactPerson || '',
-                corporateMobile: p.corporateMobile || prev.corporateMobile || '',
-                corporateGstNumber: p.corporateGstNumber || prev.corporateGstNumber || '',
-                primaryPhone: p.primaryPhone || prev.primaryPhone || '',
-                noOfGuests: p.noOfGuests || prev.noOfGuests || '',
-            }));
+            // Event details are NOT copied from the profile any more: every category /
+            // seller keeps the details the customer filled there (see per-seller store below).
             fetchArea(p.functionLocation || p.city);
         }).catch(() => fetchArea());
     }, [isAuthenticated]);
@@ -729,6 +730,65 @@ const PlanMyEventPage = () => {
         }, 60 * 1000);
         return () => clearInterval(refreshTimer);
     }, [activeCategory, filterDate, filterTime, eventInfo.functionLocation, eventInfo.lat, eventInfo.lng, currentLocation, fetchSellers]);
+
+    /* ── Details are kept separately for every category + seller ──
+       What the customer fills for one category / seller never shows in another.
+       Opening a seller for the first time starts with what was filled on that
+       category's seller list (so it need not be typed again). Saved in this
+       browser per customer. */
+    const detailsStoreKey = `jalapino_pme_details_${authUser?._id || authUser?.id || 'guest'}`;
+    const detailsKey = `${activeCategory?._id || 'none'}::${selectedSellerDetail?._id || 'list'}`;
+    const loadedDetailsRef = useRef(null);
+    // Values just loaded for a new key; the save below waits until they are on screen.
+    const pendingDetailsRef = useRef(null);
+    const readDetailsStore = () => {
+        try { return JSON.parse(localStorage.getItem(detailsStoreKey) || '{}') || {}; } catch { return {}; }
+    };
+    useEffect(() => {
+        const marker = `${detailsStoreKey}|${detailsKey}`;
+        if (loadedDetailsRef.current === marker) return;
+        const isFirstLoad = loadedDetailsRef.current === null;
+        loadedDetailsRef.current = marker;
+        const store = readDetailsStore();
+        const categoryListKey = `${activeCategory?._id || 'none'}::list`;
+        const saved = store[detailsKey] || (selectedSellerDetail?._id ? store[categoryListKey] : null);
+        // First open of the page: keep what was restored for this same view.
+        if (isFirstLoad && !saved) return;
+        const firstType = eventTypes[0]?.value || eventTypes[0]?._id || '';
+        const next = {
+            eventInfo: { ...EMPTY_EVENT_INFO, ...(saved?.eventInfo || {}) },
+            filterDate: saved?.filterDate || '',
+            filterEndDate: saved?.filterEndDate || '',
+            filterTime: saved?.filterTime || '',
+            filterMultipleDates: Array.isArray(saved?.filterMultipleDates) ? saved.filterMultipleDates : [],
+            filterRemarks: saved?.filterRemarks || '',
+        };
+        pendingDetailsRef.current = { json: JSON.stringify(next), sawOld: false };
+        setEventInfo(next.eventInfo);
+        setSelectedType(saved?.selectedType || firstType);
+        setFilterDate(next.filterDate);
+        setFilterEndDate(next.filterEndDate);
+        setFilterTime(next.filterTime);
+        setFilterMultipleDates(next.filterMultipleDates);
+        setFilterRemarks(next.filterRemarks);
+    }, [detailsKey, detailsStoreKey]);
+    useEffect(() => {
+        if (loadedDetailsRef.current !== `${detailsStoreKey}|${detailsKey}`) return;
+        // Right after switching, the first run still has the previous category/seller's
+        // values on screen - never save those under the new key.
+        const pending = pendingDetailsRef.current;
+        if (pending) {
+            const current = JSON.stringify({ eventInfo, filterDate, filterEndDate, filterTime, filterMultipleDates, filterRemarks });
+            if (current !== pending.json && !pending.sawOld) { pending.sawOld = true; return; }
+            pendingDetailsRef.current = null;
+        }
+        if (!activeCategory && !selectedSellerDetail) return;
+        try {
+            const store = readDetailsStore();
+            store[detailsKey] = { eventInfo, selectedType, filterDate, filterEndDate, filterTime, filterMultipleDates, filterRemarks };
+            localStorage.setItem(detailsStoreKey, JSON.stringify(store));
+        } catch { /* storage full / blocked - details just are not remembered */ }
+    }, [detailsKey, detailsStoreKey, eventInfo, selectedType, filterDate, filterEndDate, filterTime, filterMultipleDates, filterRemarks]);
 
     useEffect(() => {
         if (!activeCategory && !selectedSellerDetail) {
@@ -1197,11 +1257,11 @@ const PlanMyEventPage = () => {
                                                         <div className="flex flex-col gap-2">
                                                             {filterMultipleDates.map((item, idx) => (
                                                                 <div key={item.id || idx} className="flex flex-wrap items-center justify-between gap-3 bg-amber-50 p-2 rounded-lg border border-amber-100">
-                                                                    <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700 items-center">
+                                                                    <div className="flex min-w-0 flex-1 flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-slate-700 items-center">
                                                                         <span className="text-purple-700 font-bold bg-purple-100 px-2 py-1 rounded-md">🎉 {item.typeName || item.typeId}</span>
                                                                         <span className="flex items-center gap-1">📅 {item.date}</span>
                                                                         {item.time && <span className="flex items-center gap-1">🕐 {item.time}</span>}
-                                                                        {item.remarks && <span className="text-slate-500 font-normal italic flex items-center gap-1">📝 {item.remarks}</span>}
+                                                                        {item.remarks && <span className="w-full sm:w-auto min-w-0 break-words text-slate-500 font-normal italic">📝 {item.remarks}</span>}
                                                                     </div>
                                                                     <button
                                                                         onClick={() => setFilterMultipleDates(prev => prev.filter(x => x.id !== item.id))}
@@ -1452,12 +1512,13 @@ const PlanMyEventPage = () => {
                                             {(eventInfo.bookingType === 'couple' ? (relevantCats.some(c => c.coupleContactEnabled) || filteredSellers.some(s => s.coupleContactEnabled)) : eventInfo.bookingType === 'individual' ? (relevantCats.some(c => c.primaryContactEnabled) || filteredSellers.some(s => s.primaryContactEnabled)) : false) && (
                                                 <div className="flex flex-col gap-1">
                                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-wider">
-                                                        {eventInfo.bookingType === 'couple' ? '💍 Anniversary Date' : '🎂 Date of Birth'}
+                                                        {eventInfo.bookingType === 'couple' ? '💍 Marriage Anniversary Date' : '🎂 Date of Birth'}
                                                     </label>
                                                     <input
                                                         type="date"
                                                         value={eventInfo.bookingType === 'couple' ? eventInfo.anniversaryDate : eventInfo.dateOfBirth}
-                                                        max={new Date().toISOString().split('T')[0]}
+                                                        /* Date of Birth / Anniversary Date: full calendar (no date limit).
+                                                           The Booking Date filter above keeps its own rules. */
                                                         onChange={e => handleEventInfoChange(eventInfo.bookingType === 'couple' ? 'anniversaryDate' : 'dateOfBirth', e.target.value)}
                                                         className="border border-slate-200 rounded-xl px-3 py-2 text-sm font-semibold bg-slate-50 text-slate-700 outline-none focus:ring-2 focus:ring-purple-400"
                                                     />

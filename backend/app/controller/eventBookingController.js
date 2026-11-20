@@ -9,7 +9,7 @@ import Product from '../models/product.js';
 import EventCategory from '../models/event/EventCategory.js';
 import handleResponse from '../utils/helper.js';
 import { emitSellerNotification, emitCustomerNotification } from '../modules/notifications/notification.service.js';
-import { getBookingStart, isBookingWithinAdvanceNotice, parseTimeToMinutes, getEventEndIST, formatIST, isEventBookingCalendarLocked } from '../utils/advanceBooking.js';
+import { getBookingStart, isBookingWithinAdvanceNotice, parseTimeToMinutes, getEventEndIST, getEventStartIST as getSlotStartIST, formatIST, isEventBookingCalendarLocked } from '../utils/advanceBooking.js';
 import { creditWallet, debitWallet, getOrCreateWallet, updateCashInHand } from '../services/finance/walletService.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
@@ -606,7 +606,7 @@ export const getMyEventBookings = async (req, res) => {
         const customerId = req.user.id || req.user._id;
         const bookings = await EventBooking.find({ customer: customerId })
             .populate('services.category', 'name icon')
-            .populate('services.seller', 'name businessName mobile phone accountRefundEnabled')
+            .populate('services.seller', 'name businessName shopName address locality city pincode mobile phone accountRefundEnabled')
             .populate('selectedProducts.productId', 'name')
             .sort({ createdAt: -1 });
         return handleResponse(res, 200, 'Event bookings fetched successfully', bookings);
@@ -1030,10 +1030,10 @@ export const completeEventBooking = async (req, res) => {
         if (booking.overallStatus !== 'CONFIRMED') {
             return handleResponse(res, 400, 'Booking must be CONFIRMED before it can be marked COMPLETED');
         }
-        // Only after the booked date & time is over.
-        const eventEnd = getEventEndIST(booking);
-        if (eventEnd && Date.now() < eventEnd.getTime()) {
-            return handleResponse(res, 400, `You can mark this booking as completed only after the event ends (${formatIST(eventEnd)}).`);
+        // Only after the booked slot's start date & time.
+        const eventStart = getSlotStartIST(booking);
+        if (eventStart && Date.now() < eventStart.getTime()) {
+            return handleResponse(res, 400, `You can mark this booking as completed only after the event starts (${formatIST(eventStart)}).`);
         }
 
         booking.overallStatus = 'COMPLETED';

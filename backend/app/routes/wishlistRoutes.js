@@ -3,7 +3,10 @@ import {
     getWishlist,
     addToWishlist,
     removeFromWishlist,
-    toggleWishlist
+    toggleWishlist,
+    getEventWishlist,
+    toggleEventWishlist,
+    removeFromEventWishlist
 } from "../controller/wishlistController.js";
 import { verifyToken } from "../middleware/authMiddleware.js";
 import { validate } from "../middleware/validate.js";
@@ -27,6 +30,15 @@ router.delete(
     "/remove/:productId",
     validate(removeFromWishlistParamsSchema, "params"),
     removeFromWishlist,
+);
+
+// Plan My Event wishlist (separate list from the retail wishlist above)
+router.get("/events", getEventWishlist);
+router.post("/events/toggle", validate(toggleWishlistSchema), toggleEventWishlist);
+router.delete(
+    "/events/remove/:productId",
+    validate(removeFromWishlistParamsSchema, "params"),
+    removeFromEventWishlist,
 );
 
 export default router;

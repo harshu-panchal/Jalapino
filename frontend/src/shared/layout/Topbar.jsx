@@ -71,7 +71,8 @@ const Topbar = ({ onMenuClick }) => {
                 : await adminApi.getNotifications();
             if (response.data.success) {
                 setNotifications(response.data.result.notifications);
-                setUnreadCount(response.data.result.unreadCount);
+                // Bell shows the total number of notifications (from DB).
+                setUnreadCount(response.data.result.total ?? response.data.result.unreadCount);
             }
         } catch (error) {
             console.error("Notif Fetch Error:", error);
@@ -100,7 +101,22 @@ const Topbar = ({ onMenuClick }) => {
             }, 200);
         };
 
-        const offNotification = token ? onNotificationNew(getToken, refresh) : null;
+        const onNew = (payload) => {
+            refresh();
+            // Seller: a customer started a new chat -> show an alert right away.
+            if (isSeller && String(payload?.eventType || '') === 'NEW_CUSTOMER_CHAT') {
+                const sessionId = payload?.data?.sessionId;
+                toast.info(payload?.title || 'New Chat Message', {
+                    description: payload?.body || 'A customer has started a chat with you.',
+                    duration: 8000,
+                    action: {
+                        label: 'Open',
+                        onClick: () => navigate(`/seller/chat-inbox${sessionId ? `?session=${encodeURIComponent(sessionId)}` : ''}`),
+                    },
+                });
+            }
+        };
+        const offNotification = token ? onNotificationNew(getToken, onNew) : null;
 
         // Degraded fallback: 60s poll. The socket is the primary
         // path, this just covers offline-recovery / dropped connections.
@@ -150,6 +166,40 @@ const Topbar = ({ onMenuClick }) => {
             fetchNotifications();
         } catch (error) {
             toast.error("Failed to mark as read");
+        }
+    };
+
+    // Click on a notification: mark it read and open the page it is about.
+    const getNotificationRoute = (notif) => {
+        const data = notif?.data || {};
+        // Event booking notifications (also old ones saved with a customer link):
+        // seller -> that booking in Reservations.
+        const kind = String(notif?.type || data.eventType || '').toUpperCase();
+        if (isSeller && (kind.includes('EVENT_BOOKING') || kind === 'EVENT_REVIEW_REMINDER')) {
+            let bookingId = data.bookingId || data.orderId || '';
+            if (!bookingId && data.link) {
+                try { bookingId = new URL(String(data.link), window.location.origin).searchParams.get('bookingId') || ''; } catch (e) { /* ignore */ }
+            }
+            return bookingId ? `/seller/reservations?id=${encodeURIComponent(bookingId)}` : '/seller/reservations';
+        }
+        if (data.link) {
+            try {
+                const url = new URL(String(data.link), window.location.origin);
+                const path = url.pathname + url.search;
+                if ((isSeller && path.startsWith('/seller')) || (isAdmin && path.startsWith('/admin'))) return path;
+            } catch (e) { /* bad link -> fallbacks below */ }
+        }
+        if (data.orderId) return isSeller ? '/seller/orders' : `/admin/orders/view/${encodeURIComponent(data.orderId)}`;
+        return null;
+    };
+
+    const handleOpenNotification = async (notif) => {
+        const id = notif?._id || notif?.id;
+        if (id && !notif.isRead) await handleMarkAsRead(id);
+        const route = getNotificationRoute(notif);
+        if (route) {
+            setShowNotifications(false);
+            navigate(route);
         }
     };
 
@@ -231,7 +281,9 @@ const Topbar = ({ onMenuClick }) => {
                     >
                         <HiOutlineBell className="h-5 w-5" />
                         {unreadCount > 0 && (
-                            <span className="absolute top-2 right-2 h-2 w-2 bg-rose-500 rounded-full ring-2 ring-white shadow-sm"></span>
+                            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-rose-500 text-white text-[10px] font-bold leading-none rounded-full ring-2 ring-white shadow-sm">
+                                {unreadCount > 99 ? '99+' : unreadCount}
+                            </span>
                         )}
                     </button>
 
@@ -242,6 +294,7 @@ const Topbar = ({ onMenuClick }) => {
                                 onMarkAsRead={handleMarkAsRead}
                                 onMarkAllAsRead={handleMarkAllAsRead}
                                 onClose={() => setShowNotifications(false)}
+                                onOpen={handleOpenNotification}
                             />
                         )}
                     </AnimatePresence>
