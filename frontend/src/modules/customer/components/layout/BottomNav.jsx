@@ -3,6 +3,8 @@ import { Link, useLocation } from 'react-router-dom';
 import { Home, LayoutGrid, ShoppingBag, User, Clapperboard } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import CustomerNotificationBell from '../shared/CustomerNotificationBell';
+import { getStoredAuthToken } from '@core/utils/authStorage';
+import { STORAGE_KEYS } from '@core/utils/storageKeys';
 
 const navItems = [
     { label: 'Home', icon: Home, path: '/' },
@@ -16,6 +18,8 @@ const BottomNav = () => {
     const location = useLocation();
     const isReelsPage = location.pathname === '/reels';
     const isPlanMyEventActive = location.pathname === '/plan-my-event' || location.pathname.startsWith('/plan-my-event');
+    // Bell only for a logged-in customer (otherwise no empty gap between Orders and Profile).
+    const isCustomerLoggedIn = Boolean(getStoredAuthToken(STORAGE_KEYS.AUTH_CUSTOMER));
     
     const filteredNavItems = navItems.filter(item => {
         if (isPlanMyEventActive && item.label === 'Reels') return false;
@@ -34,7 +38,7 @@ const BottomNav = () => {
                     (item.path !== '/' && location.pathname.startsWith(item.path));
 
                 // Retail: notifications sit between Orders and Profile.
-                const bellBeforeProfile = !isPlanMyEventActive && item.label === 'Profile' ? (
+                const bellBeforeProfile = isCustomerLoggedIn && !isPlanMyEventActive && item.label === 'Profile' ? (
                     <div key="retail-notifications" className="flex-1 h-full">
                         <CustomerNotificationBell
                             category="retail"
