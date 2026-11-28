@@ -786,7 +786,7 @@ const ProductDetailSheet = () => {
                             onWheel={handleWheel}
                         >
                             {/* Product Image Carousel */}
-                            <div className="relative w-full bg-gradient-to-b from-[#F5F7F8] to-white pt-0 pb-4 h-[52vh] min-h-[320px] max-h-[560px]">
+                            <div className="relative w-full bg-gradient-to-b from-[#F5F7F8] to-white pt-14 pb-6 h-[52vh] min-h-[320px] max-h-[560px]">
                                 <div
                                     ref={scrollRef}
                                     className="flex overflow-x-auto snap-x snap-mandatory no-scrollbar h-full w-full"
@@ -804,7 +804,7 @@ const ProductDetailSheet = () => {
                                                 src={applyCloudinaryTransform(img, "f_auto,q_auto:best,w_1200,dpr_auto")}
                                                 alt={`${selectedProduct.name} ${i + 1}`}
                                                 className="w-full h-full object-contain mix-blend-multiply drop-shadow-xl"
-                                                style={{ objectPosition: 'center calc(50% - 40px)' }}
+                                                style={{ objectPosition: 'center' }}
                                             />
                                         </div>
                                     ))}

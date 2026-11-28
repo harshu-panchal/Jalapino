@@ -89,13 +89,13 @@ const QuickCategorySlider = ({ categories, onCategoryClick }) => {
                 onClick={() => !isStuck && onCategoryClick(cat.id)}
                 className="flex flex-col items-center cursor-pointer group/item snap-start min-w-[70px] sm:min-w-[88px] max-w-[96px] transition-transform active:scale-95"
               >
-                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-[#FFFFFF] border border-[#E7DDD5] flex items-center justify-center transition-all duration-300 group-hover/item:scale-105 group-hover/item:border-[#d0bfb2] shadow group-hover/item:shadow-md">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-full overflow-hidden bg-[#FFFFFF] border border-[#E7DDD5] flex items-center justify-center transition-all duration-300 group-hover/item:scale-105 group-hover/item:border-[#d0bfb2] shadow group-hover/item:shadow-md">
                   {cat.icon || cat.image ? (
                     <img
-                      src={applyCloudinaryTransform(cat.icon || cat.image, "f_auto,q_auto,w_150")}
+                      src={applyCloudinaryTransform(cat.icon || cat.image, "f_auto,q_auto,w_200")}
                       alt={cat.name}
                       loading="eager"
-                      className="h-10 w-10 sm:h-12 sm:w-12 object-contain mix-blend-multiply"
+                      className="w-full h-full rounded-full object-cover"
                     />
                   ) : (
                     <div className="h-6 w-6 rounded-full bg-slate-300" />

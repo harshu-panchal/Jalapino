@@ -41,7 +41,18 @@ const upload = multer({
 router.use(verifyToken, allowRoles("seller"), requireApprovedSeller);
 
 router.post("/check-intent", checkVideoUploadIntent);
-router.post("/upload", upload.single('video'), uploadProductVideo);
+// Multer errors (too large / not a video) -> clear 400 message instead of generic 500
+const uploadVideoFile = (req, res, next) => {
+    upload.single('video')(req, res, (err) => {
+        if (!err) return next();
+        const message = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
+            ? 'Video is too large. Maximum allowed size is 100 MB.'
+            : (err.message || 'Video upload failed');
+        return res.status(400).json({ success: false, message });
+    });
+};
+
+router.post("/upload", uploadVideoFile, uploadProductVideo);
 router.get("/plans", getActivePlans);
 router.post("/subscribe/create-order", createSubscriptionOrder);
 router.post("/subscribe", subscribeToPlan);

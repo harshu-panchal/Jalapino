@@ -441,9 +441,20 @@ const sellerSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'SellerSubscription'
     },
+    // Active (paid) video subscription — used by productVideoController & admin confirm.
+    activeVideoSubscriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'SellerSubscription',
+      default: null
+    },
     usedVideoStorageMB: {
       type: Number,
       default: 0
+    },
+    // Razorpay payment ids already used for extra video storage (stops reuse of one payment).
+    usedVideoStoragePaymentIds: {
+      type: [String],
+      default: []
     },
     customizationEngineEnabled: {
       type: Boolean,

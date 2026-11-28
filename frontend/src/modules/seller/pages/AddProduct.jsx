@@ -744,6 +744,16 @@ const AddProduct = () => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const fileSizeMB = file.size / (1024 * 1024);
+      e.target.value = ''; // allow selecting the same file again
+
+      if (!file.type || !file.type.startsWith('video/')) {
+        toast.error('Please select a valid video file.');
+        return;
+      }
+      if (fileSizeMB > 100) {
+        toast.error('Video is too large. Maximum allowed size is 100 MB.');
+        return;
+      }
 
       const checkToast = toast.loading('Checking storage limits...');
 
@@ -751,14 +761,17 @@ const AddProduct = () => {
         const intentRes = await sellerApi.checkVideoUploadIntent({ fileSizeMB });
         toast.dismiss(checkToast);
 
-        const { requiresPayment, totalAmount, mbToCharge, razorpayOrder } = intentRes.data;
+        const { requiresPayment, totalAmount, mbToCharge, razorpayOrder, includedMB, usedMB, extraMBPrice } = intentRes.data;
 
         if (requiresPayment) {
           setVideoPayment({
             file,
             totalAmount,
             mbToCharge,
-            razorpayOrder
+            razorpayOrder,
+            includedMB: Number(includedMB) || 0,
+            usedMB: Number(usedMB) || 0,
+            extraMBPrice: Number(extraMBPrice) || 0
           });
         } else {
           await executeVideoUpload(file);
@@ -771,14 +784,13 @@ const AddProduct = () => {
     }
   };
 
-  const handleVideoPayCOD = async () => {
-    if (!videoPayment) return;
-    await executeVideoUpload(videoPayment.file, { paymentMethod: 'COD' });
-  };
-
   const handleVideoPayRazorpay = async () => {
     if (!videoPayment || !videoPayment.razorpayOrder) return;
     try {
+      if (!window.Razorpay || !import.meta.env.VITE_RAZORPAY_KEY_ID) {
+        toast.error('Online payment is not available right now. Please try again later.');
+        return;
+      }
       const order = videoPayment.razorpayOrder;
       const options = {
         key: import.meta.env.VITE_RAZORPAY_KEY_ID,
@@ -788,17 +800,26 @@ const AddProduct = () => {
         description: 'Extra Storage Payment',
         order_id: order.id,
         handler: async (response) => {
-          await executeVideoUpload(videoPayment.file, {
+          const paidParams = {
             paymentMethod: 'Razorpay',
             razorpay_order_id: response.razorpay_order_id,
             razorpay_payment_id: response.razorpay_payment_id,
             razorpay_signature: response.razorpay_signature,
-          });
+          };
+          // Payment done: remember it, so upload can be retried if it fails
+          setVideoPayment(prev => (prev ? { ...prev, paidParams } : prev));
+          await executeVideoUpload(videoPayment.file, paidParams);
         },
         prefill: {},
         theme: { color: '#E11D48' },
+        modal: {
+          ondismiss: () => toast.info('Payment cancelled. Video not uploaded.'),
+        },
       };
       const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', (resp) => {
+        toast.error(resp?.error?.description || 'Payment failed. Video not uploaded.');
+      });
       rzp.open();
     } catch (err) {
       toast.error('Failed to initiate online payment');
@@ -2220,16 +2241,35 @@ const AddProduct = () => {
               <div className="bg-rose-50 border border-rose-100 rounded-xl p-4 mb-6">
                 <p className="text-sm font-semibold text-rose-800">Storage Limit Exceeded</p>
                 <p className="text-xs text-rose-600 mt-1">
-                  This upload exceeds your included storage by <strong>{videoPayment.mbToCharge.toFixed(2)} MB</strong>.
+                  {videoPayment.includedMB > 0 ? (
+                    <>Your plan includes <strong>{videoPayment.includedMB} MB</strong> free storage (used: <strong>{videoPayment.usedMB.toFixed(2)} MB</strong>). </>
+                  ) : (
+                    <>Free storage: <strong>0 MB</strong> (no active video plan). </>
+                  )}
+                  This upload exceeds your free limit by <strong>{videoPayment.mbToCharge.toFixed(2)} MB</strong>
+                  {videoPayment.extraMBPrice > 0 && <> (charged at <strong>₹{videoPayment.extraMBPrice}/MB</strong>)</>}.
                 </p>
                 <div className="mt-3 flex justify-between items-baseline">
                   <span className="text-xs text-slate-500 font-bold uppercase tracking-wider">Required Amount:</span>
-                  <span className="text-2xl font-black text-rose-600">â‚¹{videoPayment.totalAmount}</span>
+                  <span className="text-2xl font-black text-rose-600">₹{videoPayment.totalAmount}</span>
                 </div>
               </div>
 
-              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Select Payment Method</p>
+              <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Payment Method</p>
               <div className="space-y-3">
+                {videoPayment.paidParams ? (
+                  <button
+                    onClick={() => executeVideoUpload(videoPayment.file, videoPayment.paidParams)}
+                    disabled={videoUploading}
+                    className="w-full flex items-center justify-between px-5 py-4 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all font-bold disabled:opacity-60"
+                  >
+                    <div className="flex items-center gap-3">
+                      <HiOutlineFilm size={20} />
+                      <span>Payment Done - Retry Upload</span>
+                    </div>
+                    <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Paid</span>
+                  </button>
+                ) : (
                 <button
                   onClick={handleVideoPayRazorpay}
                   disabled={videoUploading}
@@ -2241,18 +2281,7 @@ const AddProduct = () => {
                   </div>
                   <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Instant</span>
                 </button>
-
-                <button
-                  onClick={handleVideoPayCOD}
-                  disabled={videoUploading}
-                  className="w-full flex items-center justify-between px-5 py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all font-bold disabled:opacity-60"
-                >
-                  <div className="flex items-center gap-3">
-                    <HiOutlineTruck size={20} />
-                    <span>Cash on Delivery (COD)</span>
-                  </div>
-                  <span className="text-[10px] bg-white/20 px-2 py-0.5 rounded-full uppercase tracking-wider font-extrabold">Pending</span>
-                </button>
+                )}
               </div>
 
               {videoUploading && (

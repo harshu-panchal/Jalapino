@@ -73,6 +73,11 @@ const VideoSubscriptions = () => {
         if (!payModal) return;
         setProcessing(true);
         try {
+            if (!window.Razorpay || !import.meta.env.VITE_RAZORPAY_KEY_ID) {
+              toast.error('Online payment is not available right now. Please try again later.');
+              setProcessing(false);
+              return;
+            }
             // Step 1: Create Razorpay order
             const orderRes = await sellerApi.createSubscriptionOrder({
                 planId: payModal.plan._id,
@@ -125,9 +130,19 @@ const VideoSubscriptions = () => {
                 },
                 prefill: {},
                 theme: { color: '#E11D48' },
+                modal: {
+                  ondismiss: () => toast.info('Payment cancelled. Plan not activated.'),
+                },
             };
 
             const rzp = new window.Razorpay(options);
+
+            rzp.on('payment.failed', (resp) => {
+
+              toast.error(resp?.error?.description || 'Payment failed. Plan not activated.');
+
+            });
+
             rzp.open();
         } catch (err) {
             toast.error(err.response?.data?.message || 'Payment initiation failed');
@@ -282,7 +297,7 @@ const VideoSubscriptions = () => {
                 <Info className="shrink-0 mt-0.5" size={18} />
                 <div className="text-sm">
                     <strong>How it works:</strong> Free storage is included in your plan. If you exceed it, extra MBs are charged at your plan's "Extra MB Price".
-                    Pay via <strong>Razorpay</strong> (instant activation) or <strong>COD</strong> (admin activates after collection).
+                    Pay online via <strong>Razorpay</strong> for instant activation.
                 </div>
             </div>
 
@@ -317,7 +332,7 @@ const VideoSubscriptions = () => {
                                         </div>
                                     </div>
 
-                                    <p className="text-sm font-semibold text-slate-700 mb-3">Choose Payment Method</p>
+                                    <p className="text-sm font-semibold text-slate-700 mb-3">Payment Method</p>
                                     <div className="space-y-3">
                                         <button
                                             onClick={handleRazorpay}
@@ -329,18 +344,6 @@ const VideoSubscriptions = () => {
                                                 <span>Pay Online (Razorpay)</span>
                                             </div>
                                             <span className="text-sm bg-white/20 px-2 py-0.5 rounded-lg">Instant Activation</span>
-                                        </button>
-
-                                        <button
-                                            onClick={handleCOD}
-                                            disabled={processing}
-                                            className="w-full flex items-center justify-between px-5 py-4 bg-amber-500 text-white rounded-xl hover:bg-amber-600 transition-all font-bold disabled:opacity-60"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                <Truck size={20} />
-                                                <span>Pay Cash (COD)</span>
-                                            </div>
-                                            <span className="text-sm bg-white/20 px-2 py-0.5 rounded-lg">Admin Activates</span>
                                         </button>
                                     </div>
 

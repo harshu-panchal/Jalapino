@@ -18,6 +18,31 @@ const getPriceForCycle = (plan, billingCycle) => {
     return plan.monthlyPrice;
 };
 
+// Helper: verify a Razorpay payment really succeeded for this order and amount.
+// Returns null when OK, or an error message string.
+const verifyRazorpayPayment = async ({ razorpay_order_id, razorpay_payment_id, razorpay_signature, expectedAmountPaise }) => {
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return "Payment details missing. Please complete the online payment.";
+    }
+    const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
+        .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+        .digest("hex");
+    if (expectedSignature !== razorpay_signature) return "Invalid payment signature";
+
+    const razorpay = getRazorpay();
+    let payment = await razorpay.payments.fetch(razorpay_payment_id);
+    if (!payment || payment.order_id !== razorpay_order_id) return "Payment does not match the order";
+
+    // Capture if only authorized (when auto-capture is off)
+    if (payment.status === "authorized") {
+        payment = await razorpay.payments.capture(razorpay_payment_id, payment.amount, payment.currency || "INR");
+    }
+    if (payment.status !== "captured") return "Payment not completed";
+    if (Number(payment.amount) < Number(expectedAmountPaise)) return "Paid amount is less than required amount";
+    return null;
+};
+
 // Helper: get validity days for billing cycle
 const getValidityDays = (billingCycle) => {
     if (billingCycle === "quarterly") return 90;
@@ -95,26 +120,24 @@ export const subscribeToPlan = async (req, res) => {
         const expiryDate = new Date();
         expiryDate.setDate(startDate.getDate() + validityDays);
 
-        let paymentStatus = "pending_cod";
+        let paymentStatus = "paid";
         let verifiedRazorpayPaymentId = null;
 
-        if (paymentMethod === "Razorpay" && amount > 0) {
-            // Verify Razorpay signature
-            const body = razorpay_order_id + "|" + razorpay_payment_id;
-            const expectedSignature = crypto
-                .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-                .update(body)
-                .digest("hex");
-
-            if (expectedSignature !== razorpay_signature) {
-                return res.status(400).json({ success: false, message: "Invalid payment signature" });
+        if (amount > 0) {
+            // Only online (Razorpay) payment is allowed for subscriptions — no COD.
+            if (paymentMethod !== "Razorpay") {
+                return res.status(400).json({ success: false, message: "Only online payment (Razorpay) is allowed for subscription." });
             }
-            paymentStatus = "paid";
+            const alreadyUsed = await SellerSubscription.exists({ razorpayPaymentId: razorpay_payment_id });
+            if (alreadyUsed) {
+                return res.status(400).json({ success: false, message: "This payment has already been used." });
+            }
+            const payErr = await verifyRazorpayPayment({
+                razorpay_order_id, razorpay_payment_id, razorpay_signature,
+                expectedAmountPaise: Math.round(amount * 100),
+            });
+            if (payErr) return res.status(400).json({ success: false, message: payErr });
             verifiedRazorpayPaymentId = razorpay_payment_id;
-        } else if (paymentMethod === "COD") {
-            paymentStatus = "pending_cod";
-        } else if (amount === 0) {
-            paymentStatus = "paid";
         }
 
         // Deactivate previous subscriptions
@@ -125,7 +148,7 @@ export const subscribeToPlan = async (req, res) => {
             planId: plan._id,
             billingCycle,
             amountPaid: amount,
-            paymentMethod: paymentMethod || "Razorpay",
+            paymentMethod: "Razorpay",
             paymentStatus,
             razorpayOrderId: razorpay_order_id || null,
             razorpayPaymentId: verifiedRazorpayPaymentId,
@@ -145,11 +168,9 @@ export const subscribeToPlan = async (req, res) => {
 
         res.status(200).json({
             success: true,
-            message: paymentMethod === "COD"
-                ? "COD subscription request submitted. Admin will activate after payment collection."
-                : "Successfully subscribed to plan!",
+            message: "Successfully subscribed to plan!",
             subscription,
-            requiresAdminConfirmation: paymentMethod === "COD",
+            requiresAdminConfirmation: false,
         });
     } catch (error) {
         console.error("Subscribe to Plan Error:", error);
@@ -174,7 +195,8 @@ export const checkVideoUploadIntent = async (req, res) => {
 
         if (seller.activeVideoSubscriptionId) {
             const sub = await SellerSubscription.findById(seller.activeVideoSubscriptionId).populate("planId");
-            if (sub?.planId) {
+            const subValid = sub?.isActive && sub?.paymentStatus === "paid" && (!sub?.expiryDate || new Date(sub.expiryDate) > new Date());
+            if (subValid && sub?.planId) {
                 includedMB = sub.planId.includedStorageMB;
                 extraMBPrice = sub.planId.extraMBPrice;
             }
@@ -203,6 +225,8 @@ export const checkVideoUploadIntent = async (req, res) => {
             totalAmount,
             mbToCharge,
             extraMBPrice,
+            includedMB,
+            usedMB,
             razorpayOrder: order,
             message: "Storage limit exceeded. Payment required.",
         });
@@ -243,7 +267,8 @@ export const uploadProductVideo = async (req, res) => {
         let extraMBPrice = 5;
         if (seller.activeVideoSubscriptionId) {
             const sub = await SellerSubscription.findById(seller.activeVideoSubscriptionId).populate("planId");
-            if (sub?.planId) {
+            const subValid = sub?.isActive && sub?.paymentStatus === "paid" && (!sub?.expiryDate || new Date(sub.expiryDate) > new Date());
+            if (subValid && sub?.planId) {
                 includedMB = sub.planId.includedStorageMB;
                 extraMBPrice = sub.planId.extraMBPrice;
             }
@@ -253,24 +278,26 @@ export const uploadProductVideo = async (req, res) => {
         const requiresPayment = newTotalMB > includedMB;
 
         if (requiresPayment) {
-            if (paymentMethod === "Razorpay") {
-                // Verify Razorpay signature
-                const body = razorpay_order_id + "|" + razorpay_payment_id;
-                const expectedSignature = crypto
-                    .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET)
-                    .update(body)
-                    .digest("hex");
-                if (expectedSignature !== razorpay_signature) {
-                    fs.unlinkSync(file.path);
-                    return res.status(400).json({ success: false, message: "Invalid payment signature" });
-                }
-            } else if (paymentMethod === "COD") {
-                // COD for extra storage: allow upload, mark as pending collection
-                // Admin will see this in their dashboard
-            } else {
+            // Only successful online (Razorpay) payment allows upload — no COD.
+            if (paymentMethod !== "Razorpay") {
                 fs.unlinkSync(file.path);
                 return res.status(402).json({ success: false, message: "Payment required for extra storage" });
             }
+            if ((seller.usedVideoStoragePaymentIds || []).includes(razorpay_payment_id)) {
+                fs.unlinkSync(file.path);
+                return res.status(400).json({ success: false, message: "This payment has already been used." });
+            }
+            const mbToCharge = usedMB >= includedMB ? fileSizeMB : (newTotalMB - includedMB);
+            const expectedAmount = Math.ceil(mbToCharge * extraMBPrice);
+            const payErr = await verifyRazorpayPayment({
+                razorpay_order_id, razorpay_payment_id, razorpay_signature,
+                expectedAmountPaise: Math.round(expectedAmount * 100),
+            });
+            if (payErr) {
+                fs.unlinkSync(file.path);
+                return res.status(400).json({ success: false, message: payErr });
+            }
+            seller.usedVideoStoragePaymentIds = [...(seller.usedVideoStoragePaymentIds || []), razorpay_payment_id];
         }
 
         const videoUrl = `/uploads/videos/${file.filename}`;
